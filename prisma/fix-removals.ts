@@ -29,7 +29,7 @@ const TARGET_SLUGS = [
 
 async function main() {
   for (const slug of TARGET_SLUGS) {
-    const item = await prisma.menuItem.findUnique({ where: { slug } });
+    const item = await prisma.menuItem.findFirst({ where: { slug } });
     if (!item) {
       console.warn(`⚠️  Item not found: ${slug} — skipping`);
       continue;
