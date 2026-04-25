@@ -136,3 +136,18 @@ export default async function OrderPage({
                   reorderOrder?.student.allergyNotes ?? ""
               }}
               initialSchoolId={reorderSchoolId ?? parent?.children[0]?.schoolId ?? ""}
+              initialDeliveryDateId={initialDeliveryDateId ?? ""}
+              initialCartItems={initialCartItems}
+              initialItemSlug={params.item}
+            />
+          ) : (
+            <div className="rounded-[18px] border border-amber-200 bg-amber-50 p-5 text-[13px] text-amber-900">
+              Ordering is currently closed. Check back before the next delivery window opens.
+            </div>
+          )}
+        </div>
+      </main>
+      <AppNav />
+    </>
+  );
+}

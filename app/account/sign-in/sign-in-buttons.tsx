@@ -17,4 +17,39 @@ function GoogleIcon() {
 function AppleIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 814 1000" xmlns="http://www.w3.org/2000/svg" fill="white">
-      <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 71 0 130.5 46.4 174.9 46.4 42.6 0 109.7-49.4 188.6-49.4 30.5 0 111.4 2.6 163.4 96.3zM549.8 148.8c23.7-28.1 40.8-67.8 40.8-107.5 0-5.8-.6-11.7-1.9-16.2-38.3 1.4-84.1 25.6-111.3 57.1-22.1 25-42.6 64.7-42.6 105.1 0 6.4 1.3 12.8 1.9 14.8 2.3.3 6.1.6 9.7.6 34.2 0 76.6-23.3 103.4
+      <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 71 0 130.5 46.4 174.9 46.4 42.6 0 109.7-49.4 188.6-49.4 30.5 0 111.4 2.6 163.4 96.3zM549.8 148.8c23.7-28.1 40.8-67.8 40.8-107.5 0-5.8-.6-11.7-1.9-16.2-38.3 1.4-84.1 25.6-111.3 57.1-22.1 25-42.6 64.7-42.6 105.1 0 6.4 1.3 12.8 1.9 14.8 2.3.3 6.1.6 9.7.6 34.2 0 76.6-23.3 103.4-53.9z"/>
+    </svg>
+  );
+}
+
+export function ParentSignInButtons({ googleEnabled, appleEnabled }: { googleEnabled: boolean; appleEnabled: boolean }) {
+  const [message, setMessage] = useState("");
+
+  async function handleSignIn(provider: "google" | "apple", enabled: boolean) {
+    if (!enabled) { setMessage(`${provider === "google" ? "Google" : "Apple"} sign-in is not configured yet.`); return; }
+    setMessage("");
+    await signIn(provider, { callbackUrl: "/account" });
+  }
+
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => handleSignIn("google", googleEnabled)}
+        disabled={!googleEnabled}
+        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] font-semibold text-ink disabled:opacity-50 flex items-center justify-center gap-2.5"
+      >
+        <GoogleIcon /> Continue with Google
+      </button>
+      <button
+        type="button"
+        onClick={() => handleSignIn("apple", appleEnabled)}
+        disabled={!appleEnabled}
+        className="w-full rounded-xl bg-ink px-4 py-3 text-[13px] font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2.5"
+      >
+        <AppleIcon /> Continue with Apple
+      </button>
+      {message && <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] text-amber-900">{message}</p>}
+    </div>
+  );
+}

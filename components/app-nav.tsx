@@ -79,4 +79,15 @@ export function AppNav() {
         const active = pathname === item.href;
         return (
           <a key={item.href} href={item.href}
-   
+            className="flex-1 flex flex-col items-center gap-0.5 py-1 no-underline">
+            {item.icon(active)}
+            <span className="text-[9px] font-semibold tracking-wide uppercase transition-colors"
+              style={{ color: active ? "#f59e0b" : "rgba(255,255,255,0.35)", fontFamily: "var(--font-oswald)" }}>
+              {item.label}
+            </span>
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
