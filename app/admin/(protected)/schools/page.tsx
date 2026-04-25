@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 async function createSchool(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
   const parsed = schoolSchema.parse({
     name: formData.get("name"),
     slug: slugify(String(formData.get("name") || "")),
@@ -18,7 +19,7 @@ async function createSchool(formData: FormData) {
     collectClassroom: formData.get("collectClassroom") === "on",
     isActive: formData.get("isActive") === "on"
   });
-  await prisma.school.create({ data: parsed });
+  await prisma.school.create({ data: { ...parsed, restaurantId: restaurant.id } });
   revalidatePath("/admin/schools");
 }
 

@@ -2,11 +2,13 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { menuItemSchema, menuOptionSchema } from "@/lib/validation/order";
 import { slugify } from "@/lib/utils";
+import { requireRestaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
 
 async function createMenuItem(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
   const parsed = menuItemSchema.parse({
     name: formData.get("name"),
     slug: slugify(String(formData.get("name") || "")),
@@ -14,7 +16,7 @@ async function createMenuItem(formData: FormData) {
     basePriceCents: formData.get("basePriceCents"),
     isActive: formData.get("isActive") === "on"
   });
-  await prisma.menuItem.create({ data: parsed });
+  await prisma.menuItem.create({ data: { ...parsed, restaurantId: restaurant.id } });
   revalidatePath("/admin/menu");
 }
 
@@ -91,7 +93,9 @@ const CAT_ICONS: Record<string, string> = {
 };
 
 export default async function AdminMenuPage() {
+  const restaurant = await requireRestaurant();
   const items = await prisma.menuItem.findMany({
+    where: { restaurantId: restaurant.id },
     include: { options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] } },
     orderBy: { name: "asc" }
   });
