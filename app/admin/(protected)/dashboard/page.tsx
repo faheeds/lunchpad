@@ -1,11 +1,13 @@
 import { getAdminDashboardSummary } from "@/lib/admin";
+import { requireRestaurant } from "@/lib/restaurant";
 import { formatInTimeZone } from "date-fns-tz";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const summary = await getAdminDashboardSummary();
+  const restaurant = await requireRestaurant();
+  const summary = await getAdminDashboardSummary(restaurant.id);
 
   const stats = [
     { label: "Paid orders", value: summary.paidOrders, color: "text-brand-700", bg: "bg-brand-50" },
