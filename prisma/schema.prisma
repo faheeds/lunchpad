@@ -330,4 +330,5 @@ model ProcessedWebhookEvent {
   provider     String
   eventId      String   @unique
   eventType    String
-  processedAt  Da
+  processedAt  DateTime @default(now())
+}
