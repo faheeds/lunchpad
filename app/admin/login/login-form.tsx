@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-export function LoginForm() {
+export function LoginForm({ restaurantId }: { restaurantId: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,7 +15,7 @@ export function LoginForm() {
     e.preventDefault();
     setIsPending(true);
     setError("");
-    const result = await signIn("admin-credentials", { email, password, redirect: false });
+    const result = await signIn("admin-credentials", { email, password, restaurantId, redirect: false });
     setIsPending(false);
     if (result?.error) { setError("Invalid email or password."); return; }
     router.push("/admin/dashboard");
