@@ -1,0 +1,333 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+}
+
+enum MenuOptionType {
+  ADD_ON
+  REMOVAL
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+}
+
+enum WeeklyCheckoutStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         UserRole @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model School {
+  id                   String         @id @default(cuid())
+  name                 String
+  slug                 String         @unique
+  timezone             String         @default("America/Los_Angeles")
+  defaultCutoffHour    Int            @default(17)
+  defaultCutoffMinute  Int            @default(0)
+  collectTeacher       Boolean        @default(true)
+  collectClassroom     Boolean        @default(true)
+  isActive             Boolean        @default(true)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  deliveryDates        DeliveryDate[]
+  menuAvailability     DeliveryMenuItem[]
+  orders               Order[]
+  students             Student[]
+  parentChildren       ParentChild[]
+  weeklyPlans          WeeklyLunchPlan[]
+  weeklyCheckoutItems  WeeklyCheckoutBatchItem[]
+}
+
+model DeliveryDate {
+  id                String              @id @default(cuid())
+  schoolId          String
+  deliveryDate      DateTime
+  cutoffAt          DateTime
+  orderingOpen      Boolean             @default(true)
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  school            School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  orders            Order[]
+  menuAvailability  DeliveryMenuItem[]
+  weeklyCheckoutItems WeeklyCheckoutBatchItem[]
+
+  @@unique([schoolId, deliveryDate])
+}
+
+model MenuItem {
+  id             String              @id @default(cuid())
+  name           String
+  slug           String              @unique
+  description    String?
+  imageUrl       String?
+  basePriceCents Int
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  options        MenuOption[]
+  orderItems     OrderItem[]
+  availability   DeliveryMenuItem[]
+  weeklyPlans    WeeklyLunchPlan[]
+  weeklyCheckoutItems WeeklyCheckoutBatchItem[]
+}
+
+model DeliveryMenuItem {
+  id             String       @id @default(cuid())
+  deliveryDateId String
+  menuItemId     String
+  schoolId       String
+  isAvailable    Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deliveryDate   DeliveryDate @relation(fields: [deliveryDateId], references: [id], onDelete: Cascade)
+  menuItem       MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  school         School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([deliveryDateId, menuItemId])
+}
+
+model MenuOption {
+  id             String         @id @default(cuid())
+  menuItemId     String
+  name           String
+  optionType     MenuOptionType
+  priceDeltaCents Int          @default(0)
+  isDefault      Boolean        @default(false)
+  sortOrder      Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  menuItem       MenuItem       @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+}
+
+model Student {
+  id                String   @id @default(cuid())
+  schoolId          String
+  studentName       String
+  grade             String
+  teacherName       String?
+  classroom         String?
+  allergyNotes      String?
+  dietaryNotes      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  orders            Order[]
+  school            School   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+}
+
+model ParentUser {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  name         String?
+  image        String?
+  provider     String?
+  providerId   String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  children     ParentChild[]
+  orders       Order[]
+  weeklyPlans  WeeklyLunchPlan[]
+  weeklyCheckoutBatches WeeklyCheckoutBatch[]
+}
+
+model ParentChild {
+  id             String           @id @default(cuid())
+  parentUserId   String
+  schoolId       String
+  studentName    String
+  grade          String
+  teacherName    String?
+  classroom      String?
+  allergyNotes   String?
+  dietaryNotes   String?
+  archivedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  parentUser     ParentUser       @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  school         School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  orders         Order[]
+  weeklyPlans    WeeklyLunchPlan[]
+  weeklyCheckoutItems WeeklyCheckoutBatchItem[]
+}
+
+model WeeklyLunchPlan {
+  id             String       @id @default(cuid())
+  parentUserId   String
+  parentChildId  String
+  schoolId       String
+  weekday        Int
+  menuItemId     String
+  choice         String?
+  additions      String[]
+  removals       String[]
+  sortOrder      Int          @default(0)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  parentUser     ParentUser   @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  parentChild    ParentChild  @relation(fields: [parentChildId], references: [id], onDelete: Cascade)
+  school         School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  menuItem       MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+
+  @@index([parentUserId, weekday])
+  @@index([parentChildId, weekday, sortOrder])
+}
+
+model WeeklyCheckoutBatch {
+  id                 String                  @id @default(cuid())
+  parentUserId       String
+  status             WeeklyCheckoutStatus    @default(PENDING)
+  checkoutSessionId  String?                 @unique
+  paymentIntentId    String?                 @unique
+  totalCents         Int
+  paidAt             DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  parentUser         ParentUser              @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  items              WeeklyCheckoutBatchItem[]
+}
+
+model WeeklyCheckoutBatchItem {
+  id                     String              @id @default(cuid())
+  weeklyCheckoutBatchId  String
+  parentChildId          String
+  schoolId               String
+  deliveryDateId         String
+  menuItemId             String
+  choice                 String?
+  additions              String[]
+  removals               String[]
+  itemNameSnapshot       String
+  basePriceCents         Int
+  lineTotalCents         Int
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  weeklyCheckoutBatch    WeeklyCheckoutBatch @relation(fields: [weeklyCheckoutBatchId], references: [id], onDelete: Cascade)
+  parentChild            ParentChild         @relation(fields: [parentChildId], references: [id], onDelete: Restrict)
+  school                 School              @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  deliveryDate           DeliveryDate        @relation(fields: [deliveryDateId], references: [id], onDelete: Restrict)
+  menuItem               MenuItem            @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+}
+
+model Order {
+  id                   String       @id @default(cuid())
+  orderNumber          String       @unique
+  schoolId             String
+  deliveryDateId       String
+  studentId            String
+  parentUserId         String?
+  parentChildId        String?
+  parentName           String
+  parentEmail          String
+  specialInstructions  String?
+  subtotalCents        Int
+  totalCents           Int
+  currency             String       @default("usd")
+  status               OrderStatus  @default(PENDING)
+  paidAt               DateTime?
+  refundedAt           DateTime?
+  cancelledAt          DateTime?
+  archivedAt           DateTime?
+  confirmationSentAt   DateTime?
+  checkoutSessionId    String?      @unique
+  paymentIntentId      String?      @unique
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  school               School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  deliveryDate         DeliveryDate @relation(fields: [deliveryDateId], references: [id], onDelete: Restrict)
+  student              Student      @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  parentUser           ParentUser?  @relation(fields: [parentUserId], references: [id], onDelete: SetNull)
+  parentChild          ParentChild? @relation(fields: [parentChildId], references: [id], onDelete: SetNull)
+  items                OrderItem[]
+  payment              Payment?
+  emailLogs            EmailLog[]
+}
+
+model OrderItem {
+  id                  String   @id @default(cuid())
+  orderId             String
+  menuItemId          String
+  itemNameSnapshot    String
+  basePriceCents      Int
+  additions           String[]
+  removals            String[]
+  allergyNotes        String?
+  dietaryNotes        String?
+  specialInstructions String?
+  lineTotalCents      Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem            MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  orderId               String        @unique
+  provider              String        @default("stripe")
+  providerSessionId     String?       @unique
+  providerPaymentIntent String?       @unique
+  amountCents           Int
+  currency              String        @default("usd")
+  status                PaymentStatus @default(PENDING)
+  paidAt                DateTime?
+  refundedAt            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  order                 Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model EmailLog {
+  id            String      @id @default(cuid())
+  orderId       String
+  emailType     String
+  recipient     String
+  providerId    String?
+  status        EmailStatus
+  errorMessage  String?
+  sentAt        DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model ProcessedWebhookEvent {
+  id           String   @id @default(cuid())
+  provider     String
+  eventId      String   @unique
+  eventType    String
+  processedAt  Da

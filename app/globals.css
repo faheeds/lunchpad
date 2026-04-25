@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --crimson: #c41230;
+  --gold:    #d97706;
+  --ink:     #1c0505;
+  --paper:   #fffbf7;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  @apply antialiased;
+  background-color: #f5e9e9;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #fffbf7;
+}
+
+@media (min-width: 640px) {
+  .app-shell {
+    margin: 24px auto;
+    min-height: calc(100dvh - 48px);
+    border-radius: 24px;
+    box-shadow: 0 20px 80px rgba(28,5,5,0.18);
+    overflow: hidden;
+  }
+}
+
+.app-header {
+  background: #1c0505;
+  border-bottom: none;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-shrink: 0;
+}
+
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fffbf7;
+}
+
+.app-bnav {
+  background: #1c0505;
+  border-top: none;
+  display: flex;
+  padding: 8px 0 max(10px, env(safe-area-inset-bottom));
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  flex-shrink: 0;
+}
+
+/* Hide scrollbar for food strip */
+.food-strip::-webkit-scrollbar { display: none; }
+.food-strip { -ms-overflow-style: none; scrollbar-width: none; }
+
+.container-app {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}

@@ -1,0 +1,20 @@
+export const GRADE_OPTIONS = [
+  "KG Blue",
+  "KG Green",
+  "1 Blue",
+  "1 Green",
+  "2 Blue",
+  "2 Green",
+  "3 Blue",
+  "3 Green",
+  "4 Blue",
+  "4 Green",
+  "5 Blue",
+  "5 Green",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "Teacher or Admin"
+] as const;
