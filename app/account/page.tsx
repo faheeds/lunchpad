@@ -5,7 +5,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { signOut } from "@/lib/auth";
 import { requireParent } from "@/lib/parent-auth";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
+import { requireRestaurant } from "@/lib/restaurant";
 import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
 import { SiteHeader } from "@/components/site-header";
 import { AppNav } from "@/components/app-nav";
@@ -16,7 +16,7 @@ import { WeeklyPlanPlanner } from "@/components/account/weekly-plan-planner";
 import { Badge } from "@/components/ui";
 
 export default async function ParentAccountPage() {
-  const session = await requireParent();
+  const [session, restaurant] = await Promise.all([requireParent(), requireRestaurant()]);
   const parentUserId = session.user?.parentUserId;
   if (!parentUserId) redirect("/account/sign-in");
 
@@ -85,7 +85,7 @@ export default async function ParentAccountPage() {
         }
       }
     }),
-    prisma.school.findMany({ where: { isActive: true, slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }, orderBy: { name: "asc" } }),
+    prisma.school.findMany({ where: { isActive: true, restaurantId: restaurant.id }, orderBy: { name: "asc" } }),
     prisma.order.findMany({
       where: { parentUserId, archivedAt: null },
       include: { school: true, deliveryDate: true, student: true, items: true },
@@ -109,7 +109,7 @@ export default async function ParentAccountPage() {
           orderingOpen: true,
           cutoffAt: { gt: now },
           deliveryDate: { gte: range.start, lte: range.end },
-          school: { isActive: true, slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }
+          school: { isActive: true, restaurantId: restaurant.id }
         },
         include: {
           school: true,

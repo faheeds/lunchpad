@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireParent } from "@/lib/parent-auth";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
+import { requireRestaurant } from "@/lib/restaurant";
 import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
 import { SiteHeader } from "@/components/site-header";
 import { AppNav } from "@/components/app-nav";
@@ -11,7 +11,7 @@ import { WeeklyCheckoutButton } from "@/components/account/weekly-checkout-butto
 export const dynamic = "force-dynamic";
 
 export default async function WeeklyPage() {
-  const session = await requireParent();
+  const [session, restaurant] = await Promise.all([requireParent(), requireRestaurant()]);
   const parentUserId = session.user?.parentUserId;
   if (!parentUserId) redirect("/account/sign-in");
 
@@ -48,7 +48,7 @@ export default async function WeeklyPage() {
           orderingOpen: true,
           cutoffAt: { gt: now },
           deliveryDate: { gte: range.start, lte: range.end },
-          school: { isActive: true, slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }
+          school: { isActive: true, restaurantId: restaurant.id }
         },
         include: {
           school: true,

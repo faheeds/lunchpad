@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
+import { requireRestaurant } from "@/lib/restaurant";
 import { getWeekdayNumber } from "@/lib/weekly-week";
 import { SiteHeader } from "@/components/site-header";
 import { AppNav } from "@/components/app-nav";
@@ -14,14 +14,14 @@ export default async function OrderPage({
 }: {
   searchParams: Promise<{ reorder?: string; item?: string }>;
 }) {
-  const session = await auth();
+  const [session, restaurant] = await Promise.all([auth(), requireRestaurant()]);
   const params = await searchParams;
 
   const allDeliveryDates = await prisma.deliveryDate.findMany({
     where: {
       orderingOpen: true,
       cutoffAt: { gt: new Date() },
-      school: { isActive: true, slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }
+      school: { isActive: true, restaurantId: restaurant.id }
     },
     include: {
       school: true,

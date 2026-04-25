@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
+import { requireRestaurant } from "@/lib/restaurant";
 import { schoolSchema } from "@/lib/validation/order";
 import { slugify } from "@/lib/utils";
 
@@ -31,8 +31,9 @@ async function toggleSchool(formData: FormData) {
 }
 
 export default async function AdminSchoolsPage() {
+  const restaurant = await requireRestaurant();
   const schools = await prisma.school.findMany({
-    where: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } },
+    where: { restaurantId: restaurant.id },
     orderBy: { name: "asc" }
   });
 

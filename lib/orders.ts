@@ -3,7 +3,6 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
 import { orderFormSchema } from "@/lib/validation/order";
 import type { OrderDraftInput } from "@/types/order";
 
@@ -263,6 +262,7 @@ export async function markOrderPaidByCheckoutSession(
 }
 
 export async function listOrders(filters: {
+  restaurantId?: string;
   deliveryDateId?: string;
   schoolId?: string;
   schoolIds?: string[];
@@ -271,6 +271,7 @@ export async function listOrders(filters: {
 }) {
   const where: Prisma.OrderWhereInput = {};
 
+  if (filters.restaurantId) where.restaurantId = filters.restaurantId;
   if (filters.deliveryDateId) where.deliveryDateId = filters.deliveryDateId;
   if (filters.schoolIds?.length) {
     where.schoolId = { in: filters.schoolIds };
@@ -292,7 +293,7 @@ export async function listOrders(filters: {
     where: {
       ...where,
       school: {
-        slug: { in: [...ALLOWED_SCHOOL_SLUGS] }
+        isActive: true
       }
     },
     include: {

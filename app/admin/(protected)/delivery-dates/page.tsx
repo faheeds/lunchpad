@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
+import { requireRestaurant } from "@/lib/restaurant";
 import { deliveryDateSchema } from "@/lib/validation/order";
 
 export const dynamic = "force-dynamic";
@@ -65,10 +65,11 @@ async function attachMenuItems(formData: FormData) {
 }
 
 export default async function DeliveryDatesPage() {
+  const restaurant = await requireRestaurant();
   const [schools, deliveryDates, menuItems] = await Promise.all([
-    prisma.school.findMany({ where: { isActive: true, slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }, orderBy: { name: "asc" } }),
+    prisma.school.findMany({ where: { restaurantId: restaurant.id, isActive: true }, orderBy: { name: "asc" } }),
     prisma.deliveryDate.findMany({
-      where: { school: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } } },
+      where: { school: { restaurantId: restaurant.id } },
       include: {
         school: true,
         // Only surface available rows — unchecked items keep a row with

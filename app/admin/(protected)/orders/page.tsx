@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { listOrders } from "@/lib/orders";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
+import { requireRestaurant } from "@/lib/restaurant";
 import { OrdersList } from "@/components/admin/orders-list";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -17,14 +17,14 @@ export default async function AdminOrdersPage({
 }: {
   searchParams: Promise<{ deliveryDateId?: string; schoolIds?: string | string[]; status?: string; archived?: string }>;
 }) {
-  const params = await searchParams;
+  const [params, restaurant] = await Promise.all([searchParams, requireRestaurant()]);
   const selectedSchoolIds = normalizeMultiValue(params.schoolIds);
 
   const [orders, schools, allDeliveryDates] = await Promise.all([
-    listOrders({ deliveryDateId: params.deliveryDateId, schoolIds: selectedSchoolIds, status: params.status, archived: params.archived }),
-    prisma.school.findMany({ where: { isActive: true, slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }, orderBy: { name: "asc" } }),
+    listOrders({ restaurantId: restaurant.id, deliveryDateId: params.deliveryDateId, schoolIds: selectedSchoolIds, status: params.status, archived: params.archived }),
+    prisma.school.findMany({ where: { restaurantId: restaurant.id, isActive: true }, orderBy: { name: "asc" } }),
     prisma.deliveryDate.findMany({
-      where: { school: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }, schoolId: selectedSchoolIds.length ? { in: selectedSchoolIds } : undefined },
+      where: { school: { restaurantId: restaurant.id }, schoolId: selectedSchoolIds.length ? { in: selectedSchoolIds } : undefined },
       include: { school: true },
       orderBy: { deliveryDate: "asc" }
     })

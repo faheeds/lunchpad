@@ -1,15 +1,14 @@
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
 
-export async function getAdminDashboardSummary() {
+export async function getAdminDashboardSummary(restaurantId: string) {
   const [paidOrders, refundedOrders, cancelledOrders, schools, upcomingDeliveryDates] = await Promise.all([
-    prisma.order.count({ where: { status: OrderStatus.PAID, archivedAt: null, school: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } } } }),
-    prisma.order.count({ where: { status: OrderStatus.REFUNDED, archivedAt: null, school: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } } } }),
-    prisma.order.count({ where: { status: OrderStatus.CANCELLED, archivedAt: null, school: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } } } }),
-    prisma.school.count({ where: { isActive: true, slug: { in: [...ALLOWED_SCHOOL_SLUGS] } } }),
+    prisma.order.count({ where: { restaurantId, status: OrderStatus.PAID, archivedAt: null } }),
+    prisma.order.count({ where: { restaurantId, status: OrderStatus.REFUNDED, archivedAt: null } }),
+    prisma.order.count({ where: { restaurantId, status: OrderStatus.CANCELLED, archivedAt: null } }),
+    prisma.school.count({ where: { restaurantId, isActive: true } }),
     prisma.deliveryDate.findMany({
-      where: { deliveryDate: { gte: new Date() }, school: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } } },
+      where: { deliveryDate: { gte: new Date() }, school: { restaurantId } },
       include: { school: true },
       take: 5,
       orderBy: { deliveryDate: "asc" }
@@ -47,12 +46,15 @@ export async function setOrderArchived(orderId: string, archived: boolean) {
   });
 }
 
-export async function getAdminReports(filters: {
-  schoolIds?: string[];
-  deliveryDateId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}) {
+export async function getAdminReports(
+  restaurantId: string,
+  filters: {
+    schoolIds?: string[];
+    deliveryDateId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+) {
   const deliveryDateFilter =
     filters.dateFrom || filters.dateTo
       ? {
@@ -63,11 +65,11 @@ export async function getAdminReports(filters: {
 
   const orders = await prisma.order.findMany({
     where: {
+      restaurantId,
       status: OrderStatus.PAID,
       archivedAt: null,
       deliveryDateId: filters.deliveryDateId || undefined,
       schoolId: filters.schoolIds?.length ? { in: filters.schoolIds } : undefined,
-      school: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } },
       deliveryDate: deliveryDateFilter ? { deliveryDate: deliveryDateFilter } : undefined
     },
     include: {

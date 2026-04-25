@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getAdminReports } from "@/lib/admin";
-import { ALLOWED_SCHOOL_SLUGS } from "@/lib/school-config";
+import { requireRestaurant } from "@/lib/restaurant";
 import { formatCurrency } from "@/lib/utils";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -16,17 +16,17 @@ export default async function AdminReportsPage({
 }: {
   searchParams: Promise<{ schoolIds?: string | string[]; deliveryDateId?: string; dateFrom?: string; dateTo?: string }>;
 }) {
-  const params = await searchParams;
+  const [params, restaurant] = await Promise.all([searchParams, requireRestaurant()]);
   const selectedSchoolIds = normalizeMultiValue(params.schoolIds);
 
   const [schools, allDeliveryDates, reports] = await Promise.all([
-    prisma.school.findMany({ where: { isActive: true, slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }, orderBy: { name: "asc" } }),
+    prisma.school.findMany({ where: { restaurantId: restaurant.id, isActive: true }, orderBy: { name: "asc" } }),
     prisma.deliveryDate.findMany({
-      where: { school: { slug: { in: [...ALLOWED_SCHOOL_SLUGS] } }, schoolId: selectedSchoolIds.length ? { in: selectedSchoolIds } : undefined },
+      where: { school: { restaurantId: restaurant.id }, schoolId: selectedSchoolIds.length ? { in: selectedSchoolIds } : undefined },
       include: { school: true },
       orderBy: { deliveryDate: "asc" }
     }),
-    getAdminReports({ schoolIds: selectedSchoolIds, deliveryDateId: params.deliveryDateId, dateFrom: params.dateFrom, dateTo: params.dateTo })
+    getAdminReports(restaurant.id, { schoolIds: selectedSchoolIds, deliveryDateId: params.deliveryDateId, dateFrom: params.dateFrom, dateTo: params.dateTo })
   ]);
 
   // Deduplicate dates
