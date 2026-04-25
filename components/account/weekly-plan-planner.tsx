@@ -635,3 +635,21 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
                           disabled={isPending || !selectedMenuItem}
                           className="flex-1 py-2.5 rounded-xl bg-brand-700 text-white text-[13px] font-semibold disabled:opacity-50"
                         >
+                          Save to {WEEKDAY_LABELS[activeDay.weekday]?.short ?? "day"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {error && (
+        <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>
+      )}
+    </div>
+  );
+}

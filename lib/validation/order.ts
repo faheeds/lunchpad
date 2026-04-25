@@ -83,4 +83,5 @@ export const deliveryDateSchema = z.object({
     ),
   cutoffAt: z.string().min(1),
   orderingOpen: z.coerce.boolean().default(true),
-  no
+  notes: z.string().optional().default("")
+});

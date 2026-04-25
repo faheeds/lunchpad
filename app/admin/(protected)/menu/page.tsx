@@ -257,4 +257,97 @@ export default async function AdminMenuPage() {
                           {item.description || "No description"}
                         </p>
                         <form action={toggleItemActive}>
-                          <input type="hidden" name=
+                          <input type="hidden" name="id" value={item.id} />
+                          <button type="submit"
+                            className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition ${
+                              item.isActive
+                                ? "border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+                                : "border-brand-200 text-brand-700 hover:bg-brand-50"
+                            }`}>
+                            {item.isActive ? "Deactivate" : "Activate"}
+                          </button>
+                        </form>
+                      </div>
+
+                      {/* Quick price edit */}
+                      <form action={updateItemPrice} className="flex items-center gap-2">
+                        <input type="hidden" name="id" value={item.id} />
+                        <label className="text-[11px] text-slate-500 flex-shrink-0">Price ($)</label>
+                        <div className="relative flex-1">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-slate-400">$</span>
+                          <input
+                            name="price"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            defaultValue={(item.basePriceCents / 100).toFixed(2)}
+                            className="w-full rounded-lg border border-slate-200 text-[13px] pl-6 pr-3 py-1.5"
+                          />
+                        </div>
+                        <button type="submit"
+                          className="px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold flex-shrink-0 hover:bg-brand-800 transition">
+                          Save
+                        </button>
+                      </form>
+
+                      {/* Quick description edit */}
+                      <form action={updateItemDescription} className="flex items-start gap-2">
+                        <input type="hidden" name="id" value={item.id} />
+                        <label className="text-[11px] text-slate-500 flex-shrink-0 mt-2">Description</label>
+                        <textarea
+                          name="description"
+                          rows={2}
+                          defaultValue={item.description ?? ""}
+                          placeholder="Signature Burgers & Sandwiches. Description here…"
+                          className="flex-1 rounded-lg border border-slate-200 text-[12px] px-3 py-1.5 resize-none"
+                        />
+                        <button type="submit"
+                          className="px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold flex-shrink-0 hover:bg-brand-800 transition mt-0.5">
+                          Save
+                        </button>
+                      </form>
+
+                      {/* Add-ons */}
+                      {addons.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Add-ons</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {addons.map((o) => (
+                              <span key={o.id}
+                                className="px-2.5 py-1 rounded-full text-[11px] bg-brand-50 text-brand-800 border border-brand-100">
+                                + {o.name}{o.priceDeltaCents ? ` +${fmt(o.priceDeltaCents)}` : " (free)"}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Removals */}
+                      {removals.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Removals</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {removals.map((o) => (
+                              <span key={o.id}
+                                className="px-2.5 py-1 rounded-full text-[11px] bg-red-50 text-red-700 border border-red-100">
+                                No {o.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {item.options.length === 0 && (
+                        <p className="text-[12px] text-slate-400">No options configured.</p>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

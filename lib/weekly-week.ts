@@ -51,4 +51,13 @@ export function getUpcomingOrderingWindowRange(now: Date, timezone: string) {
   const weekday = getWeekdayNumber(now, timezone);
   const daysUntilNextMonday = weekday === 1 ? 7 : 8 - weekday;
   const nextMonday = new Date(now);
-  nextMonday.setDa
+  nextMonday.setDate(nextMonday.getDate() + daysUntilNextMonday);
+
+  const nextThursday = new Date(nextMonday);
+  nextThursday.setDate(nextThursday.getDate() + 3); // Mon–Thu only
+
+  return {
+    start: buildLocalDayStart(now, timezone),
+    end: buildLocalDayEnd(nextThursday, timezone)
+  };
+}

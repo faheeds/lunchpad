@@ -511,4 +511,31 @@ async function main() {
         items.map((item) =>
           prisma.deliveryMenuItem.upsert({
             where: {
-              deliveryDateId_
+              deliveryDateId_menuItemId: {
+                deliveryDateId: dateRecord.id,
+                menuItemId: item.id
+              }
+            },
+            update: {},
+            create: {
+              schoolId: school.id,
+              deliveryDateId: dateRecord.id,
+              menuItemId: item.id,
+              isAvailable: true
+            }
+          })
+        )
+      );
+    }
+  }
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (error) => {
+    console.error(error);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

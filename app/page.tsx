@@ -223,4 +223,50 @@ export default async function HomePage() {
                   }}>
                     {step.title}
                   </p>
-                  <p style={{ fontSize: 12, color: "#78716c", lineHeight
+                  <p style={{ fontSize: 12, color: "#78716c", lineHeight: 1.55 }}>
+                    {step.body}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </main>
+      <AppNav />
+    </>
+  );
+}
+
+function FeatureIcon({ name }: { name: string }) {
+  const icons: Record<string, React.ReactNode> = {
+    location: (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+        <circle cx="12" cy="9" r="2.5"/>
+      </svg>
+    ),
+    menu: (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+    ),
+    child: (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="7" r="4"/>
+        <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+      </svg>
+    ),
+    calendar: (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <path d="M16 2v4M8 2v4M3 10h18"/>
+        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
+      </svg>
+    ),
+  };
+  return <>{icons[name]}</>;
+}

@@ -527,4 +527,65 @@ export function OrderForm({
 
           <button type="button" onClick={() => { if (!cartItems.length) { setError("Add at least one item first."); return; } setError(""); window.history.pushState({ orderStep: 4 }, ""); setStep(4); }}
             disabled={!cartItems.length}
-            className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold disabl
+            className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold disabled:opacity-30">
+            Review & pay →
+          </button>
+          {error && <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2 mt-2">{error}</p>}
+        </div>
+      )}
+
+      {/* STEP 4: Review */}
+      {step === 4 && (
+        <div className="space-y-4">
+          <button type="button" onClick={() => window.history.back()} className="text-[12px] text-slate-500 flex items-center gap-1 mb-2">← Back</button>
+
+          <div className="rounded-[18px] border border-slate-100 bg-white divide-y divide-slate-50 overflow-hidden">
+            <div className="p-4">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Delivery</p>
+              <p className="text-[13px] font-semibold text-ink">{selectedDelivery && formatInTimeZone(selectedDelivery.deliveryDate, selectedDelivery.school.timezone, "EEEE, MMMM d")}</p>
+              <p className="text-[12px] text-slate-500">{selectedDelivery?.school.name}</p>
+            </div>
+            <div className="p-4">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Student</p>
+              <p className="text-[13px] font-semibold text-ink">{studentName}</p>
+              <p className="text-[12px] text-slate-500">Grade {grade}{allergyNotes ? ` · Allergy: ${allergyNotes}` : ""}</p>
+            </div>
+            <div className="p-4">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Order</p>
+              {cartItems.map((item) => (
+                <div key={item.id} className="flex justify-between mb-2">
+                  <div>
+                    <p className="text-[13px] font-semibold text-ink">{item.itemName}</p>
+                    <p className="text-[11px] text-slate-500">{[item.choice, item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ")}</p>
+                  </div>
+                  <p className="text-[13px] font-semibold text-ink">{fmt(item.lineTotalCents)}</p>
+                </div>
+              ))}
+              <div className="border-t border-slate-100 pt-3 mt-1 flex justify-between">
+                <span className="text-[13px] font-semibold">Order total</span>
+                <span className="text-[18px] font-semibold text-ink">{fmt(totalCents)}</span>
+              </div>
+            </div>
+            <div className="p-4">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Contact</p>
+              <p className="text-[13px] font-semibold text-ink">{parentName}</p>
+              <p className="text-[12px] text-slate-500">{parentEmail}</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-[12px] text-amber-900 flex gap-2">
+            <span>🔒</span>
+            <span>You'll be redirected to <strong>Stripe</strong> for secure payment. Confirmation sent by email.</span>
+          </div>
+
+          {error && <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+
+          <button type="button" onClick={handleSubmit}
+            className="w-full py-3.5 rounded-xl bg-brand-700 text-white text-[14px] font-semibold">
+            Pay with Stripe →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

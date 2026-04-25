@@ -111,4 +111,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       ? [
           Google({
             clientId: env.GOOGLE_CLIENT_ID,
-            clientSecret: env.GOOGLE
+            clientSecret: env.GOOGLE_CLIENT_SECRET
+          })
+        ]
+      : []),
+    ...(env.AUTH_APPLE_ID && env.AUTH_APPLE_SECRET
+      ? [
+          Apple({
+            clientId: env.AUTH_APPLE_ID,
+            clientSecret: env.AUTH_APPLE_SECRET
+          })
+        ]
+      : []),
+    // Mobile app token exchange — accepts a short-lived JWT issued by
+    // /api/mobile/auth/[provider] and converts it to a full NextAuth session.
+    Credentials({
+      id: "mobile-token",
+      name: "Mobile Token",
+      credentials: { token: { type: "text" } },
+      async authorize(credentials) {
+        if (!credentials?.token) return null;
+        try {
+          const payload = await verifyMobileToken(String(credentials.token));
+          return {
+            id: payload.parentUserId,
+            email: payload.email,
+            name: payload.name ?? null,
+            parentUserId: payload.parentUserId
+          };
+        } catch {
+          return null;
+        }
+      }
+    })
+  ]
+});

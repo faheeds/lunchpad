@@ -21,4 +21,10 @@ export default function ParentSignInPage() {
               Save children, view order history, and plan weekly lunches in one place.
             </p>
           </div>
-          <ParentSignInButtons googleEnabled={googleEnabled} apple
+          <ParentSignInButtons googleEnabled={googleEnabled} appleEnabled={appleEnabled} />
+        </div>
+      </main>
+      <AppNav />
+    </>
+  );
+}
