@@ -181,9 +181,21 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
 
   const totalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
 
+  // Derive restaurantId from the first school on the plan (all plans for one
+  // parent within a weekly checkout belong to one restaurant).
+  const firstSchool = eligibleDeliveryDates[0]?.school;
+  const restaurantId = firstSchool
+    ? (await prisma.school.findUnique({ where: { id: firstSchool.id }, select: { restaurantId: true } }))?.restaurantId
+    : null;
+
+  if (!restaurantId) {
+    throw new Error("Could not determine restaurant for weekly checkout.");
+  }
+
   return prisma.weeklyCheckoutBatch.create({
     data: {
       parentUserId,
+      restaurantId,
       totalCents,
       items: {
         create: batchItems
@@ -253,6 +265,7 @@ export async function markWeeklyBatchPaidByCheckoutSession(
       const order = await tx.order.create({
         data: {
           orderNumber: buildOrderNumber(item.deliveryDate.school.timezone),
+          restaurantId: batch.restaurantId,
           schoolId: item.schoolId,
           deliveryDateId: item.deliveryDateId,
           studentId: student.id,

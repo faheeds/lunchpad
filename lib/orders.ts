@@ -168,6 +168,7 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
     const order = await tx.order.create({
       data: {
         orderNumber,
+        restaurantId: deliveryDate.school.restaurantId,
         schoolId: parsed.schoolId,
         deliveryDateId: parsed.deliveryDateId,
         studentId: student.id,
