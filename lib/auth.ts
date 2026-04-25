@@ -26,6 +26,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (isAdminCredentialsLogin) {
         token.role = "ADMIN";
         token.adminUserId = user.id;
+        token.restaurantId = (user as { restaurantId?: string }).restaurantId;
         token.parentUserId = undefined;
       }
 
@@ -68,6 +69,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = (token.role as string | undefined) ?? "PARENT";
         session.user.parentUserId = token.parentUserId as string | undefined;
         session.user.adminUserId = token.adminUserId as string | undefined;
+        session.user.restaurantId = token.restaurantId as string | undefined;
       }
       return session;
     }
@@ -78,7 +80,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: "Admin Email & Password",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        restaurantId: { label: "Restaurant ID", type: "text" }
       },
       async authorize(credentials) {
         const parsed = adminLoginSchema.safeParse(credentials);
@@ -86,8 +89,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const admin = await prisma.adminUser.findUnique({
-          where: { email: parsed.data.email.toLowerCase() }
+        // restaurantId is passed from the login form (resolved from subdomain)
+        const restaurantId = String((credentials as Record<string, unknown>).restaurantId ?? "");
+
+        const admin = await prisma.adminUser.findFirst({
+          where: {
+            email: parsed.data.email.toLowerCase(),
+            ...(restaurantId ? { restaurantId } : {}),
+          }
         });
 
         if (!admin) {
@@ -103,7 +112,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: admin.id,
           email: admin.email,
           name: admin.name,
-          role: "ADMIN"
+          role: "ADMIN",
+          restaurantId: admin.restaurantId,
         };
       }
     }),

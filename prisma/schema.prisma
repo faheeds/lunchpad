@@ -7,8 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum AdminRole {
+  OWNER
   ADMIN
+  STAFF
 }
 
 enum MenuOptionType {
@@ -41,28 +45,76 @@ enum WeeklyCheckoutStatus {
   CANCELLED
 }
 
-model AdminUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         UserRole @default(ADMIN)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+enum RestaurantPlan {
+  FREE
+  STARTER
+  PRO
 }
 
+// ─── RESTAURANT (root tenant) ─────────────────────────────────────────────────
+
+model Restaurant {
+  id                       String         @id @default(cuid())
+  name                     String
+  slug                     String         @unique   // subdomain: {slug}.lunchpad.us
+  timezone                 String         @default("America/Los_Angeles")
+  logoUrl                  String?
+  primaryColor             String?        @default("#c41230")
+  contactEmail             String?
+  contactPhone             String?
+  isActive                 Boolean        @default(true)
+
+  // Stripe Connect
+  stripeAccountId          String?        @unique
+  stripeOnboardingComplete Boolean        @default(false)
+
+  // Subscription
+  plan                     RestaurantPlan @default(FREE)
+  trialEndsAt              DateTime?
+
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+
+  admins                   AdminUser[]
+  schools                  School[]
+  menuItems                MenuItem[]
+  orders                   Order[]
+  weeklyCheckoutBatches    WeeklyCheckoutBatch[]
+  processedWebhookEvents   ProcessedWebhookEvent[]
+}
+
+// ─── ADMIN USERS ─────────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String     @id @default(cuid())
+  restaurantId String
+  email        String
+  name         String
+  passwordHash String
+  role         AdminRole  @default(ADMIN)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, email])
+}
+
+// ─── SCHOOLS (locations within a restaurant) ─────────────────────────────────
+
 model School {
-  id                   String         @id @default(cuid())
+  id                   String             @id @default(cuid())
+  restaurantId         String
   name                 String
-  slug                 String         @unique
-  timezone             String         @default("America/Los_Angeles")
-  defaultCutoffHour    Int            @default(17)
-  defaultCutoffMinute  Int            @default(0)
-  collectTeacher       Boolean        @default(true)
-  collectClassroom     Boolean        @default(true)
-  isActive             Boolean        @default(true)
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  slug                 String
+  timezone             String             @default("America/Los_Angeles")
+  defaultCutoffHour    Int                @default(17)
+  defaultCutoffMinute  Int                @default(0)
+  collectTeacher       Boolean            @default(true)
+  collectClassroom     Boolean            @default(true)
+  isActive             Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  restaurant           Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   deliveryDates        DeliveryDate[]
   menuAvailability     DeliveryMenuItem[]
   orders               Order[]
@@ -70,40 +122,50 @@ model School {
   parentChildren       ParentChild[]
   weeklyPlans          WeeklyLunchPlan[]
   weeklyCheckoutItems  WeeklyCheckoutBatchItem[]
+
+  @@unique([restaurantId, slug])
 }
 
+// ─── DELIVERY DATES ──────────────────────────────────────────────────────────
+
 model DeliveryDate {
-  id                String              @id @default(cuid())
-  schoolId          String
-  deliveryDate      DateTime
-  cutoffAt          DateTime
-  orderingOpen      Boolean             @default(true)
-  notes             String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  school            School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  orders            Order[]
-  menuAvailability  DeliveryMenuItem[]
+  id                  String               @id @default(cuid())
+  schoolId            String
+  deliveryDate        DateTime
+  cutoffAt            DateTime
+  orderingOpen        Boolean              @default(true)
+  notes               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  school              School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  orders              Order[]
+  menuAvailability    DeliveryMenuItem[]
   weeklyCheckoutItems WeeklyCheckoutBatchItem[]
 
   @@unique([schoolId, deliveryDate])
 }
 
+// ─── MENU ─────────────────────────────────────────────────────────────────────
+
 model MenuItem {
-  id             String              @id @default(cuid())
-  name           String
-  slug           String              @unique
-  description    String?
-  imageUrl       String?
-  basePriceCents Int
-  isActive       Boolean             @default(true)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  options        MenuOption[]
-  orderItems     OrderItem[]
-  availability   DeliveryMenuItem[]
-  weeklyPlans    WeeklyLunchPlan[]
+  id                  String             @id @default(cuid())
+  restaurantId        String
+  name                String
+  slug                String
+  description         String?
+  imageUrl            String?
+  basePriceCents      Int
+  isActive            Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  restaurant          Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  options             MenuOption[]
+  orderItems          OrderItem[]
+  availability        DeliveryMenuItem[]
+  weeklyPlans         WeeklyLunchPlan[]
   weeklyCheckoutItems WeeklyCheckoutBatchItem[]
+
+  @@unique([restaurantId, slug])
 }
 
 model DeliveryMenuItem {
@@ -122,159 +184,171 @@ model DeliveryMenuItem {
 }
 
 model MenuOption {
-  id             String         @id @default(cuid())
-  menuItemId     String
-  name           String
-  optionType     MenuOptionType
-  priceDeltaCents Int          @default(0)
-  isDefault      Boolean        @default(false)
-  sortOrder      Int            @default(0)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  menuItem       MenuItem       @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  id              String         @id @default(cuid())
+  menuItemId      String
+  name            String
+  optionType      MenuOptionType
+  priceDeltaCents Int            @default(0)
+  isDefault       Boolean        @default(false)
+  sortOrder       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  menuItem        MenuItem       @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 }
+
+// ─── STUDENTS & PARENTS ───────────────────────────────────────────────────────
 
 model Student {
-  id                String   @id @default(cuid())
-  schoolId          String
-  studentName       String
-  grade             String
-  teacherName       String?
-  classroom         String?
-  allergyNotes      String?
-  dietaryNotes      String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  orders            Order[]
-  school            School   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  id           String   @id @default(cuid())
+  schoolId     String
+  studentName  String
+  grade        String
+  teacherName  String?
+  classroom    String?
+  allergyNotes String?
+  dietaryNotes String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  orders       Order[]
 }
 
+// ParentUser is global — one account works across restaurants.
+// Their children are scoped to schools (which belong to restaurants).
 model ParentUser {
-  id           String           @id @default(cuid())
-  email        String           @unique
-  name         String?
-  image        String?
-  provider     String?
-  providerId   String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  children     ParentChild[]
-  orders       Order[]
-  weeklyPlans  WeeklyLunchPlan[]
+  id                    String                @id @default(cuid())
+  email                 String                @unique
+  name                  String?
+  image                 String?
+  provider              String?
+  providerId            String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  children              ParentChild[]
+  orders                Order[]
+  weeklyPlans           WeeklyLunchPlan[]
   weeklyCheckoutBatches WeeklyCheckoutBatch[]
 }
 
 model ParentChild {
-  id             String           @id @default(cuid())
-  parentUserId   String
-  schoolId       String
-  studentName    String
-  grade          String
-  teacherName    String?
-  classroom      String?
-  allergyNotes   String?
-  dietaryNotes   String?
-  archivedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  parentUser     ParentUser       @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
-  school         School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
-  orders         Order[]
-  weeklyPlans    WeeklyLunchPlan[]
+  id                  String                  @id @default(cuid())
+  parentUserId        String
+  schoolId            String
+  studentName         String
+  grade               String
+  teacherName         String?
+  classroom           String?
+  allergyNotes        String?
+  dietaryNotes        String?
+  archivedAt          DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  parentUser          ParentUser              @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  school              School                  @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  orders              Order[]
+  weeklyPlans         WeeklyLunchPlan[]
   weeklyCheckoutItems WeeklyCheckoutBatchItem[]
 }
 
+// ─── WEEKLY PLANS ─────────────────────────────────────────────────────────────
+
 model WeeklyLunchPlan {
-  id             String       @id @default(cuid())
-  parentUserId   String
-  parentChildId  String
-  schoolId       String
-  weekday        Int
-  menuItemId     String
-  choice         String?
-  additions      String[]
-  removals       String[]
-  sortOrder      Int          @default(0)
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  parentUser     ParentUser   @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
-  parentChild    ParentChild  @relation(fields: [parentChildId], references: [id], onDelete: Cascade)
-  school         School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
-  menuItem       MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  id            String     @id @default(cuid())
+  parentUserId  String
+  parentChildId String
+  schoolId      String
+  weekday       Int
+  menuItemId    String
+  choice        String?
+  additions     String[]
+  removals      String[]
+  sortOrder     Int        @default(0)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  parentUser    ParentUser  @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  parentChild   ParentChild @relation(fields: [parentChildId], references: [id], onDelete: Cascade)
+  school        School      @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  menuItem      MenuItem    @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
 
   @@index([parentUserId, weekday])
   @@index([parentChildId, weekday, sortOrder])
 }
 
 model WeeklyCheckoutBatch {
-  id                 String                  @id @default(cuid())
-  parentUserId       String
-  status             WeeklyCheckoutStatus    @default(PENDING)
-  checkoutSessionId  String?                 @unique
-  paymentIntentId    String?                 @unique
-  totalCents         Int
-  paidAt             DateTime?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  parentUser         ParentUser              @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
-  items              WeeklyCheckoutBatchItem[]
+  id                String               @id @default(cuid())
+  parentUserId      String
+  restaurantId      String
+  status            WeeklyCheckoutStatus @default(PENDING)
+  checkoutSessionId String?              @unique
+  paymentIntentId   String?              @unique
+  totalCents        Int
+  paidAt            DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  parentUser        ParentUser           @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  restaurant        Restaurant           @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  items             WeeklyCheckoutBatchItem[]
 }
 
 model WeeklyCheckoutBatchItem {
-  id                     String              @id @default(cuid())
-  weeklyCheckoutBatchId  String
-  parentChildId          String
-  schoolId               String
-  deliveryDateId         String
-  menuItemId             String
-  choice                 String?
-  additions              String[]
-  removals               String[]
-  itemNameSnapshot       String
-  basePriceCents         Int
-  lineTotalCents         Int
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-  weeklyCheckoutBatch    WeeklyCheckoutBatch @relation(fields: [weeklyCheckoutBatchId], references: [id], onDelete: Cascade)
-  parentChild            ParentChild         @relation(fields: [parentChildId], references: [id], onDelete: Restrict)
-  school                 School              @relation(fields: [schoolId], references: [id], onDelete: Restrict)
-  deliveryDate           DeliveryDate        @relation(fields: [deliveryDateId], references: [id], onDelete: Restrict)
-  menuItem               MenuItem            @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  id                    String              @id @default(cuid())
+  weeklyCheckoutBatchId String
+  parentChildId         String
+  schoolId              String
+  deliveryDateId        String
+  menuItemId            String
+  choice                String?
+  additions             String[]
+  removals              String[]
+  itemNameSnapshot      String
+  basePriceCents        Int
+  lineTotalCents        Int
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  weeklyCheckoutBatch   WeeklyCheckoutBatch @relation(fields: [weeklyCheckoutBatchId], references: [id], onDelete: Cascade)
+  parentChild           ParentChild         @relation(fields: [parentChildId], references: [id], onDelete: Restrict)
+  school                School              @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  deliveryDate          DeliveryDate        @relation(fields: [deliveryDateId], references: [id], onDelete: Restrict)
+  menuItem              MenuItem            @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
 }
 
+// ─── ORDERS ───────────────────────────────────────────────────────────────────
+
 model Order {
-  id                   String       @id @default(cuid())
-  orderNumber          String       @unique
-  schoolId             String
-  deliveryDateId       String
-  studentId            String
-  parentUserId         String?
-  parentChildId        String?
-  parentName           String
-  parentEmail          String
-  specialInstructions  String?
-  subtotalCents        Int
-  totalCents           Int
-  currency             String       @default("usd")
-  status               OrderStatus  @default(PENDING)
-  paidAt               DateTime?
-  refundedAt           DateTime?
-  cancelledAt          DateTime?
-  archivedAt           DateTime?
-  confirmationSentAt   DateTime?
-  checkoutSessionId    String?      @unique
-  paymentIntentId      String?      @unique
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  school               School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
-  deliveryDate         DeliveryDate @relation(fields: [deliveryDateId], references: [id], onDelete: Restrict)
-  student              Student      @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  parentUser           ParentUser?  @relation(fields: [parentUserId], references: [id], onDelete: SetNull)
-  parentChild          ParentChild? @relation(fields: [parentChildId], references: [id], onDelete: SetNull)
-  items                OrderItem[]
-  payment              Payment?
-  emailLogs            EmailLog[]
+  id                  String       @id @default(cuid())
+  orderNumber         String       @unique
+  restaurantId        String
+  schoolId            String
+  deliveryDateId      String
+  studentId           String
+  parentUserId        String?
+  parentChildId       String?
+  parentName          String
+  parentEmail         String
+  specialInstructions String?
+  subtotalCents       Int
+  totalCents          Int
+  currency            String       @default("usd")
+  status              OrderStatus  @default(PENDING)
+  paidAt              DateTime?
+  refundedAt          DateTime?
+  cancelledAt         DateTime?
+  archivedAt          DateTime?
+  confirmationSentAt  DateTime?
+  checkoutSessionId   String?      @unique
+  paymentIntentId     String?      @unique
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  restaurant          Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  school              School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  deliveryDate        DeliveryDate @relation(fields: [deliveryDateId], references: [id], onDelete: Restrict)
+  student             Student      @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  parentUser          ParentUser?  @relation(fields: [parentUserId], references: [id], onDelete: SetNull)
+  parentChild         ParentChild? @relation(fields: [parentChildId], references: [id], onDelete: SetNull)
+  items               OrderItem[]
+  payment             Payment?
+  emailLogs           EmailLog[]
 }
 
 model OrderItem {
@@ -311,24 +385,28 @@ model Payment {
   order                 Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
+// ─── EMAIL & WEBHOOKS ─────────────────────────────────────────────────────────
+
 model EmailLog {
-  id            String      @id @default(cuid())
-  orderId       String
-  emailType     String
-  recipient     String
-  providerId    String?
-  status        EmailStatus
-  errorMessage  String?
-  sentAt        DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id           String      @id @default(cuid())
+  orderId      String
+  emailType    String
+  recipient    String
+  providerId   String?
+  status       EmailStatus
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  order        Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model ProcessedWebhookEvent {
-  id           String   @id @default(cuid())
+  id           String      @id @default(cuid())
+  restaurantId String?
   provider     String
-  eventId      String   @unique
+  eventId      String      @unique
   eventType    String
-  processedAt  DateTime @default(now())
+  processedAt  DateTime    @default(now())
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 }

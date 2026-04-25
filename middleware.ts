@@ -1,0 +1,53 @@
+import { NextRequest, NextResponse } from "next/server";
+
+// Paths that bypass restaurant resolution (public platform routes)
+const PUBLIC_PATHS = [
+  "/api/auth",
+  "/_next",
+  "/favicon.ico",
+  "/robots.txt",
+];
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Skip public paths
+  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  const host = req.headers.get("host") ?? "";
+
+  // Resolve the restaurant slug from the subdomain.
+  // In production:  medina.lunchpad.us  → slug = "medina"
+  // In development: use RESTAURANT_SLUG env var or default to "demo"
+  let restaurantSlug: string | null = null;
+
+  const rootDomain = process.env.ROOT_DOMAIN ?? "lunchpad.us";
+  const isProduction = host.endsWith(`.${rootDomain}`);
+
+  if (isProduction) {
+    restaurantSlug = host.replace(`.${rootDomain}`, "");
+  } else {
+    // Local dev: read from env or fall back to "demo"
+    restaurantSlug = process.env.RESTAURANT_SLUG ?? null;
+  }
+
+  if (!restaurantSlug) {
+    // No restaurant context — show the platform landing page
+    return NextResponse.next();
+  }
+
+  // Forward the slug via header so server components can read it
+  // without hitting the DB in middleware (avoid cold-start latency).
+  // The actual DB lookup happens in lib/restaurant.ts on first use.
+  const res = NextResponse.next();
+  res.headers.set("x-restaurant-slug", restaurantSlug);
+  return res;
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
+};

@@ -9,11 +9,13 @@ declare module "next-auth" {
       role?: string;
       parentUserId?: string;
       adminUserId?: string;
+      restaurantId?: string;
     };
   }
 
   interface User {
     role?: string;
+    restaurantId?: string;
   }
 }
 
@@ -22,5 +24,6 @@ declare module "next-auth/jwt" {
     role?: string;
     parentUserId?: string;
     adminUserId?: string;
+    restaurantId?: string;
   }
 }
