@@ -1,18 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-
-// Role hierarchy — higher index = more permissions
-export const ADMIN_ROLES = ["STAFF", "MANAGER", "OWNER"] as const;
-export type AdminRole = typeof ADMIN_ROLES[number];
-
-function roleLevel(role: string | undefined): number {
-  const idx = ADMIN_ROLES.indexOf((role ?? "") as AdminRole);
-  return idx === -1 ? -1 : idx;
-}
-
-export function hasRole(userRole: string | undefined, minRole: AdminRole): boolean {
-  return roleLevel(userRole) >= roleLevel(minRole);
-}
+export { ADMIN_ROLES, hasRole, roleLevel } from "@/lib/roles";
+export type { AdminRole } from "@/lib/roles";
 
 /**
  * Require the user to be logged in as any admin role.
@@ -29,7 +18,8 @@ export async function requireAdmin() {
 /**
  * Require a minimum admin role. Redirects to /admin/dashboard if insufficient.
  */
-export async function requireAdminRole(minRole: AdminRole): Promise<void> {
+export async function requireAdminRole(minRole: import("@/lib/roles").AdminRole): Promise<void> {
+  const { hasRole } = await import("@/lib/roles");
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/admin/login");
@@ -42,7 +32,8 @@ export async function requireAdminRole(minRole: AdminRole): Promise<void> {
 /**
  * For use in API routes — throws instead of redirecting.
  */
-export async function assertAdminApiRequest(minRole?: AdminRole): Promise<void> {
+export async function assertAdminApiRequest(minRole?: import("@/lib/roles").AdminRole): Promise<void> {
+  const { hasRole } = await import("@/lib/roles");
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") {
     throw new Error("Unauthorized");

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { hasRole, type AdminRole } from "@/lib/admin-auth";
+import { hasRole, type AdminRole } from "@/lib/roles";
 
 const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/dashboard",      label: "Dashboard", minRole: "STAFF"   },
