@@ -64,7 +64,7 @@ function hexSaturation(hex: string): number {
 // Extract CSS custom properties from :root blocks
 function extractCssVars(css: string): Record<string, string> {
   const vars: Record<string, string> = {};
-  const rootBlock = /:root\s*\{([^}]+)\}/gs;
+  const rootBlock = /:root\s*\{([^}]+)\}/g;
   let m;
   while ((m = rootBlock.exec(css)) !== null) {
     const varPat = /--([a-z0-9_-]+)\s*:\s*([^;}\n]+)/gi;
