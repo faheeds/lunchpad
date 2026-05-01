@@ -3,12 +3,12 @@ import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { ThemePicker } from "@/components/admin/theme-picker";
-import { DISPLAY_FONTS, BODY_FONTS } from "@/lib/fonts";
 
 export const dynamic = "force-dynamic";
 
 async function updateSettings(formData: FormData) {
   "use server";
+  let errorMsg: string | null = null;
   try {
     const restaurant = await requireRestaurant();
     await requireAdminRole("OWNER");
@@ -41,13 +41,14 @@ async function updateSettings(formData: FormData) {
       }
     });
   } catch (e: unknown) {
-    const { isRedirectError } = await import("next/dist/client/components/redirect");
-    if (isRedirectError(e)) throw e;
-    const msg = e instanceof Error ? e.message : "Something went wrong";
-    redirect(`/admin/settings?error=${encodeURIComponent(msg)}`);
-    return;
+    errorMsg = e instanceof Error ? e.message : "Something went wrong";
   }
-  redirect("/admin/settings?saved=1");
+
+  if (errorMsg) {
+    redirect(`/admin/settings?error=${encodeURIComponent(errorMsg)}`);
+  } else {
+    redirect("/admin/settings?saved=1");
+  }
 }
 
 const TIMEZONES = [
@@ -154,40 +155,15 @@ export default async function AdminSettingsPage({
             <p className="text-[11px] text-slate-400 mt-0.5">Click a preset or customize each color</p>
           </div>
           <ThemePicker
-            currentPrimary={restaurant.primaryColor    ?? "#c41230"}
-            currentAccent={restaurant.accentColor      ?? "#f59e0b"}
-            currentDark={restaurant.darkColor          ?? "#1c0505"}
+            currentPrimary={restaurant.primaryColor     ?? "#c41230"}
+            currentAccent={restaurant.accentColor       ?? "#f59e0b"}
+            currentDark={restaurant.darkColor           ?? "#1c0505"}
             currentHeroTitle={restaurant.heroTitleColor  ?? "#ffffff"}
             currentHeroAccent={restaurant.heroAccentColor ?? "#fbbf24"}
-            currentBodyText={restaurant.bodyTextColor   ?? "#1c0505"}
+            currentBodyText={restaurant.bodyTextColor    ?? "#1c0505"}
+            currentDisplayFont={restaurant.displayFont   ?? "Oswald"}
+            currentBodyFont={restaurant.bodyFont         ?? "Inter"}
           />
-        </div>
-
-        {/* ── Fonts ───────────────────────────────────────────────── */}
-        <div className="border-t border-slate-50">
-          <div className="px-4 py-3 border-b border-slate-50">
-            <p className="text-[13px] font-semibold text-ink">Fonts</p>
-          </div>
-          <div className="px-4 py-4 space-y-3">
-            <div>
-              <label className="text-[11px] text-slate-500 font-medium block mb-1">Display font <span className="text-slate-400 font-normal">(headings, buttons)</span></label>
-              <select name="displayFont" defaultValue={restaurant.displayFont ?? "Oswald"}
-                className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-                {DISPLAY_FONTS.map((f) => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[11px] text-slate-500 font-medium block mb-1">Body font <span className="text-slate-400 font-normal">(paragraphs, labels)</span></label>
-              <select name="bodyFont" defaultValue={restaurant.bodyFont ?? "Inter"}
-                className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-                {BODY_FONTS.map((f) => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
         </div>
 
         <div className="px-4 pb-4">
