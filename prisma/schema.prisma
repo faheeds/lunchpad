@@ -62,6 +62,12 @@ model Restaurant {
   primaryColor             String?        @default("#c41230")
   accentColor              String?        @default("#f59e0b")
   darkColor                String?        @default("#1c0505")
+  heroImageUrl             String?
+  heroTitleColor           String?        @default("#ffffff")
+  heroAccentColor          String?        @default("#fbbf24")
+  bodyTextColor            String?        @default("#1c0505")
+  displayFont              String?        @default("Oswald")
+  bodyFont                 String?        @default("Inter")
   contactEmail             String?
   contactPhone             String?
   isActive                 Boolean        @default(true)

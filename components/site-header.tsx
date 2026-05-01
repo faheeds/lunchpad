@@ -13,16 +13,16 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
     <header className="app-header" style={{ flexDirection: "column", padding: 0, background: "var(--dark-bg)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px" }}>
         <Link href="/" className="no-underline" onClick={() => setMenuOpen(false)}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 1, fontFamily: "var(--font-oswald)" }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 1, fontFamily: "var(--font-display)" }}>
             {restaurantName}
           </p>
-          <p style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "var(--font-oswald)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
             Hot Lunch
           </p>
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isAdmin ? (
-            <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "var(--brand-hex)", color: "white", fontFamily: "var(--font-oswald)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "var(--brand-hex)", color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Staff
             </span>
           ) : (
@@ -33,7 +33,7 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
                 alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 700, color: "white",
                 border: "1.5px solid rgba(var(--accent-rgb),0.4)", textDecoration: "none",
-                fontFamily: "var(--font-oswald)"
+                fontFamily: "var(--font-display)"
               }}>
                 SM
               </Link>
@@ -75,7 +75,7 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
               color: pathname === item.href ? "var(--accent)" : "rgba(255,255,255,0.75)",
               background: pathname === item.href ? "rgba(var(--brand-rgb),0.35)" : "transparent",
               textDecoration: "none", marginBottom: 2,
-              fontFamily: "var(--font-oswald)", textTransform: "uppercase", letterSpacing: "0.05em"
+              fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.05em"
             }}>
               {item.label}
             </Link>

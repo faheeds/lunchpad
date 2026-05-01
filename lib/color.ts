@@ -21,46 +21,54 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
-/**
- * Converts a hex color to its R,G,B components as a comma-separated string.
- * e.g. "#c41230" → "196,18,48"  (for use in rgba())
- */
 export function hexToRgbString(hex: string): string {
   const clean = hex.replace("#", "").slice(0, 6).padEnd(6, "0");
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  return `${r},${g},${b}`;
+  return [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16),
+  ].join(",");
 }
 
 /**
- * Generates a <style> tag content string injecting all theme CSS variables.
- * Covers: brand (HSL + hex + rgb), accent, dark-bg.
+ * Generates a full :root { } CSS block with all theme variables.
  */
 export function themeCssBlock(opts: {
-  primaryColor?: string | null;
-  accentColor?: string | null;
-  darkColor?: string | null;
+  primaryColor?:   string | null;
+  accentColor?:    string | null;
+  darkColor?:      string | null;
+  heroTitleColor?: string | null;
+  heroAccentColor?:string | null;
+  bodyTextColor?:  string | null;
+  displayFont?:    string | null;
+  bodyFont?:       string | null;
 }): string {
-  const primary = opts.primaryColor ?? "#c41230";
-  const accent  = opts.accentColor  ?? "#f59e0b";
-  const dark    = opts.darkColor    ?? "#1c0505";
+  const primary       = opts.primaryColor    ?? "#c41230";
+  const accent        = opts.accentColor     ?? "#f59e0b";
+  const dark          = opts.darkColor       ?? "#1c0505";
+  const heroTitle     = opts.heroTitleColor  ?? "#ffffff";
+  const heroAccent    = opts.heroAccentColor ?? "#fbbf24";
+  const bodyText      = opts.bodyTextColor   ?? "#1c0505";
+  const displayFamily = opts.displayFont     ?? "Oswald";
+  const bodyFamily    = opts.bodyFont        ?? "Inter";
 
   const { h, s } = hexToHsl(primary);
-  const brandRgb  = hexToRgbString(primary);
-  const accentRgb = hexToRgbString(accent);
-  const darkRgb   = hexToRgbString(dark);
 
   return [
     ":root {",
     `  --brand-h: ${h};`,
     `  --brand-s: ${s}%;`,
     `  --brand-hex: ${primary};`,
-    `  --brand-rgb: ${brandRgb};`,
+    `  --brand-rgb: ${hexToRgbString(primary)};`,
     `  --accent: ${accent};`,
-    `  --accent-rgb: ${accentRgb};`,
+    `  --accent-rgb: ${hexToRgbString(accent)};`,
     `  --dark-bg: ${dark};`,
-    `  --dark-rgb: ${darkRgb};`,
+    `  --dark-rgb: ${hexToRgbString(dark)};`,
+    `  --hero-title: ${heroTitle};`,
+    `  --hero-accent: ${heroAccent};`,
+    `  --body-text: ${bodyText};`,
+    `  --font-display: '${displayFamily}', sans-serif;`,
+    `  --font-body: '${bodyFamily}', sans-serif;`,
     "}",
   ].join("\n");
 }

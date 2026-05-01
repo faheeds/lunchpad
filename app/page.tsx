@@ -59,7 +59,7 @@ export default async function HomePage() {
         {/* ── Hero ────────────────────────────────────────────────── */}
         <div className="relative overflow-hidden" style={{ height: 290 }}>
           <Image
-            src="/food/hero.jpeg"
+            src={restaurant?.heroImageUrl ?? "/food/hero.jpeg"}
             alt="Local Bigger Burger spread"
             fill
             style={{ objectFit: "cover", objectPosition: "center top" }}
@@ -73,15 +73,15 @@ export default async function HomePage() {
           <div className="absolute inset-0 flex flex-col justify-end" style={{ padding: "0 20px 0" }}>
             <p style={{
               fontSize: 9, fontWeight: 700, letterSpacing: "0.28em",
-              textTransform: "uppercase", color: "var(--accent)",
-              marginBottom: 6, fontFamily: "var(--font-oswald)"
+              textTransform: "uppercase", color: "var(--hero-accent)",
+              marginBottom: 6, fontFamily: "var(--font-display)"
             }}>
               ★ {restaurantName} ★
             </p>
             <h1 style={{
               fontSize: 38, fontWeight: 700, lineHeight: 1.0,
               color: "white", marginBottom: 10,
-              fontFamily: "var(--font-oswald)",
+              fontFamily: "var(--font-display)",
               textTransform: "uppercase", letterSpacing: "0.01em"
             }}>
               <span style={{ color: "var(--accent)" }}>Hot Lunch</span>
@@ -94,7 +94,7 @@ export default async function HomePage() {
                 padding: "12px 22px", borderRadius: 100,
                 fontSize: 13, fontWeight: 700, textDecoration: "none",
                 background: "var(--brand-hex)", color: "white",
-                fontFamily: "var(--font-oswald)",
+                fontFamily: "var(--font-display)",
                 textTransform: "uppercase", letterSpacing: "0.08em",
                 boxShadow: "0 4px 16px rgba(var(--brand-rgb),0.45)"
               }}>
@@ -104,7 +104,7 @@ export default async function HomePage() {
                 padding: "12px 20px", borderRadius: 100,
                 fontSize: 13, fontWeight: 700, textDecoration: "none",
                 background: "var(--accent)", color: "var(--dark-bg)",
-                fontFamily: "var(--font-oswald)",
+                fontFamily: "var(--font-display)",
                 textTransform: "uppercase", letterSpacing: "0.08em",
                 boxShadow: "0 4px 16px rgba(var(--accent-rgb),0.40)"
               }}>
@@ -125,7 +125,7 @@ export default async function HomePage() {
           <p style={{
             fontSize: 10, fontWeight: 700, letterSpacing: "0.22em",
             textTransform: "uppercase", color: "var(--brand-hex)", marginBottom: 13,
-            fontFamily: "var(--font-oswald)"
+            fontFamily: "var(--font-display)"
           }}>
             On the Menu
           </p>
@@ -168,12 +168,12 @@ export default async function HomePage() {
                   </div>
                   <p style={{
                     fontSize: 13, fontWeight: 700, color: "var(--dark-bg)",
-                    marginBottom: 3, fontFamily: "var(--font-oswald)",
+                    marginBottom: 3, fontFamily: "var(--font-display)",
                     textTransform: "uppercase", letterSpacing: "0.03em"
                   }}>
                     {f.text}
                   </p>
-                  <p style={{ fontSize: 11, color: "#78716c", lineHeight: 1.4 }}>
+                  <p style={{ fontSize: 11, color: "var(--body-text,#78716c)", lineHeight: 1.4 }}>
                     {f.sub}
                   </p>
                 </div>
@@ -194,7 +194,7 @@ export default async function HomePage() {
           <p style={{
             fontSize: 10, fontWeight: 700, letterSpacing: "0.22em",
             textTransform: "uppercase", color: "var(--brand-hex)", marginBottom: 13,
-            fontFamily: "var(--font-oswald)"
+            fontFamily: "var(--font-display)"
           }}>
             How it works
           </p>
@@ -217,7 +217,7 @@ export default async function HomePage() {
                 }}>
                   <span style={{
                     fontSize: 14, fontWeight: 700, color: "white",
-                    fontFamily: "var(--font-oswald)"
+                    fontFamily: "var(--font-display)"
                   }}>
                     {step.n}
                   </span>
@@ -225,12 +225,12 @@ export default async function HomePage() {
                 <div>
                   <p style={{
                     fontSize: 14, fontWeight: 700, color: "var(--dark-bg)",
-                    marginBottom: 3, fontFamily: "var(--font-oswald)",
+                    marginBottom: 3, fontFamily: "var(--font-display)",
                     textTransform: "uppercase", letterSpacing: "0.03em"
                   }}>
                     {step.title}
                   </p>
-                  <p style={{ fontSize: 12, color: "#78716c", lineHeight: 1.55 }}>
+                  <p style={{ fontSize: 12, color: "var(--body-text,#78716c)", lineHeight: 1.55 }}>
                     {step.body}
                   </p>
                 </div>
