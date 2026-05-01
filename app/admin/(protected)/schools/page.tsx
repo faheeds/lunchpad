@@ -115,4 +115,11 @@ export default async function AdminSchoolsPage() {
                     : "border-brand-200 text-brand-700 hover:bg-brand-50"
                 }`}>
                 {school.isActive ? "Deactivate" : "Activate"}
-       
+              </button>
+            </form>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

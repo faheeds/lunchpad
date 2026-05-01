@@ -144,4 +144,9 @@ export default async function AdminReportsPage({
             ))}
           </div>
         ) : (
-          <p className="px-4 py-4 text-[12px] text-slate-400"
+          <p className="px-4 py-4 text-[12px] text-slate-400">No item sales for current filters.</p>
+        )}
+      </div>
+    </div>
+  );
+}

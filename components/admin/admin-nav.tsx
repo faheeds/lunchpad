@@ -42,4 +42,25 @@ export function AdminNav({ adminRole }: { adminRole: string }) {
           </div>
           <button type="button" onClick={() => signOut({ callbackUrl: "/admin/login" })}
             className="text-[11px] text-slate-500 border border-slate-200 rounded-full px-3 py-1 hover:bg-slate-50 transition flex items-center gap-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
+        <div className="flex overflow-x-auto gap-0.5 py-1" style={{ scrollbarWidth: "none" }}>
+          {links.map((link) => {
+            const active = pathname === link.href;
+            return (
+              <Link key={link.href} href={link.href}
+                className="flex-shrink-0 px-3 py-1.5 rounded-lg text-[12px] no-underline transition whitespace-nowrap"
+                style={{ background: active ? "#f0fdf4" : "transparent", color: active ? "#15803d" : "#64748b", fontWeight: active ? 600 : 400 }}>
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </header>
+  );
+}

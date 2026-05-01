@@ -347,4 +347,12 @@ export default async function AdminMenuPage() {
                       )}
                     </div>
                   </details>
-             
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

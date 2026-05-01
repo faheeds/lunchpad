@@ -7,4 +7,9 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
   return (
     <div className="min-h-screen bg-slate-50">
       <AdminNav adminRole={adminRole} />
-      <d
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        {children}
+      </div>
+    </div>
+  );
+}

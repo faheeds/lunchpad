@@ -148,4 +148,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const payload = await verifyMobileToken(String(credentials.token));
           return {
             id: payload.parentUserId,
-      
+            email: payload.email,
+            name: payload.name ?? null,
+            parentUserId: payload.parentUserId
+          };
+        } catch {
+          return null;
+        }
+      }
+    })
+  ]
+});

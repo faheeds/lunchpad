@@ -238,4 +238,11 @@ export default async function DeliveryDatesPage() {
                   <p className="text-[11px] text-slate-400">{formatInTimeZone(date.deliveryDate, date.school.timezone, "EEE, MMM d yyyy")}</p>
                 </div>
                 <span className="text-[10px] text-slate-400">{date.menuAvailability.length} items</span>
- 
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
