@@ -27,6 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = "ADMIN";
         token.adminUserId = user.id;
         token.restaurantId = (user as { restaurantId?: string }).restaurantId;
+        token.adminRole = (user as { adminRole?: string }).adminRole;
         token.parentUserId = undefined;
       }
 
@@ -70,6 +71,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.parentUserId = token.parentUserId as string | undefined;
         session.user.adminUserId = token.adminUserId as string | undefined;
         session.user.restaurantId = token.restaurantId as string | undefined;
+        session.user.adminRole = token.adminRole as string | undefined;
       }
       return session;
     }
@@ -113,6 +115,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: admin.email,
           name: admin.name,
           role: "ADMIN",
+          adminRole: admin.role, // OWNER | MANAGER | STAFF
           restaurantId: admin.restaurantId,
         };
       }
