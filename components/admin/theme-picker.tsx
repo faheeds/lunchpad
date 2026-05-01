@@ -15,6 +15,8 @@ interface Colors {
   bodyFont:        string;
 }
 
+type ExtractType = "colors" | "fonts" | "both";
+
 export function ThemePicker({
   currentPrimary,
   currentAccent,
@@ -45,13 +47,14 @@ export function ThemePicker({
     bodyFont:        currentBodyFont,
   });
 
-  const [extractUrl, setExtractUrl] = useState("");
-  const [extracting, setExtracting] = useState(false);
-  const [extractMsg, setExtractMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [extractUrl, setExtractUrl]   = useState("");
+  const [extractType, setExtractType] = useState<ExtractType>("both");
+  const [extracting, setExtracting]   = useState(false);
+  const [extractMsg, setExtractMsg]   = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  const [aiDesc, setAiDesc]   = useState("");
+  const [aiDesc, setAiDesc]       = useState("");
   const [suggesting, setSuggesting] = useState(false);
-  const [aiMsg, setAiMsg]     = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [aiMsg, setAiMsg]         = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   function applyColors(partial: Partial<Colors>) {
     setColors((prev) => ({ ...prev, ...partial }));
@@ -69,15 +72,32 @@ export function ThemePicker({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Extraction failed");
-      applyColors({
-        darkColor:    data.darkColor    ?? colors.darkColor,
-        primaryColor: data.primaryColor ?? colors.primaryColor,
-        accentColor:  data.accentColor  ?? colors.accentColor,
-        ...(data.displayFont ? { displayFont: data.displayFont } : {}),
-        ...(data.bodyFont    ? { bodyFont:    data.bodyFont    } : {}),
-      });
-      const fontNote = data.fontsFound?.length ? ` Fonts found: ${data.fontsFound.join(", ")}.` : "";
-      setExtractMsg({ type: "ok", text: `Colors extracted.${fontNote}` });
+
+      const applyColorsOnly = extractType === "colors";
+      const applyFontsOnly  = extractType === "fonts";
+      const applyBoth       = extractType === "both";
+
+      const update: Partial<Colors> = {};
+      if (applyColorsOnly || applyBoth) {
+        if (data.darkColor)    update.darkColor    = data.darkColor;
+        if (data.primaryColor) update.primaryColor = data.primaryColor;
+        if (data.accentColor)  update.accentColor  = data.accentColor;
+      }
+      if (applyFontsOnly || applyBoth) {
+        if (data.displayFont) update.displayFont = data.displayFont;
+        if (data.bodyFont)    update.bodyFont    = data.bodyFont;
+      }
+      applyColors(update);
+
+      const parts: string[] = [];
+      if ((applyColorsOnly || applyBoth) && (data.darkColor || data.primaryColor || data.accentColor)) {
+        parts.push("colors extracted");
+      }
+      if ((applyFontsOnly || applyBoth) && data.fontsFound?.length) {
+        parts.push(`fonts found: ${data.fontsFound.join(", ")}`);
+      }
+      const msg = parts.length ? parts.join(" · ") : "Nothing matched — try a different site";
+      setExtractMsg({ type: parts.length ? "ok" : "err", text: msg.charAt(0).toUpperCase() + msg.slice(1) + "." });
     } catch (e) {
       setExtractMsg({ type: "err", text: e instanceof Error ? e.message : "Failed" });
     } finally {
@@ -130,6 +150,12 @@ export function ThemePicker({
     );
   }
 
+  const typeOptions: { value: ExtractType; label: string }[] = [
+    { value: "colors", label: "Colors only" },
+    { value: "fonts",  label: "Fonts only"  },
+    { value: "both",   label: "Colors & fonts" },
+  ];
+
   return (
     <div className="px-4 py-4 space-y-5">
 
@@ -140,6 +166,20 @@ export function ThemePicker({
           <p className="text-[10px] text-slate-400">Paste any URL — we'll pull its colors & fonts</p>
         </div>
         <div className="p-3 space-y-2">
+          {/* What to extract */}
+          <div className="flex gap-1.5">
+            {typeOptions.map((opt) => (
+              <button key={opt.value} type="button"
+                onClick={() => setExtractType(opt.value)}
+                className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold border transition ${
+                  extractType === opt.value
+                    ? "bg-slate-800 text-white border-slate-800"
+                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-400"
+                }`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <div className="flex gap-2">
             <input type="url" value={extractUrl} onChange={(e) => setExtractUrl(e.target.value)}
               placeholder="https://yourwebsite.com"

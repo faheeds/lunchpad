@@ -65,9 +65,9 @@ export default async function HomePage() {
             style={{ objectFit: "cover", objectPosition: "center top" }}
             priority
           />
-          {/* Dark red gradient overlay */}
+          {/* Gradient overlay — always dark-to-clear so the image stays visible */}
           <div className="absolute inset-0" style={{
-            background: "linear-gradient(170deg, rgba(var(--dark-rgb),0.30) 0%, rgba(var(--dark-rgb),0.92) 75%)"
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.18) 35%, rgba(var(--dark-rgb),0.72) 100%)"
           }} />
 
           <div className="absolute inset-0 flex flex-col justify-end" style={{ padding: "0 20px 0" }}>
