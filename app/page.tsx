@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { prisma } from "@/lib/db";
 import { getCurrentRestaurant } from "@/lib/restaurant";
@@ -53,7 +53,7 @@ export default async function HomePage() {
   const stripItems = [...pinned, ...rest].map((i) => ({ src: i.imageUrl!, alt: i.name }));
   return (
     <>
-      <SiteHeader />
+      <SiteHeaderServer />
       <main className="app-content">
 
         {/* ── Hero ────────────────────────────────────────────────── */}

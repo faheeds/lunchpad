@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 
-export function SiteHeader() {
+export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: string }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -14,10 +14,10 @@ export function SiteHeader() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px" }}>
         <Link href="/" className="no-underline" onClick={() => setMenuOpen(false)}>
           <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#f59e0b", marginBottom: 1, fontFamily: "var(--font-oswald)" }}>
-            Local Bigger Burger
+            {restaurantName}
           </p>
           <p style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "var(--font-oswald)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Medina Academy Hot Lunch
+            Hot Lunch
           </p>
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

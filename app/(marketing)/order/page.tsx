@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { requireRestaurant } from "@/lib/restaurant";
 import { getWeekdayNumber } from "@/lib/weekly-week";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { OrderForm } from "@/components/forms/order-form";
 
@@ -84,7 +84,7 @@ export default async function OrderPage({
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeaderServer />
       <main className="app-content">
         <div className="px-4 py-4">
           {deliveryDates.length ? (

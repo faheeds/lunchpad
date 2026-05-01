@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentRestaurant } from "@/lib/restaurant";
 import { Resend } from "resend";
 import { env } from "@/lib/env";
 import { z } from "zod";
@@ -28,6 +29,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: first }, { status: 400 });
   }
 
+  const restaurant = await getCurrentRestaurant();
+  const restaurantName = restaurant?.name ?? "Hot Lunch";
   const { name, phone, email, feedbackType, orderNumber, message } = parsed.data;
 
   const typeLabel = feedbackType === "order_issue" ? "Order Issue" : "General Feedback";
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
     <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #1c0505;">
       <div style="background: #1c0505; padding: 20px 24px; border-radius: 12px 12px 0 0;">
         <p style="color: #f59e0b; font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 4px;">
-          Medina Academy Hot Lunch
+          ${restaurantName}
         </p>
         <h1 style="color: white; font-size: 20px; font-weight: 700; margin: 0;">New Contact Submission</h1>
       </div>

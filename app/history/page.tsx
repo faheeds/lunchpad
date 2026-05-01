@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { requireParent } from "@/lib/parent-auth";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import Link from "next/link";
 
@@ -29,7 +29,7 @@ export default async function HistoryPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeaderServer />
       <main className="app-content pb-4">
         <div className="px-4 py-4">
           <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700 mb-0.5">Orders</p>

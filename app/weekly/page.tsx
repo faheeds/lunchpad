@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireParent } from "@/lib/parent-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { WeeklyPlanPlanner } from "@/components/account/weekly-plan-planner";
 import { WeeklyCheckoutButton } from "@/components/account/weekly-checkout-button";
@@ -69,7 +69,7 @@ export default async function WeeklyPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeaderServer />
       <main className="app-content pb-32">
         <div className="px-4 py-4">
           <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700 mb-0.5">Meal planning</p>

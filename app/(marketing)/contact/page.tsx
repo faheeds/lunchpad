@@ -1,4 +1,4 @@
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { ContactForm } from "./contact-form";
@@ -11,7 +11,7 @@ export default async function ContactPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeaderServer />
       <main className="app-content">
         {/* Header */}
         <div style={{

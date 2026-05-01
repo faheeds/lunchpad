@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
 import { getCurrentRestaurant } from "@/lib/restaurant";
@@ -72,7 +72,7 @@ export default async function MenuPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeaderServer />
 
       <main className="app-content">
         {/* ── Hero strip ─────────────────────────────────────────────────── */}

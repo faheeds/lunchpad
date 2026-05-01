@@ -7,7 +7,7 @@ import { stripe } from "@/lib/payments/stripe";
 import { formatCurrency, formatList } from "@/lib/utils";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 import { OrderStatus } from "@prisma/client";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeaderServer />
       <main className="app-content p-4">
         <div className="pt-8 text-center mb-6">
           <div className="w-14 h-14 rounded-full bg-brand-100 flex items-center justify-center text-2xl mx-auto mb-3">✓</div>

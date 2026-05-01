@@ -7,7 +7,7 @@ import { signOut } from "@/lib/auth";
 import { requireParent } from "@/lib/parent-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { GradeSelect } from "@/components/forms/grade-select";
@@ -137,7 +137,7 @@ export default async function ParentAccountPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeaderServer />
       <main className="app-content pb-36">
         <div className="px-4 py-4 space-y-4">
 
