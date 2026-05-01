@@ -15,17 +15,20 @@ interface Colors {
   bodyFont:        string;
 }
 
+interface ExtractionResult {
+  summary:     string;
+  colorsFound: string[];
+  fontsFound:  string[];
+  displayFont: string | null;
+  bodyFont:    string | null;
+}
+
 type ExtractType = "colors" | "fonts" | "both";
 
 export function ThemePicker({
-  currentPrimary,
-  currentAccent,
-  currentDark,
-  currentHeroTitle,
-  currentHeroAccent,
-  currentBodyText,
-  currentDisplayFont,
-  currentBodyFont,
+  currentPrimary, currentAccent, currentDark,
+  currentHeroTitle, currentHeroAccent, currentBodyText,
+  currentDisplayFont, currentBodyFont,
 }: {
   currentPrimary:     string;
   currentAccent:      string;
@@ -37,24 +40,21 @@ export function ThemePicker({
   currentBodyFont:    string;
 }) {
   const [colors, setColors] = useState<Colors>({
-    primaryColor:    currentPrimary,
-    accentColor:     currentAccent,
-    darkColor:       currentDark,
-    heroTitleColor:  currentHeroTitle,
-    heroAccentColor: currentHeroAccent,
-    bodyTextColor:   currentBodyText,
-    displayFont:     currentDisplayFont,
-    bodyFont:        currentBodyFont,
+    primaryColor: currentPrimary, accentColor: currentAccent,
+    darkColor: currentDark, heroTitleColor: currentHeroTitle,
+    heroAccentColor: currentHeroAccent, bodyTextColor: currentBodyText,
+    displayFont: currentDisplayFont, bodyFont: currentBodyFont,
   });
 
-  const [extractUrl, setExtractUrl]   = useState("");
-  const [extractType, setExtractType] = useState<ExtractType>("both");
-  const [extracting, setExtracting]   = useState(false);
-  const [extractMsg, setExtractMsg]   = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [extractUrl, setExtractUrl]         = useState("");
+  const [extractType, setExtractType]       = useState<ExtractType>("both");
+  const [extracting, setExtracting]         = useState(false);
+  const [extractResult, setExtractResult]   = useState<ExtractionResult | null>(null);
+  const [extractErr, setExtractErr]         = useState<string | null>(null);
 
-  const [aiDesc, setAiDesc]       = useState("");
-  const [suggesting, setSuggesting] = useState(false);
-  const [aiMsg, setAiMsg]         = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [aiDesc, setAiDesc]                 = useState("");
+  const [suggesting, setSuggesting]         = useState(false);
+  const [aiMsg, setAiMsg]                   = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   function applyColors(partial: Partial<Colors>) {
     setColors((prev) => ({ ...prev, ...partial }));
@@ -63,7 +63,8 @@ export function ThemePicker({
   async function handleExtract() {
     if (!extractUrl.trim()) return;
     setExtracting(true);
-    setExtractMsg(null);
+    setExtractResult(null);
+    setExtractErr(null);
     try {
       const res = await fetch("/api/admin/extract-theme", {
         method: "POST",
@@ -73,33 +74,33 @@ export function ThemePicker({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Extraction failed");
 
-      const applyColorsOnly = extractType === "colors";
-      const applyFontsOnly  = extractType === "fonts";
-      const applyBoth       = extractType === "both";
+      const applyC = extractType === "colors" || extractType === "both";
+      const applyF = extractType === "fonts"  || extractType === "both";
 
       const update: Partial<Colors> = {};
-      if (applyColorsOnly || applyBoth) {
-        if (data.darkColor)    update.darkColor    = data.darkColor;
-        if (data.primaryColor) update.primaryColor = data.primaryColor;
-        if (data.accentColor)  update.accentColor  = data.accentColor;
+      if (applyC) {
+        if (data.darkColor)       update.darkColor       = data.darkColor;
+        if (data.primaryColor)    update.primaryColor    = data.primaryColor;
+        if (data.accentColor)     update.accentColor     = data.accentColor;
+        if (data.heroTitleColor)  update.heroTitleColor  = data.heroTitleColor;
+        if (data.heroAccentColor) update.heroAccentColor = data.heroAccentColor;
+        if (data.bodyTextColor)   update.bodyTextColor   = data.bodyTextColor;
       }
-      if (applyFontsOnly || applyBoth) {
+      if (applyF) {
         if (data.displayFont) update.displayFont = data.displayFont;
         if (data.bodyFont)    update.bodyFont    = data.bodyFont;
       }
       applyColors(update);
 
-      const parts: string[] = [];
-      if ((applyColorsOnly || applyBoth) && (data.darkColor || data.primaryColor || data.accentColor)) {
-        parts.push("colors extracted");
-      }
-      if ((applyFontsOnly || applyBoth) && data.fontsFound?.length) {
-        parts.push(`fonts found: ${data.fontsFound.join(", ")}`);
-      }
-      const msg = parts.length ? parts.join(" · ") : "Nothing matched — try a different site";
-      setExtractMsg({ type: parts.length ? "ok" : "err", text: msg.charAt(0).toUpperCase() + msg.slice(1) + "." });
+      setExtractResult({
+        summary:     data.summary ?? "Extracted",
+        colorsFound: data.colorsFound ?? [],
+        fontsFound:  data.fontsFound  ?? [],
+        displayFont: data.displayFont ?? null,
+        bodyFont:    data.bodyFont    ?? null,
+      });
     } catch (e) {
-      setExtractMsg({ type: "err", text: e instanceof Error ? e.message : "Failed" });
+      setExtractErr(e instanceof Error ? e.message : "Failed");
     } finally {
       setExtracting(false);
     }
@@ -163,7 +164,7 @@ export function ThemePicker({
       <div className="rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-3 py-2.5 bg-slate-50 border-b border-slate-200">
           <p className="text-[12px] font-semibold text-ink">🔍 Extract from website</p>
-          <p className="text-[10px] text-slate-400">Paste any URL — we'll pull its colors & fonts</p>
+          <p className="text-[10px] text-slate-400">Fetches HTML + CSS — extracts colors, fonts, and sizing in context</p>
         </div>
         <div className="p-3 space-y-2">
           {/* What to extract */}
@@ -189,10 +190,56 @@ export function ThemePicker({
               {extracting ? "Extracting…" : "Extract"}
             </button>
           </div>
-          {extractMsg && (
-            <p className={`text-[11px] ${extractMsg.type === "ok" ? "text-green-700" : "text-red-600"}`}>
-              {extractMsg.text}
-            </p>
+
+          {/* Error */}
+          {extractErr && (
+            <p className="text-[11px] text-red-600">{extractErr}</p>
+          )}
+
+          {/* Results preview */}
+          {extractResult && (
+            <div className="rounded-lg border border-green-100 bg-green-50 p-2.5 space-y-2">
+              <p className="text-[10px] font-semibold text-green-800">✓ Applied to theme below — hit Save changes to keep</p>
+              <p className="text-[10px] text-green-700">{extractResult.summary}</p>
+
+              {/* Color palette */}
+              {extractResult.colorsFound.length > 0 && (
+                <div>
+                  <p className="text-[9px] text-green-600 font-medium mb-1 uppercase tracking-wide">Colors found</p>
+                  <div className="flex flex-wrap gap-1">
+                    {extractResult.colorsFound.slice(0, 8).map((c) => (
+                      <button key={c} type="button" title={c}
+                        onClick={() => applyColors({ primaryColor: c })}
+                        className="group relative">
+                        <div className="w-7 h-7 rounded-md border border-white/50 shadow-sm"
+                          style={{ background: c }} />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 rounded text-[8px] bg-slate-900 text-white opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none z-10">
+                          {c}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-green-600 mt-1">Tap a swatch to set it as brand color</p>
+                </div>
+              )}
+
+              {/* Fonts found */}
+              {extractResult.fontsFound.length > 0 && (
+                <div>
+                  <p className="text-[9px] text-green-600 font-medium mb-1 uppercase tracking-wide">Fonts found on site</p>
+                  <div className="flex flex-wrap gap-1">
+                    {extractResult.fontsFound.slice(0, 6).map((f) => (
+                      <span key={f} className="text-[9px] px-2 py-0.5 rounded-full bg-white border border-green-200 text-green-800">
+                        {f}{extractResult.displayFont === f ? " (display)" : extractResult.bodyFont === f ? " (body)" : ""}
+                      </span>
+                    ))}
+                  </div>
+                  {extractResult.fontsFound.some(f => f !== extractResult.displayFont && f !== extractResult.bodyFont) && (
+                    <p className="text-[9px] text-green-600 mt-1">Fonts without a match were not applied — choose manually below</p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -249,18 +296,18 @@ export function ThemePicker({
       <div>
         <p className="text-[11px] text-slate-500 font-medium mb-1">Background & brand</p>
         <div className="divide-y divide-slate-50">
-          <ColorRow label="Background"    sub="Header & hero dark bg"       field="darkColor" />
-          <ColorRow label="Brand color"   sub="Buttons & icons"             field="primaryColor" />
-          <ColorRow label="Accent color"  sub="Secondary buttons & tags"    field="accentColor" />
+          <ColorRow label="Background"   sub="Header & hero dark bg"    field="darkColor" />
+          <ColorRow label="Brand color"  sub="Buttons & icons"          field="primaryColor" />
+          <ColorRow label="Accent color" sub="Secondary buttons & tags" field="accentColor" />
         </div>
       </div>
 
       <div>
         <p className="text-[11px] text-slate-500 font-medium mb-1">Text colors</p>
         <div className="divide-y divide-slate-50">
-          <ColorRow label="Hero title"    sub="Main HOT LUNCH heading"      field="heroTitleColor" />
-          <ColorRow label="Hero accent"   sub="Star text & subheading"      field="heroAccentColor" />
-          <ColorRow label="Body text"     sub="Card text & descriptions"    field="bodyTextColor" />
+          <ColorRow label="Hero title"   sub="Main HOT LUNCH heading"   field="heroTitleColor" />
+          <ColorRow label="Hero accent"  sub="Star text & subheading"   field="heroAccentColor" />
+          <ColorRow label="Body text"    sub="Card text & descriptions" field="bodyTextColor" />
         </div>
       </div>
 
@@ -270,24 +317,18 @@ export function ThemePicker({
         <div className="space-y-2">
           <div>
             <label className="text-[10px] text-slate-400 block mb-1">Display font <span className="text-slate-300">(headings, buttons)</span></label>
-            <select name="displayFont"
-              value={colors.displayFont}
+            <select name="displayFont" value={colors.displayFont}
               onChange={(e) => applyColors({ displayFont: e.target.value })}
               className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-              {DISPLAY_FONTS.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
+              {DISPLAY_FONTS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
           <div>
             <label className="text-[10px] text-slate-400 block mb-1">Body font <span className="text-slate-300">(paragraphs, labels)</span></label>
-            <select name="bodyFont"
-              value={colors.bodyFont}
+            <select name="bodyFont" value={colors.bodyFont}
               onChange={(e) => applyColors({ bodyFont: e.target.value })}
               className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-              {BODY_FONTS.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
+              {BODY_FONTS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
         </div>
