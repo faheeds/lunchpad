@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
+import { requireAdminRole } from "@/lib/admin-auth";
 import { schoolSchema } from "@/lib/validation/order";
 import { slugify } from "@/lib/utils";
 
@@ -32,7 +33,7 @@ async function toggleSchool(formData: FormData) {
 }
 
 export default async function AdminSchoolsPage() {
-  const restaurant = await requireRestaurant();
+  const [restaurant] = await Promise.all([requireRestaurant(), requireAdminRole("OWNER")]);
   const schools = await prisma.school.findMany({
     where: { restaurantId: restaurant.id },
     orderBy: { name: "asc" }
@@ -114,11 +115,4 @@ export default async function AdminSchoolsPage() {
                     : "border-brand-200 text-brand-700 hover:bg-brand-50"
                 }`}>
                 {school.isActive ? "Deactivate" : "Activate"}
-              </button>
-            </form>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+       

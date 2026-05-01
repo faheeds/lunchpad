@@ -10,39 +10,4 @@ function roleLevel(role: string | undefined): number {
   return idx === -1 ? -1 : idx;
 }
 
-export function hasRole(userRole: string | undefined, minRole: AdminRole): boolean {
-  return roleLevel(userRole) >= roleLevel(minRole);
-}
-
-/** Redirects to login if not an admin at all. Returns session. */
-export async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.email || session.user.role !== "ADMIN") {
-    redirect("/admin/login");
-  }
-  return session;
-}
-
-/** Redirects to login if not an admin, or to /admin/dashboard if role is insufficient. */
-export async function requireAdminRole(minRole: AdminRole) {
-  const session = await auth();
-  if (!session?.user?.email || session.user.role !== "ADMIN") {
-    redirect("/admin/login");
-  }
-  if (!hasRole(session.user.adminRole, minRole)) {
-    redirect("/admin/dashboard");
-  }
-  return session;
-}
-
-/** For use in API routes — throws instead of redirecting. */
-export async function assertAdminApiRequest(minRole?: AdminRole) {
-  const session = await auth();
-  if (!session?.user?.email || session.user.role !== "ADMIN") {
-    throw new Error("Unauthorized");
-  }
-  if (minRole && !hasRole(session.user.adminRole, minRole)) {
-    throw new Error("Insufficient permissions");
-  }
-  return session;
-}
+export function hasRole(userRole: string | undefined, minRole: AdminR

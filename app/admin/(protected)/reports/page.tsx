@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getAdminReports } from "@/lib/admin";
 import { requireRestaurant } from "@/lib/restaurant";
+import { requireAdminRole } from "@/lib/admin-auth";
 import { formatCurrency } from "@/lib/utils";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -16,7 +17,7 @@ export default async function AdminReportsPage({
 }: {
   searchParams: Promise<{ schoolIds?: string | string[]; deliveryDateId?: string; dateFrom?: string; dateTo?: string }>;
 }) {
-  const [params, restaurant] = await Promise.all([searchParams, requireRestaurant()]);
+  const [params, restaurant] = await Promise.all([searchParams, requireRestaurant(), requireAdminRole("MANAGER")]);
   const selectedSchoolIds = normalizeMultiValue(params.schoolIds);
 
   const [schools, allDeliveryDates, reports] = await Promise.all([
@@ -143,9 +144,4 @@ export default async function AdminReportsPage({
             ))}
           </div>
         ) : (
-          <p className="px-4 py-4 text-[12px] text-slate-400">No item sales for current filters.</p>
-        )}
-      </div>
-    </div>
-  );
-}
+          <p className="px-4 py-4 text-[12px] text-slate-400"

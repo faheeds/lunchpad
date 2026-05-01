@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
+import { requireAdminRole } from "@/lib/admin-auth";
 import { deliveryDateSchema } from "@/lib/validation/order";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ async function attachMenuItems(formData: FormData) {
 }
 
 export default async function DeliveryDatesPage() {
-  const restaurant = await requireRestaurant();
+  const [restaurant] = await Promise.all([requireRestaurant(), requireAdminRole("MANAGER")]);
   const [schools, deliveryDates, menuItems] = await Promise.all([
     prisma.school.findMany({ where: { restaurantId: restaurant.id, isActive: true }, orderBy: { name: "asc" } }),
     prisma.deliveryDate.findMany({
@@ -237,11 +238,4 @@ export default async function DeliveryDatesPage() {
                   <p className="text-[11px] text-slate-400">{formatInTimeZone(date.deliveryDate, date.school.timezone, "EEE, MMM d yyyy")}</p>
                 </div>
                 <span className="text-[10px] text-slate-400">{date.menuAvailability.length} items</span>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-    </div>
-  );
-}
+ 

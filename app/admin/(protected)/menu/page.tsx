@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { menuItemSchema, menuOptionSchema } from "@/lib/validation/order";
 import { slugify } from "@/lib/utils";
 import { requireRestaurant } from "@/lib/restaurant";
+import { requireAdminRole } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +94,7 @@ const CAT_ICONS: Record<string, string> = {
 };
 
 export default async function AdminMenuPage() {
-  const restaurant = await requireRestaurant();
+  const [restaurant] = await Promise.all([requireRestaurant(), requireAdminRole("MANAGER")]);
   const items = await prisma.menuItem.findMany({
     where: { restaurantId: restaurant.id },
     include: { options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] } },
@@ -346,12 +347,4 @@ export default async function AdminMenuPage() {
                       )}
                     </div>
                   </details>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+             

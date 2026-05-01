@@ -22,11 +22,4 @@ declare module "next-auth" {
 }
 
 declare module "next-auth/jwt" {
-  interface JWT {
-    role?: string;
-    adminRole?: string;
-    parentUserId?: string;
-    adminUserId?: string;
-    restaurantId?: string;
-  }
-}
+  i
