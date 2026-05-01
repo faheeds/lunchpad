@@ -13,7 +13,7 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
     <header className="app-header" style={{ flexDirection: "column", padding: 0, background: "var(--dark-bg)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px" }}>
         <Link href="/" className="no-underline" onClick={() => setMenuOpen(false)}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 1, fontFamily: "var(--font-display)" }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--accent-on-dark)", marginBottom: 1, fontFamily: "var(--font-display)" }}>
             {restaurantName}
           </p>
           <p style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
@@ -22,7 +22,7 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isAdmin ? (
-            <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "var(--brand-hex)", color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "var(--brand-on-dark)", color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Staff
             </span>
           ) : (
@@ -72,8 +72,8 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
             <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{
               display: "block", padding: "11px 14px", borderRadius: 10,
               fontSize: 14, fontWeight: pathname === item.href ? 700 : 500,
-              color: pathname === item.href ? "var(--accent)" : "rgba(255,255,255,0.75)",
-              background: pathname === item.href ? "rgba(var(--brand-rgb),0.35)" : "transparent",
+              color: pathname === item.href ? "var(--accent-on-dark)" : "rgba(255,255,255,0.75)",
+              background: pathname === item.href ? "rgba(var(--brand-on-dark-rgb),0.25)" : "transparent",
               textDecoration: "none", marginBottom: 2,
               fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.05em"
             }}>

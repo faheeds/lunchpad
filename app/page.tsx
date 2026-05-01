@@ -93,7 +93,7 @@ export default async function HomePage() {
               <Link href="/order" style={{
                 padding: "12px 22px", borderRadius: 100,
                 fontSize: 13, fontWeight: 700, textDecoration: "none",
-                background: "var(--brand-hex)", color: "white",
+                background: "var(--brand-on-dark)", color: "white",
                 fontFamily: "var(--font-display)",
                 textTransform: "uppercase", letterSpacing: "0.08em",
                 boxShadow: "0 4px 16px rgba(var(--brand-rgb),0.45)"
@@ -124,7 +124,7 @@ export default async function HomePage() {
         {stripItems.length > 0 && <div style={{ padding: "20px 20px 4px" }}>
           <p style={{
             fontSize: 10, fontWeight: 700, letterSpacing: "0.22em",
-            textTransform: "uppercase", color: "var(--brand-hex)", marginBottom: 13,
+            textTransform: "uppercase", color: "var(--brand-on-white)", marginBottom: 13,
             fontFamily: "var(--font-display)"
           }}>
             On the Menu
@@ -193,7 +193,7 @@ export default async function HomePage() {
         <div style={{ padding: "20px 20px 28px" }}>
           <p style={{
             fontSize: 10, fontWeight: 700, letterSpacing: "0.22em",
-            textTransform: "uppercase", color: "var(--brand-hex)", marginBottom: 13,
+            textTransform: "uppercase", color: "var(--brand-on-white)", marginBottom: 13,
             fontFamily: "var(--font-display)"
           }}>
             How it works
@@ -211,9 +211,9 @@ export default async function HomePage() {
               }}>
                 <div style={{
                   width: 30, height: 30, borderRadius: "50%",
-                  background: "var(--brand-hex)", display: "flex",
+                  background: "var(--brand-on-white)", display: "flex",
                   alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  boxShadow: "0 2px 8px rgba(var(--brand-rgb),0.35)"
+                  boxShadow: "0 2px 8px rgba(var(--brand-on-white-rgb),0.35)"
                 }}>
                   <span style={{
                     fontSize: 14, fontWeight: 700, color: "white",
@@ -248,13 +248,13 @@ export default async function HomePage() {
 function FeatureIcon({ name }: { name: string }) {
   const icons: Record<string, React.ReactNode> = {
     location: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-hex)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
         <circle cx="12" cy="9" r="2.5"/>
       </svg>
     ),
     menu: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-hex)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1.5"/>
         <rect x="14" y="3" width="7" height="7" rx="1.5"/>
         <rect x="3" y="14" width="7" height="7" rx="1.5"/>
@@ -262,18 +262,13 @@ function FeatureIcon({ name }: { name: string }) {
       </svg>
     ),
     child: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-hex)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="7" r="4"/>
         <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
       </svg>
     ),
     calendar: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-hex)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2"/>
         <path d="M16 2v4M8 2v4M3 10h18"/>
-        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
-      </svg>
-    ),
-  };
-  return <>{icons[name]}</>;
-}
+        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"
