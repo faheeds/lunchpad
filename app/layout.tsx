@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Oswald, Inter } from "next/font/google";
 import { getCurrentRestaurant } from "@/lib/restaurant";
+import { brandCssVars } from "@/lib/color";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -32,9 +33,12 @@ export const viewport: Viewport = {
   themeColor: "#c41230",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const restaurant = await getCurrentRestaurant();
+  const cssVars = brandCssVars(restaurant?.primaryColor);
   return (
-    <html lang="en" className={`${oswald.variable} ${inter.variable}`}>
+    <html lang="en" className={`${oswald.variable} ${inter.variable}`}
+      style={cssVars as React.CSSProperties}>
       <body>
         <div className="app-shell">
           {children}
