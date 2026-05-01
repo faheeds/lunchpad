@@ -60,6 +60,8 @@ model Restaurant {
   timezone                 String         @default("America/Los_Angeles")
   logoUrl                  String?
   primaryColor             String?        @default("#c41230")
+  accentColor              String?        @default("#f59e0b")
+  darkColor                String?        @default("#1c0505")
   contactEmail             String?
   contactPhone             String?
   isActive                 Boolean        @default(true)

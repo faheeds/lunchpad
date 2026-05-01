@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { ThemePicker } from "@/components/admin/theme-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -10,18 +11,20 @@ async function updateSettings(formData: FormData) {
   const restaurant = await requireRestaurant();
   await requireAdminRole("OWNER");
 
-  const name = String(formData.get("name") || "").trim();
-  const logoUrl = String(formData.get("logoUrl") || "").trim() || null;
-  const primaryColor = String(formData.get("primaryColor") || "#000000").trim();
+  const name         = String(formData.get("name")         || "").trim();
+  const logoUrl      = String(formData.get("logoUrl")      || "").trim() || null;
+  const primaryColor = String(formData.get("primaryColor") || "#c41230").trim();
+  const accentColor  = String(formData.get("accentColor")  || "#f59e0b").trim();
+  const darkColor    = String(formData.get("darkColor")    || "#1c0505").trim();
   const contactEmail = String(formData.get("contactEmail") || "").trim() || null;
   const contactPhone = String(formData.get("contactPhone") || "").trim() || null;
-  const timezone = String(formData.get("timezone") || "America/Los_Angeles");
+  const timezone     = String(formData.get("timezone")     || "America/Los_Angeles");
 
   if (!name) throw new Error("Name is required");
 
   await prisma.restaurant.update({
     where: { id: restaurant.id },
-    data: { name, logoUrl, primaryColor, contactEmail, contactPhone, timezone }
+    data: { name, logoUrl, primaryColor, accentColor, darkColor, contactEmail, contactPhone, timezone }
   });
 
   revalidatePath("/admin/settings");
@@ -34,7 +37,7 @@ const TIMEZONES = [
   { value: "America/Denver",      label: "Mountain (MT)" },
   { value: "America/Los_Angeles", label: "Pacific (PT)" },
   { value: "America/Anchorage",   label: "Alaska (AKT)" },
-  { value: "Pacific/Honolulu",    label: "Hawaii (HT)" },
+  { value: "Pacific/Honolulu",    label: "Hawaii (HT)"  },
 ];
 
 export default async function AdminSettingsPage() {
@@ -45,84 +48,67 @@ export default async function AdminSettingsPage() {
       <h1 className="text-[17px] font-semibold text-ink">Settings</h1>
 
       <form action={updateSettings} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+
+        {/* ── Profile ───────────────────────────────────────────── */}
         <div className="px-4 py-3 border-b border-slate-50">
           <p className="text-[13px] font-semibold text-ink">Restaurant profile</p>
         </div>
-
         <div className="px-4 py-4 space-y-4">
-          {/* Name */}
           <div>
             <label className="text-[11px] text-slate-500 font-medium block mb-1">Restaurant name</label>
-            <input
-              type="text" name="name" required
-              defaultValue={restaurant.name}
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
-            />
+            <input type="text" name="name" required defaultValue={restaurant.name}
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
           </div>
-
-          {/* Logo URL */}
           <div>
-            <label className="text-[11px] text-slate-500 font-medium block mb-1">Logo URL <span className="text-slate-400 font-normal">(optional)</span></label>
-            <input
-              type="url" name="logoUrl"
-              defaultValue={restaurant.logoUrl ?? ""}
+            <label className="text-[11px] text-slate-500 font-medium block mb-1">
+              Logo URL <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <input type="url" name="logoUrl" defaultValue={restaurant.logoUrl ?? ""}
               placeholder="https://..."
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
-            />
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
             {restaurant.logoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={restaurant.logoUrl} alt="Logo preview" className="mt-2 h-10 object-contain rounded" />
             )}
           </div>
-
-          {/* Primary color */}
-          <div>
-            <label className="text-[11px] text-slate-500 font-medium block mb-1">Brand color</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color" name="primaryColor"
-                defaultValue={restaurant.primaryColor ?? "#c41230"}
-                className="h-9 w-12 rounded border border-slate-200 cursor-pointer p-0.5"
-              />
-              <span className="text-[12px] text-slate-500">Used for buttons and accents</span>
-            </div>
-          </div>
-
-          {/* Timezone */}
           <div>
             <label className="text-[11px] text-slate-500 font-medium block mb-1">Timezone</label>
-            <select
-              name="timezone"
-              defaultValue={restaurant.timezone}
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
-            >
+            <select name="timezone" defaultValue={restaurant.timezone}
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
               {TIMEZONES.map((tz) => (
                 <option key={tz.value} value={tz.value}>{tz.label}</option>
               ))}
             </select>
           </div>
-
-          {/* Contact email */}
           <div>
-            <label className="text-[11px] text-slate-500 font-medium block mb-1">Contact email <span className="text-slate-400 font-normal">(optional)</span></label>
-            <input
-              type="email" name="contactEmail"
-              defaultValue={restaurant.contactEmail ?? ""}
+            <label className="text-[11px] text-slate-500 font-medium block mb-1">
+              Contact email <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <input type="email" name="contactEmail" defaultValue={restaurant.contactEmail ?? ""}
               placeholder="hello@yourrestaurant.com"
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
-            />
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
           </div>
-
-          {/* Contact phone */}
           <div>
-            <label className="text-[11px] text-slate-500 font-medium block mb-1">Contact phone <span className="text-slate-400 font-normal">(optional)</span></label>
-            <input
-              type="tel" name="contactPhone"
-              defaultValue={restaurant.contactPhone ?? ""}
+            <label className="text-[11px] text-slate-500 font-medium block mb-1">
+              Contact phone <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <input type="tel" name="contactPhone" defaultValue={restaurant.contactPhone ?? ""}
               placeholder="+1 (555) 000-0000"
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
-            />
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
           </div>
+        </div>
+
+        {/* ── Theme ─────────────────────────────────────────────── */}
+        <div className="border-t border-slate-50">
+          <div className="px-4 py-3 border-b border-slate-50">
+            <p className="text-[13px] font-semibold text-ink">Theme</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Click a preset or pick custom colors below</p>
+          </div>
+          <ThemePicker
+            currentPrimary={restaurant.primaryColor ?? "#c41230"}
+            currentAccent={restaurant.accentColor   ?? "#f59e0b"}
+            currentDark={restaurant.darkColor       ?? "#1c0505"}
+          />
         </div>
 
         <div className="px-4 pb-4">
@@ -133,7 +119,7 @@ export default async function AdminSettingsPage() {
         </div>
       </form>
 
-      {/* Read-only info */}
+      {/* ── Account info ────────────────────────────────────────── */}
       <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-50">
           <p className="text-[13px] font-semibold text-ink">Account info</p>

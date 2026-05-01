@@ -10,10 +10,10 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="app-header" style={{ flexDirection: "column", padding: 0, background: "#1c0505" }}>
+    <header className="app-header" style={{ flexDirection: "column", padding: 0, background: "var(--dark-bg)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px" }}>
         <Link href="/" className="no-underline" onClick={() => setMenuOpen(false)}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#f59e0b", marginBottom: 1, fontFamily: "var(--font-oswald)" }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 1, fontFamily: "var(--font-oswald)" }}>
             {restaurantName}
           </p>
           <p style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "var(--font-oswald)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
@@ -22,17 +22,17 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isAdmin ? (
-            <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "#c41230", color: "white", fontFamily: "var(--font-oswald)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "var(--brand-hex)", color: "white", fontFamily: "var(--font-oswald)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Staff
             </span>
           ) : (
             <>
               <Link href="/account" style={{
                 width: 32, height: 32, borderRadius: "50%",
-                background: "rgba(196,18,48,0.85)", display: "flex",
+                background: "rgba(var(--brand-rgb),0.85)", display: "flex",
                 alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 700, color: "white",
-                border: "1.5px solid rgba(245,158,11,0.4)", textDecoration: "none",
+                border: "1.5px solid rgba(var(--accent-rgb),0.4)", textDecoration: "none",
                 fontFamily: "var(--font-oswald)"
               }}>
                 SM
@@ -59,7 +59,7 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
       </div>
 
       {menuOpen && !isAdmin && (
-        <nav style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.08)", background: "#1c0505", padding: "8px 12px 14px" }}>
+        <nav style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.08)", background: "var(--dark-bg)", padding: "8px 12px 14px" }}>
           {[
             { href: "/",        label: "Home"          },
             { href: "/menu",    label: "Menu"          },
@@ -72,8 +72,8 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
             <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{
               display: "block", padding: "11px 14px", borderRadius: 10,
               fontSize: 14, fontWeight: pathname === item.href ? 700 : 500,
-              color: pathname === item.href ? "#f59e0b" : "rgba(255,255,255,0.75)",
-              background: pathname === item.href ? "rgba(196,18,48,0.35)" : "transparent",
+              color: pathname === item.href ? "var(--accent)" : "rgba(255,255,255,0.75)",
+              background: pathname === item.href ? "rgba(var(--brand-rgb),0.35)" : "transparent",
               textDecoration: "none", marginBottom: 2,
               fontFamily: "var(--font-oswald)", textTransform: "uppercase", letterSpacing: "0.05em"
             }}>
