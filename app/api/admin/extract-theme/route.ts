@@ -67,11 +67,21 @@ export async function POST(req: NextRequest) {
     const { url } = await req.json();
     if (!url) return NextResponse.json({ error: "URL required" }, { status: 400 });
 
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; LunchPad-ThemeBot/1.0)" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+        },
+        redirect: "follow",
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (fetchErr) {
+      throw new Error("Could not reach that URL — the site may block automated requests, or the address is unreachable.");
+    }
+    if (!res.ok) throw new Error(`Site returned ${res.status} — try a different URL.`);
     const html = await res.text();
 
     const themeColor = findThemeColor(html);
