@@ -14,8 +14,8 @@ html { scroll-behavior: smooth; }
 
 body {
   @apply antialiased;
-  background-color: #f5e9e9;
-  font-family: var(--font-inter), system-ui, sans-serif;
+  background-color: #e8e8e8;
+  font-family: var(--font-body, var(--font-inter)), system-ui, sans-serif;
 }
 
 .app-shell {
@@ -24,7 +24,7 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: #fffbf7;
+  background: #ffffff;
 }
 
 @media (min-width: 640px) {
@@ -32,13 +32,13 @@ body {
     margin: 24px auto;
     min-height: calc(100dvh - 48px);
     border-radius: 24px;
-    box-shadow: 0 20px 80px rgba(28,5,5,0.18);
+    box-shadow: 0 20px 80px rgba(0,0,0,0.20);
     overflow: hidden;
   }
 }
 
 .app-header {
-  background: #1c0505;
+  background: var(--dark-bg, #1c0505);
   border-bottom: none;
   padding: 10px 16px;
   display: flex;
@@ -54,11 +54,11 @@ body {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: #fffbf7;
+  background: #ffffff;
 }
 
 .app-bnav {
-  background: #1c0505;
+  background: var(--dark-bg, #1c0505);
   border-top: none;
   display: flex;
   padding: 8px 0 max(10px, env(safe-area-inset-bottom));
