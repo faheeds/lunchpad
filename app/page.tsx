@@ -3,24 +3,32 @@ import Image from "next/image";
 import { SiteHeader } from "@/components/site-header";
 import { AppNav } from "@/components/app-nav";
 import { prisma } from "@/lib/db";
+import { getCurrentRestaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
 
-const features = [
-  { text: "Two campuses",    sub: "Catering Redmond and Bellevue campus", icon: "location", href: null       },
-  { text: "20+ menu items", sub: "Burgers, salads, chicken & more",       icon: "menu",     href: "/menu"    },
-  { text: "Add Your Kids",  sub: "Faster checkout every time",            icon: "child",    href: "/account" },
-  { text: "Weekly planner", sub: "One checkout for the week",             icon: "calendar", href: "/weekly"  },
-];
-
 const steps = [
-  { n: "1", title: "Pick school & date",  body: "Redmond or Bellevue (9 PM cutoff). Only open dates are shown." },
-  { n: "2", title: "Build your order",    body: "20+ items — burgers, chicken, salads & sides. Full customization." },
+  { n: "1", title: "Pick school & date",  body: "Select your child's school and an available delivery date. Ordering closes at 9 PM the night before." },
+  { n: "2", title: "Build your order",    body: "Choose from our full menu — burgers, chicken, salads, sides & more. Full customization available." },
   { n: "3", title: "Pay & confirm",       body: "Secure Stripe checkout. Confirmation email sent right away." },
 ];
 
-
 export default async function HomePage() {
+  const restaurant = await getCurrentRestaurant();
+  const restaurantName = restaurant?.name ?? "Hot Lunch";
+
+  // School count for feature card
+  const schoolCount = restaurant
+    ? await prisma.school.count({ where: { restaurantId: restaurant.id, isActive: true } })
+    : 0;
+
+  const features = [
+    { text: schoolCount === 1 ? "1 school" : `${schoolCount} schools`, sub: "Fresh lunch delivered on-site", icon: "location", href: null },
+    { text: "Full menu",      sub: "Burgers, salads, chicken & more",  icon: "menu",     href: "/menu"    },
+    { text: "Add Your Kids",  sub: "Faster checkout every time",       icon: "child",    href: "/account" },
+    { text: "Weekly planner", sub: "One checkout for the week",        icon: "calendar", href: "/weekly"  },
+  ];
+
   // Fetch all active menu items that have a photo
   const itemsWithPhotos = await prisma.menuItem.findMany({
     where: { isActive: true, imageUrl: { not: null } },
@@ -68,7 +76,7 @@ export default async function HomePage() {
               textTransform: "uppercase", color: "#f59e0b",
               marginBottom: 6, fontFamily: "var(--font-oswald)"
             }}>
-              ★ Local Bigger Burger ★
+              ★ {restaurantName} ★
             </p>
             <h1 style={{
               fontSize: 38, fontWeight: 700, lineHeight: 1.0,
@@ -76,11 +84,10 @@ export default async function HomePage() {
               fontFamily: "var(--font-oswald)",
               textTransform: "uppercase", letterSpacing: "0.01em"
             }}>
-              Medina Academy<br/>
               <span style={{ color: "#fbbf24" }}>Hot Lunch</span>
             </h1>
             <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.72)", marginBottom: 20, lineHeight: 1.5 }}>
-              Fresh burgers, chicken &amp; more — order for tomorrow or plan the whole week.
+              Fresh food delivered to your school — order for tomorrow or plan the whole week.
             </p>
             <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
               <Link href="/order" style={{
@@ -108,7 +115,7 @@ export default async function HomePage() {
               fontSize: 10.5, color: "rgba(255,255,255,0.60)", letterSpacing: "0.06em",
               textTransform: "uppercase", paddingBottom: 14
             }}>
-              HFSAA Certified · Hand Slaughtered Halal
+              {restaurantName}
             </p>
           </div>
         </div>

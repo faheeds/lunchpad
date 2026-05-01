@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Oswald, Inter } from "next/font/google";
+import { getCurrentRestaurant } from "@/lib/restaurant";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -15,10 +16,14 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "LBB Hot Lunch | Medina Academy",
-  description: "Hot lunch preorders for Medina Academy by Local Bigger Burger.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const restaurant = await getCurrentRestaurant();
+  const name = restaurant?.name ?? "Hot Lunch";
+  return {
+    title: `${name} | Hot Lunch`,
+    description: `Order hot lunch from ${name}.`,
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { SiteHeader } from "@/components/site-header";
 import { AppNav } from "@/components/app-nav";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
+import { getCurrentRestaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,9 @@ function getCategory(name: string, description: string | null) {
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default async function MenuPage() {
+  const restaurant = await getCurrentRestaurant();
+  const restaurantName = restaurant?.name ?? "Hot Lunch";
+
   const items = await prisma.menuItem.findMany({
     where: { isActive: true },
     include: {
@@ -88,7 +92,7 @@ export default async function MenuPage() {
             fontSize: 9, fontWeight: 700, letterSpacing: "0.22em",
             textTransform: "uppercase", color: "#f59e0b", marginBottom: 6,
           }}>
-            ★ Local Bigger Burger ★
+            ★ {restaurantName} ★
           </p>
           <h1 style={{
             fontSize: 28, fontWeight: 800, color: "white",
@@ -98,7 +102,7 @@ export default async function MenuPage() {
             Our Menu
           </h1>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 18, lineHeight: 1.55 }}>
-            HFSAA certified · Hand slaughtered halal · {totalItems} fresh items
+            {totalItems} fresh items — made to order
           </p>
           <Link href="/order" style={{
             display: "inline-flex", alignItems: "center", gap: 6,

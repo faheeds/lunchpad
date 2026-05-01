@@ -132,7 +132,7 @@ export default async function AdminReportsPage({
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-ink truncate">{item.itemName}</p>
                   <p className="text-[11px] text-slate-500">
-                    {Object.entries(item.bySchool).map(([school, count]) => `${school.replace("Medina Academy ", "")}: ${count}`).join(" · ")}
+                    {Object.entries(item.bySchool).map(([school, count]) => `${school}: ${count}`).join(" · ")}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
