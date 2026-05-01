@@ -28,9 +28,9 @@ export async function middleware(req: NextRequest) {
 
   if (isProduction) {
     restaurantSlug = host.replace(`.${rootDomain}`, "");
-  } else {
-    // Local dev: read from env or fall back to "demo"
-    restaurantSlug = process.env.RESTAURANT_SLUG ?? null;
+  } else if (host.includes(".vercel.app") || host.includes("localhost")) {
+    // Vercel preview / local dev: read from env or fall back to "demo"
+    restaurantSlug = process.env.RESTAURANT_SLUG ?? "demo";
   }
 
   if (!restaurantSlug) {
