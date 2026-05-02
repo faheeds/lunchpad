@@ -48,7 +48,16 @@ enum WeeklyCheckoutStatus {
 enum RestaurantPlan {
   FREE
   STARTER
-  PRO
+  GROWTH
+  SCALE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
 }
 
 // ─── RESTAURANT (root tenant) ─────────────────────────────────────────────────
@@ -77,8 +86,11 @@ model Restaurant {
   stripeOnboardingComplete Boolean        @default(false)
 
   // Subscription
-  plan                     RestaurantPlan @default(FREE)
+  plan                     RestaurantPlan     @default(FREE)
+  subscriptionStatus       SubscriptionStatus @default(TRIAL)
   trialEndsAt              DateTime?
+  stripeCustomerId         String?            @unique
+  stripeSubscriptionId     String?            @unique
 
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt

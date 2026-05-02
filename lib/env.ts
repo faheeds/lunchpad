@@ -15,7 +15,10 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().email().optional(),
   EMAIL_FROM_NAME: z.string().min(1).optional(),
   APP_BASE_URL: z.string().url(),
-  DEFAULT_TIMEZONE: z.string().default("America/Los_Angeles")
+  DEFAULT_TIMEZONE: z.string().default("America/Los_Angeles"),
+  STRIPE_PRICE_STARTER: z.string().optional(),
+  STRIPE_PRICE_GROWTH: z.string().optional(),
+  STRIPE_PRICE_SCALE: z.string().optional()
 });
 
 export const env = envSchema.parse({
@@ -33,5 +36,8 @@ export const env = envSchema.parse({
   EMAIL_FROM: process.env.EMAIL_FROM,
   EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
   APP_BASE_URL: process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL,
-  DEFAULT_TIMEZONE: process.env.DEFAULT_TIMEZONE ?? "America/Los_Angeles"
+  DEFAULT_TIMEZONE: process.env.DEFAULT_TIMEZONE ?? "America/Los_Angeles",
+  STRIPE_PRICE_STARTER: process.env.STRIPE_PRICE_STARTER,
+  STRIPE_PRICE_GROWTH: process.env.STRIPE_PRICE_GROWTH,
+  STRIPE_PRICE_SCALE: process.env.STRIPE_PRICE_SCALE
 });

@@ -37,6 +37,47 @@ export async function POST(request: Request) {
   }
 
   try {
+    // ── Subscription lifecycle ────────────────────────────────────────────────
+    if (
+      event.type === "customer.subscription.created" ||
+      event.type === "customer.subscription.updated"
+    ) {
+      const sub = event.data.object as Stripe.Subscription;
+      const restaurantId = sub.metadata?.restaurantId;
+      const plan = sub.metadata?.plan;
+      if (restaurantId) {
+        const status = sub.status === "active" ? "ACTIVE"
+          : sub.status === "past_due" ? "PAST_DUE"
+          : sub.status === "paused" ? "PAUSED"
+          : sub.status === "canceled" ? "CANCELLED"
+          : "TRIAL";
+        await prisma.restaurant.update({
+          where: { id: restaurantId },
+          data: {
+            stripeSubscriptionId: sub.id,
+            subscriptionStatus: status as import("@prisma/client").SubscriptionStatus,
+            ...(plan && ["STARTER", "GROWTH", "SCALE"].includes(plan)
+              ? { plan: plan as import("@prisma/client").RestaurantPlan }
+              : {}),
+          },
+        });
+      }
+    }
+
+    if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as Stripe.Subscription;
+      const restaurantId = sub.metadata?.restaurantId;
+      if (restaurantId) {
+        await prisma.restaurant.update({
+          where: { id: restaurantId },
+          data: {
+            subscriptionStatus: "CANCELLED",
+            stripeSubscriptionId: null,
+          },
+        });
+      }
+    }
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.id) {
