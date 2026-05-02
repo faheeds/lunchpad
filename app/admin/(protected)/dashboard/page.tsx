@@ -199,10 +199,10 @@ export default async function AdminDashboardPage() {
                     background: "#fff1f3", display: "flex", alignItems: "center",
                     justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#c41230",
                   }}>
-                    {(order.student?.name ?? "?")[0].toUpperCase()}
+                    {(order.student?.studentName ?? "?")[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-ink truncate">{order.student?.name ?? "Unknown"}</p>
+                    <p className="text-[13px] font-semibold text-ink truncate">{order.student?.studentName ?? "Unknown"}</p>
                     <p className="text-[11px] text-slate-400 truncate">{order.school.name}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
