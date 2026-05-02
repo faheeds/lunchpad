@@ -160,7 +160,7 @@ export default async function AdminMenuPage() {
       <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
           <span className="text-[13px] font-semibold text-ink">⬆ Bulk upload menu</span>
-          <span className="text-[11px] text-slate-400">Excel or AI extraction</span>
+          <span className="text-[11px] text-slate-400">Upload Excel file</span>
         </summary>
         <div className="px-4 pb-4 border-t border-slate-50 pt-3">
           <BulkMenuUpload />
