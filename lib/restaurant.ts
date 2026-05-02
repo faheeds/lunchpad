@@ -13,11 +13,25 @@ export const getCurrentRestaurant = cache(async (): Promise<Restaurant | null> =
   const slug = headerList.get("x-restaurant-slug");
   if (!slug) return null;
 
-  const restaurant = await prisma.restaurant.findUnique({
-    where: { slug, isActive: true },
-  });
-
-  return restaurant;
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { slug, isActive: true },
+    });
+    return restaurant;
+  } catch {
+    // Subscription migration not yet applied — fall back to selecting only legacy columns
+    const rows = await prisma.$queryRaw<Restaurant[]>`
+      SELECT id, name, slug, timezone, "logoUrl", "primaryColor", "accentColor",
+             "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
+             "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
+             "isActive", "stripeAccountId", "stripeOnboardingComplete",
+             plan, "trialEndsAt", "createdAt", "updatedAt"
+      FROM "Restaurant"
+      WHERE slug = ${slug} AND "isActive" = true
+      LIMIT 1
+    `;
+    return rows[0] ?? null;
+  }
 });
 
 /**
