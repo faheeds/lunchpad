@@ -5,6 +5,7 @@ import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { orderFormSchema } from "@/lib/validation/order";
 import type { OrderDraftInput } from "@/types/order";
+import { stripe } from "@/lib/payments/stripe";
 
 export function buildPaidState(now = new Date()) {
   return {
@@ -398,6 +399,63 @@ export async function updateOrderBeforeCutoff(args: {
         student: true,
         items: true
       }
+    });
+  });
+}
+
+export async function cancelOrderWithRefund(orderId: string, parentUserId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      school: true,
+      deliveryDate: true,
+      student: true,
+      items: true,
+      payment: true,
+    },
+  });
+
+  if (!order) throw new Error("Order not found.");
+  if (order.parentUserId !== parentUserId) throw new Error("You can only cancel your own orders.");
+  if (order.status !== OrderStatus.PAID) throw new Error("Only paid orders can be cancelled.");
+
+  assertOrderingOpen(
+    new Date(),
+    order.deliveryDate.cutoffAt,
+    order.deliveryDate.deliveryDate,
+    order.school.timezone
+  );
+
+  const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+
+  if (stripe && paymentIntentId) {
+    await stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      reason: "requested_by_customer",
+    });
+  }
+
+  const now = new Date();
+
+  return prisma.$transaction(async (tx) => {
+    await tx.payment.updateMany({
+      where: { orderId: order.id },
+      data: { status: PaymentStatus.REFUNDED, refundedAt: now },
+    });
+
+    return tx.order.update({
+      where: { id: order.id },
+      data: {
+        status: OrderStatus.CANCELLED,
+        cancelledAt: now,
+        refundedAt: now,
+      },
+      include: {
+        school: true,
+        deliveryDate: true,
+        student: true,
+        items: true,
+      },
     });
   });
 }

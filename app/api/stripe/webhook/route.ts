@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { stripe } from "@/lib/payments/stripe";
 import { markOrderPaidByCheckoutSession } from "@/lib/orders";
-import { sendOrderConfirmationEmail } from "@/lib/email/service";
+import { sendOrderConfirmationEmail, scheduleCutoffReminderEmail } from "@/lib/email/service";
 import { isDuplicateWebhookEvent } from "@/lib/payments/webhook";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 
@@ -64,6 +64,8 @@ export async function POST(request: Request) {
           } catch {
             // Email failures are logged and can be retried in admin.
           }
+          // Schedule a reminder 24h before cutoff - best-effort, never throws.
+          scheduleCutoffReminderEmail(order.id).catch(() => {});
         }
       }
     }
