@@ -69,30 +69,62 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-5 pb-10">
 
-      {/* ── Today snapshot ────────────────────────────────────────── */}
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">Today</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Orders today",    value: todayOrderCount,                color: "#c41230", bg: "#fff1f3", sub: "paid today" },
-            { label: "Revenue today",   value: formatCurrency(todayRevenueAmount), color: "#0369a1", bg: "#eff6ff", sub: "collected" },
-            { label: "All-time orders", value: allTimePaid,                    color: "#7c3aed", bg: "#f5f3ff", sub: "paid orders" },
-            {
-              label: "Next delivery",
-              value: nextDelivery ? formatInTimeZone(nextDelivery.deliveryDate, nextDelivery.school.timezone, "MMM d") : "—",
-              color: "#059669", bg: "#ecfdf5",
-              sub: nextDelivery ? nextDelivery.school.name : "No upcoming dates",
-            },
-          ].map(({ label, value, color, bg, sub }) => (
-            <div key={label} style={{ background: bg, borderRadius: 14, padding: "16px 16px 14px", border: "1px solid rgba(0,0,0,0.04)" }}>
-              <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 6, fontWeight: 500 }}>{label}</p>
-              <p style={{ fontSize: 26, fontWeight: 800, color, lineHeight: 1, marginBottom: 4, letterSpacing: "-0.02em" }}>
-                {value}
-              </p>
-              <p style={{ fontSize: 11, color: "#9ca3af" }}>{sub}</p>
-            </div>
-          ))}
-        </div>
+      {/* ── Stat tiles ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          {
+            label: "Orders",
+            sub: "today",
+            value: String(todayOrderCount),
+            color: "#c41230",
+            bg: "#fff1f3",
+            border: "#fecdd3",
+          },
+          {
+            label: "Revenue",
+            sub: "today",
+            value: formatCurrency(todayRevenueAmount),
+            color: "#0369a1",
+            bg: "#eff6ff",
+            border: "#bfdbfe",
+          },
+          {
+            label: "All orders",
+            sub: "all time",
+            value: String(allTimePaid),
+            color: "#7c3aed",
+            bg: "#f5f3ff",
+            border: "#ddd6fe",
+          },
+          {
+            label: "Next delivery",
+            sub: nextDelivery ? nextDelivery.school.name : "—",
+            value: nextDelivery
+              ? formatInTimeZone(nextDelivery.deliveryDate, nextDelivery.school.timezone, "MMM d")
+              : "None",
+            color: "#059669",
+            bg: "#ecfdf5",
+            border: "#a7f3d0",
+          },
+        ].map(({ label, sub, value, color, bg, border }) => (
+          <div key={label} style={{
+            background: bg, borderRadius: 14,
+            border: `1px solid ${border}`,
+            padding: "14px 14px 12px",
+            display: "flex", flexDirection: "column", gap: 6,
+            minHeight: 96,
+          }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+              {label}
+            </p>
+            <p style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1, letterSpacing: "-0.03em" }}>
+              {value}
+            </p>
+            <p style={{ fontSize: 10, color: "#9ca3af", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {sub}
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* ── Next delivery spotlight ───────────────────────────────── */}
@@ -222,16 +254,48 @@ export default async function AdminDashboardPage() {
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">Quick actions</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { href: "/admin/delivery-dates", label: "Add delivery date", icon: "📅" },
-            { href: "/admin/menu",           label: "Edit menu",         icon: "🍔" },
-            { href: "/admin/orders",         label: "View all orders",   icon: "📋" },
-            { href: "/admin/reports",        label: "Sales report",      icon: "📊" },
-          ].map((item) => (
+          {([
+            {
+              href: "/admin/delivery-dates",
+              label: "Add delivery date",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/>
+                </svg>
+              ),
+            },
+            {
+              href: "/admin/menu",
+              label: "Edit menu",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+              ),
+            },
+            {
+              href: "/admin/orders",
+              label: "View all orders",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+              ),
+            },
+            {
+              href: "/admin/reports",
+              label: "Sales report",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+              ),
+            },
+          ] as { href: string; label: string; icon: React.ReactNode }[]).map((item) => (
             <Link key={item.href} href={item.href}
-              className="rounded-[14px] border border-slate-100 bg-white px-4 py-3.5 flex items-center gap-3 no-underline hover:border-slate-200 hover:bg-slate-50 transition">
-              <span style={{ fontSize: 18 }}>{item.icon}</span>
-              <span className="text-[12px] font-medium text-ink">{item.label}</span>
+              className="rounded-[14px] border border-slate-100 bg-white px-4 py-3.5 flex items-center gap-3 no-underline hover:border-red-100 hover:bg-red-50 transition">
+              <span style={{ flexShrink: 0 }}>{item.icon}</span>
+              <span className="text-[12px] font-medium text-ink leading-tight">{item.label}</span>
             </Link>
           ))}
         </div>
