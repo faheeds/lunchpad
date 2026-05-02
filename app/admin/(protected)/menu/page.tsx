@@ -10,11 +10,14 @@ export const dynamic = "force-dynamic";
 async function createMenuItem(formData: FormData) {
   "use server";
   const restaurant = await requireRestaurant();
+  // Accept price in dollars (e.g. "12.99") and convert to cents
+  const priceDollars = parseFloat(String(formData.get("price") || "0"));
+  const basePriceCents = Math.round(priceDollars * 100);
   const parsed = menuItemSchema.parse({
     name: formData.get("name"),
     slug: slugify(String(formData.get("name") || "")),
     description: formData.get("description"),
-    basePriceCents: formData.get("basePriceCents"),
+    basePriceCents,
     isActive: formData.get("isActive") === "on"
   });
   await prisma.menuItem.create({ data: { ...parsed, restaurantId: restaurant.id } });
@@ -128,9 +131,12 @@ export default async function AdminMenuPage() {
                 className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Base price (cents)</label>
-              <input name="basePriceCents" placeholder="e.g. 1299 = $12.99" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              <label className="text-[11px] text-slate-500 mb-1 block">Price</label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 pointer-events-none">$</span>
+                <input name="price" type="number" step="0.01" min="0" placeholder="12.99" required
+                  className="w-full rounded-lg border-slate-200 text-[13px] pl-6 pr-3 py-2" />
+              </div>
             </div>
           </div>
           <div>

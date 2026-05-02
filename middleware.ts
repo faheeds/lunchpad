@@ -34,15 +34,19 @@ export async function middleware(req: NextRequest) {
     restaurantSlug = process.env.RESTAURANT_SLUG ?? null;
   }
 
+  // Always forward the current pathname so server components can read it
+  // (used by admin layout to skip setup-redirect on the setup page itself).
+  const res = NextResponse.next();
+  res.headers.set("x-pathname", pathname);
+
   if (!restaurantSlug) {
     // No restaurant context — show the platform landing page
-    return NextResponse.next();
+    return res;
   }
 
   // Forward the slug via header so server components can read it
   // without hitting the DB in middleware (avoid cold-start latency).
   // The actual DB lookup happens in lib/restaurant.ts on first use.
-  const res = NextResponse.next();
   res.headers.set("x-restaurant-slug", restaurantSlug);
   return res;
 }

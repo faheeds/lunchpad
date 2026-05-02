@@ -6,14 +6,14 @@ import { signOut } from "next-auth/react";
 import { hasRole, type AdminRole } from "@/lib/roles";
 
 const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
-  { href: "/admin/dashboard",      label: "Dashboard", minRole: "STAFF"   },
-  { href: "/admin/orders",         label: "Orders",    minRole: "STAFF"   },
-  { href: "/admin/delivery-dates", label: "Dates",     minRole: "MANAGER" },
-  { href: "/admin/menu",           label: "Menu",      minRole: "MANAGER" },
-  { href: "/admin/reports",        label: "Reports",   minRole: "MANAGER" },
-  { href: "/admin/schools",        label: "Schools",   minRole: "OWNER"   },
-  { href: "/admin/settings",       label: "Settings",  minRole: "OWNER"   },
+  { href: "/admin/dashboard",      label: "Dashboard",    minRole: "STAFF"   },
+  { href: "/admin/orders",         label: "Orders",       minRole: "STAFF"   },
+  { href: "/admin/reports",        label: "Reports",      minRole: "MANAGER" },
+  { href: "/admin/menu",           label: "Menu",         minRole: "MANAGER" },
+  { href: "/admin/delivery-dates", label: "Schedule",     minRole: "MANAGER" },
+  { href: "/admin/schools",        label: "Schools",      minRole: "OWNER"   },
   { href: "/admin/team",           label: "Team",         minRole: "OWNER"   },
+  { href: "/admin/settings",       label: "Settings",     minRole: "OWNER"   },
   { href: "/admin/subscription",   label: "Subscription", minRole: "OWNER"   },
 ];
 
@@ -33,9 +33,18 @@ export function AdminNav({ adminRole }: { adminRole: string }) {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between py-2.5 border-b border-slate-50">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700">LunchPad</span>
+            <Link href="/admin/dashboard" className="no-underline flex items-center gap-2">
+              <div style={{
+                width: 22, height: 22, borderRadius: 6,
+                background: "linear-gradient(135deg, #c41230, #8b0d22)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "white" }}>L</span>
+              </div>
+              <span className="text-[13px] font-semibold text-ink">LunchPad</span>
+            </Link>
             <span className="text-slate-200">|</span>
-            <span className="text-[13px] font-semibold text-ink">Admin</span>
+            <span className="text-[12px] text-slate-400">Admin</span>
             <span className="ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full text-white"
               style={{ background: badge.color }}>
               {badge.label}
@@ -51,11 +60,15 @@ export function AdminNav({ adminRole }: { adminRole: string }) {
         </div>
         <div className="flex overflow-x-auto gap-0.5 py-1" style={{ scrollbarWidth: "none" }}>
           {links.map((link) => {
-            const active = pathname === link.href;
+            const active = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
               <Link key={link.href} href={link.href}
                 className="flex-shrink-0 px-3 py-1.5 rounded-lg text-[12px] no-underline transition whitespace-nowrap"
-                style={{ background: active ? "#f0fdf4" : "transparent", color: active ? "#15803d" : "#64748b", fontWeight: active ? 600 : 400 }}>
+                style={{
+                  background: active ? "#fff1f3" : "transparent",
+                  color: active ? "#c41230" : "#64748b",
+                  fontWeight: active ? 600 : 400,
+                }}>
                 {link.label}
               </Link>
             );

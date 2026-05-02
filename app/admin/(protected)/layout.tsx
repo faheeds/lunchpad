@@ -1,9 +1,13 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { requireAdmin } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
+
+// Pages that bypass the setup-completion check
+const SETUP_EXEMPT = ["/admin/setup", "/admin/subscription"];
 
 export default async function AdminProtectedLayout({
   children,
@@ -14,7 +18,8 @@ export default async function AdminProtectedLayout({
   const adminRole = session.user?.adminRole ?? "STAFF";
 
   const restaurant = await requireRestaurant();
-  // Wrap in try/catch — subscription columns may not exist until migration is applied
+
+  // ── Subscription gating ─────────────────────────────────────────────────
   let full: Awaited<ReturnType<typeof prisma.restaurant.findUnique>> | null = null;
   try {
     full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
@@ -22,7 +27,6 @@ export default async function AdminProtectedLayout({
     // Migration not yet applied — skip subscription gating
   }
 
-  // Hard block: cancelled subscription or expired trial
   if (full) {
     const isCancelled = full.subscriptionStatus === "CANCELLED";
     const isExpiredTrial =
@@ -47,14 +51,11 @@ export default async function AdminProtectedLayout({
                 ? "Your LunchPad subscription has been cancelled. Reactivate to regain access."
                 : "Your 14-day free trial has ended. Choose a plan to continue using LunchPad."}
             </p>
-            <Link
-              href="/admin/subscription"
-              style={{
-                display: "block", padding: "14px", borderRadius: 12,
-                background: "#c41230", color: "white",
-                fontWeight: 700, fontSize: 15, textDecoration: "none",
-              }}
-            >
+            <Link href="/admin/subscription" style={{
+              display: "block", padding: "14px", borderRadius: 12,
+              background: "#c41230", color: "white",
+              fontWeight: 700, fontSize: 15, textDecoration: "none",
+            }}>
               View plans
             </Link>
           </div>
@@ -63,14 +64,37 @@ export default async function AdminProtectedLayout({
     }
   }
 
+  // ── Setup completion check ───────────────────────────────────────────────
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "";
+  const isSetupExempt = SETUP_EXEMPT.some((p) => pathname.startsWith(p));
+
+  if (!isSetupExempt) {
+    const [schoolCount, menuCount, dateCount] = await Promise.all([
+      prisma.school.count({ where: { restaurantId: restaurant.id, isActive: true } }),
+      prisma.menuItem.count({ where: { restaurantId: restaurant.id, isActive: true } }),
+      prisma.deliveryDate.count({
+        where: { school: { restaurantId: restaurant.id }, deliveryDate: { gte: new Date() } }
+      }),
+    ]);
+
+    if (schoolCount === 0 || menuCount === 0 || dateCount === 0) {
+      redirect("/admin/setup");
+    }
+  }
+
+  // ── Trial days remaining warning ─────────────────────────────────────────
+  const trialDaysLeft = full?.subscriptionStatus === "TRIAL" && full.trialEndsAt
+    ? Math.ceil((full.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Past-due warning banner */}
+      {/* Past-due warning */}
       {full?.subscriptionStatus === "PAST_DUE" && (
         <div style={{
           background: "#fef2f2", borderBottom: "1px solid #fecaca",
-          padding: "10px 16px", textAlign: "center",
-          fontSize: 13, color: "#991b1b",
+          padding: "10px 16px", textAlign: "center", fontSize: 13, color: "#991b1b",
         }}>
           Your last payment failed.{" "}
           <Link href="/admin/subscription" style={{ fontWeight: 700, color: "#991b1b" }}>
@@ -79,22 +103,18 @@ export default async function AdminProtectedLayout({
           to avoid losing access.
         </div>
       )}
-      {/* Trial expiry warning */}
-      {full?.subscriptionStatus === "TRIAL" && full.trialEndsAt && (() => {
-        const daysLeft = Math.ceil((full.trialEndsAt!.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        return daysLeft <= 3 ? (
-          <div style={{
-            background: "#fefce8", borderBottom: "1px solid #fde68a",
-            padding: "10px 16px", textAlign: "center",
-            fontSize: 13, color: "#854d0e",
-          }}>
-            {daysLeft === 0 ? "Your trial expires today." : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left in your trial.`}{" "}
-            <Link href="/admin/subscription" style={{ fontWeight: 700, color: "#854d0e" }}>
-              Upgrade now
-            </Link>
-          </div>
-        ) : null;
-      })()}
+      {/* Trial expiry warning (≤ 3 days) */}
+      {trialDaysLeft !== null && trialDaysLeft <= 3 && (
+        <div style={{
+          background: "#fefce8", borderBottom: "1px solid #fde68a",
+          padding: "10px 16px", textAlign: "center", fontSize: 13, color: "#854d0e",
+        }}>
+          {trialDaysLeft === 0 ? "Your trial expires today." : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} left in your trial.`}{" "}
+          <Link href="/admin/subscription" style={{ fontWeight: 700, color: "#854d0e" }}>
+            Upgrade now
+          </Link>
+        </div>
+      )}
       <AdminNav adminRole={adminRole} />
       <div className="max-w-7xl mx-auto px-4 py-4">
         {children}

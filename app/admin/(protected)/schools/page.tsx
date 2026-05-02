@@ -7,15 +7,27 @@ import { slugify } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+const TIMEZONES = [
+  { value: "America/New_York",    label: "Eastern (ET)" },
+  { value: "America/Chicago",     label: "Central (CT)" },
+  { value: "America/Denver",      label: "Mountain (MT)" },
+  { value: "America/Los_Angeles", label: "Pacific (PT)" },
+  { value: "America/Anchorage",   label: "Alaska (AKT)" },
+  { value: "Pacific/Honolulu",    label: "Hawaii (HT)"  },
+];
+
 async function createSchool(formData: FormData) {
   "use server";
   const restaurant = await requireRestaurant();
+  // cutoffTime is a "HH:MM" string from <input type="time">
+  const cutoffTime = String(formData.get("cutoffTime") || "21:00");
+  const [hourStr, minStr] = cutoffTime.split(":");
   const parsed = schoolSchema.parse({
     name: formData.get("name"),
     slug: slugify(String(formData.get("name") || "")),
     timezone: formData.get("timezone"),
-    defaultCutoffHour: formData.get("defaultCutoffHour"),
-    defaultCutoffMinute: formData.get("defaultCutoffMinute"),
+    defaultCutoffHour: parseInt(hourStr ?? "21", 10),
+    defaultCutoffMinute: parseInt(minStr ?? "0", 10),
     collectTeacher: formData.get("collectTeacher") === "on",
     collectClassroom: formData.get("collectClassroom") === "on",
     isActive: formData.get("isActive") === "on"
@@ -53,24 +65,24 @@ export default async function AdminSchoolsPage() {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[11px] text-slate-500 mb-1 block">School name</label>
-              <input name="name" placeholder="e.g. Medina Academy Redmond" required
+              <input name="name" placeholder="e.g. Lincoln Elementary" required
                 className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
             </div>
             <div>
               <label className="text-[11px] text-slate-500 mb-1 block">Timezone</label>
-              <input name="timezone" defaultValue="America/Los_Angeles" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              <select name="timezone" defaultValue="America/Los_Angeles"
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                {TIMEZONES.map((tz) => (
+                  <option key={tz.value} value={tz.value}>{tz.label}</option>
+                ))}
+              </select>
             </div>
-            <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Cutoff hour (24h)</label>
-              <input name="defaultCutoffHour" defaultValue="21" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
-            </div>
-            <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Cutoff minute</label>
-              <input name="defaultCutoffMinute" defaultValue="0" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
-            </div>
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-500 mb-1 block">Default ordering cutoff time</label>
+            <input name="cutoffTime" type="time" defaultValue="21:00" required
+              className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+            <p className="text-[10px] text-slate-400 mt-1">Parents cannot order after this time the night before delivery.</p>
           </div>
           <div className="flex gap-4 flex-wrap pt-1">
             <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
