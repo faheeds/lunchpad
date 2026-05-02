@@ -18,7 +18,8 @@ const envSchema = z.object({
   DEFAULT_TIMEZONE: z.string().default("America/Los_Angeles"),
   STRIPE_PRICE_STARTER: z.string().optional(),
   STRIPE_PRICE_GROWTH: z.string().optional(),
-  STRIPE_PRICE_SCALE: z.string().optional()
+  STRIPE_PRICE_SCALE: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -39,5 +40,6 @@ export const env = envSchema.parse({
   DEFAULT_TIMEZONE: process.env.DEFAULT_TIMEZONE ?? "America/Los_Angeles",
   STRIPE_PRICE_STARTER: process.env.STRIPE_PRICE_STARTER,
   STRIPE_PRICE_GROWTH: process.env.STRIPE_PRICE_GROWTH,
-  STRIPE_PRICE_SCALE: process.env.STRIPE_PRICE_SCALE
+  STRIPE_PRICE_SCALE: process.env.STRIPE_PRICE_SCALE,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
 });

@@ -4,6 +4,7 @@ import { menuItemSchema, menuOptionSchema } from "@/lib/validation/order";
 import { slugify } from "@/lib/utils";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { BulkMenuUpload } from "@/components/admin/bulk-menu-upload";
 
 export const dynamic = "force-dynamic";
 
@@ -153,6 +154,17 @@ export default async function AdminMenuPage() {
             Create item
           </button>
         </form>
+      </details>
+
+      {/* Bulk upload */}
+      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
+          <span className="text-[13px] font-semibold text-ink">⬆ Bulk upload menu</span>
+          <span className="text-[11px] text-slate-400">Excel or AI extraction</span>
+        </summary>
+        <div className="px-4 pb-4 border-t border-slate-50 pt-3">
+          <BulkMenuUpload />
+        </div>
       </details>
 
       {/* Add option */}

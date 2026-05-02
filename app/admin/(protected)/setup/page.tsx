@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdmin } from "@/lib/admin-auth";
 import { slugify } from "@/lib/utils";
+import { BulkMenuUpload } from "@/components/admin/bulk-menu-upload";
 
 export const dynamic = "force-dynamic";
 
@@ -237,34 +238,47 @@ export default async function AdminSetupPage() {
             </div>
           }
           formContent={
-            <form action={createMenuItem} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={labelStyle}>Item name</label>
-                  <input name="name" required placeholder="e.g. Smash Burger" style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Price</label>
-                  <div style={{ position: "relative" }}>
-                    <span style={{
-                      position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-                      fontSize: 13, color: "#6b7280", pointerEvents: "none",
-                    }}>$</span>
-                    <input name="price" required type="number" step="0.01" min="0"
-                      placeholder="12.99"
-                      style={{ ...inputStyle, paddingLeft: 24 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {/* Quick single-item form */}
+              <form action={createMenuItem} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={labelStyle}>Item name</label>
+                    <input name="name" required placeholder="e.g. Smash Burger" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Price</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{
+                        position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+                        fontSize: 13, color: "#6b7280", pointerEvents: "none",
+                      }}>$</span>
+                      <input name="price" required type="number" step="0.01" min="0"
+                        placeholder="12.99"
+                        style={{ ...inputStyle, paddingLeft: 24 }} />
+                    </div>
                   </div>
                 </div>
+                <div>
+                  <label style={labelStyle}>
+                    Description <span style={{ color: "#9ca3af", fontWeight: 400 }}>(optional)</span>
+                  </label>
+                  <input name="description" placeholder="e.g. Classic smash patty with American cheese"
+                    style={inputStyle} />
+                </div>
+                <button type="submit" style={primaryBtnStyle}>Add menu item</button>
+              </form>
+
+              {/* Divider */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 12px" }}>
+                <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+                <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>or bulk upload</span>
+                <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
               </div>
-              <div>
-                <label style={labelStyle}>
-                  Description <span style={{ color: "#9ca3af", fontWeight: 400 }}>(optional)</span>
-                </label>
-                <input name="description" placeholder="e.g. Classic smash patty with American cheese"
-                  style={inputStyle} />
-              </div>
-              <button type="submit" style={primaryBtnStyle}>Add menu item</button>
-            </form>
+
+              {/* Bulk upload */}
+              <BulkMenuUpload />
+            </div>
           }
         />
 
