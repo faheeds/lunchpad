@@ -14,7 +14,13 @@ export default async function AdminProtectedLayout({
   const adminRole = session.user?.adminRole ?? "STAFF";
 
   const restaurant = await requireRestaurant();
-  const full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
+  // Wrap in try/catch — subscription columns may not exist until migration is applied
+  let full: Awaited<ReturnType<typeof prisma.restaurant.findUnique>> | null = null;
+  try {
+    full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
+  } catch {
+    // Migration not yet applied — skip subscription gating
+  }
 
   // Hard block: cancelled subscription or expired trial
   if (full) {
