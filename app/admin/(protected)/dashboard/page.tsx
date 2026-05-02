@@ -29,7 +29,7 @@ export default async function AdminDashboardPage() {
       },
     }),
     prisma.payment.aggregate({
-      _sum: { amount: true },
+      _sum: { amountCents: true },
       where: {
         order: { restaurantId: restaurant.id, status: "PAID" },
         status: "PAID",
@@ -56,7 +56,7 @@ export default async function AdminDashboardPage() {
     }),
   ]);
 
-  const todayRevenueAmount = todayRevenue._sum.amount ?? 0;
+  const todayRevenueAmount = todayRevenue._sum.amountCents ?? 0;
   const nextDelivery = upcomingDeliveryDates[0] ?? null;
 
   const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
