@@ -13,7 +13,8 @@ const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/reports",        label: "Reports",   minRole: "MANAGER" },
   { href: "/admin/schools",        label: "Schools",   minRole: "OWNER"   },
   { href: "/admin/settings",       label: "Settings",  minRole: "OWNER"   },
-  { href: "/admin/team",           label: "Team",      minRole: "OWNER"   },
+  { href: "/admin/team",           label: "Team",         minRole: "OWNER"   },
+  { href: "/admin/subscription",   label: "Subscription", minRole: "OWNER"   },
 ];
 
 const ROLE_BADGE: Record<string, { label: string; color: string }> = {
