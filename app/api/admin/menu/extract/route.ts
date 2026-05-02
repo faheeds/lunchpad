@@ -134,7 +134,7 @@ ${pageText}`;
       options: Array.isArray(item.options)
         ? item.options.map((opt: Record<string, unknown>) => ({
             name: String(opt.name ?? "").trim(),
-            optionType: opt.optionType === "REMOVAL" ? "REMOVAL" : "ADD_ON",
+            optionType: (opt.optionType === "REMOVAL" ? "REMOVAL" : "ADD_ON") as "ADD_ON" | "REMOVAL",
             priceDeltaCents: Math.max(0, Math.round(Number(opt.priceDeltaCents) || 0)),
             isDefault: opt.isDefault === true,
           }))
