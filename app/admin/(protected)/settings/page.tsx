@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { ThemePicker } from "@/components/admin/theme-picker";
+import { CopyUrlButton } from "@/components/admin/copy-url-button";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -186,9 +188,76 @@ export default async function AdminSettingsPage({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-[12px] text-slate-500">Plan</span>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wide">
-              {restaurant.plan}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wide">
+                {restaurant.plan}
+              </span>
+              <Link href="/admin/subscription" className="text-[11px] text-brand-700 font-medium no-underline">
+                Manage →
+              </Link>
+            </div>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-[12px] text-slate-500">Status</span>
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+              restaurant.subscriptionStatus === "ACTIVE" || restaurant.subscriptionStatus === "TRIAL"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}>
+              {restaurant.subscriptionStatus}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Public ordering URL ─────────────────────────────────── */}
+      <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-50">
+          <p className="text-[13px] font-semibold text-ink">Ordering page URL</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Share this link with parents so they can place orders</p>
+        </div>
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200 px-3 py-2">
+            <p className="text-[12px] font-mono text-slate-600 flex-1 truncate">
+              https://{restaurant.slug}.lunchpad.us
+            </p>
+            <CopyUrlButton url={`https://${restaurant.slug}.lunchpad.us`} />
+          </div>
+          <div className="flex gap-2 mt-2">
+            <a href={`https://${restaurant.slug}.lunchpad.us`} target="_blank" rel="noopener noreferrer"
+              className="text-[12px] text-brand-700 font-medium no-underline hover:underline">
+              Preview ordering page →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Danger zone ─────────────────────────────────────────── */}
+      <div className="rounded-[14px] border border-red-100 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-red-50 bg-red-50/50">
+          <p className="text-[13px] font-semibold text-red-700">Danger zone</p>
+          <p className="text-[11px] text-red-400 mt-0.5">These actions are permanent and cannot be undone</p>
+        </div>
+        <div className="px-4 py-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-medium text-ink">Change password</p>
+              <p className="text-[11px] text-slate-400">Update your admin account password</p>
+            </div>
+            <Link href="/admin/team"
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-[11px] font-semibold text-slate-600 no-underline hover:bg-slate-50 transition">
+              Go to Team →
+            </Link>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-medium text-ink">Cancel subscription</p>
+              <p className="text-[11px] text-slate-400">Downgrade or cancel your LunchPad plan</p>
+            </div>
+            <Link href="/admin/subscription"
+              className="px-3 py-1.5 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 no-underline hover:bg-red-50 transition">
+              Manage plan →
+            </Link>
           </div>
         </div>
       </div>

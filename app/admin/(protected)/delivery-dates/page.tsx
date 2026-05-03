@@ -1,29 +1,36 @@
 import { revalidatePath } from "next/cache";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
-import { deliveryDateSchema } from "@/lib/validation/order";
 
 export const dynamic = "force-dynamic";
 
+// ── Server actions ────────────────────────────────────────────────────────────
+
 async function createDeliveryDate(formData: FormData) {
   "use server";
-  const parsed = deliveryDateSchema.parse({
-    schoolId: formData.get("schoolId"),
-    deliveryDate: formData.get("deliveryDate"),
-    cutoffAt: formData.get("cutoffAt"),
-    orderingOpen: formData.get("orderingOpen") === "on",
-    notes: formData.get("notes")
-  });
+  const schoolId       = String(formData.get("schoolId") || "");
+  const deliveryDateStr = String(formData.get("deliveryDate") || "");
+  const cutoffAtStr    = String(formData.get("cutoffAt") || "");
+  const notes          = String(formData.get("notes") || "").trim() || null;
+  const orderingOpen   = formData.get("orderingOpen") === "on";
+
+  if (!schoolId || !deliveryDateStr || !cutoffAtStr) return;
+
+  // Use the school's own timezone — not a hardcoded value
+  const school = await prisma.school.findUnique({ where: { id: schoolId }, select: { timezone: true } });
+  if (!school) return;
+
   await prisma.deliveryDate.create({
     data: {
-      schoolId: parsed.schoolId,
-      deliveryDate: fromZonedTime(`${parsed.deliveryDate} 11:00:00`, "America/Los_Angeles"),
-      cutoffAt: fromZonedTime(parsed.cutoffAt.replace("T", " ") + ":00", "America/Los_Angeles"),
-      orderingOpen: parsed.orderingOpen,
-      notes: parsed.notes || null
-    }
+      schoolId,
+      deliveryDate: fromZonedTime(`${deliveryDateStr} 11:00:00`, school.timezone),
+      cutoffAt:     fromZonedTime(cutoffAtStr.replace("T", " ") + ":00", school.timezone),
+      orderingOpen,
+      notes,
+    },
   });
   revalidatePath("/admin/delivery-dates");
 }
@@ -39,191 +46,278 @@ async function toggleDateOpen(formData: FormData) {
 async function attachMenuItems(formData: FormData) {
   "use server";
   const deliveryDateId = String(formData.get("deliveryDateId"));
-  const schoolId = String(formData.get("schoolId"));
-  const submittedIds = new Set(formData.getAll("menuItemIds").map(String));
+  const schoolId       = String(formData.get("schoolId"));
+  const submittedIds   = new Set(formData.getAll("menuItemIds").map(String));
 
-  // The submitted checkbox list is the authoritative state: any active menu
-  // item in the set is available for this delivery date, everything else is
-  // unavailable. Without this, unchecking + saving would leave stale
-  // availability rows behind and the UI would re-render as still-checked.
   const activeMenuItems = await prisma.menuItem.findMany({
-    where: { isActive: true },
-    select: { id: true }
+    where: { isActive: true }, select: { id: true },
   });
 
   await prisma.$transaction(
     activeMenuItems.map((item) => {
       const shouldBeAvailable = submittedIds.has(item.id);
       return prisma.deliveryMenuItem.upsert({
-        where: { deliveryDateId_menuItemId: { deliveryDateId, menuItemId: item.id } },
+        where:  { deliveryDateId_menuItemId: { deliveryDateId, menuItemId: item.id } },
         update: { isAvailable: shouldBeAvailable },
-        create: { deliveryDateId, menuItemId: item.id, schoolId, isAvailable: shouldBeAvailable }
+        create: { deliveryDateId, menuItemId: item.id, schoolId, isAvailable: shouldBeAvailable },
       });
-    })
+    }),
   );
-
   revalidatePath("/admin/delivery-dates");
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default async function DeliveryDatesPage() {
   const [restaurant] = await Promise.all([requireRestaurant(), requireAdminRole("MANAGER")]);
+
   const [schools, deliveryDates, menuItems] = await Promise.all([
-    prisma.school.findMany({ where: { restaurantId: restaurant.id, isActive: true }, orderBy: { name: "asc" } }),
+    prisma.school.findMany({
+      where: { restaurantId: restaurant.id, isActive: true },
+      orderBy: { name: "asc" },
+    }),
     prisma.deliveryDate.findMany({
       where: { school: { restaurantId: restaurant.id } },
       include: {
         school: true,
-        // Only surface available rows — unchecked items keep a row with
-        // isAvailable=false so history is preserved, but the UI should treat
-        // them as detached.
         menuAvailability: {
           where: { isAvailable: true },
-          include: { menuItem: true }
-        }
+          include: { menuItem: { select: { id: true, name: true } } },
+        },
+        _count: {
+          select: { orders: { where: { status: "PAID" } } },
+        },
       },
-      orderBy: { deliveryDate: "asc" }
+      orderBy: { deliveryDate: "asc" },
     }),
-    prisma.menuItem.findMany({ where: { isActive: true }, orderBy: { name: "asc" } })
+    prisma.menuItem.findMany({
+      where: { restaurantId: restaurant.id, isActive: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
-  // Group by upcoming vs past
-  const now = new Date();
-  const upcoming = deliveryDates.filter((d) => new Date(d.deliveryDate) >= now);
-  const past = deliveryDates.filter((d) => new Date(d.deliveryDate) < now);
+  const now      = new Date();
+  const upcoming = deliveryDates.filter((d) => d.deliveryDate >= now);
+  const past     = deliveryDates.filter((d) => d.deliveryDate < now);
 
   return (
-    <div className="space-y-4 pb-10">
-      <h1 className="text-[17px] font-semibold text-ink">Delivery dates</h1>
+    <div className="space-y-5 pb-10">
 
-      {/* Add date */}
+      {/* ── Header ─────────────────────���───────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[17px] font-semibold text-ink">Schedule</h1>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            {upcoming.length} upcoming · {past.length} past
+          </p>
+        </div>
+      </div>
+
+      {/* ── Add delivery date ───────────────────────────────────────── */}
       <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[13px] font-semibold text-ink">+ Add delivery date</span>
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/>
+            </svg>
+            Add delivery date
+          </span>
           <span className="text-[11px] text-slate-400">tap to expand</span>
         </summary>
-        <form action={createDeliveryDate} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-2">
-          <div>
-            <label className="text-[11px] text-slate-500 mb-1 block">School</label>
-            <select name="schoolId" className="w-full rounded-lg border-slate-200 text-[13px] py-2">
-              {schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
+
+        <form action={createDeliveryDate} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Delivery date</label>
-              <input type="date" name="deliveryDate" required className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">School</label>
+              <select name="schoolId" required
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                <option value="">Select school…</option>
+                {schools.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Order cutoff</label>
-              <input type="datetime-local" name="cutoffAt" required className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Delivery date</label>
+              <input type="date" name="deliveryDate" required
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
             </div>
           </div>
-          <div>
-            <label className="text-[11px] text-slate-500 mb-1 block">Notes (optional)</label>
-            <input name="notes" placeholder="e.g. Last day before spring break" className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Ordering closes at</label>
+              <input type="datetime-local" name="cutoffAt" required
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              <p className="text-[10px] text-slate-400 mt-1">In the school&apos;s timezone</p>
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Notes <span className="font-normal text-slate-400">(optional)</span></label>
+              <input type="text" name="notes" placeholder="e.g. Pizza day!"
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+            </div>
           </div>
           <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
-            <input type="checkbox" name="orderingOpen" defaultChecked className="rounded" /> Open for ordering
+            <input type="checkbox" name="orderingOpen" defaultChecked className="rounded" />
+            Open for ordering immediately
           </label>
-          <button type="submit" className="w-full py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+          <button type="submit"
+            className="w-full py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
             Create delivery date
           </button>
         </form>
       </details>
 
-      {/* Upcoming dates */}
+      {/* ── Upcoming dates ──────────────────────────────────────────── */}
       {upcoming.length > 0 && (
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 mb-2">Upcoming ({upcoming.length})</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-2">
+            Upcoming ({upcoming.length})
+          </p>
           <div className="space-y-2">
-            {upcoming.map((date) => (
-              <details key={date.id} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
-                <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer list-none">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-brand-50 flex flex-col items-center justify-center">
-                    <p className="text-[8px] font-semibold uppercase text-brand-600">
-                      {formatInTimeZone(date.deliveryDate, date.school.timezone, "MMM")}
-                    </p>
-                    <p className="text-[16px] font-semibold text-brand-900 leading-none">
-                      {formatInTimeZone(date.deliveryDate, date.school.timezone, "d")}
-                    </p>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-ink truncate">{date.school.name}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {formatInTimeZone(date.deliveryDate, date.school.timezone, "EEEE")} &middot; {date.menuAvailability.length} items
-                    </p>
-                  </div>
-                  <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${
-                    date.orderingOpen ? "bg-brand-100 text-brand-800" : "bg-slate-100 text-slate-500"
-                  }`}>
-                    {date.orderingOpen ? "Open" : "Closed"}
-                  </span>
-                </summary>
+            {upcoming.map((date) => {
+              const tz         = date.school.timezone;
+              const orderCount = date._count.orders;
+              const menuCount  = date.menuAvailability.length;
 
-                <div className="border-t border-slate-50 px-4 py-3 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] text-slate-500">
-                      Cutoff: {formatInTimeZone(date.cutoffAt, date.school.timezone, "MMM d h:mm a zzz")}
-                      {date.notes && <span> · {date.notes}</span>}
-                    </p>
-                    <form action={toggleDateOpen}>
-                      <input type="hidden" name="id" value={date.id} />
-                      <button type="submit"
-                        className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition ${
-                          date.orderingOpen
-                            ? "border-slate-200 text-slate-600 hover:border-red-200 hover:text-red-700"
-                            : "border-brand-200 text-brand-700 hover:bg-brand-50"
-                        }`}>
-                        {date.orderingOpen ? "Close ordering" : "Open ordering"}
-                      </button>
-                    </form>
-                  </div>
+              return (
+                <details key={date.id} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+                  <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer list-none">
+                    {/* Calendar tile */}
+                    <div style={{
+                      flexShrink: 0, width: 44, height: 44, borderRadius: 12,
+                      background: "#fff1f3", display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      <p style={{ fontSize: 8, fontWeight: 700, color: "#c41230", textTransform: "uppercase" }}>
+                        {formatInTimeZone(date.deliveryDate, tz, "MMM")}
+                      </p>
+                      <p style={{ fontSize: 18, fontWeight: 800, color: "#c41230", lineHeight: 1 }}>
+                        {formatInTimeZone(date.deliveryDate, tz, "d")}
+                      </p>
+                    </div>
 
-                  {/* Menu items on this date */}
-                  {date.menuAvailability.length > 0 && (
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Menu items</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {date.menuAvailability.map((entry) => (
-                          <span key={entry.id} className="px-2.5 py-1 rounded-full text-[11px] bg-brand-50 text-brand-800 border border-brand-100">
-                            {entry.menuItem.name}
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-ink truncate">{date.school.name}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {formatInTimeZone(date.deliveryDate, tz, "EEEE")}
+                        {date.notes ? ` · ${date.notes}` : ""}
+                      </p>
+                    </div>
+
+                    {/* Badges */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {orderCount > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 700, background: "#dcfce7", color: "#15803d", borderRadius: 100, padding: "3px 10px" }}>
+                          {orderCount} order{orderCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {menuCount > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 600, background: "#eff6ff", color: "#0369a1", borderRadius: 100, padding: "3px 8px" }}>
+                          {menuCount} items
+                        </span>
+                      )}
+                      <span style={{
+                        fontSize: 10, fontWeight: 700,
+                        background: date.orderingOpen ? "#dcfce7" : "#f3f4f6",
+                        color: date.orderingOpen ? "#15803d" : "#6b7280",
+                        borderRadius: 100, padding: "3px 10px",
+                      }}>
+                        {date.orderingOpen ? "Open" : "Closed"}
+                      </span>
+                    </div>
+                  </summary>
+
+                  {/* Expanded body */}
+                  <div className="border-t border-slate-50 px-4 py-3 space-y-3">
+                    {/* Cutoff + toggle */}
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <p className="text-[11px] text-slate-500">
+                          Cutoff: <span className="font-medium text-ink">
+                            {formatInTimeZone(date.cutoffAt, tz, "EEE MMM d · h:mm a zzz")}
                           </span>
-                        ))}
+                        </p>
+                        {orderCount > 0 && (
+                          <Link href={`/admin/orders?deliveryDateId=${date.id}`}
+                            className="text-[11px] text-brand-700 font-medium no-underline hover:underline">
+                            View {orderCount} order{orderCount !== 1 ? "s" : ""} →
+                          </Link>
+                        )}
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <form action={toggleDateOpen}>
+                          <input type="hidden" name="id" value={date.id} />
+                          <button type="submit"
+                            className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition ${
+                              date.orderingOpen
+                                ? "border-slate-200 text-slate-600 hover:border-red-200 hover:text-red-700"
+                                : "border-brand-200 text-brand-700 hover:bg-brand-50"
+                            }`}>
+                            {date.orderingOpen ? "Close ordering" : "Open ordering"}
+                          </button>
+                        </form>
                       </div>
                     </div>
-                  )}
 
-                  {/* Attach menu items */}
-                  <details className="rounded-lg border border-slate-100 overflow-hidden">
-                    <summary className="px-3 py-2 text-[12px] text-brand-700 font-medium cursor-pointer list-none">
-                      + Attach more menu items
-                    </summary>
-                    <form action={attachMenuItems} className="px-3 pb-3 border-t border-slate-50 pt-2 space-y-2">
-                      <input type="hidden" name="deliveryDateId" value={date.id} />
-                      <input type="hidden" name="schoolId" value={date.schoolId} />
-                      <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
-                        {menuItems.map((item) => (
-                          <label key={item.id} className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer py-1">
-                            <input type="checkbox" name="menuItemIds" value={item.id}
-                              defaultChecked={date.menuAvailability.some((a) => a.menuItemId === item.id)}
-                              className="rounded flex-shrink-0" />
-                            <span className="truncate">{item.name}</span>
-                          </label>
-                        ))}
+                    {/* Menu items currently on this date */}
+                    {date.menuAvailability.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Menu items on this date</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {date.menuAvailability.map((entry) => (
+                            <span key={entry.id}
+                              className="px-2.5 py-1 rounded-full text-[11px] bg-brand-50 text-brand-800 border border-brand-100">
+                              {entry.menuItem.name}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <button type="submit" className="w-full py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
-                        Save menu items
-                      </button>
-                    </form>
-                  </details>
-                </div>
-              </details>
-            ))}
+                    )}
+
+                    {/* Attach / update menu items */}
+                    <details className="rounded-lg border border-slate-100 overflow-hidden">
+                      <summary className="px-3 py-2 text-[12px] text-brand-700 font-medium cursor-pointer list-none hover:bg-slate-50 transition">
+                        {date.menuAvailability.length > 0 ? "Update menu items →" : "+ Attach menu items"}
+                      </summary>
+                      <form action={attachMenuItems} className="px-3 pb-3 border-t border-slate-50 pt-2 space-y-2">
+                        <input type="hidden" name="deliveryDateId" value={date.id} />
+                        <input type="hidden" name="schoolId" value={date.schoolId} />
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto py-1">
+                          {menuItems.map((item) => (
+                            <label key={item.id} className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer py-1">
+                              <input type="checkbox" name="menuItemIds" value={item.id}
+                                defaultChecked={date.menuAvailability.some((a) => a.menuItemId === item.id)}
+                                className="rounded flex-shrink-0 accent-brand-700" />
+                              <span className="truncate">{item.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <button type="submit"
+                          className="w-full py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
+                          Save menu items
+                        </button>
+                      </form>
+                    </details>
+                  </div>
+                </details>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Past dates - collapsed summary */}
+      {upcoming.length === 0 && (
+        <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-8 text-center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+          <p className="text-[13px] font-medium text-slate-400">No upcoming delivery dates.</p>
+          <p className="text-[11px] text-slate-300 mt-1">Expand &ldquo;Add delivery date&rdquo; above to create one.</p>
+        </div>
+      )}
+
+      {/* ── Past dates ──────────────────────────────────────────────── */}
       {past.length > 0 && (
         <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
           <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
@@ -231,15 +325,47 @@ export default async function DeliveryDatesPage() {
             <span className="text-[11px] text-slate-400">tap to expand</span>
           </summary>
           <div className="border-t border-slate-50 divide-y divide-slate-50">
-            {past.slice().reverse().map((date) => (
-              <div key={date.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-medium text-slate-600">{date.school.name}</p>
-                  <p className="text-[11px] text-slate-400">{formatInTimeZone(date.deliveryDate, date.school.timezone, "EEE, MMM d yyyy")}</p>
+            {past.slice().reverse().map((date) => {
+              const tz         = date.school.timezone;
+              const orderCount = date._count.orders;
+              return (
+                <div key={date.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div style={{
+                      flexShrink: 0, width: 36, height: 36, borderRadius: 10,
+                      background: "#f3f4f6", display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      <p style={{ fontSize: 7, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" }}>
+                        {formatInTimeZone(date.deliveryDate, tz, "MMM")}
+                      </p>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                        {formatInTimeZone(date.deliveryDate, tz, "d")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-medium text-slate-600">{date.school.name}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {formatInTimeZone(date.deliveryDate, tz, "EEE, MMM d yyyy")}
+                        {date.notes ? ` · ${date.notes}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {orderCount > 0 && (
+                      <Link href={`/admin/orders?deliveryDateId=${date.id}&archived=include`}
+                        className="text-[11px] font-semibold no-underline"
+                        style={{ color: "#6b7280" }}>
+                        {orderCount} orders
+                      </Link>
+                    )}
+                    <span className="text-[10px] text-slate-400">
+                      {date.menuAvailability.length} items
+                    </span>
+                  </div>
                 </div>
-                <span className="text-[10px] text-slate-400">{date.menuAvailability.length} items</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </details>
       )}

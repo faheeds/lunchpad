@@ -4,33 +4,43 @@ import { listOrders } from "@/lib/orders";
 import { requireRestaurant } from "@/lib/restaurant";
 import { OrdersList } from "@/components/admin/orders-list";
 import { formatInTimeZone } from "date-fns-tz";
+import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-function normalizeMultiValue(value: string | string[] | undefined) {
-  if (!value) return [];
-  return Array.isArray(value) ? value.filter(Boolean) : [value].filter(Boolean);
-}
-
 export default async function AdminOrdersPage({
-  searchParams
+  searchParams,
 }: {
-  searchParams: Promise<{ deliveryDateId?: string; schoolIds?: string | string[]; status?: string; archived?: string }>;
+  searchParams: Promise<{
+    deliveryDateId?: string;
+    schoolId?: string;
+    status?: string;
+    archived?: string;
+  }>;
 }) {
   const [params, restaurant] = await Promise.all([searchParams, requireRestaurant()]);
-  const selectedSchoolIds = normalizeMultiValue(params.schoolIds);
 
   const [orders, schools, allDeliveryDates] = await Promise.all([
-    listOrders({ restaurantId: restaurant.id, deliveryDateId: params.deliveryDateId, schoolIds: selectedSchoolIds, status: params.status, archived: params.archived }),
-    prisma.school.findMany({ where: { restaurantId: restaurant.id, isActive: true }, orderBy: { name: "asc" } }),
+    listOrders({
+      restaurantId: restaurant.id,
+      deliveryDateId: params.deliveryDateId,
+      schoolIds: params.schoolId ? [params.schoolId] : [],
+      status: params.status,
+      archived: params.archived,
+    }),
+    prisma.school.findMany({
+      where: { restaurantId: restaurant.id, isActive: true },
+      orderBy: { name: "asc" },
+    }),
     prisma.deliveryDate.findMany({
-      where: { school: { restaurantId: restaurant.id }, schoolId: selectedSchoolIds.length ? { in: selectedSchoolIds } : undefined },
+      where: { school: { restaurantId: restaurant.id } },
       include: { school: true },
-      orderBy: { deliveryDate: "asc" }
-    })
+      orderBy: { deliveryDate: "desc" },
+      take: 60,
+    }),
   ]);
 
-  // Deduplicate dates — when no school filter, show each calendar date once
+  // Deduplicate delivery dates by calendar day
   const seenDates = new Set<string>();
   const deliveryDates = allDeliveryDates.filter((d) => {
     const label = formatInTimeZone(d.deliveryDate, d.school.timezone, "yyyy-MM-dd");
@@ -39,59 +49,130 @@ export default async function AdminOrdersPage({
     return true;
   });
 
+  // Summary stats from returned orders
+  const paidOrders    = orders.filter((o) => o.status === "PAID");
+  const pendingOrders = orders.filter((o) => o.status === "PENDING");
+  const revenue       = paidOrders.reduce((sum, o) => sum + o.totalCents, 0);
+
+  const exportBase = params.deliveryDateId ? `?deliveryDateId=${params.deliveryDateId}` : "";
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[17px] font-semibold text-ink">Orders</h1>
-        <div className="flex gap-2">
-          <a href={`/api/admin/export${params.deliveryDateId ? `?deliveryDateId=${params.deliveryDateId}` : ""}`}
-            className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] text-slate-600 no-underline">CSV</a>
-          <a href={`/api/admin/labels${params.deliveryDateId ? `?deliveryDateId=${params.deliveryDateId}` : ""}`}
-            target="_blank" rel="noopener noreferrer"
-            className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] text-slate-600 no-underline">Labels PDF</a>
-          <Link href={`/admin/orders/labels-print${params.deliveryDateId ? `?deliveryDateId=${params.deliveryDateId}` : ""}`}
-            className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] text-slate-600 no-underline">Print</Link>
+    <div className="space-y-4 pb-10">
+
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-[17px] font-semibold text-ink">Orders</h1>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            {orders.length} order{orders.length !== 1 ? "s" : ""} match current filters
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <a href={`/api/admin/export${exportBase}`}
+            className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 no-underline hover:bg-slate-50 transition flex items-center gap-1.5">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            CSV
+          </a>
+          <a href={`/api/admin/labels${exportBase}`} target="_blank" rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 no-underline hover:bg-slate-50 transition flex items-center gap-1.5">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Labels PDF
+          </a>
+          <Link href={`/admin/orders/labels-print${exportBase}`}
+            className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 no-underline hover:bg-slate-50 transition flex items-center gap-1.5">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            Print
+          </Link>
         </div>
       </div>
 
+      {/* ── Stat tiles ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {([
+          { label: "Total",    sub: "shown",      value: String(orders.length),         color: "#0f1923", bg: "#f8fafc", border: "#e2e8f0" },
+          { label: "Paid",     sub: "orders",     value: String(paidOrders.length),     color: "#15803d", bg: "#f0fdf4", border: "#bbf7d0" },
+          { label: "Pending",  sub: "orders",     value: String(pendingOrders.length),  color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
+          { label: "Revenue",  sub: "from paid",  value: formatCurrency(revenue),       color: "#c41230", bg: "#fff1f3", border: "#fecdd3" },
+        ] as const).map(({ label, sub, value, color, bg, border }) => (
+          <div key={label} style={{
+            background: bg, border: `1px solid ${border}`, borderRadius: 14,
+            padding: "12px 14px", minHeight: 80,
+          }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+              {label}
+            </p>
+            <p style={{ fontSize: 22, fontWeight: 800, color, letterSpacing: "-0.03em", lineHeight: 1, whiteSpace: "nowrap" }}>
+              {value}
+            </p>
+            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Filter bar ─────────────────────────────────────────────── */}
       <form className="rounded-[14px] border border-slate-100 bg-white p-3">
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <select name="schoolIds" multiple defaultValue={selectedSchoolIds}
-            className="rounded-lg border-slate-200 text-[12px] py-1.5 min-h-[56px]">
-            {schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">School</label>
+            <select name="schoolId" defaultValue={params.schoolId ?? ""}
+              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
+              <option value="">All schools</option>
+              {schools.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Delivery date</label>
             <select name="deliveryDateId" defaultValue={params.deliveryDateId ?? ""}
-              className="rounded-lg border-slate-200 text-[12px] py-1.5">
+              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
               <option value="">All dates</option>
               {deliveryDates.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {formatInTimeZone(d.deliveryDate, d.school.timezone, "EEE MMM d")}
+                  {formatInTimeZone(d.deliveryDate, d.school.timezone, "EEE, MMM d")}
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Status</label>
             <select name="status" defaultValue={params.status ?? "ALL"}
-              className="rounded-lg border-slate-200 text-[12px] py-1.5">
+              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
               <option value="ALL">All statuses</option>
               <option value="PENDING">Pending</option>
               <option value="PAID">Paid</option>
               <option value="REFUNDED">Refunded</option>
               <option value="CANCELLED">Cancelled</option>
             </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Show</label>
             <select name="archived" defaultValue={params.archived ?? "exclude"}
-              className="rounded-lg border-slate-200 text-[12px] py-1.5">
+              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
               <option value="exclude">Active only</option>
               <option value="include">Active + archived</option>
               <option value="only">Archived only</option>
             </select>
           </div>
         </div>
-        <button type="submit"
-          className="w-full py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
-          Apply filters
-        </button>
+        <div className="flex gap-2">
+          <button type="submit" className="flex-1 py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
+            Apply filters
+          </button>
+          <Link href="/admin/orders"
+            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-500 text-[12px] font-medium no-underline hover:bg-slate-50 transition whitespace-nowrap">
+            Clear
+          </Link>
+        </div>
       </form>
 
+      {/* ── Orders list ────────────────────────────────────────────── */}
       <OrdersList orders={orders} />
     </div>
   );
