@@ -38,7 +38,12 @@ export async function POST(request: Request) {
     }
 
     // ── Check slug uniqueness ───────────────────────────────────
-    const existing = await prisma.restaurant.findUnique({ where: { slug } });
+    // Use select:{id:true} so Prisma never requests columns that may not
+    // exist yet in the DB (e.g. customDomain before the migration runs).
+    const existing = await prisma.restaurant.findFirst({
+      where: { slug },
+      select: { id: true },
+    });
     if (existing) {
       return NextResponse.json({ error: "That subdomain is already taken. Please choose another." }, { status: 409 });
     }
@@ -50,6 +55,7 @@ export async function POST(request: Request) {
     const validPlans = ["STARTER", "GROWTH", "SCALE"];
     const selectedPlan = validPlans.includes(plan) ? plan : "STARTER";
 
+    // select:{id,slug} avoids requesting columns not yet in the DB
     const restaurant = await prisma.restaurant.create({
       data: {
         name: restaurantName.trim(),
@@ -67,6 +73,7 @@ export async function POST(request: Request) {
           },
         },
       },
+      select: { id: true, slug: true },
     });
 
     return NextResponse.json({ ok: true, restaurantId: restaurant.id, slug: restaurant.slug });

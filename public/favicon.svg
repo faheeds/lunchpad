@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background rounded square -->
+  <rect width="32" height="32" rx="7" fill="#c41230"/>
+  <!-- Dome: semi-ellipse arc, center at (16,19), rx=12 ry=10 -->
+  <path d="M 4 19 A 12 10 0 0 1 28 19"
+        fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Handle T-bar -->
+  <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Handle stem connecting T-bar to dome top -->
+  <line x1="16" y1="5.5" x2="16" y2="9" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <!-- Base plate -->
+  <rect x="3" y="20.5" width="26" height="5.5" rx="2.75" fill="white"/>
+</svg>

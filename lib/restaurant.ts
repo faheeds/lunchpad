@@ -21,9 +21,10 @@ export const getCurrentRestaurant = cache(async (): Promise<Restaurant | null> =
       });
       return restaurant;
     } catch {
-      // Subscription migration not yet applied — fall back to selecting only legacy columns
+      // Column migration not yet applied — fall back to raw query with only known columns.
+      // NOTE: do NOT include "customDomain" here until the migration has been deployed.
       const rows = await prisma.$queryRaw<Restaurant[]>`
-        SELECT id, name, slug, "customDomain", timezone, "logoUrl", "primaryColor", "accentColor",
+        SELECT id, name, slug, timezone, "logoUrl", "primaryColor", "accentColor",
                "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
                "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
                "isActive", "stripeAccountId", "stripeOnboardingComplete",
@@ -68,8 +69,23 @@ export async function requireRestaurant(): Promise<Restaurant> {
     const session = await auth();
     const restaurantId = (session?.user as { restaurantId?: string } | undefined)?.restaurantId;
     if (restaurantId) {
-      const fromSession = await prisma.restaurant.findUnique({ where: { id: restaurantId, isActive: true } });
-      if (fromSession) return fromSession;
+      try {
+        const fromSession = await prisma.restaurant.findUnique({ where: { id: restaurantId, isActive: true } });
+        if (fromSession) return fromSession;
+      } catch {
+        // Column migration not yet applied — raw fallback
+        const rows = await prisma.$queryRaw<Restaurant[]>`
+          SELECT id, name, slug, timezone, "logoUrl", "primaryColor", "accentColor",
+                 "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
+                 "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
+                 "isActive", "stripeAccountId", "stripeOnboardingComplete",
+                 plan, "trialEndsAt", "createdAt", "updatedAt"
+          FROM "Restaurant"
+          WHERE id = ${restaurantId} AND "isActive" = true
+          LIMIT 1
+        `;
+        if (rows[0]) return rows[0];
+      }
     }
   } catch {
     // auth not available — fall through to error

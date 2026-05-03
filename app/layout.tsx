@@ -20,10 +20,19 @@ const inter = Inter({
 
 export async function generateMetadata(): Promise<Metadata> {
   const restaurant = await getCurrentRestaurant();
-  const name = restaurant?.name ?? "Hot Lunch";
   return {
-    title: `${name} | Hot Lunch`,
-    description: `Order hot lunch from ${name}.`,
+    title: restaurant
+      ? { default: restaurant.name, template: `%s | ${restaurant.name}` }
+      : { default: "LunchPad", template: "%s | LunchPad" },
+    description: restaurant
+      ? `Order lunch from ${restaurant.name} — powered by LunchPad.`
+      : "LunchPad — school lunch ordering made simple for restaurants and parents.",
+    icons: {
+      icon: [
+        { url: "/favicon.svg", type: "image/svg+xml" },
+        { url: "/icon.png" },
+      ],
+    },
   };
 }
 
