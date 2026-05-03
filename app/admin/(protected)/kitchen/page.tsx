@@ -4,6 +4,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
+import { PrintButton } from "@/components/admin/print-button";
 
 export const dynamic = "force-dynamic";
 
@@ -73,33 +74,16 @@ export default async function KitchenSheetPage({
 
   return (
     <>
-      {/* Print styles */}
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          .print-break { page-break-before: always; }
-          body { font-size: 12px; }
-        }
-      `}</style>
-
       <div className="space-y-5 pb-10">
 
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between flex-wrap gap-3 no-print">
           <h1 className="text-[17px] font-semibold text-ink">Kitchen Sheet</h1>
-          <button
-            onClick={() => window.print()}
-            className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5"
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
-            </svg>
-            Print
-          </button>
+          <PrintButton />
         </div>
 
         {/* ── Delivery date selector ─────────────────────────────────── */}
-        <form className="rounded-[14px] border border-slate-100 bg-white p-3 no-print">
+        <form method="GET" className="rounded-[14px] border border-slate-100 bg-white p-3 no-print">
           <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
             Delivery date
           </label>
@@ -108,11 +92,6 @@ export default async function KitchenSheetPage({
               name="deliveryDateId"
               defaultValue={selectedId ?? ""}
               className="flex-1 rounded-lg border-slate-200 text-[13px] py-2 px-2"
-              onChange={(e) => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("deliveryDateId", e.target.value);
-                window.location.href = url.toString();
-              }}
             >
               <option value="">Select a date…</option>
               {allDates.map((d) => (
@@ -121,6 +100,10 @@ export default async function KitchenSheetPage({
                 </option>
               ))}
             </select>
+            <button type="submit"
+              className="px-3 py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold whitespace-nowrap">
+              View
+            </button>
             {selectedId && (
               <Link href="/admin/kitchen" className="px-3 py-2 rounded-lg border border-slate-200 text-[12px] text-slate-500 no-underline hover:bg-slate-50 transition whitespace-nowrap">
                 Clear
