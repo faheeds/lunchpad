@@ -3,51 +3,53 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
-  let body: {
-    restaurantName: string;
-    slug: string;
-    contactEmail: string;
-    ownerName: string;
-    password: string;
-    plan: string;
-  };
-
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
+    // ── Parse body ──────────────────────────────────────────────
+    let body: {
+      restaurantName: string;
+      slug: string;
+      contactEmail: string;
+      ownerName: string;
+      password: string;
+      plan: string;
+    };
 
-  const { restaurantName, slug, contactEmail, ownerName, password, plan } = body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    }
 
-  if (!restaurantName?.trim() || !slug?.trim() || !contactEmail?.trim() || !ownerName?.trim() || !password) {
-    return NextResponse.json({ error: "All fields are required." }, { status: 400 });
-  }
+    const { restaurantName, slug, contactEmail, ownerName, password, plan } = body;
 
-  // Validate slug: lowercase letters, numbers, hyphens only
-  if (!/^[a-z0-9-]{2,30}$/.test(slug)) {
-    return NextResponse.json({
-      error: "Subdomain must be 2-30 characters: lowercase letters, numbers, and hyphens only."
-    }, { status: 400 });
-  }
+    // ── Validate inputs ─────────────────────────────────────────
+    if (!restaurantName?.trim() || !slug?.trim() || !contactEmail?.trim() || !ownerName?.trim() || !password) {
+      return NextResponse.json({ error: "All fields are required." }, { status: 400 });
+    }
 
-  if (password.length < 8) {
-    return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
-  }
+    if (!/^[a-z0-9-]{2,30}$/.test(slug)) {
+      return NextResponse.json({
+        error: "Subdomain must be 2-30 characters: lowercase letters, numbers, and hyphens only."
+      }, { status: 400 });
+    }
 
-  // Check slug uniqueness
-  const existing = await prisma.restaurant.findUnique({ where: { slug } });
-  if (existing) {
-    return NextResponse.json({ error: "That subdomain is already taken." }, { status: 409 });
-  }
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+    }
 
-  const passwordHash = await bcrypt.hash(password, 12);
-  const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    // ── Check slug uniqueness ───────────────────────────────────
+    const existing = await prisma.restaurant.findUnique({ where: { slug } });
+    if (existing) {
+      return NextResponse.json({ error: "That subdomain is already taken. Please choose another." }, { status: 409 });
+    }
 
-  const validPlans = ["STARTER", "GROWTH", "SCALE"];
-  const selectedPlan = validPlans.includes(plan) ? plan : "STARTER";
+    // ── Create restaurant + owner ───────────────────────────────
+    const passwordHash = await bcrypt.hash(password, 12);
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
-  try {
+    const validPlans = ["STARTER", "GROWTH", "SCALE"];
+    const selectedPlan = validPlans.includes(plan) ? plan : "STARTER";
+
     const restaurant = await prisma.restaurant.create({
       data: {
         name: restaurantName.trim(),
@@ -68,8 +70,11 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, restaurantId: restaurant.id, slug: restaurant.slug });
+
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create account.";
+    // Top-level catch — always return JSON so the client never gets an empty/HTML response
+    console.error("[signup] unhandled error:", error);
+    const message = error instanceof Error ? error.message : "Failed to create account. Please try again.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

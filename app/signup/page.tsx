@@ -88,7 +88,9 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ restaurantName, slug, contactEmail, ownerName, password, plan }),
       });
-      const data = await res.json();
+      // Safely parse JSON — a non-JSON response (e.g. Vercel 500 HTML page) would
+      // otherwise throw "Unexpected end of JSON input" and swallow the real error.
+      const data = await res.json().catch(() => ({ error: `Server error (${res.status}). Please try again.` }));
       if (!res.ok) throw new Error(data.error ?? "Signup failed.");
 
       // Sign in automatically
