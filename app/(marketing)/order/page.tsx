@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function OrderPage({
   searchParams
 }: {
-  searchParams: Promise<{ reorder?: string; item?: string }>;
+  searchParams: Promise<{ reorder?: string; item?: string; childId?: string }>;
 }) {
   const [session, restaurant] = await Promise.all([auth(), requireRestaurant()]);
   const params = await searchParams;
@@ -125,17 +125,34 @@ export default async function OrderPage({
                   allergyNotes: child.allergyNotes ?? ""
                 })) ?? []
               }
-              initialParentProfile={{
-                parentName: parent?.name ?? "",
-                parentEmail: parent?.email ?? "",
-                parentChildId: reorderOrder?.parentChildId ?? parent?.children[0]?.id ?? "",
-                studentName: reorderOrder?.student.studentName ?? "",
-                grade: reorderOrder?.student.grade ?? "",
-                allergyNotes:
-                  reorderOrder?.items.map((i) => i.allergyNotes).find(Boolean) ??
-                  reorderOrder?.student.allergyNotes ?? ""
-              }}
-              initialSchoolId={reorderSchoolId ?? parent?.children[0]?.schoolId ?? ""}
+              initialParentProfile={(() => {
+                // Prefer explicit ?childId= param (from "Order" button on account page),
+                // then reorder child, then first saved child.
+                const preferredChild =
+                  (params.childId
+                    ? parent?.children.find((c) => c.id === params.childId)
+                    : undefined) ??
+                  (reorderOrder?.parentChildId
+                    ? parent?.children.find((c) => c.id === reorderOrder.parentChildId)
+                    : undefined) ??
+                  parent?.children[0];
+                return {
+                  parentName: parent?.name ?? "",
+                  parentEmail: parent?.email ?? "",
+                  parentChildId: preferredChild?.id ?? "",
+                  studentName: reorderOrder?.student.studentName ?? preferredChild?.studentName ?? "",
+                  grade: reorderOrder?.student.grade ?? preferredChild?.grade ?? "",
+                  allergyNotes:
+                    reorderOrder?.items.map((i) => i.allergyNotes).find(Boolean) ??
+                    reorderOrder?.student.allergyNotes ??
+                    preferredChild?.allergyNotes ?? "",
+                };
+              })()}
+              initialSchoolId={
+                reorderSchoolId ??
+                (params.childId ? parent?.children.find((c) => c.id === params.childId)?.schoolId : undefined) ??
+                parent?.children[0]?.schoolId ?? ""
+              }
               initialDeliveryDateId={initialDeliveryDateId ?? ""}
               initialCartItems={initialCartItems}
               initialItemSlug={params.item}

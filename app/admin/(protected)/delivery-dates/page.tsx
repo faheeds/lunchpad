@@ -175,9 +175,11 @@ export default async function DeliveryDatesPage() {
           </p>
           <div className="space-y-2">
             {upcoming.map((date) => {
-              const tz         = date.school.timezone;
-              const orderCount = date._count.orders;
-              const menuCount  = date.menuAvailability.length;
+              const tz              = date.school.timezone;
+              const orderCount      = date._count.orders;
+              const menuCount       = date.menuAvailability.length;
+              const cutoffPassed    = new Date() >= date.cutoffAt;
+              const effectivelyOpen = date.orderingOpen && !cutoffPassed;
 
               return (
                 <details key={date.id} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
@@ -219,11 +221,11 @@ export default async function DeliveryDatesPage() {
                       )}
                       <span style={{
                         fontSize: 10, fontWeight: 700,
-                        background: date.orderingOpen ? "#dcfce7" : "#f3f4f6",
-                        color: date.orderingOpen ? "#15803d" : "#6b7280",
+                        background: effectivelyOpen ? "#dcfce7" : cutoffPassed ? "#fef9c3" : "#f3f4f6",
+                        color: effectivelyOpen ? "#15803d" : cutoffPassed ? "#854d0e" : "#6b7280",
                         borderRadius: 100, padding: "3px 10px",
                       }}>
-                        {date.orderingOpen ? "Open" : "Closed"}
+                        {effectivelyOpen ? "Open" : cutoffPassed ? "Cutoff passed" : "Closed"}
                       </span>
                     </div>
                   </summary>
@@ -246,17 +248,21 @@ export default async function DeliveryDatesPage() {
                         )}
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
-                        <form action={toggleDateOpen}>
-                          <input type="hidden" name="id" value={date.id} />
-                          <button type="submit"
-                            className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition ${
-                              date.orderingOpen
-                                ? "border-slate-200 text-slate-600 hover:border-red-200 hover:text-red-700"
-                                : "border-brand-200 text-brand-700 hover:bg-brand-50"
-                            }`}>
-                            {date.orderingOpen ? "Close ordering" : "Open ordering"}
-                          </button>
-                        </form>
+                        {cutoffPassed ? (
+                          <span style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>Cutoff passed</span>
+                        ) : (
+                          <form action={toggleDateOpen}>
+                            <input type="hidden" name="id" value={date.id} />
+                            <button type="submit"
+                              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition ${
+                                date.orderingOpen
+                                  ? "border-slate-200 text-slate-600 hover:border-red-200 hover:text-red-700"
+                                  : "border-brand-200 text-brand-700 hover:bg-brand-50"
+                              }`}>
+                              {date.orderingOpen ? "Close ordering" : "Open ordering"}
+                            </button>
+                          </form>
+                        )}
                       </div>
                     </div>
 

@@ -336,7 +336,14 @@ export default async function ParentAccountPage() {
 
           {/* ── Order history ──────────────────────────────────────── */}
           <section>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Order history</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Order history</p>
+              {orders.length > 0 && (
+                <Link href="/history" style={{ fontSize: 11, fontWeight: 600, color: "var(--brand-on-white, #c41230)", textDecoration: "none" }}>
+                  View all →
+                </Link>
+              )}
+            </div>
 
             {orders.length ? orders.map((order) => {
               const s = STATUS_STYLE[order.status] ?? STATUS_STYLE.PENDING;
