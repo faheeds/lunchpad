@@ -115,7 +115,7 @@ export default async function AdminProtectedLayout({
           </Link>
         </div>
       )}
-      <AdminNav adminRole={adminRole} />
+      <AdminNav adminRole={adminRole} restaurantSlug={restaurant.slug} />
       <div className="max-w-7xl mx-auto px-4 py-4">
         {children}
       </div>

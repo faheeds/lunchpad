@@ -12,12 +12,16 @@ export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: 
   return (
     <header className="app-header" style={{ flexDirection: "column", padding: 0, background: "var(--dark-bg)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px" }}>
-        <Link href="/" className="no-underline" onClick={() => setMenuOpen(false)}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--accent-on-dark)", marginBottom: 1, fontFamily: "var(--font-display)" }}>
-            {restaurantName}
-          </p>
+        <Link href="/" className="no-underline flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="7" fill="#c41230"/>
+            <path d="M 4 19 A 12 10 0 0 1 28 19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="16" y1="5.5" x2="16" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <rect x="3" y="20.5" width="26" height="5.5" rx="2.75" fill="white"/>
+          </svg>
           <p style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Hot Lunch
+            {restaurantName}
           </p>
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

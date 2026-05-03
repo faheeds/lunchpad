@@ -2,8 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { hasRole, type AdminRole } from "@/lib/roles";
+
+function ClocheMark({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="7" fill="#c41230"/>
+      <path d="M 4 19 A 12 10 0 0 1 28 19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="16" y1="5.5" x2="16" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+      <rect x="3" y="20.5" width="26" height="5.5" rx="2.75" fill="white"/>
+    </svg>
+  );
+}
 
 const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/dashboard",      label: "Dashboard",    minRole: "STAFF"   },
@@ -24,10 +37,29 @@ const ROLE_BADGE: Record<string, { label: string; color: string }> = {
   STAFF:   { label: "Staff",   color: "#374151" },
 };
 
-export function AdminNav({ adminRole }: { adminRole: string }) {
+export function AdminNav({ adminRole, restaurantSlug }: { adminRole: string; restaurantSlug?: string }) {
   const pathname = usePathname();
+  const [urlCopied, setUrlCopied] = useState(false);
   const links = ALL_LINKS.filter((l) => hasRole(adminRole, l.minRole));
   const badge = ROLE_BADGE[adminRole] ?? ROLE_BADGE.STAFF;
+  const orderingUrl = restaurantSlug ? `https://${restaurantSlug}.lunchpad.us` : null;
+
+  function copyUrl() {
+    if (!orderingUrl) return;
+    navigator.clipboard.writeText(orderingUrl).then(() => {
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2000);
+    }).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = orderingUrl;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2000);
+    });
+  }
 
   return (
     <header className="bg-white border-b border-slate-100 sticky top-0 z-20">
@@ -35,13 +67,7 @@ export function AdminNav({ adminRole }: { adminRole: string }) {
         <div className="flex items-center justify-between py-2.5 border-b border-slate-50">
           <div className="flex items-center gap-2">
             <Link href="/admin/dashboard" className="no-underline flex items-center gap-2">
-              <div style={{
-                width: 22, height: 22, borderRadius: 6,
-                background: "linear-gradient(135deg, #c41230, #8b0d22)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "white" }}>L</span>
-              </div>
+              <ClocheMark size={22} />
               <span className="text-[13px] font-semibold text-ink">LunchPad</span>
             </Link>
             <span className="text-slate-200">|</span>
@@ -51,13 +77,43 @@ export function AdminNav({ adminRole }: { adminRole: string }) {
               {badge.label}
             </span>
           </div>
-          <button type="button" onClick={() => signOut({ callbackUrl: "/admin/login" })}
-            className="text-[11px] text-slate-500 border border-slate-200 rounded-full px-3 py-1 hover:bg-slate-50 transition flex items-center gap-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            Sign out
-          </button>
+          <div className="flex items-center gap-2">
+            {orderingUrl && (
+              <button
+                type="button"
+                onClick={copyUrl}
+                title="Copy your ordering URL"
+                className="hidden sm:flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition"
+                style={{
+                  borderColor: urlCopied ? "#16a34a" : "#d1fae5",
+                  background: urlCopied ? "#f0fdf4" : "#f0fdf4",
+                  color: urlCopied ? "#16a34a" : "#15803d",
+                }}>
+                {urlCopied ? (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    {restaurantSlug}.lunchpad.us
+                  </>
+                )}
+              </button>
+            )}
+            <button type="button" onClick={() => signOut({ callbackUrl: "/admin/login" })}
+              className="text-[11px] text-slate-500 border border-slate-200 rounded-full px-3 py-1 hover:bg-slate-50 transition flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sign out
+            </button>
+          </div>
         </div>
         <div className="flex overflow-x-auto gap-0.5 py-1" style={{ scrollbarWidth: "none" }}>
           {links.map((link) => {

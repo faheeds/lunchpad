@@ -3,6 +3,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import { CopyUrlButton } from "@/components/admin/copy-url-button";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +67,40 @@ export default async function AdminDashboardPage() {
     REFUNDED:  { bg: "#f3f4f6", text: "#6b7280", label: "Refunded" },
   };
 
+  const orderingUrl = `https://${restaurant.slug}.lunchpad.us`;
+
   return (
     <div className="space-y-5 pb-10">
+
+      {/* ── Ordering URL hero card ────────────────────────────────── */}
+      <div style={{
+        background: "linear-gradient(135deg, #052e16 0%, #14532d 100%)",
+        borderRadius: 16, padding: "18px 20px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        gap: 16, flexWrap: "wrap",
+      }}>
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
+            Your ordering page
+          </p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "#86efac", letterSpacing: "-0.01em", fontFamily: "monospace" }}>
+            {orderingUrl}
+          </p>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>
+            Share this URL with parents to start accepting orders
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <CopyUrlButton url={orderingUrl} />
+          <a href={orderingUrl} target="_blank" rel="noopener noreferrer" style={{
+            padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+            background: "rgba(255,255,255,0.1)", color: "white", textDecoration: "none",
+            border: "1px solid rgba(255,255,255,0.15)",
+          }}>
+            Preview ↗
+          </a>
+        </div>
+      </div>
 
       {/* ── Stat tiles ───────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
