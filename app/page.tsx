@@ -364,13 +364,13 @@ export default async function HomePage() {
         padding: "0 24px", height: 56,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: "linear-gradient(135deg, #c41230, #8b0d22)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "white", letterSpacing: "-0.5px" }}>L</span>
-          </div>
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="7" fill="#c41230"/>
+            <path d="M 4 19 A 12 10 0 0 1 28 19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="16" y1="5.5" x2="16" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <rect x="3" y="20.5" width="26" height="5.5" rx="2.75" fill="white"/>
+          </svg>
           <span style={{ fontSize: 15, fontWeight: 800, color: "#0f1923", letterSpacing: "-0.3px" }}>LunchPad</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -816,13 +816,13 @@ export default async function HomePage() {
         display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 22, height: 22, borderRadius: 6,
-            background: "linear-gradient(135deg, #c41230, #8b0d22)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: "white" }}>L</span>
-          </div>
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="7" fill="#c41230"/>
+            <path d="M 4 19 A 12 10 0 0 1 28 19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="16" y1="5.5" x2="16" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <rect x="3" y="20.5" width="26" height="5.5" rx="2.75" fill="white"/>
+          </svg>
           <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>LunchPad</span>
         </div>
         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>

@@ -7,5 +7,5 @@ import { SiteHeader } from "@/components/site-header";
  */
 export async function SiteHeaderServer() {
   const restaurant = await getCurrentRestaurant();
-  return <SiteHeader restaurantName={restaurant?.name ?? "Hot Lunch"} />;
+  return <SiteHeader restaurantName={restaurant?.name ?? "LunchPad"} />;
 }
