@@ -5,6 +5,7 @@ import { slugify } from "@/lib/utils";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { BulkMenuUpload } from "@/components/admin/bulk-menu-upload";
+import { ConfirmButton } from "@/components/admin/confirm-button";
 
 export const dynamic = "force-dynamic";
 
@@ -436,11 +437,11 @@ export default async function AdminMenuPage() {
                               {/* Delete */}
                               <form action={deleteMenuOption}>
                                 <input type="hidden" name="optionId" value={o.id} />
-                                <button type="submit"
-                                  className="w-full py-1.5 rounded-lg border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 transition"
-                                  onClick={(e) => { if (!confirm(`Delete "${o.name}"?`)) e.preventDefault(); }}>
+                                <ConfirmButton
+                                  message={`Delete "${o.name}"?`}
+                                  className="w-full py-1.5 rounded-lg border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 transition">
                                   Delete option
-                                </button>
+                                </ConfirmButton>
                               </form>
                             </div>
                           </details>

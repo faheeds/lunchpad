@@ -4,6 +4,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { ConfirmButton } from "@/components/admin/confirm-button";
 
 export const dynamic = "force-dynamic";
 
@@ -199,11 +200,11 @@ export default async function AdminTeamPage() {
 
                   <form action={removeAdmin}>
                     <input type="hidden" name="adminId" value={member.id} />
-                    <button type="submit"
-                      className="text-[11px] px-2.5 py-1.5 rounded-lg border border-red-100 text-red-500 font-semibold hover:bg-red-50 transition whitespace-nowrap"
-                      onClick={(e) => { if (!confirm(`Remove ${member.name} from the team?`)) e.preventDefault(); }}>
+                    <ConfirmButton
+                      message={`Remove ${member.name} from the team?`}
+                      className="text-[11px] px-2.5 py-1.5 rounded-lg border border-red-100 text-red-500 font-semibold hover:bg-red-50 transition whitespace-nowrap">
                       Remove
-                    </button>
+                    </ConfirmButton>
                   </form>
                 </div>
               )}
