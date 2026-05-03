@@ -42,7 +42,6 @@ export default async function KitchenSheetPage({
           school: true,
           deliveryDate: { include: { school: true } },
           items: {
-            include: { options: true },
             orderBy: { itemNameSnapshot: "asc" },
           },
         },
@@ -236,9 +235,12 @@ export default async function KitchenSheetPage({
                           {order.items.map((item) => (
                             <div key={item.id} className="mb-1">
                               <p className="text-[12px] font-medium text-ink">{item.itemNameSnapshot}</p>
-                              {item.options.length > 0 && (
+                              {(item.additions.length > 0 || item.removals.length > 0) && (
                                 <p className="text-[11px] text-slate-500">
-                                  {item.options.map((o) => o.optionNameSnapshot).join(", ")}
+                                  {[
+                                    ...item.additions.map((a) => `+ ${a}`),
+                                    ...item.removals.map((r) => `− ${r}`),
+                                  ].join(" · ")}
                                 </p>
                               )}
                               {item.specialInstructions && (
