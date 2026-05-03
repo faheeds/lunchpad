@@ -228,11 +228,13 @@ export async function sendKitchenPrepEmail(deliveryDateId: string) {
   }
 
   // Build item groups: { itemName → orders[] }
-  const groupMap = new Map<string, typeof deliveryDate.orders[0]["items"][0] & { order: typeof deliveryDate.orders[0] }[]>();
+  type OrderWithItems = (typeof deliveryDate.orders)[0];
+  type ItemEntry = OrderWithItems["items"][0] & { order: OrderWithItems };
+  const groupMap = new Map<string, ItemEntry[]>();
   for (const order of deliveryDate.orders) {
     for (const item of order.items) {
       const key = item.itemNameSnapshot;
-      if (!groupMap.has(key)) groupMap.set(key, []);
+      if (!groupMap.has(key)) groupMap.set(key, [] as ItemEntry[]);
       groupMap.get(key)!.push({ ...item, order });
     }
   }
