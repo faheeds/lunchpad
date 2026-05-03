@@ -291,6 +291,15 @@ export default async function AdminDashboardPage() {
                 </svg>
               ),
             },
+            {
+              href: "/admin/kitchen",
+              label: "Kitchen sheet",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                </svg>
+              ),
+            },
           ] as { href: string; label: string; icon: React.ReactNode }[]).map((item) => (
             <Link key={item.href} href={item.href}
               className="rounded-[14px] border border-slate-100 bg-white px-4 py-3.5 flex items-center gap-3 no-underline hover:border-red-100 hover:bg-red-50 transition">

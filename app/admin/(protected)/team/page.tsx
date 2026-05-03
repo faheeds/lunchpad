@@ -41,6 +41,32 @@ async function removeAdmin(formData: FormData) {
   revalidatePath("/admin/team");
 }
 
+async function changePassword(formData: FormData) {
+  "use server";
+  await requireRestaurant();
+  const session = await auth();
+  const adminId = (session?.user as { adminUserId?: string } | undefined)?.adminUserId;
+  if (!adminId) throw new Error("Not authenticated");
+
+  const currentPassword = String(formData.get("currentPassword") || "");
+  const newPassword     = String(formData.get("newPassword")     || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+
+  if (!currentPassword || !newPassword) throw new Error("All fields are required");
+  if (newPassword.length < 8) throw new Error("New password must be at least 8 characters");
+  if (newPassword !== confirmPassword) throw new Error("Passwords do not match");
+
+  const admin = await prisma.adminUser.findUnique({ where: { id: adminId } });
+  if (!admin) throw new Error("User not found");
+
+  const valid = await bcrypt.compare(currentPassword, admin.passwordHash);
+  if (!valid) throw new Error("Current password is incorrect");
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.adminUser.update({ where: { id: adminId }, data: { passwordHash } });
+  revalidatePath("/admin/team");
+}
+
 async function changeRole(formData: FormData) {
   "use server";
   const restaurant = await requireRestaurant();
@@ -185,6 +211,40 @@ export default async function AdminTeamPage() {
           );
         })}
       </div>
+
+      {/* ── Change my password ─────────────────────────────────────── */}
+      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Change my password
+          </span>
+          <span className="text-[11px] text-slate-400">tap to expand</span>
+        </summary>
+        <form action={changePassword} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
+          <div>
+            <label className="text-[11px] text-slate-500 font-semibold block mb-1">Current password</label>
+            <input type="password" name="currentPassword" required placeholder="Your current password"
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-500 font-semibold block mb-1">New password</label>
+            <input type="password" name="newPassword" required minLength={8} placeholder="Min 8 characters"
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-500 font-semibold block mb-1">Confirm new password</label>
+            <input type="password" name="confirmPassword" required minLength={8} placeholder="Repeat new password"
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+          </div>
+          <button type="submit"
+            className="w-full py-2.5 rounded-lg bg-slate-800 text-white text-[13px] font-semibold">
+            Update password
+          </button>
+        </form>
+      </details>
 
       {/* ── Add team member ─────────────────────────────────────────── */}
       <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">

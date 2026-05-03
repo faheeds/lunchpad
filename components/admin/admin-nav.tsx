@@ -8,6 +8,7 @@ import { hasRole, type AdminRole } from "@/lib/roles";
 const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/dashboard",      label: "Dashboard",    minRole: "STAFF"   },
   { href: "/admin/orders",         label: "Orders",       minRole: "STAFF"   },
+  { href: "/admin/kitchen",        label: "Kitchen",      minRole: "STAFF"   },
   { href: "/admin/reports",        label: "Reports",      minRole: "MANAGER" },
   { href: "/admin/menu",           label: "Menu",         minRole: "MANAGER" },
   { href: "/admin/delivery-dates", label: "Schedule",     minRole: "MANAGER" },
