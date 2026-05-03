@@ -11,28 +11,44 @@ import { Restaurant } from "@prisma/client";
 export const getCurrentRestaurant = cache(async (): Promise<Restaurant | null> => {
   const headerList = await headers();
   const slug = headerList.get("x-restaurant-slug");
+  const customDomain = headerList.get("x-custom-domain");
 
-  if (!slug) return null;
-
-  try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { slug, isActive: true },
-    });
-    return restaurant;
-  } catch {
-    // Subscription migration not yet applied — fall back to selecting only legacy columns
-    const rows = await prisma.$queryRaw<Restaurant[]>`
-      SELECT id, name, slug, timezone, "logoUrl", "primaryColor", "accentColor",
-             "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
-             "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
-             "isActive", "stripeAccountId", "stripeOnboardingComplete",
-             plan, "trialEndsAt", "createdAt", "updatedAt"
-      FROM "Restaurant"
-      WHERE slug = ${slug} AND "isActive" = true
-      LIMIT 1
-    `;
-    return rows[0] ?? null;
+  // 1. Slug-based lookup (subdomain routing — primary path)
+  if (slug) {
+    try {
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { slug, isActive: true },
+      });
+      return restaurant;
+    } catch {
+      // Subscription migration not yet applied — fall back to selecting only legacy columns
+      const rows = await prisma.$queryRaw<Restaurant[]>`
+        SELECT id, name, slug, "customDomain", timezone, "logoUrl", "primaryColor", "accentColor",
+               "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
+               "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
+               "isActive", "stripeAccountId", "stripeOnboardingComplete",
+               plan, "trialEndsAt", "createdAt", "updatedAt"
+        FROM "Restaurant"
+        WHERE slug = ${slug} AND "isActive" = true
+        LIMIT 1
+      `;
+      return rows[0] ?? null;
+    }
   }
+
+  // 2. Custom domain lookup (e.g. lunch.example.com)
+  if (customDomain) {
+    try {
+      const restaurant = await prisma.restaurant.findFirst({
+        where: { customDomain, isActive: true },
+      });
+      return restaurant;
+    } catch {
+      // Column may not exist yet on older DB — ignore
+    }
+  }
+
+  return null;
 });
 
 /**

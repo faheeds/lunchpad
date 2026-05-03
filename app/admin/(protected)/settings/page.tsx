@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
@@ -42,6 +43,38 @@ async function updateSettings(formData: FormData) {
         contactEmail, contactPhone, timezone,
       }
     });
+  } catch (e: unknown) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong";
+  }
+
+  if (errorMsg) {
+    redirect(`/admin/settings?error=${encodeURIComponent(errorMsg)}`);
+  } else {
+    redirect("/admin/settings?saved=1");
+  }
+}
+
+async function updateCustomDomain(formData: FormData) {
+  "use server";
+  let errorMsg: string | null = null;
+  try {
+    const restaurant = await requireRestaurant();
+    await requireAdminRole("OWNER");
+
+    const raw = String(formData.get("customDomain") || "").trim().toLowerCase();
+    // Strip protocol/path if accidentally pasted
+    const customDomain = raw.replace(/^https?:\/\//i, "").split("/")[0] || null;
+
+    // Basic hostname validation
+    if (customDomain && !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(customDomain)) {
+      throw new Error("Invalid domain format. Use something like lunch.yourdomain.com");
+    }
+
+    await prisma.restaurant.update({
+      where: { id: restaurant.id },
+      data: { customDomain },
+    });
+    revalidatePath("/admin/settings");
   } catch (e: unknown) {
     errorMsg = e instanceof Error ? e.message : "Something went wrong";
   }
@@ -229,6 +262,101 @@ export default async function AdminSettingsPage({
               Preview ordering page →
             </a>
           </div>
+        </div>
+      </div>
+
+      {/* ── Custom domain ───────────────────────────────────────── */}
+      <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-50">
+          <p className="text-[13px] font-semibold text-ink">Custom domain</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Use your own domain instead of <span className="font-mono">{restaurant.slug}.lunchpad.us</span>
+          </p>
+        </div>
+        <div className="px-4 py-4 space-y-4">
+          {/* Current custom domain status */}
+          {restaurant.customDomain ? (
+            <div className="flex items-center gap-2 bg-green-50 rounded-lg border border-green-200 px-3 py-2.5">
+              <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+              <p className="text-[12px] font-mono text-green-800 flex-1">{restaurant.customDomain}</p>
+              <span className="text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Active</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200 px-3 py-2.5">
+              <div className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
+              <p className="text-[12px] text-slate-400">No custom domain configured</p>
+            </div>
+          )}
+
+          {/* Set/update domain form */}
+          <form action={updateCustomDomain} className="space-y-2">
+            <label className="text-[11px] text-slate-500 font-medium block">
+              {restaurant.customDomain ? "Change domain" : "Add custom domain"}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                name="customDomain"
+                defaultValue={restaurant.customDomain ?? ""}
+                placeholder="lunch.yourdomain.com"
+                className="flex-1 rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
+              />
+              <button type="submit"
+                className="px-3 py-2 rounded-lg bg-slate-800 text-white text-[12px] font-semibold whitespace-nowrap">
+                Save
+              </button>
+            </div>
+            {restaurant.customDomain && (
+              <button
+                type="submit"
+                name="customDomain"
+                value=""
+                className="text-[11px] text-slate-400 hover:text-red-500 transition">
+                Remove custom domain
+              </button>
+            )}
+          </form>
+
+          {/* DNS instructions */}
+          <details className="rounded-lg border border-slate-100 overflow-hidden">
+            <summary className="px-3 py-2.5 text-[12px] font-semibold text-slate-600 cursor-pointer list-none flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                How to set up DNS
+              </span>
+              <span className="text-[10px] text-slate-400">tap to expand</span>
+            </summary>
+            <div className="px-3 pb-3 border-t border-slate-50 pt-3 space-y-3">
+              <p className="text-[12px] text-slate-600">
+                Add a <strong>CNAME record</strong> at your domain registrar (GoDaddy, Namecheap, Cloudflare, etc.):
+              </p>
+              <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                <div className="grid grid-cols-3 border-b border-slate-200 px-3 py-1.5">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Type</span>
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Name</span>
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Value</span>
+                </div>
+                <div className="grid grid-cols-3 px-3 py-2 gap-1">
+                  <span className="text-[12px] font-mono font-semibold text-slate-700">CNAME</span>
+                  <span className="text-[12px] font-mono text-slate-600">lunch</span>
+                  <span className="text-[11px] font-mono text-slate-600 break-all">cname.vercel-dns.com</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                The <strong>Name</strong> is the subdomain part of your custom domain (e.g. if your domain is <span className="font-mono">lunch.yourdomain.com</span>, the name is <span className="font-mono">lunch</span>).
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <p className="text-[11px] text-amber-800 font-medium">
+                  After adding DNS — also add your custom domain in the{" "}
+                  <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer"
+                    className="underline">Vercel dashboard</a>{" "}
+                  under your project&apos;s Settings → Domains. DNS changes can take up to 24 hours.
+                </p>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
 

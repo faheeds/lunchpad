@@ -7,6 +7,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdmin } from "@/lib/admin-auth";
 import { slugify } from "@/lib/utils";
 import { BulkMenuUpload } from "@/components/admin/bulk-menu-upload";
+import { CopyUrlButton } from "@/components/admin/copy-url-button";
 
 export const dynamic = "force-dynamic";
 
@@ -336,6 +337,50 @@ export default async function AdminSetupPage() {
         />
 
       </div>
+
+      {/* ── Ordering URL (shown once all steps done) ─────────────── */}
+      {allDone && (
+        <div style={{
+          marginTop: 16,
+          background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+          borderRadius: 16,
+          border: "1px solid #bbf7d0",
+          padding: "18px 20px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+              background: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </div>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d" }}>Your ordering page is ready!</p>
+              <p style={{ fontSize: 11, color: "#4ade80" }}>Share this link with parents to start taking orders</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "white", borderRadius: 10, border: "1px solid #bbf7d0", padding: "9px 12px" }}>
+            <p style={{ fontSize: 12, fontFamily: "monospace", color: "#374151", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              https://{restaurant.slug}.lunchpad.us
+            </p>
+            <CopyUrlButton url={`https://${restaurant.slug}.lunchpad.us`} />
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+            <a href={`https://${restaurant.slug}.lunchpad.us`} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 12, color: "#16a34a", textDecoration: "none", fontWeight: 600 }}>
+              Preview ordering page →
+            </a>
+            <span style={{ fontSize: 12, color: "#86efac" }}>·</span>
+            <Link href="/admin/settings"
+              style={{ fontSize: 12, color: "#16a34a", textDecoration: "none", fontWeight: 600 }}>
+              Set up custom domain →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ── CTA ───────────────────────────────────────────────────── */}
       <div style={{ marginTop: 28, textAlign: "center" }}>

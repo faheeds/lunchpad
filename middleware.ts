@@ -26,18 +26,23 @@ export async function middleware(req: NextRequest) {
   const rootDomain = process.env.ROOT_DOMAIN ?? "lunchpad.us";
   const isProduction = host.endsWith(`.${rootDomain}`);
 
+  // Always forward the current pathname so server components can read it
+  // (used by admin layout to skip setup-redirect on the setup page itself).
+  const res = NextResponse.next();
+  res.headers.set("x-pathname", pathname);
+
   if (isProduction) {
     restaurantSlug = host.replace(`.${rootDomain}`, "");
   } else if (host.includes(".vercel.app") || host.includes("localhost")) {
     // Vercel preview / local dev: read from env if explicitly set.
     // No fallback — omitting RESTAURANT_SLUG shows the platform landing page.
     restaurantSlug = process.env.RESTAURANT_SLUG ?? null;
+  } else {
+    // Unknown host — could be a restaurant's custom domain (e.g. lunch.example.com).
+    // Forward as x-custom-domain; restaurant.ts will do the DB lookup.
+    res.headers.set("x-custom-domain", host);
+    return res;
   }
-
-  // Always forward the current pathname so server components can read it
-  // (used by admin layout to skip setup-redirect on the setup page itself).
-  const res = NextResponse.next();
-  res.headers.set("x-pathname", pathname);
 
   if (!restaurantSlug) {
     // No restaurant context — show the platform landing page

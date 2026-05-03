@@ -66,6 +66,7 @@ model Restaurant {
   id                       String         @id @default(cuid())
   name                     String
   slug                     String         @unique   // subdomain: {slug}.lunchpad.us
+  customDomain             String?        @unique   // e.g. lunch.example.com
   timezone                 String         @default("America/Los_Angeles")
   logoUrl                  String?
   primaryColor             String?        @default("#c41230")
