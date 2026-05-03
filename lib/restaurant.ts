@@ -12,39 +12,26 @@ export const getCurrentRestaurant = cache(async (): Promise<Restaurant | null> =
   const headerList = await headers();
   const slug = headerList.get("x-restaurant-slug");
 
-  if (slug) {
-    try {
-      const restaurant = await prisma.restaurant.findUnique({
-        where: { slug, isActive: true },
-      });
-      return restaurant;
-    } catch {
-      // Subscription migration not yet applied — fall back to selecting only legacy columns
-      const rows = await prisma.$queryRaw<Restaurant[]>`
-        SELECT id, name, slug, timezone, "logoUrl", "primaryColor", "accentColor",
-               "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
-               "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
-               "isActive", "stripeAccountId", "stripeOnboardingComplete",
-               plan, "trialEndsAt", "createdAt", "updatedAt"
-        FROM "Restaurant"
-        WHERE slug = ${slug} AND "isActive" = true
-        LIMIT 1
-      `;
-      return rows[0] ?? null;
-    }
-  }
+  if (!slug) return null;
 
-  // No subdomain header — fall back to the logged-in admin's restaurantId.
-  // This lets /admin/* pages work on the root Vercel URL or any domain
-  // without subdomain routing (e.g. lunchpad-five.vercel.app/admin/dashboard).
   try {
-    const { auth } = await import("@/lib/auth");
-    const session = await auth();
-    const restaurantId = (session?.user as { restaurantId?: string } | undefined)?.restaurantId;
-    if (!restaurantId) return null;
-    return await prisma.restaurant.findUnique({ where: { id: restaurantId, isActive: true } });
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { slug, isActive: true },
+    });
+    return restaurant;
   } catch {
-    return null;
+    // Subscription migration not yet applied — fall back to selecting only legacy columns
+    const rows = await prisma.$queryRaw<Restaurant[]>`
+      SELECT id, name, slug, timezone, "logoUrl", "primaryColor", "accentColor",
+             "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
+             "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
+             "isActive", "stripeAccountId", "stripeOnboardingComplete",
+             plan, "trialEndsAt", "createdAt", "updatedAt"
+      FROM "Restaurant"
+      WHERE slug = ${slug} AND "isActive" = true
+      LIMIT 1
+    `;
+    return rows[0] ?? null;
   }
 });
 
@@ -53,11 +40,26 @@ export const getCurrentRestaurant = cache(async (): Promise<Restaurant | null> =
  * Use in pages that require a valid tenant context.
  */
 export async function requireRestaurant(): Promise<Restaurant> {
+  // 1. Try subdomain-based resolution first
   const restaurant = await getCurrentRestaurant();
-  if (!restaurant) {
-    throw new Error("Restaurant not found. Check the subdomain.");
+  if (restaurant) return restaurant;
+
+  // 2. No subdomain header — fall back to the logged-in admin's restaurantId.
+  //    This lets /admin/* pages work on the root Vercel URL or any domain
+  //    without subdomain routing (e.g. lunchpad-five.vercel.app/admin/dashboard).
+  try {
+    const { auth } = await import("@/lib/auth");
+    const session = await auth();
+    const restaurantId = (session?.user as { restaurantId?: string } | undefined)?.restaurantId;
+    if (restaurantId) {
+      const fromSession = await prisma.restaurant.findUnique({ where: { id: restaurantId, isActive: true } });
+      if (fromSession) return fromSession;
+    }
+  } catch {
+    // auth not available — fall through to error
   }
-  return restaurant;
+
+  throw new Error("Restaurant not found. Check the subdomain.");
 }
 
 /**
