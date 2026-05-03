@@ -5,6 +5,7 @@ import { requireAdminRole } from "@/lib/admin-auth";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import { PrintButton } from "@/components/admin/print-button";
+import { KitchenEmailButton } from "@/components/admin/kitchen-email-button";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +80,15 @@ export default async function KitchenSheetPage({
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between flex-wrap gap-3 no-print">
           <h1 className="text-[17px] font-semibold text-ink">Kitchen Sheet</h1>
-          <PrintButton />
+          <div className="flex items-center gap-2">
+            {selectedId && restaurant.contactEmail && (
+              <KitchenEmailButton
+                deliveryDateId={selectedId}
+                contactEmail={restaurant.contactEmail}
+              />
+            )}
+            <PrintButton />
+          </div>
         </div>
 
         {/* ── Delivery date selector ─────────────────────────────────── */}

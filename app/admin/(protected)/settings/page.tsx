@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { env } from "@/lib/env";
 import { ThemePicker } from "@/components/admin/theme-picker";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import Link from "next/link";
@@ -98,7 +99,7 @@ const TIMEZONES = [
 export default async function AdminSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; connect_success?: string; connect_error?: string }>;
 }) {
   const [params, restaurant] = await Promise.all([
     searchParams,
@@ -106,6 +107,8 @@ export default async function AdminSettingsPage({
     requireAdminRole("OWNER"),
   ]);
   const saved = params.saved === "1";
+  const connectSuccess = params.connect_success === "1";
+  const connectError = params.connect_error ?? null;
   const error = params.error ?? null;
 
   return (
@@ -127,6 +130,22 @@ export default async function AdminSettingsPage({
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <p className="text-[13px] font-medium text-red-800">{error}</p>
+        </div>
+      )}
+      {connectSuccess && (
+        <div className="rounded-[12px] bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          <p className="text-[13px] font-medium text-green-800">Stripe account connected! Parents can now check out.</p>
+        </div>
+      )}
+      {connectError && (
+        <div className="rounded-[12px] bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p className="text-[13px] font-medium text-red-800">Stripe Connect failed: {connectError}</p>
         </div>
       )}
 
@@ -357,6 +376,72 @@ export default async function AdminSettingsPage({
               </div>
             </div>
           </details>
+        </div>
+      </div>
+
+      {/* ── Stripe Connect ──────────────────────────────────────── */}
+      <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-50">
+          <p className="text-[13px] font-semibold text-ink">Payouts — Stripe Connect</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Connect your Stripe account so parent payments go directly to you
+          </p>
+        </div>
+        <div className="px-4 py-4 space-y-4">
+          {/* Status */}
+          {restaurant.stripeOnboardingComplete && restaurant.stripeAccountId ? (
+            <div className="flex items-center gap-3 bg-green-50 rounded-lg border border-green-200 px-3 py-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-semibold text-green-800">Stripe account connected</p>
+                <p className="text-[11px] text-green-600 font-mono truncate">{restaurant.stripeAccountId}</p>
+              </div>
+              <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full whitespace-nowrap">Active</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 bg-amber-50 rounded-lg border border-amber-200 px-3 py-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p className="text-[12px] text-amber-800 flex-1">
+                No Stripe account connected — parents can&apos;t check out yet.
+              </p>
+            </div>
+          )}
+
+          {/* How it works */}
+          <div className="bg-slate-50 rounded-lg border border-slate-100 px-3 py-3 space-y-1.5">
+            <p className="text-[11px] font-semibold text-slate-600">How payouts work</p>
+            {[
+              "Parents pay at checkout — money goes directly to your Stripe account",
+              `LunchPad retains a ${env.PLATFORM_FEE_PERCENT}% platform fee automatically`,
+              "Stripe deposits funds to your bank on a rolling 2-day schedule",
+            ].map((line) => (
+              <div key={line} className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 flex-shrink-0" />
+                <p className="text-[11px] text-slate-500">{line}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <a
+            href="/api/stripe/connect/authorize"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-[13px] font-semibold text-white no-underline transition"
+            style={{ background: "linear-gradient(135deg, #635bff, #4f46e5)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>
+            </svg>
+            {restaurant.stripeOnboardingComplete
+              ? "Reconnect Stripe account"
+              : "Connect Stripe account"}
+          </a>
+          <p className="text-[10px] text-slate-400 text-center">
+            You&apos;ll be redirected to Stripe to connect or create your account
+          </p>
         </div>
       </div>
 

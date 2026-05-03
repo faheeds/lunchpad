@@ -14,14 +14,26 @@ export async function POST() {
     }
 
     const batch = await createWeeklyCheckoutBatch(parentUserId);
+
+    // Look up the restaurant's Stripe Connect account for payment routing
+    const restaurantStripe = await prisma.restaurant.findUnique({
+      where: { id: batch.restaurantId },
+      select: { stripeAccountId: true, stripeOnboardingComplete: true },
+    });
+    const stripeAccountId =
+      restaurantStripe?.stripeOnboardingComplete && restaurantStripe.stripeAccountId
+        ? restaurantStripe.stripeAccountId
+        : null;
+
     const stripeSession = await createWeeklyStripeCheckoutSession({
       batchId: batch.id,
       parentEmail: batch.parentUser.email,
+      stripeAccountId,
       lineItems: batch.items.map((item) => ({
         name: `${item.parentChild.studentName}: ${item.itemNameSnapshot}`,
         description: `${item.deliveryDate.school.name} - ${item.deliveryDate.deliveryDate.toISOString().slice(0, 10)}`,
-        amountCents: item.lineTotalCents
-      }))
+        amountCents: item.lineTotalCents,
+      })),
     });
 
     await prisma.weeklyCheckoutBatch.update({

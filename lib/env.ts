@@ -10,16 +10,19 @@ const envSchema = z.object({
   AUTH_APPLE_SECRET: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_CONNECT_CLIENT_ID: z.string().optional(), // ca_xxx from Stripe Connect settings
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().email().optional(),
   EMAIL_FROM_NAME: z.string().min(1).optional(),
   APP_BASE_URL: z.string().url(),
+  ROOT_DOMAIN: z.string().default("lunchpad.us"),
   DEFAULT_TIMEZONE: z.string().default("America/Los_Angeles"),
   STRIPE_PRICE_STARTER: z.string().optional(),
   STRIPE_PRICE_GROWTH: z.string().optional(),
   STRIPE_PRICE_SCALE: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
+  PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(100).default(2.9), // LunchPad's cut %
 });
 
 export const env = envSchema.parse({
@@ -32,14 +35,17 @@ export const env = envSchema.parse({
   AUTH_APPLE_SECRET: process.env.AUTH_APPLE_SECRET,
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_CONNECT_CLIENT_ID: process.env.STRIPE_CONNECT_CLIENT_ID,
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   EMAIL_FROM: process.env.EMAIL_FROM,
   EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
   APP_BASE_URL: process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL,
+  ROOT_DOMAIN: process.env.ROOT_DOMAIN ?? "lunchpad.us",
   DEFAULT_TIMEZONE: process.env.DEFAULT_TIMEZONE ?? "America/Los_Angeles",
   STRIPE_PRICE_STARTER: process.env.STRIPE_PRICE_STARTER,
   STRIPE_PRICE_GROWTH: process.env.STRIPE_PRICE_GROWTH,
   STRIPE_PRICE_SCALE: process.env.STRIPE_PRICE_SCALE,
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  PLATFORM_FEE_PERCENT: process.env.PLATFORM_FEE_PERCENT,
 });

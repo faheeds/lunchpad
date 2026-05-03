@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { sendWelcomeRestaurantEmail } from "@/lib/email/service";
 
 export async function POST(request: Request) {
   try {
@@ -75,6 +76,9 @@ export async function POST(request: Request) {
       },
       select: { id: true, slug: true },
     });
+
+    // Fire-and-forget welcome email — never blocks or throws
+    sendWelcomeRestaurantEmail(restaurant.id).catch(() => {});
 
     return NextResponse.json({ ok: true, restaurantId: restaurant.id, slug: restaurant.slug });
 

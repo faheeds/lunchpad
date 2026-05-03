@@ -37,6 +37,19 @@ export async function POST(request: Request) {
   }
 
   try {
+    // ── Stripe Connect: account status updates ────────────────────────────────
+    if (event.type === "account.updated") {
+      const account = event.data.object as import("stripe").Stripe.Account;
+      if (account.id) {
+        await prisma.restaurant.updateMany({
+          where: { stripeAccountId: account.id },
+          data: {
+            stripeOnboardingComplete: account.charges_enabled === true,
+          },
+        });
+      }
+    }
+
     // ── Subscription lifecycle ────────────────────────────────────────────────
     if (
       event.type === "customer.subscription.created" ||

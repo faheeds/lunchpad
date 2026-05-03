@@ -6,6 +6,8 @@ import {
   buildConfirmationEmail,
   buildCancellationEmail,
   buildCutoffReminderEmail,
+  buildKitchenPrepEmail,
+  buildWelcomeRestaurantEmail,
 } from "@/lib/email/templates";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -190,5 +192,123 @@ export async function scheduleCutoffReminderEmail(orderId: string) {
     });
   } catch {
     // Best-effort - never blocks the calling flow.
+  }
+}
+
+// ─── Kitchen prep summary ─────────────────────────────────────────────────────
+
+/**
+ * Sends the kitchen prep sheet for a delivery date to the restaurant's
+ * contact email. Safe to call from an API route or a scheduled job.
+ */
+export async function sendKitchenPrepEmail(deliveryDateId: string) {
+  const deliveryDate = await prisma.deliveryDate.findUnique({
+    where: { id: deliveryDateId },
+    include: {
+      school: { include: { restaurant: true } },
+      orders: {
+        where: { status: "PAID", archivedAt: null },
+        include: {
+          student: true,
+          items: { orderBy: { itemNameSnapshot: "asc" } },
+        },
+        orderBy: [{ student: { studentName: "asc" } }],
+      },
+    },
+  });
+
+  if (!deliveryDate) throw new Error("Delivery date not found.");
+
+  const restaurant = deliveryDate.school.restaurant;
+  const to = restaurant.contactEmail;
+  if (!to) throw new Error("Restaurant has no contact email configured.");
+
+  if (!resend || !env.EMAIL_FROM) {
+    throw new Error("Email delivery is not configured.");
+  }
+
+  // Build item groups: { itemName → orders[] }
+  const groupMap = new Map<string, typeof deliveryDate.orders[0]["items"][0] & { order: typeof deliveryDate.orders[0] }[]>();
+  for (const order of deliveryDate.orders) {
+    for (const item of order.items) {
+      const key = item.itemNameSnapshot;
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key)!.push({ ...item, order });
+    }
+  }
+
+  const itemGroups = Array.from(groupMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([itemName, items]) => ({
+      itemName,
+      orders: items.map((i) => ({
+        studentName: i.order.student.studentName,
+        grade: i.order.student.grade,
+        additions: i.additions,
+        removals: i.removals,
+        allergyNotes: i.allergyNotes ?? i.order.student.allergyNotes ?? null,
+        specialInstructions: i.specialInstructions ?? null,
+      })),
+    }));
+
+  const message = buildKitchenPrepEmail({
+    restaurantName: restaurant.name,
+    schoolName: deliveryDate.school.name,
+    deliveryDate: deliveryDate.deliveryDate,
+    timezone: deliveryDate.school.timezone,
+    itemGroups,
+    totalOrders: deliveryDate.orders.length,
+  });
+
+  const result = await resend.emails.send({
+    from: env.EMAIL_FROM_NAME ? `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>` : env.EMAIL_FROM,
+    to,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+  });
+
+  if (result.error) throw new Error(result.error.message || "Resend failed.");
+  return { ok: true, ordersCount: deliveryDate.orders.length };
+}
+
+// ─── Welcome email (restaurant signup) ───────────────────────────────────────
+
+/**
+ * Sends a welcome email to a newly created restaurant's owner.
+ * Best-effort — never throws; logs errors to console only.
+ */
+export async function sendWelcomeRestaurantEmail(restaurantId: string) {
+  try {
+    if (!resend || !env.EMAIL_FROM) return;
+
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      include: { admins: { where: { role: "OWNER" }, take: 1 } },
+    });
+    if (!restaurant?.contactEmail) return;
+
+    const owner = restaurant.admins[0];
+    const ownerName = owner?.name ?? "there";
+    const orderingUrl = `https://${restaurant.slug}.${env.ROOT_DOMAIN}`;
+    const setupUrl = `https://${restaurant.slug}.${env.ROOT_DOMAIN}/admin/setup`;
+
+    const message = buildWelcomeRestaurantEmail({
+      ownerName,
+      restaurantName: restaurant.name,
+      slug: restaurant.slug,
+      setupUrl,
+      orderingUrl,
+    });
+
+    await resend.emails.send({
+      from: env.EMAIL_FROM_NAME ? `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>` : env.EMAIL_FROM,
+      to: restaurant.contactEmail,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+    });
+  } catch (err) {
+    console.error("[welcome-email] failed:", err);
   }
 }

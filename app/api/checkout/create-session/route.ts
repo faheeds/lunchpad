@@ -25,15 +25,27 @@ export async function POST(request: Request) {
       );
     }
 
+    // Look up the restaurant's Stripe Connect account so payments are routed
+    // directly to the restaurant (LunchPad retains a platform fee).
+    const restaurantStripe = await prisma.restaurant.findUnique({
+      where: { id: provisionalOrder.restaurantId },
+      select: { stripeAccountId: true, stripeOnboardingComplete: true },
+    });
+    const stripeAccountId =
+      restaurantStripe?.stripeOnboardingComplete && restaurantStripe.stripeAccountId
+        ? restaurantStripe.stripeAccountId
+        : null;
+
     const session = await createStripeCheckoutSession({
       orderId: provisionalOrder.id,
       orderNumber: provisionalOrder.orderNumber,
       parentEmail: provisionalOrder.parentEmail,
+      stripeAccountId,
       lineItems: provisionalOrder.items.map((item) => ({
         name: `School lunch preorder: ${item.itemNameSnapshot}`,
         description: `Order ${provisionalOrder.orderNumber}`,
-        amountCents: item.lineTotalCents
-      }))
+        amountCents: item.lineTotalCents,
+      })),
     });
 
     await prisma.order.update({
