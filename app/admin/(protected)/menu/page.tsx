@@ -27,13 +27,17 @@ async function createMenuItem(formData: FormData) {
 
 async function createMenuOption(formData: FormData) {
   "use server";
+  await requireRestaurant();
+  await requireAdminRole("MANAGER");
+  const priceDollars = parseFloat(String(formData.get("priceDollars") || "0"));
+  const priceDeltaCents = isNaN(priceDollars) ? 0 : Math.round(priceDollars * 100);
   const parsed = menuOptionSchema.parse({
     menuItemId: formData.get("menuItemId"),
     name: formData.get("name"),
     optionType: formData.get("optionType"),
-    priceDeltaCents: formData.get("priceDeltaCents"),
+    priceDeltaCents,
     isDefault: false,
-    sortOrder: formData.get("sortOrder")
+    sortOrder: formData.get("sortOrder") ?? 0,
   });
   await prisma.menuOption.create({ data: parsed });
   revalidatePath("/admin/menu");
@@ -54,6 +58,38 @@ async function updateItemPrice(formData: FormData) {
   if (isNaN(dollars) || dollars < 0) throw new Error("Invalid price");
   const basePriceCents = Math.round(dollars * 100);
   await prisma.menuItem.update({ where: { id }, data: { basePriceCents } });
+  revalidatePath("/admin/menu");
+}
+
+async function deleteMenuOption(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+  const id = String(formData.get("optionId"));
+  // Verify option belongs to this restaurant
+  const option = await prisma.menuOption.findFirst({
+    where: { id, menuItem: { restaurantId: restaurant.id } },
+  });
+  if (!option) throw new Error("Option not found");
+  await prisma.menuOption.delete({ where: { id } });
+  revalidatePath("/admin/menu");
+}
+
+async function updateMenuOption(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+  const id = String(formData.get("optionId"));
+  const name = String(formData.get("name") || "").trim();
+  const optionType = String(formData.get("optionType") || "ADD_ON") as "ADD_ON" | "REMOVAL";
+  const priceDeltaCents = Math.round(parseFloat(String(formData.get("priceDollars") || "0")) * 100);
+
+  if (!name) throw new Error("Option name is required");
+  const option = await prisma.menuOption.findFirst({
+    where: { id, menuItem: { restaurantId: restaurant.id } },
+  });
+  if (!option) throw new Error("Option not found");
+  await prisma.menuOption.update({ where: { id }, data: { name, optionType, priceDeltaCents } });
   revalidatePath("/admin/menu");
 }
 
@@ -330,39 +366,129 @@ export default async function AdminMenuPage() {
                         </button>
                       </form>
 
-                      {/* Add-ons */}
-                      {addons.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Add-ons</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {addons.map((o) => (
-                              <span key={o.id}
-                                className="px-2.5 py-1 rounded-full text-[11px] bg-brand-50 text-brand-800 border border-brand-100">
-                                + {o.name}{o.priceDeltaCents ? ` +${fmt(o.priceDeltaCents)}` : " (free)"}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      {/* Options (add-ons + removals) — editable */}
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                          Options ({item.options.length})
+                        </p>
 
-                      {/* Removals */}
-                      {removals.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Removals</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {removals.map((o) => (
-                              <span key={o.id}
-                                className="px-2.5 py-1 rounded-full text-[11px] bg-red-50 text-red-700 border border-red-100">
-                                No {o.name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        {item.options.length === 0 && (
+                          <p className="text-[12px] text-slate-400 mb-2">No options yet — add one below.</p>
+                        )}
 
-                      {item.options.length === 0 && (
-                        <p className="text-[12px] text-slate-400">No options configured.</p>
-                      )}
+                        {/* Existing options */}
+                        {item.options.map((o) => (
+                          <details key={o.id} className="rounded-[10px] border border-slate-100 bg-slate-50/50 mb-1.5 overflow-hidden">
+                            <summary className="flex items-center gap-2 px-3 py-2 cursor-pointer list-none">
+                              <span style={{
+                                fontSize: 10, fontWeight: 700,
+                                color: o.optionType === "ADD_ON" ? "#0369a1" : "#b91c1c",
+                                background: o.optionType === "ADD_ON" ? "#eff6ff" : "#fee2e2",
+                                borderRadius: 100, padding: "1px 7px", flexShrink: 0,
+                              }}>
+                                {o.optionType === "ADD_ON" ? "Add-on" : "Removal"}
+                              </span>
+                              <p className="text-[12px] font-medium text-ink flex-1 truncate">{o.name}</p>
+                              {o.priceDeltaCents !== 0 && (
+                                <span className="text-[11px] text-slate-500 flex-shrink-0">
+                                  +{fmt(o.priceDeltaCents)}
+                                </span>
+                              )}
+                              <span className="text-[10px] text-slate-400 flex-shrink-0">Edit ▼</span>
+                            </summary>
+
+                            {/* Inline edit form */}
+                            <div className="border-t border-slate-100 px-3 pb-3 pt-2 space-y-2">
+                              <form action={updateMenuOption} className="space-y-2">
+                                <input type="hidden" name="optionId" value={o.id} />
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-[10px] text-slate-500 font-medium block mb-1">Name</label>
+                                    <input type="text" name="name" required defaultValue={o.name}
+                                      className="w-full rounded-lg border border-slate-200 bg-white text-[12px] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] text-slate-500 font-medium block mb-1">Type</label>
+                                    <select name="optionType" defaultValue={o.optionType}
+                                      className="w-full rounded-lg border border-slate-200 bg-white text-[12px] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+                                      <option value="ADD_ON">Add-on</option>
+                                      <option value="REMOVAL">Removal</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-slate-500 font-medium block mb-1">
+                                    Extra price ($ — enter 0 for free)
+                                  </label>
+                                  <div className="relative">
+                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">$</span>
+                                    <input type="number" name="priceDollars" step="0.01" min="0"
+                                      defaultValue={(o.priceDeltaCents / 100).toFixed(2)}
+                                      className="w-full rounded-lg border border-slate-200 bg-white text-[12px] pl-6 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                                  </div>
+                                </div>
+                                <button type="submit"
+                                  className="w-full py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold">
+                                  Save changes
+                                </button>
+                              </form>
+
+                              {/* Delete */}
+                              <form action={deleteMenuOption}>
+                                <input type="hidden" name="optionId" value={o.id} />
+                                <button type="submit"
+                                  className="w-full py-1.5 rounded-lg border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 transition"
+                                  onClick={(e) => { if (!confirm(`Delete "${o.name}"?`)) e.preventDefault(); }}>
+                                  Delete option
+                                </button>
+                              </form>
+                            </div>
+                          </details>
+                        ))}
+
+                        {/* Add option inline */}
+                        <details className="rounded-[10px] border border-dashed border-slate-200 bg-white overflow-hidden mt-2">
+                          <summary className="flex items-center gap-1.5 px-3 py-2 cursor-pointer list-none text-[12px] text-slate-500 font-medium">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+                            </svg>
+                            Add option
+                          </summary>
+                          <form action={createMenuOption} className="border-t border-slate-100 px-3 pb-3 pt-2 space-y-2">
+                            <input type="hidden" name="menuItemId" value={item.id} />
+                            <input type="hidden" name="sortOrder" value={item.options.length} />
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] text-slate-500 font-medium block mb-1">Name</label>
+                                <input type="text" name="name" required placeholder="e.g. Extra cheese"
+                                  className="w-full rounded-lg border border-slate-200 text-[12px] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-slate-500 font-medium block mb-1">Type</label>
+                                <select name="optionType"
+                                  className="w-full rounded-lg border border-slate-200 text-[12px] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+                                  <option value="ADD_ON">Add-on</option>
+                                  <option value="REMOVAL">Removal</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-slate-500 font-medium block mb-1">
+                                Extra price ($ — enter 0 for free)
+                              </label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">$</span>
+                                <input type="number" name="priceDollars" step="0.01" min="0" defaultValue="0"
+                                  className="w-full rounded-lg border border-slate-200 text-[12px] pl-6 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                              </div>
+                            </div>
+                            <button type="submit"
+                              className="w-full py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold">
+                              Add option
+                            </button>
+                          </form>
+                        </details>
+                      </div>
                     </div>
                   </details>
                 );
