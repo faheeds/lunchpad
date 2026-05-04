@@ -33,9 +33,7 @@ export default async function OrderPage({
     orderBy: [{ deliveryDate: "asc" }, { school: { name: "asc" } }]
   });
 
-  // Filter to Mon–Thu only (school doesn't provide lunch on Fri/Sat/Sun).
-  // The deliveryDateSchema already blocks new Friday dates, but existing
-  // ones in the DB would otherwise show up here.
+  // Filter to Mon–Thu only
   const deliveryDates = allDeliveryDates.filter((d) => {
     const weekday = getWeekdayNumber(d.deliveryDate, d.school.timezone);
     return weekday >= 1 && weekday <= 4;
@@ -62,12 +60,25 @@ export default async function OrderPage({
   );
 
   const reorderSchoolId = reorderOrder?.schoolId;
+
+  // Prefer the same school's next delivery date; fall back to any open date
   const initialDeliveryDateId =
     reorderSchoolId && deliveryDates.some((d) => d.schoolId === reorderSchoolId)
       ? deliveryDates.find((d) => d.schoolId === reorderSchoolId)?.id
       : deliveryDates[0]?.id;
 
-  const initialCartItems =
+  // Build candidate cart items from the original order, then split into
+  // available (item exists on the target date's menu) vs. unavailable.
+  const availableMenuItemIds = new Set(
+    initialDeliveryDateId ? (menuItemsByDeliveryDate[initialDeliveryDateId] ?? []).map((m) => m.id) : []
+  );
+
+  // Also check if the target date is even for the same school — if we fell
+  // back to a different school's date, nothing from the reorder will match.
+  const targetDateSchoolId = deliveryDates.find((d) => d.id === initialDeliveryDateId)?.schoolId;
+  const sameSchool = targetDateSchoolId === reorderSchoolId;
+
+  const reorderCandidates =
     reorderOrder?.items.map((item) => {
       const requiredChoices = getRequiredChoicesForMenuItem(item.menuItem.slug);
       const choice = item.additions.find((v) => requiredChoices.includes(v));
@@ -78,15 +89,46 @@ export default async function OrderPage({
         choice,
         additions: item.additions.filter((v) => !requiredChoices.includes(v)),
         removals: item.removals,
-        lineTotalCents: item.lineTotalCents
+        lineTotalCents: item.lineTotalCents,
+        available: sameSchool && availableMenuItemIds.has(item.menuItemId),
       };
     }) ?? [];
+
+  const initialCartItems = reorderCandidates
+    .filter((i) => i.available)
+    .map(({ available: _, ...rest }) => rest);
+
+  const unavailableReorderItems = reorderCandidates
+    .filter((i) => !i.available)
+    .map((i) => i.itemName);
+
+  // Distinct: same item might appear twice but only show once in the notice
+  const unavailableNames = [...new Set(unavailableReorderItems)];
 
   return (
     <>
       <SiteHeaderServer />
       <main className="app-content">
         <div className="px-4 py-4">
+          {/* Reorder: original school has no open dates — show a clear notice above the form */}
+          {reorderOrder && reorderSchoolId && !sameSchool && deliveryDates.length > 0 && (
+            <div style={{
+              borderRadius: 14, border: "1px solid #e2e8f0",
+              background: "#f8fafc", padding: "12px 14px",
+              display: "flex", gap: 10, alignItems: "flex-start",
+              marginBottom: 12,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>
+                <strong>{reorderOrder.school.name}</strong> has no upcoming delivery dates open for ordering. Showing available dates for other schools instead.
+              </p>
+            </div>
+          )}
+
           {deliveryDates.length ? (
             <OrderForm
               deliveryDates={deliveryDates.map((date) => ({
@@ -126,8 +168,6 @@ export default async function OrderPage({
                 })) ?? []
               }
               initialParentProfile={(() => {
-                // Prefer explicit ?childId= param (from "Order" button on account page),
-                // then reorder child, then first saved child.
                 const preferredChild =
                   (params.childId
                     ? parent?.children.find((c) => c.id === params.childId)
@@ -155,6 +195,7 @@ export default async function OrderPage({
               }
               initialDeliveryDateId={initialDeliveryDateId ?? ""}
               initialCartItems={initialCartItems}
+              unavailableReorderItems={unavailableNames}
               initialItemSlug={params.item}
             />
           ) : (

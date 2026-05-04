@@ -23,6 +23,8 @@ type OrderFormProps = {
   initialDeliveryDateId?: string;
   initialCartItems?: CartItem[];
   initialItemSlug?: string;
+  /** Items from a reorder that aren't on the current date's menu — shown as a warning banner */
+  unavailableReorderItems?: string[];
 };
 
 function fmt(cents: number) {
@@ -60,7 +62,7 @@ type Step = 1 | 2 | 3 | 4;
 export function OrderForm({
   deliveryDates, menuItemsByDeliveryDate, savedChildren = [],
   initialParentProfile, initialSchoolId, initialDeliveryDateId, initialCartItems = [],
-  initialItemSlug
+  initialItemSlug, unavailableReorderItems = [],
 }: OrderFormProps) {
   const defaultSchoolId = initialSchoolId || "";
   const defaultDeliveryDateId = initialDeliveryDateId || "";
@@ -210,6 +212,32 @@ export function OrderForm({
 
   return (
     <div className="pb-32">
+      {/* Reorder unavailability notice */}
+      {unavailableReorderItems.length > 0 && (
+        <div style={{
+          borderRadius: 14, border: "1px solid #fed7aa",
+          background: "#fff7ed", padding: "12px 14px",
+          display: "flex", gap: 10, alignItems: "flex-start",
+          marginBottom: 16,
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <div>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#9a3412", marginBottom: 2 }}>
+              {unavailableReorderItems.length === 1
+                ? "1 item isn't available for this date"
+                : `${unavailableReorderItems.length} items aren't available for this date`}
+            </p>
+            <p style={{ fontSize: 11, color: "#c2410c", lineHeight: 1.5 }}>
+              {unavailableReorderItems.join(", ")} {unavailableReorderItems.length === 1 ? "has" : "have"} been removed from your cart. Pick a replacement from the menu below.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Progress */}
       <div className="flex items-center gap-1 mb-4">
         {progressSteps.map((label, i) => (
