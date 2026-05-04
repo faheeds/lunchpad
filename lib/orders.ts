@@ -446,4 +446,123 @@ export async function updateOrderAsAdmin(args: {
     include: {
       school: true,
       deliveryDate: true,
-      items: { include: { menuItem: { include: { o
+      items: { include: { menuItem: { include: { options: true } } } },
+      student: true,
+    },
+  });
+
+  if (!order) throw new Error("Order not found.");
+
+  const item = order.items[0];
+  const addOnSet = new Set(
+    item.menuItem.options.filter((o) => o.optionType === "ADD_ON").map((o) => o.name)
+  );
+  const removalSet = new Set(
+    item.menuItem.options.filter((o) => o.optionType === "REMOVAL").map((o) => o.name)
+  );
+
+  if (!args.additions.every((v) => addOnSet.has(v))) throw new Error("One or more add-ons are invalid.");
+  if (!args.removals.every((v) => removalSet.has(v))) throw new Error("One or more removals are invalid.");
+
+  const additionCost = item.menuItem.options
+    .filter((o) => args.additions.includes(o.name))
+    .reduce((sum, o) => sum + o.priceDeltaCents, 0);
+  const totalCents = item.basePriceCents + additionCost;
+
+  // Prepend admin note to specialInstructions if provided
+  const specialInstructions = args.adminNote
+    ? `[Admin note: ${args.adminNote}]${args.specialInstructions ? `\n${args.specialInstructions}` : ""}`
+    : (args.specialInstructions ?? order.specialInstructions ?? null);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.student.update({
+      where: { id: order.studentId },
+      data: {
+        teacherName: args.teacherName ?? null,
+        classroom: args.classroom ?? null,
+        allergyNotes: args.allergyNotes ?? null,
+        dietaryNotes: args.dietaryNotes ?? null,
+      },
+    });
+
+    await tx.orderItem.update({
+      where: { id: item.id },
+      data: {
+        additions: args.additions,
+        removals: args.removals,
+        allergyNotes: args.allergyNotes ?? null,
+        dietaryNotes: args.dietaryNotes ?? null,
+        specialInstructions: args.specialInstructions ?? null,
+        lineTotalCents: totalCents,
+      },
+    });
+
+    return tx.order.update({
+      where: { id: order.id },
+      data: {
+        subtotalCents: totalCents,
+        totalCents,
+        specialInstructions,
+        payment: { update: { amountCents: totalCents } },
+      },
+      include: { school: true, deliveryDate: true, student: true, items: true },
+    });
+  });
+}
+
+export async function cancelOrderWithRefund(orderId: string, parentUserId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      school: true,
+      deliveryDate: true,
+      student: true,
+      items: true,
+      payment: true,
+    },
+  });
+
+  if (!order) throw new Error("Order not found.");
+  if (order.parentUserId !== parentUserId) throw new Error("You can only cancel your own orders.");
+  if (order.status !== OrderStatus.PAID) throw new Error("Only paid orders can be cancelled.");
+
+  assertOrderingOpen(
+    new Date(),
+    order.deliveryDate.cutoffAt,
+    order.deliveryDate.deliveryDate,
+    order.school.timezone
+  );
+
+  const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+
+  if (stripe && paymentIntentId) {
+    await stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      reason: "requested_by_customer",
+    });
+  }
+
+  const now = new Date();
+
+  return prisma.$transaction(async (tx) => {
+    await tx.payment.updateMany({
+      where: { orderId: order.id },
+      data: { status: PaymentStatus.REFUNDED, refundedAt: now },
+    });
+
+    return tx.order.update({
+      where: { id: order.id },
+      data: {
+        status: OrderStatus.CANCELLED,
+        cancelledAt: now,
+        refundedAt: now,
+      },
+      include: {
+        school: true,
+        deliveryDate: true,
+        student: true,
+        items: true,
+      },
+    });
+  });
+}
