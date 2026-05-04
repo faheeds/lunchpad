@@ -403,6 +403,91 @@ export async function updateOrderBeforeCutoff(args: {
   });
 }
 
+/**
+ * Admin-only order update — bypasses the cutoff check.
+ * Identical to updateOrderBeforeCutoff except it skips assertOrderingOpen
+ * and accepts an optional adminNote stored in specialInstructions.
+ */
+export async function updateOrderAsAdmin(args: {
+  orderId: string;
+  teacherName?: string;
+  classroom?: string;
+  additions: string[];
+  removals: string[];
+  allergyNotes?: string;
+  dietaryNotes?: string;
+  specialInstructions?: string;
+  adminNote?: string;
+}) {
+  const order = await prisma.order.findUnique({
+    where: { id: args.orderId },
+    include: {
+      school: true,
+      deliveryDate: true,
+      items: { include: { menuItem: { include: { options: true } } } },
+      student: true,
+    },
+  });
+
+  if (!order) throw new Error("Order not found.");
+
+  const item = order.items[0];
+  const addOnSet = new Set(
+    item.menuItem.options.filter((o) => o.optionType === "ADD_ON").map((o) => o.name)
+  );
+  const removalSet = new Set(
+    item.menuItem.options.filter((o) => o.optionType === "REMOVAL").map((o) => o.name)
+  );
+
+  if (!args.additions.every((v) => addOnSet.has(v))) throw new Error("One or more add-ons are invalid.");
+  if (!args.removals.every((v) => removalSet.has(v))) throw new Error("One or more removals are invalid.");
+
+  const additionCost = item.menuItem.options
+    .filter((o) => args.additions.includes(o.name))
+    .reduce((sum, o) => sum + o.priceDeltaCents, 0);
+  const totalCents = item.basePriceCents + additionCost;
+
+  // Prepend admin note to specialInstructions if provided
+  const specialInstructions = args.adminNote
+    ? `[Admin note: ${args.adminNote}]${args.specialInstructions ? `\n${args.specialInstructions}` : ""}`
+    : (args.specialInstructions ?? order.specialInstructions ?? null);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.student.update({
+      where: { id: order.studentId },
+      data: {
+        teacherName: args.teacherName ?? null,
+        classroom: args.classroom ?? null,
+        allergyNotes: args.allergyNotes ?? null,
+        dietaryNotes: args.dietaryNotes ?? null,
+      },
+    });
+
+    await tx.orderItem.update({
+      where: { id: item.id },
+      data: {
+        additions: args.additions,
+        removals: args.removals,
+        allergyNotes: args.allergyNotes ?? null,
+        dietaryNotes: args.dietaryNotes ?? null,
+        specialInstructions: args.specialInstructions ?? null,
+        lineTotalCents: totalCents,
+      },
+    });
+
+    return tx.order.update({
+      where: { id: order.id },
+      data: {
+        subtotalCents: totalCents,
+        totalCents,
+        specialInstructions,
+        payment: { update: { amountCents: totalCents } },
+      },
+      include: { school: true, deliveryDate: true, student: true, items: true },
+    });
+  });
+}
+
 export async function cancelOrderWithRefund(orderId: string, parentUserId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
