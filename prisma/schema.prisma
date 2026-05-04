@@ -93,6 +93,9 @@ model Restaurant {
   stripeCustomerId         String?            @unique
   stripeSubscriptionId     String?            @unique
 
+  // Kitchen sheet automation (0–23 = UTC hour to send; null = disabled)
+  kitchenSheetSendHour     Int?
+
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 

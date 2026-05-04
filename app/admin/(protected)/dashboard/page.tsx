@@ -15,9 +15,19 @@ export default async function AdminDashboardPage() {
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
 
+  // Start of current Mon–Sun week (Monday = day 1)
+  const weekStart = new Date(todayStart);
+  const dayOfWeek = weekStart.getDay(); // 0=Sun, 1=Mon…
+  weekStart.setDate(weekStart.getDate() - ((dayOfWeek + 6) % 7));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
   const [
     todayOrderCount,
     todayRevenue,
+    weekOrderCount,
+    weekRevenue,
     allTimePaid,
     upcomingDeliveryDates,
     recentOrders,
@@ -35,6 +45,21 @@ export default async function AdminDashboardPage() {
         order: { restaurantId: restaurant.id, status: "PAID" },
         status: "PAID",
         createdAt: { gte: todayStart, lte: todayEnd },
+      },
+    }),
+    prisma.order.count({
+      where: {
+        restaurantId: restaurant.id,
+        status: "PAID",
+        createdAt: { gte: weekStart, lte: weekEnd },
+      },
+    }),
+    prisma.payment.aggregate({
+      _sum: { amountCents: true },
+      where: {
+        order: { restaurantId: restaurant.id, status: "PAID" },
+        status: "PAID",
+        createdAt: { gte: weekStart, lte: weekEnd },
       },
     }),
     prisma.order.count({
@@ -58,6 +83,7 @@ export default async function AdminDashboardPage() {
   ]);
 
   const todayRevenueAmount = todayRevenue._sum.amountCents ?? 0;
+  const weekRevenueAmount = weekRevenue._sum.amountCents ?? 0;
   const nextDelivery = upcomingDeliveryDates[0] ?? null;
 
   const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -103,57 +129,36 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* ── Stat tiles ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {[
-          {
-            label: "Orders",
-            sub: "today",
-            value: String(todayOrderCount),
-            color: "#c41230",
-            bg: "#fff1f3",
-            border: "#fecdd3",
-          },
-          {
-            label: "Revenue",
-            sub: "today",
-            value: formatCurrency(todayRevenueAmount),
-            color: "#0369a1",
-            bg: "#eff6ff",
-            border: "#bfdbfe",
-          },
-          {
-            label: "All orders",
-            sub: "all time",
-            value: String(allTimePaid),
-            color: "#7c3aed",
-            bg: "#f5f3ff",
-            border: "#ddd6fe",
-          },
+          { label: "Orders",  sub: "today",     value: String(todayOrderCount),       color: "#c41230", bg: "#fff1f3", border: "#fecdd3" },
+          { label: "Orders",  sub: "this week",  value: String(weekOrderCount),         color: "#c41230", bg: "#fff1f3", border: "#fecdd3" },
+          { label: "Orders",  sub: "all time",   value: String(allTimePaid),            color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+          { label: "Revenue", sub: "today",      value: formatCurrency(todayRevenueAmount), color: "#0369a1", bg: "#eff6ff", border: "#bfdbfe" },
+          { label: "Revenue", sub: "this week",  value: formatCurrency(weekRevenueAmount),  color: "#0369a1", bg: "#eff6ff", border: "#bfdbfe" },
           {
             label: "Next delivery",
             sub: nextDelivery ? nextDelivery.school.name : "—",
             value: nextDelivery
               ? formatInTimeZone(nextDelivery.deliveryDate, nextDelivery.school.timezone, "MMM d")
               : "None",
-            color: "#059669",
-            bg: "#ecfdf5",
-            border: "#a7f3d0",
+            color: "#059669", bg: "#ecfdf5", border: "#a7f3d0",
           },
         ].map(({ label, sub, value, color, bg, border }) => (
-          <div key={label} style={{
+          <div key={`${label}-${sub}`} style={{
             background: bg, borderRadius: 14,
             border: `1px solid ${border}`,
-            padding: "14px 14px 12px",
-            display: "flex", flexDirection: "column", gap: 6,
-            minHeight: 96,
+            padding: "12px 12px 10px",
+            display: "flex", flexDirection: "column", gap: 5,
+            minHeight: 86,
           }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+            <p style={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
               {label}
             </p>
-            <p style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1, letterSpacing: "-0.03em" }}>
+            <p style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1, letterSpacing: "-0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {value}
             </p>
-            <p style={{ fontSize: 10, color: "#9ca3af", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <p style={{ fontSize: 9, color: "#9ca3af", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {sub}
             </p>
           </div>

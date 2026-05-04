@@ -54,7 +54,12 @@ export default async function AdminOrdersPage({
   const pendingOrders = orders.filter((o) => o.status === "PENDING");
   const revenue       = paidOrders.reduce((sum, o) => sum + o.totalCents, 0);
 
-  const exportBase = params.deliveryDateId ? `?deliveryDateId=${params.deliveryDateId}` : "";
+  const exportParams = new URLSearchParams();
+  if (params.deliveryDateId) exportParams.set("deliveryDateId", params.deliveryDateId);
+  if (params.schoolId) exportParams.set("schoolId", params.schoolId);
+  if (params.status && params.status !== "ALL") exportParams.set("status", params.status);
+  if (params.archived) exportParams.set("archived", params.archived);
+  const exportBase = exportParams.toString() ? `?${exportParams.toString()}` : "";
 
   return (
     <div className="space-y-4 pb-10">

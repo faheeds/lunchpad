@@ -1,36 +1,37 @@
-import { OrderStatus } from "@prisma/client";
 import { Parser } from "json2csv";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { listOrders } from "@/lib/orders";
 import { formatList } from "@/lib/utils";
-import { assertAdminApiRequest } from "@/lib/admin-auth";
+import { formatInTimeZone } from "date-fns-tz";
+import { requireAdmin } from "@/lib/admin-auth";
+import { requireRestaurant } from "@/lib/restaurant";
 
 export async function GET(request: Request) {
   try {
-    await assertAdminApiRequest();
+    await requireAdmin();
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { searchParams } = new URL(request.url);
-  const deliveryDateId = searchParams.get("deliveryDateId");
 
-  const orders = await prisma.order.findMany({
-    where: {
-      deliveryDateId: deliveryDateId ?? undefined,
-      status: OrderStatus.PAID,
-      archivedAt: null
-    },
-    include: {
-      school: true,
-      student: true,
-      items: true,
-      deliveryDate: true
-    },
-    orderBy: { createdAt: "asc" }
+  const restaurant = await requireRestaurant();
+  const { searchParams } = new URL(request.url);
+  const deliveryDateId = searchParams.get("deliveryDateId") ?? undefined;
+  const schoolId = searchParams.get("schoolId") ?? undefined;
+  const status = searchParams.get("status") ?? undefined;
+  const archived = searchParams.get("archived") ?? "exclude";
+
+  const orders = await listOrders({
+    restaurantId: restaurant.id,
+    deliveryDateId,
+    schoolIds: schoolId ? [schoolId] : [],
+    status,
+    archived,
   });
 
   const rows = orders.map((order) => ({
     orderNumber: order.orderNumber,
+    status: order.status,
+    deliveryDate: formatInTimeZone(order.deliveryDate.deliveryDate, order.school.timezone, "yyyy-MM-dd"),
     school: order.school.name,
     studentName: order.student.studentName,
     grade: order.student.grade,
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
     removals: formatList(order.items.flatMap((item) => item.removals)),
     allergyNotes: order.items.map((item) => item.allergyNotes).find(Boolean) ?? "",
     specialInstructions: order.specialInstructions ?? "",
-    totalPaid: (order.totalCents / 100).toFixed(2)
+    totalPaid: (order.totalCents / 100).toFixed(2),
   }));
 
   const csv = new Parser().parse(rows);

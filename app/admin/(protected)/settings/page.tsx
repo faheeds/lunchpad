@@ -55,6 +55,31 @@ async function updateSettings(formData: FormData) {
   }
 }
 
+async function updateKitchenSheetSettings(formData: FormData) {
+  "use server";
+  let errorMsg: string | null = null;
+  try {
+    const restaurant = await requireRestaurant();
+    await requireAdminRole("OWNER");
+
+    const raw = formData.get("kitchenSheetSendHour");
+    const kitchenSheetSendHour = raw === "" || raw === null ? null : Number(raw);
+
+    await prisma.restaurant.update({
+      where: { id: restaurant.id },
+      data: { kitchenSheetSendHour },
+    });
+  } catch (e: unknown) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong";
+  }
+
+  if (errorMsg) {
+    redirect(`/admin/settings?error=${encodeURIComponent(errorMsg)}`);
+  } else {
+    redirect("/admin/settings?saved=1");
+  }
+}
+
 async function updateCustomDomain(formData: FormData) {
   "use server";
   let errorMsg: string | null = null;
@@ -444,6 +469,40 @@ export default async function AdminSettingsPage({
           </p>
         </div>
       </div>
+
+      {/* ── Kitchen sheet automation ────────────────────────────── */}
+      <form action={updateKitchenSheetSettings} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-50">
+          <p className="text-[13px] font-semibold text-ink">Kitchen sheet automation</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Automatically email the kitchen prep sheet on each delivery day
+          </p>
+        </div>
+        <div className="px-4 py-4 space-y-3">
+          <div>
+            <label className="text-[11px] text-slate-500 font-medium block mb-1">
+              Auto-send time <span className="text-slate-400 font-normal">(in your restaurant&apos;s timezone)</span>
+            </label>
+            <select name="kitchenSheetSendHour"
+              defaultValue={restaurant.kitchenSheetSendHour ?? ""}
+              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+              <option value="">Disabled — send manually</option>
+              {Array.from({ length: 24 }, (_, h) => {
+                const ampm = h < 12 ? "AM" : "PM";
+                const label = h === 0 ? "12:00 AM (midnight)" : h < 12 ? `${h}:00 AM` : h === 12 ? "12:00 PM (noon)" : `${h - 12}:00 PM`;
+                return <option key={h} value={h}>{label}</option>;
+              })}
+            </select>
+            <p className="text-[11px] text-slate-400 mt-1.5">
+              The prep sheet is sent to your contact email once per delivery day at this hour. Make sure a contact email is set above.
+            </p>
+          </div>
+          <button type="submit"
+            className="w-full py-2.5 rounded-lg bg-slate-800 text-white text-[13px] font-semibold">
+            Save kitchen sheet settings
+          </button>
+        </div>
+      </form>
 
       {/* ── Danger zone ─────────────────────────────────────────── */}
       <div className="rounded-[14px] border border-red-100 bg-white overflow-hidden">
