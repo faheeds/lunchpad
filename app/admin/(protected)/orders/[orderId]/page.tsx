@@ -220,7 +220,7 @@ export default async function AdminOrderDetailPage({
               <textarea name="specialInstructions" rows={2}
                 defaultValue={
                   // Strip any prepended admin note lines so the field shows original instructions only
-                  (order.specialInstructions ?? "").replace(/^\[Admin note:.*?\]\n?/s, "")
+                  (order.specialInstructions ?? "").replace(/^\[Admin note:[\s\S]*?\]\n?/, "")
                 }
                 className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2 resize-none" />
             </div>
