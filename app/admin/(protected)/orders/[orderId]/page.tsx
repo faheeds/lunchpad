@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { updateOrderAsAdmin } from "@/lib/orders";
+import { sendOrderModifiedEmail } from "@/lib/email/service";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
@@ -55,6 +56,8 @@ export default async function AdminOrderDetailPage({
       specialInstructions: String(formData.get("specialInstructions") || ""),
       adminNote: String(formData.get("adminNote") || "") || undefined,
     });
+    // Send notification email to parent (best-effort — never block the save)
+    sendOrderModifiedEmail(orderId).catch(() => {});
     revalidatePath(`/admin/orders/${orderId}`);
     revalidatePath("/admin/orders");
     redirect("/admin/orders");

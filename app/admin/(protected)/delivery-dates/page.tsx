@@ -56,10 +56,14 @@ async function attachMenuItems(formData: FormData) {
   await prisma.$transaction(
     activeMenuItems.map((item) => {
       const shouldBeAvailable = submittedIds.has(item.id);
+      const rawQty = formData.get(`maxQty_${item.id}`);
+      const maxQuantity = rawQty && String(rawQty).trim() !== ""
+        ? parseInt(String(rawQty), 10) || null
+        : null;
       return prisma.deliveryMenuItem.upsert({
         where:  { deliveryDateId_menuItemId: { deliveryDateId, menuItemId: item.id } },
-        update: { isAvailable: shouldBeAvailable },
-        create: { deliveryDateId, menuItemId: item.id, schoolId, isAvailable: shouldBeAvailable },
+        update: { isAvailable: shouldBeAvailable, maxQuantity: shouldBeAvailable ? maxQuantity : null },
+        create: { deliveryDateId, menuItemId: item.id, schoolId, isAvailable: shouldBeAvailable, maxQuantity: shouldBeAvailable ? maxQuantity : null },
       });
     }),
   );
@@ -83,6 +87,11 @@ export default async function DeliveryDatesPage() {
         menuAvailability: {
           where: { isAvailable: true },
           include: { menuItem: { select: { id: true, name: true } } },
+          orderBy: { menuItem: { name: "asc" } },
+        },
+        orders: {
+          where: { status: "PAID", archivedAt: null },
+          select: { items: { select: { menuItemId: true } } },
         },
         _count: {
           select: { orders: { where: { status: "PAID" } } },
@@ -289,16 +298,60 @@ export default async function DeliveryDatesPage() {
                       <form action={attachMenuItems} className="px-3 pb-3 border-t border-slate-50 pt-2 space-y-2">
                         <input type="hidden" name="deliveryDateId" value={date.id} />
                         <input type="hidden" name="schoolId" value={date.schoolId} />
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto py-1">
-                          {menuItems.map((item) => (
-                            <label key={item.id} className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer py-1">
-                              <input type="checkbox" name="menuItemIds" value={item.id}
-                                defaultChecked={date.menuAvailability.some((a) => a.menuItemId === item.id)}
-                                className="rounded flex-shrink-0 accent-brand-700" />
-                              <span className="truncate">{item.name}</span>
-                            </label>
-                          ))}
-                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide pt-1">
+                          Check items to include · set a qty cap (optional)
+                        </p>
+                        {(() => {
+                          // Build a count map: menuItemId → # PAID orders on this date
+                          const soldMap = new Map<string, number>();
+                          for (const o of date.orders) {
+                            for (const i of o.items) {
+                              soldMap.set(i.menuItemId, (soldMap.get(i.menuItemId) ?? 0) + 1);
+                            }
+                          }
+                          return (
+                            <div className="space-y-1 max-h-56 overflow-y-auto py-1">
+                              {menuItems.map((item) => {
+                                const existing = date.menuAvailability.find((a) => a.menuItemId === item.id);
+                                const soldCount = soldMap.get(item.id) ?? 0;
+                                const cap = (existing as { maxQuantity?: number | null } | undefined)?.maxQuantity ?? null;
+                                const isSoldOut = cap !== null && soldCount >= cap;
+                                return (
+                                  <div key={item.id} className="flex items-center gap-2">
+                                    <input type="checkbox" name="menuItemIds" value={item.id}
+                                      defaultChecked={!!existing}
+                                      className="rounded flex-shrink-0 accent-brand-700" />
+                                    <span className="text-[12px] text-slate-700 flex-1 truncate">{item.name}</span>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      {soldCount > 0 && (
+                                        <span style={{
+                                          fontSize: 9, fontWeight: 700,
+                                          background: isSoldOut ? "#fee2e2" : "#f0fdf4",
+                                          color: isSoldOut ? "#b91c1c" : "#15803d",
+                                          borderRadius: 100, padding: "1px 6px",
+                                        }}>
+                                          {soldCount} sold{isSoldOut ? " · SOLD OUT" : ""}
+                                        </span>
+                                      )}
+                                      <input
+                                        type="number"
+                                        name={`maxQty_${item.id}`}
+                                        defaultValue={cap ?? ""}
+                                        min={1}
+                                        placeholder="∞"
+                                        style={{
+                                          width: 48, fontSize: 11, textAlign: "center",
+                                          borderRadius: 6, border: "1px solid #e2e8f0",
+                                          padding: "2px 4px", color: "#475569",
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
                         <button type="submit"
                           className="w-full py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
                           Save menu items

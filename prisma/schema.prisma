@@ -195,6 +195,7 @@ model DeliveryMenuItem {
   menuItemId     String
   schoolId       String
   isAvailable    Boolean      @default(true)
+  maxQuantity    Int?         // null = unlimited; set to cap orders for this item on this date
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deliveryDate   DeliveryDate @relation(fields: [deliveryDateId], references: [id], onDelete: Cascade)

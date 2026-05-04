@@ -25,6 +25,8 @@ type OrderFormProps = {
   initialItemSlug?: string;
   /** Items from a reorder that aren't on the current date's menu — shown as a warning banner */
   unavailableReorderItems?: string[];
+  /** Per delivery date ID: list of menuItemIds that have sold out */
+  soldOutByDeliveryDate?: Record<string, string[]>;
 };
 
 function fmt(cents: number) {
@@ -62,7 +64,7 @@ type Step = 1 | 2 | 3 | 4;
 export function OrderForm({
   deliveryDates, menuItemsByDeliveryDate, savedChildren = [],
   initialParentProfile, initialSchoolId, initialDeliveryDateId, initialCartItems = [],
-  initialItemSlug, unavailableReorderItems = [],
+  initialItemSlug, unavailableReorderItems = [], soldOutByDeliveryDate = {},
 }: OrderFormProps) {
   const defaultSchoolId = initialSchoolId || "";
   const defaultDeliveryDateId = initialDeliveryDateId || "";
@@ -121,6 +123,10 @@ export function OrderForm({
   const schoolDeliveryDates = useMemo(() => deliveryDates.filter((d) => d.school.id === selectedSchoolId), [deliveryDates, selectedSchoolId]);
   const selectedDelivery = deliveryDates.find((d) => d.id === selectedDeliveryDateId);
   const menuItems = menuItemsByDeliveryDate[selectedDeliveryDateId] ?? [];
+  const soldOutIds = useMemo(
+    () => new Set(soldOutByDeliveryDate[selectedDeliveryDateId] ?? []),
+    [soldOutByDeliveryDate, selectedDeliveryDateId]
+  );
   const selectedMenuItem = menuItems.find((item) => item.id === selectedMenuItemId);
   const requiredChoices = selectedMenuItem ? getRequiredChoicesForMenuItem(selectedMenuItem.slug) : [];
 
@@ -409,14 +415,21 @@ export function OrderForm({
                 {items.map((item) => {
                   const isSelected = selectedMenuItemId === item.id;
                   const inCart = cartItems.some((c) => c.menuItemId === item.id);
+                  const isSoldOut = soldOutIds.has(item.id);
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => { setSelectedMenuItemId(item.id); setSelectedChoice(""); setSelectedAdditions([]); setSelectedRemovals([]); setError(""); }}
+                      disabled={isSoldOut}
+                      onClick={() => {
+                        if (isSoldOut) return;
+                        setSelectedMenuItemId(item.id); setSelectedChoice(""); setSelectedAdditions([]); setSelectedRemovals([]); setError("");
+                      }}
                       className={cn(
                         "w-full rounded-[14px] border p-3 text-left flex gap-2.5 items-start transition",
-                        isSelected ? "border-brand-600 bg-brand-50 border-2" : inCart ? "border-green-200 bg-green-50/40 border" : "border-slate-100 bg-white"
+                        isSoldOut ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed" :
+                        isSelected ? "border-brand-600 bg-brand-50 border-2" :
+                        inCart ? "border-green-200 bg-green-50/40 border" : "border-slate-100 bg-white"
                       )}
                     >
                       {item.imageUrl ? (
@@ -433,18 +446,21 @@ export function OrderForm({
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className={cn("text-[13px] font-semibold leading-snug", isSelected ? "text-brand-900" : "text-ink")}>
+                          <p className={cn("text-[13px] font-semibold leading-snug", isSelected ? "text-brand-900" : isSoldOut ? "text-slate-400" : "text-ink")}>
                             {item.name}
-                            {getRequiredChoicesForMenuItem(item.slug).length > 0 && (
+                            {!isSoldOut && getRequiredChoicesForMenuItem(item.slug).length > 0 && (
                               <span className="ml-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">choose style</span>
                             )}
+                            {isSoldOut && (
+                              <span className="ml-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-500">sold out</span>
+                            )}
                           </p>
-                          <span className={cn("text-[13px] font-semibold flex-shrink-0", isSelected ? "text-brand-700" : "text-ink")}>
+                          <span className={cn("text-[13px] font-semibold flex-shrink-0", isSoldOut ? "text-slate-400 line-through" : isSelected ? "text-brand-700" : "text-ink")}>
                             {fmt(item.basePriceCents)}
                           </span>
                         </div>
                         {getDesc(item) && <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{getDesc(item)}</p>}
-                        {inCart && <p className="text-[10px] text-green-700 font-medium mt-1">✓ In cart</p>}
+                        {inCart && !isSoldOut && <p className="text-[10px] text-green-700 font-medium mt-1">✓ In cart</p>}
                       </div>
                     </button>
                   );

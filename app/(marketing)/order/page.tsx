@@ -28,6 +28,11 @@ export default async function OrderPage({
       menuAvailability: {
         where: { isAvailable: true, menuItem: { is: { isActive: true } } },
         include: { menuItem: { include: { options: { orderBy: { sortOrder: "asc" } } } } }
+      },
+      // Count PAID orders per item to determine sold-out status
+      orders: {
+        where: { status: "PAID", archivedAt: null },
+        select: { items: { select: { menuItemId: true } } }
       }
     },
     orderBy: [{ deliveryDate: "asc" }, { school: { name: "asc" } }]
@@ -57,6 +62,23 @@ export default async function OrderPage({
 
   const menuItemsByDeliveryDate = Object.fromEntries(
     deliveryDates.map((date) => [date.id, date.menuAvailability.map((e) => e.menuItem)])
+  );
+
+  // Per delivery date: set of menuItemIds that have hit their cap
+  const soldOutByDeliveryDate = Object.fromEntries(
+    deliveryDates.map((date) => {
+      // Count how many PAID orders each item has on this date
+      const countMap = new Map<string, number>();
+      for (const order of date.orders) {
+        for (const item of order.items) {
+          countMap.set(item.menuItemId, (countMap.get(item.menuItemId) ?? 0) + 1);
+        }
+      }
+      const soldOut = date.menuAvailability
+        .filter((entry) => entry.maxQuantity !== null && (countMap.get(entry.menuItemId) ?? 0) >= entry.maxQuantity!)
+        .map((entry) => entry.menuItemId);
+      return [date.id, soldOut];
+    })
   );
 
   const reorderSchoolId = reorderOrder?.schoolId;
@@ -196,6 +218,7 @@ export default async function OrderPage({
               initialDeliveryDateId={initialDeliveryDateId ?? ""}
               initialCartItems={initialCartItems}
               unavailableReorderItems={unavailableNames}
+              soldOutByDeliveryDate={soldOutByDeliveryDate}
               initialItemSlug={params.item}
             />
           ) : (

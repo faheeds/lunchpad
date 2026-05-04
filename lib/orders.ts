@@ -114,6 +114,23 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       throw new Error("One or more selected menu items are unavailable for that delivery date.");
     }
 
+    // Quantity cap check — count existing PAID orders for this item on this date
+    if (menuEntry.maxQuantity !== null && menuEntry.maxQuantity !== undefined) {
+      const soldCount = await prisma.orderItem.count({
+        where: {
+          menuItemId: cartItem.menuItemId,
+          order: {
+            deliveryDateId: parsed.deliveryDateId,
+            status: OrderStatus.PAID,
+            archivedAt: null,
+          },
+        },
+      });
+      if (soldCount >= menuEntry.maxQuantity) {
+        throw new Error(`Sorry, ${menuEntry.menuItem.name} is sold out for this delivery date.`);
+      }
+    }
+
     const menuItem = menuEntry.menuItem;
     const addOnSet = new Set(
       menuItem.options.filter((option) => option.optionType === "ADD_ON").map((option) => option.name)

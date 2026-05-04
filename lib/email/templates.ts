@@ -365,3 +365,97 @@ export function buildWelcomeRestaurantEmail(args: WelcomeRestaurantTemplateArgs)
 
   return { subject, text, html };
 }
+
+// ─── Order modified by admin ──────────────────────────────────────────────────
+
+type OrderModifiedTemplateArgs = {
+  parentName: string;
+  studentName: string;
+  deliveryDate: Date;
+  timezone: string;
+  orderNumber: string;
+  items: { itemName: string; additions: string[]; removals: string[] }[];
+  allergyNotes?: string | null;
+  amountCents: number;
+  adminNote?: string | null;
+};
+
+export function buildOrderModifiedEmail(args: OrderModifiedTemplateArgs) {
+  const deliveryDateStr = formatInTimeZone(args.deliveryDate, args.timezone, "EEEE, MMMM d");
+
+  const subject = `Your order has been updated — ${args.orderNumber}`;
+
+  const text = [
+    `Hi ${args.parentName},`,
+    "",
+    `Your order for ${args.studentName} on ${deliveryDateStr} has been updated by the restaurant.`,
+    "",
+    `Updated items:`,
+    ...args.items.flatMap((item, i) => [
+      `Item ${i + 1}: ${item.itemName}`,
+      item.additions.length ? `  + ${item.additions.join(", ")}` : null,
+      item.removals.length ? `  - ${item.removals.join(", ")}` : null,
+    ].filter(Boolean) as string[]),
+    "",
+    args.allergyNotes ? `Allergy note: ${args.allergyNotes}` : null,
+    `Order total: ${formatCurrency(args.amountCents)}`,
+    `Order number: ${args.orderNumber}`,
+    args.adminNote ? `\nNote from restaurant: ${args.adminNote}` : null,
+    "",
+    "If you have questions about this change, please contact the restaurant directly.",
+  ].filter((l) => l !== null).join("\n");
+
+  const itemRows = args.items
+    .map(
+      (item, i) => `
+    <tr>
+      <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;font-weight:600;font-size:13px;white-space:nowrap">Item ${i + 1}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:13px">
+        ${item.itemName}
+        ${item.additions.length ? `<br><span style="color:#15803d;font-size:12px">+${item.additions.join(", ")}</span>` : ""}
+        ${item.removals.length ? `<br><span style="color:#dc2626;font-size:12px">−${item.removals.join(", ")}</span>` : ""}
+      </td>
+    </tr>`
+    )
+    .join("");
+
+  const html = `
+    <div style="${base}">
+      <div style="background:linear-gradient(135deg,#0f1923,#1a2d42);border-radius:10px;padding:20px 28px;margin-bottom:16px">
+        <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.12em;margin:0 0 4px">Order Updated</p>
+        <h1 style="font-size:20px;font-weight:800;color:white;margin:0 0 4px;letter-spacing:-0.02em">${args.orderNumber}</h1>
+        <p style="font-size:13px;color:rgba(255,255,255,0.6);margin:0">${args.studentName} &middot; ${deliveryDateStr}</p>
+      </div>
+
+      <div style="${card}">
+        <p style="font-size:14px;margin:0 0 14px">Hi ${args.parentName},</p>
+        <p style="font-size:13px;color:#4b5563;margin:0 0 16px;line-height:1.65">
+          The restaurant has made an update to your order for <strong>${args.studentName}</strong> on <strong>${deliveryDateStr}</strong>.
+        </p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+          ${itemRows}
+          ${args.allergyNotes ? `
+          <tr>
+            <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;font-weight:600;font-size:13px;white-space:nowrap;color:#d97706">Allergy note</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#d97706">${args.allergyNotes}</td>
+          </tr>` : ""}
+          <tr>
+            <td style="padding:8px 10px;font-weight:600;font-size:13px;white-space:nowrap">Order total</td>
+            <td style="padding:8px 10px;font-size:13px;font-weight:700">${formatCurrency(args.amountCents)}</td>
+          </tr>
+        </table>
+        ${args.adminNote ? `
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-top:4px">
+          <p style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Note from restaurant</p>
+          <p style="font-size:13px;color:#78350f;margin:0;line-height:1.5">${args.adminNote}</p>
+        </div>` : ""}
+      </div>
+
+      <p style="font-size:11px;color:#9ca3af;text-align:center;margin-top:16px">
+        If you have questions, please contact the restaurant directly.
+      </p>
+    </div>
+  `;
+
+  return { subject, text, html };
+}

@@ -8,6 +8,7 @@ import {
   buildCutoffReminderEmail,
   buildKitchenPrepEmail,
   buildWelcomeRestaurantEmail,
+  buildOrderModifiedEmail,
 } from "@/lib/email/templates";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -272,6 +273,65 @@ export async function sendKitchenPrepEmail(deliveryDateId: string) {
 
   if (result.error) throw new Error(result.error.message || "Resend failed.");
   return { ok: true, ordersCount: deliveryDate.orders.length };
+}
+
+// ─── Order modified by admin ──────────────────────────────────────────────────
+
+/**
+ * Sends an "order updated" email to the parent after an admin modifies their order.
+ * Best-effort — caller should `.catch(() => {})` so a mail failure never blocks saves.
+ */
+export async function sendOrderModifiedEmail(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { school: true, deliveryDate: true, student: true, items: true },
+  });
+
+  if (!order) throw new Error("Order not found.");
+  if (!resend || !env.EMAIL_FROM) throw new Error("Email delivery is not configured.");
+
+  // Extract admin note from the special instructions prefix if present
+  const adminNoteMatch = order.items[0]?.specialInstructions?.match(/^\[Admin note:([\s\S]*?)\]/);
+  const adminNote = adminNoteMatch ? adminNoteMatch[1].trim() : null;
+
+  const message = buildOrderModifiedEmail({
+    parentName: order.parentName,
+    studentName: order.student.studentName,
+    deliveryDate: order.deliveryDate.deliveryDate,
+    timezone: order.school.timezone,
+    orderNumber: order.orderNumber,
+    items: order.items.map((item) => ({
+      itemName: item.itemNameSnapshot,
+      additions: item.additions,
+      removals: item.removals,
+    })),
+    allergyNotes: order.items.map((i) => i.allergyNotes).find(Boolean) ?? order.student.allergyNotes,
+    amountCents: order.totalCents,
+    adminNote,
+  });
+
+  const result = await resend.emails.send({
+    from: env.EMAIL_FROM_NAME ? `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>` : env.EMAIL_FROM,
+    to: order.parentEmail,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+  });
+
+  if (result.error) throw new Error(result.error.message || "Resend email delivery failed.");
+
+  await prisma.emailLog.create({
+    data: {
+      orderId: order.id,
+      emailType: "ORDER_MODIFIED",
+      recipient: order.parentEmail,
+      providerId: result.data?.id,
+      status: EmailStatus.SENT,
+      sentAt: new Date(),
+    },
+  });
+
+  return { ok: true };
 }
 
 // ─── Welcome email (restaurant signup) ───────────────────────────────────────
