@@ -12,6 +12,29 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = orderFormSchema.parse(body);
 
+    // Rate-limit: block if the same parent already has a PENDING order for this
+    // delivery date created in the last 5 minutes (prevents accidental double-orders)
+    const parentUserId =
+      authSession?.user?.role === "PARENT" ? authSession.user.parentUserId : undefined;
+    if (parentUserId) {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const duplicate = await prisma.order.findFirst({
+        where: {
+          parentUserId,
+          deliveryDateId: parsed.deliveryDateId,
+          status: "PENDING",
+          createdAt: { gte: fiveMinutesAgo },
+        },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "You already have a pending order for this date. Complete or cancel it before placing another." },
+          { status: 429 }
+        );
+      }
+    }
+
     const provisionalOrder = await createPendingOrder(
       parsed,
       undefined,

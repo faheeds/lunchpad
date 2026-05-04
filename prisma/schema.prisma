@@ -146,8 +146,24 @@ model School {
   parentChildren       ParentChild[]
   weeklyPlans          WeeklyLunchPlan[]
   weeklyCheckoutItems  WeeklyCheckoutBatchItem[]
+  schoolMenuItems      SchoolMenuItem[]
 
   @@unique([restaurantId, slug])
+}
+
+// ─── SCHOOL MENU RESTRICTIONS ─────────────────────────────────────────────────
+// When a MenuItem has at least one SchoolMenuItem row, it is ONLY available
+// to schools listed here. Zero rows = available to all schools (backward compat).
+
+model SchoolMenuItem {
+  id         String   @id @default(cuid())
+  schoolId   String
+  menuItemId String
+  createdAt  DateTime @default(now())
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, menuItemId])
 }
 
 // ─── DELIVERY DATES ──────────────────────────────────────────────────────────
@@ -188,6 +204,7 @@ model MenuItem {
   availability        DeliveryMenuItem[]
   weeklyPlans         WeeklyLunchPlan[]
   weeklyCheckoutItems WeeklyCheckoutBatchItem[]
+  schoolRestrictions  SchoolMenuItem[]   // empty = available to all schools
 
   @@unique([restaurantId, slug])
 }

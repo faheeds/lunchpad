@@ -1,5 +1,6 @@
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { stripe } from "@/lib/payments/stripe";
 
 export async function getAdminDashboardSummary(restaurantId: string) {
   const [paidOrders, refundedOrders, cancelledOrders, schools, upcomingDeliveryDates] = await Promise.all([
@@ -35,6 +36,49 @@ export async function setOrderStatus(orderId: string, status: OrderStatus) {
       payment: status === OrderStatus.REFUNDED ? { update: { status: PaymentStatus.REFUNDED, refundedAt: now } } : undefined
     }
   });
+}
+
+/**
+ * Admin-only cancel + refund. Skips cutoff and parentUserId checks.
+ * Issues a Stripe refund if a paymentIntent exists, then marks the order cancelled.
+ */
+export async function adminCancelOrderWithRefund(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { payment: true },
+  });
+
+  if (!order) throw new Error(`Order ${orderId} not found.`);
+  if (order.status !== OrderStatus.PAID) {
+    throw new Error(`Order ${orderId} is not in PAID status.`);
+  }
+
+  const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+
+  if (stripe && paymentIntentId) {
+    try {
+      await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        reason: "requested_by_customer",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Log but don't block — the order can still be cancelled in the DB
+      console.error(`[admin-cancel] Stripe refund failed for order ${orderId}:`, msg);
+    }
+  }
+
+  const now = new Date();
+  return prisma.$transaction([
+    prisma.payment.updateMany({
+      where: { orderId: order.id },
+      data: { status: PaymentStatus.REFUNDED, refundedAt: now },
+    }),
+    prisma.order.update({
+      where: { id: order.id },
+      data: { status: OrderStatus.CANCELLED, cancelledAt: now, refundedAt: now },
+    }),
+  ]);
 }
 
 export async function setOrderArchived(orderId: string, archived: boolean) {

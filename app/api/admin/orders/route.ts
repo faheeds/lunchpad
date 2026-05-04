@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { assertAdminApiRequest } from "@/lib/admin-auth";
 import { listOrders } from "@/lib/orders";
 import { sendOrderConfirmationEmail } from "@/lib/email/service";
-import { setOrderArchived, setOrderStatus } from "@/lib/admin";
+import { setOrderArchived, setOrderStatus, adminCancelOrderWithRefund } from "@/lib/admin";
 import { OrderStatus } from "@prisma/client";
 
 export async function GET(request: Request) {
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         await Promise.all(orderIds.map((orderId: string) => setOrderArchived(orderId, true)));
         return NextResponse.json({ ok: true, updated: orderIds.length });
       case "cancel":
-        await Promise.all(orderIds.map((orderId: string) => setOrderStatus(orderId, OrderStatus.CANCELLED)));
+        await Promise.all(orderIds.map((orderId: string) => adminCancelOrderWithRefund(orderId)));
         return NextResponse.json({ ok: true, updated: orderIds.length });
       case "resend_confirmation":
         for (const orderId of orderIds) {

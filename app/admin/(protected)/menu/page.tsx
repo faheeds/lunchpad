@@ -111,6 +111,43 @@ async function updateItemImageUrl(formData: FormData) {
   revalidatePath("/menu");
 }
 
+async function updateSchoolRestrictions(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+  const menuItemId = String(formData.get("menuItemId"));
+
+  // Verify item belongs to this restaurant
+  const item = await prisma.menuItem.findFirst({
+    where: { id: menuItemId, restaurantId: restaurant.id },
+    select: { id: true },
+  });
+  if (!item) throw new Error("Item not found");
+
+  // Get all schools for this restaurant
+  const schools = await prisma.school.findMany({
+    where: { restaurantId: restaurant.id, isActive: true },
+    select: { id: true },
+  });
+
+  // Collect checked school IDs from form
+  const checkedSchoolIds = schools
+    .map((s) => s.id)
+    .filter((sid) => formData.get(`school_${sid}`) === "on");
+
+  // Replace all restrictions: delete existing, create new ones
+  await prisma.$transaction([
+    prisma.schoolMenuItem.deleteMany({ where: { menuItemId } }),
+    ...(checkedSchoolIds.length > 0
+      ? [prisma.schoolMenuItem.createMany({
+          data: checkedSchoolIds.map((schoolId) => ({ schoolId, menuItemId })),
+        })]
+      : []),
+  ]);
+
+  revalidatePath("/admin/menu");
+}
+
 const CATEGORIES = [
   "Signature Burgers & Sandwiches",
   "Salads with Protein",
@@ -136,11 +173,21 @@ const CAT_ICONS: Record<string, string> = {
 
 export default async function AdminMenuPage() {
   const [restaurant] = await Promise.all([requireRestaurant(), requireAdminRole("MANAGER")]);
-  const items = await prisma.menuItem.findMany({
-    where: { restaurantId: restaurant.id },
-    include: { options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] } },
-    orderBy: { name: "asc" }
-  });
+  const [items, schools] = await Promise.all([
+    prisma.menuItem.findMany({
+      where: { restaurantId: restaurant.id },
+      include: {
+        options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] },
+        schoolRestrictions: { select: { schoolId: true } },
+      },
+      orderBy: { name: "asc" },
+    }),
+    prisma.school.findMany({
+      where: { restaurantId: restaurant.id, isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   // Group by category
   const grouped = CATEGORIES.reduce<Record<string, typeof items>>((acc, cat) => {
@@ -366,6 +413,48 @@ export default async function AdminMenuPage() {
                           Save
                         </button>
                       </form>
+
+                      {/* School availability */}
+                      {schools.length > 1 && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                            School availability
+                          </p>
+                          {item.schoolRestrictions.length === 0 ? (
+                            <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-2">
+                              ✓ Available to all schools
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-2">
+                              ⚠ Restricted to {item.schoolRestrictions.length} school{item.schoolRestrictions.length !== 1 ? "s" : ""}
+                            </p>
+                          )}
+                          <form action={updateSchoolRestrictions} className="space-y-1.5">
+                            <input type="hidden" name="menuItemId" value={item.id} />
+                            <p className="text-[11px] text-slate-400 mb-1.5">
+                              Check schools that should see this item. Leave all unchecked = visible to everyone.
+                            </p>
+                            {schools.map((school) => {
+                              const isChecked = item.schoolRestrictions.some((r) => r.schoolId === school.id);
+                              return (
+                                <label key={school.id} className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    name={`school_${school.id}`}
+                                    defaultChecked={isChecked}
+                                    className="rounded border-slate-300 text-brand-700"
+                                  />
+                                  <span className="text-[12px] text-ink">{school.name}</span>
+                                </label>
+                              );
+                            })}
+                            <button type="submit"
+                              className="mt-2 px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold hover:bg-brand-800 transition">
+                              Save availability
+                            </button>
+                          </form>
+                        </div>
+                      )}
 
                       {/* Options (add-ons + removals) — editable */}
                       <div>

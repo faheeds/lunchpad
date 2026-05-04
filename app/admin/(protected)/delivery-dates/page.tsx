@@ -49,9 +49,16 @@ async function attachMenuItems(formData: FormData) {
   const schoolId       = String(formData.get("schoolId"));
   const submittedIds   = new Set(formData.getAll("menuItemIds").map(String));
 
-  const activeMenuItems = await prisma.menuItem.findMany({
-    where: { isActive: true }, select: { id: true },
+  // Only operate on items that are active AND allowed for this school
+  const allActiveMenuItems = await prisma.menuItem.findMany({
+    where: { isActive: true },
+    select: { id: true, schoolRestrictions: { select: { schoolId: true } } },
   });
+  const activeMenuItems = allActiveMenuItems.filter(
+    (item) =>
+      item.schoolRestrictions.length === 0 ||
+      item.schoolRestrictions.some((r) => r.schoolId === schoolId)
+  );
 
   await prisma.$transaction(
     activeMenuItems.map((item) => {
@@ -101,6 +108,7 @@ export default async function DeliveryDatesPage() {
     }),
     prisma.menuItem.findMany({
       where: { restaurantId: restaurant.id, isActive: true },
+      include: { schoolRestrictions: { select: { schoolId: true } } },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -250,10 +258,20 @@ export default async function DeliveryDatesPage() {
                           </span>
                         </p>
                         {orderCount > 0 && (
-                          <Link href={`/admin/orders?deliveryDateId=${date.id}`}
-                            className="text-[11px] text-brand-700 font-medium no-underline hover:underline">
-                            View {orderCount} order{orderCount !== 1 ? "s" : ""} →
-                          </Link>
+                          <div className="flex items-center gap-3">
+                            <Link href={`/admin/orders?deliveryDateId=${date.id}`}
+                              className="text-[11px] text-brand-700 font-medium no-underline hover:underline">
+                              View {orderCount} order{orderCount !== 1 ? "s" : ""} →
+                            </Link>
+                            <a href={`/api/admin/labels?deliveryDateId=${date.id}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="text-[11px] text-slate-500 font-medium no-underline hover:underline flex items-center gap-1">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                              </svg>
+                              Labels
+                            </a>
+                          </div>
                         )}
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
@@ -311,7 +329,13 @@ export default async function DeliveryDatesPage() {
                           }
                           return (
                             <div className="space-y-1 max-h-56 overflow-y-auto py-1">
-                              {menuItems.map((item) => {
+                              {menuItems
+                                .filter(
+                                  (item) =>
+                                    item.schoolRestrictions.length === 0 ||
+                                    item.schoolRestrictions.some((r) => r.schoolId === date.schoolId)
+                                )
+                                .map((item) => {
                                 const existing = date.menuAvailability.find((a) => a.menuItemId === item.id);
                                 const soldCount = soldMap.get(item.id) ?? 0;
                                 const cap = (existing as { maxQuantity?: number | null } | undefined)?.maxQuantity ?? null;
@@ -412,11 +436,22 @@ export default async function DeliveryDatesPage() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {orderCount > 0 && (
-                      <Link href={`/admin/orders?deliveryDateId=${date.id}&archived=include`}
-                        className="text-[11px] font-semibold no-underline"
-                        style={{ color: "#6b7280" }}>
-                        {orderCount} orders
-                      </Link>
+                      <>
+                        <Link href={`/admin/orders?deliveryDateId=${date.id}&archived=include`}
+                          className="text-[11px] font-semibold no-underline"
+                          style={{ color: "#6b7280" }}>
+                          {orderCount} orders
+                        </Link>
+                        <a href={`/api/admin/labels?deliveryDateId=${date.id}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="text-[11px] font-medium no-underline hover:underline flex items-center gap-1"
+                          style={{ color: "#94a3b8" }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                          </svg>
+                          Labels
+                        </a>
+                      </>
                     )}
                     <span className="text-[10px] text-slate-400">
                       {date.menuAvailability.length} items
