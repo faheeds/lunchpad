@@ -25,6 +25,9 @@ type OrderCheckoutArgs = {
   parentEmail: string;
   lineItems: SharedLineItem[];
   stripeAccountId?: string | null;
+  /** Optional overrides — used by the mobile API to redirect back into the app */
+  successUrl?: string;
+  cancelUrl?: string;
 };
 
 type WeeklyBatchCheckoutArgs = {
@@ -77,8 +80,8 @@ async function createSession(args: SharedCheckoutArgs) {
 export async function createStripeCheckoutSession(args: OrderCheckoutArgs) {
   return createSession({
     parentEmail: args.parentEmail,
-    successUrl: `${env.APP_BASE_URL}/checkout/success?order=${args.orderId}&session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${env.APP_BASE_URL}/order?cancelled=1`,
+    successUrl: args.successUrl ?? `${env.APP_BASE_URL}/checkout/success?order=${args.orderId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: args.cancelUrl ?? `${env.APP_BASE_URL}/order?cancelled=1`,
     metadata: {
       checkoutType: "order",
       orderId: args.orderId,
