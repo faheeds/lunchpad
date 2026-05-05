@@ -5,7 +5,7 @@
  * The React Native app opens this URL in the browser for payment,
  * then deep-links back to lunchpad://checkout/success or /cancel.
  *
- * Auth: Bearer JWT (optional — guest checkout still works)
+ * Auth: Bearer JWT (optional - guest checkout still works)
  *
  * Body: {
  *   deliveryDateId: string
@@ -20,8 +20,6 @@
  *     menuItemId: string
  *     additions?: string[]
  *     removals?: string[]
- *     allergyNotes?: string
- *     specialInstructions?: string
  *   }[]
  * }
  *
@@ -74,6 +72,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Map mobile "items" array to internal "cartItems" shape
+    const cartItems = (body.items ?? []).map(
+      (i: { menuItemId: string; additions?: string[]; removals?: string[] }) => ({
+        menuItemId: i.menuItemId,
+        additions: i.additions ?? [],
+        removals: i.removals ?? [],
+      })
+    );
+
     const provisionalOrder = await createPendingOrder(
       {
         deliveryDateId: body.deliveryDateId,
@@ -84,7 +91,7 @@ export async function POST(request: NextRequest) {
         parentEmail: body.parentEmail.toLowerCase(),
         allergyNotes: body.allergyNotes ?? "",
         specialInstructions: body.specialInstructions ?? "",
-        items: body.items ?? [],
+        cartItems,
       },
       undefined,
       parentUserId
@@ -106,9 +113,8 @@ export async function POST(request: NextRequest) {
         ? restaurantStripe.stripeAccountId
         : null;
 
-    // Deep-link success/cancel back into the app
-    const successUrl = `${process.env.NEXTAUTH_URL ?? ""}/api/mobile/native/order/success?orderId=${provisionalOrder.id}`;
-    const cancelUrl = `${process.env.NEXTAUTH_URL ?? ""}/api/mobile/native/order/cancel?orderId=${provisionalOrder.id}`;
+    const successUrl = process.env.NEXTAUTH_URL + "/api/mobile/native/order/success?orderId=" + provisionalOrder.id;
+    const cancelUrl = process.env.NEXTAUTH_URL + "/api/mobile/native/order/cancel?orderId=" + provisionalOrder.id;
 
     const session = await createStripeCheckoutSession({
       orderId: provisionalOrder.id,
@@ -118,8 +124,8 @@ export async function POST(request: NextRequest) {
       successUrl,
       cancelUrl,
       lineItems: provisionalOrder.items.map((item) => ({
-        name: `School lunch: ${item.itemNameSnapshot}`,
-        description: `Order ${provisionalOrder.orderNumber}`,
+        name: "School lunch: " + item.itemNameSnapshot,
+        description: "Order " + provisionalOrder.orderNumber,
         amountCents: item.lineTotalCents,
       })),
     });
