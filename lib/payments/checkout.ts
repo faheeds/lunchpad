@@ -101,11 +101,4 @@ export async function createWeeklyStripeCheckoutSession(args: WeeklyBatchCheckou
       checkoutType: "weekly_batch",
       batchId: args.batchId,
     },
-    lineItems: args.lineItems,
-    stripeAccountId: args.stripeAccountId,
-  });
-}
-
-export function getPaymentSummary(amountCents: number) {
-  return formatCurrency(amountCents);
-}
+    lineItems
