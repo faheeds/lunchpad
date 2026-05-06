@@ -31,6 +31,12 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set("x-pathname", pathname);
 
+  // TEMP DEBUG: surface the runtime values so we can diagnose multi-tenant routing.
+  // Remove after debugging.
+  res.headers.set("x-debug-host", host);
+  res.headers.set("x-debug-root-domain", rootDomain);
+  res.headers.set("x-debug-is-production", String(isProduction));
+
   if (isProduction) {
     restaurantSlug = host.replace(`.${rootDomain}`, "");
   } else if (host.includes(".vercel.app") || host.includes("localhost")) {
