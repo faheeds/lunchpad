@@ -101,4 +101,7 @@ export async function createWeeklyStripeCheckoutSession(args: WeeklyBatchCheckou
       checkoutType: "weekly_batch",
       batchId: args.batchId,
     },
-    lineItems
+    lineItems: args.lineItems,
+    stripeAccountId: args.stripeAccountId,
+  });
+}
