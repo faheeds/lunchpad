@@ -25,7 +25,7 @@ const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/reports",        label: "Reports",      minRole: "MANAGER" },
   { href: "/admin/menu",           label: "Menu",         minRole: "MANAGER" },
   { href: "/admin/delivery-dates", label: "Schedule",     minRole: "MANAGER" },
-  { href: "/admin/schools",        label: "Schools",      minRole: "OWNER"   },
+  { href: "/admin/locations",     label: "Locations",    minRole: "OWNER"   },
   { href: "/admin/team",           label: "Team",         minRole: "OWNER"   },
   { href: "/admin/settings",       label: "Settings",     minRole: "OWNER"   },
   { href: "/admin/subscription",   label: "Subscription", minRole: "OWNER"   },

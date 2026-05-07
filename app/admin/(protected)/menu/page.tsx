@@ -595,29 +595,4 @@ export default async function AdminMenuPage() {
                             </div>
                             <div>
                               <label className="text-[10px] text-slate-500 font-medium block mb-1">
-                                Extra price ($ — enter 0 for free)
-                              </label>
-                              <div className="relative">
-                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">$</span>
-                                <input type="number" name="priceDollars" step="0.01" min="0" defaultValue="0"
-                                  className="w-full rounded-lg border border-slate-200 text-[12px] pl-6 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
-                              </div>
-                            </div>
-                            <button type="submit"
-                              className="w-full py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold">
-                              Add option
-                            </button>
-                          </form>
-                        </details>
-                      </div>
-                    </div>
-                  </details>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+                                Extra pri

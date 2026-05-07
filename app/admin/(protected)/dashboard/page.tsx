@@ -344,13 +344,4 @@ export default async function AdminDashboardPage() {
           ] as { href: string; label: string; icon: React.ReactNode }[]).map((item) => (
             <Link key={item.href} href={item.href}
               className="rounded-[14px] border border-slate-100 bg-white px-4 py-3.5 flex items-center gap-3 no-underline hover:border-red-100 hover:bg-red-50 transition">
-              <span style={{ flexShrink: 0 }}>{item.icon}</span>
-              <span className="text-[12px] font-medium text-ink leading-tight">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-    </div>
-  );
-}
+              <span style={{ flexShrink: 0 }}>{item.i

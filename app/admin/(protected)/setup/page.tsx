@@ -190,8 +190,8 @@ export default async function AdminSetupPage() {
         {/* ── Step 1: School ──────────────────────────────────────── */}
         <SetupCard
           step={1}
-          title="Add your first school"
-          description="Schools are the delivery locations where you serve lunch."
+          title="Add your first location"
+          description="Locations are the delivery sites where you serve lunch — schools, offices, anywhere."
           done={hasSchool}
           doneContent={
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -202,8 +202,8 @@ export default async function AdminSetupPage() {
                   <span style={{ fontSize: 11, color: "#9ca3af" }}>{s.timezone}</span>
                 </div>
               ))}
-              <Link href="/admin/schools" style={{ fontSize: 12, color: "#c41230", textDecoration: "none", marginTop: 4 }}>
-                Manage schools →
+              <Link href="/admin/locations" style={{ fontSize: 12, color: "#c41230", textDecoration: "none", marginTop: 4 }}>
+                Manage locations →
               </Link>
             </div>
           }
@@ -211,7 +211,7 @@ export default async function AdminSetupPage() {
             <form action={createSchool} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={labelStyle}>School name</label>
+                  <label style={labelStyle}>Location name</label>
                   <input name="name" required placeholder="e.g. Lincoln Elementary"
                     style={inputStyle} />
                 </div>
@@ -231,7 +231,7 @@ export default async function AdminSetupPage() {
                   Parents can&apos;t order after this time the night before delivery.
                 </p>
               </div>
-              <button type="submit" style={primaryBtnStyle}>Add school</button>
+              <button type="submit" style={primaryBtnStyle}>Add location</button>
             </form>
           }
         />
@@ -338,7 +338,7 @@ export default async function AdminSetupPage() {
             ) : (
               <form action={createDeliveryDate} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div>
-                  <label style={labelStyle}>School</label>
+                  <label style={labelStyle}>Location</label>
                   <select name="schoolId" style={inputStyle}>
                     {schools.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
@@ -501,27 +501,4 @@ function SetupCard({
       <div style={{ padding: "16px 20px" }}>
         {done ? doneContent : formContent}
       </div>
-    </div>
-  );
-}
-
-// ── Shared styles ─────────────────────────────────────────────────────────────
-
-const labelStyle: React.CSSProperties = {
-  display: "block", fontSize: 11, fontWeight: 600,
-  color: "#6b7280", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%", borderRadius: 8, border: "1px solid #d1d5db",
-  fontSize: 13, padding: "9px 12px", outline: "none",
-  background: "white", color: "#0f1923", boxSizing: "border-box",
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  width: "100%", padding: "11px", borderRadius: 10,
-  background: "linear-gradient(135deg, #c41230, #8b0d22)",
-  color: "white", fontSize: 13, fontWeight: 700,
-  border: "none", cursor: "pointer",
-  boxShadow: "0 2px 10px rgba(196,18,48,0.3)",
-};
+    </
