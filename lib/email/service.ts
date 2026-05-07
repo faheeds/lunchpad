@@ -424,9 +424,12 @@ export async function sendSubscriptionChangedEmail(
         const upcoming = await stripe.invoices.createPreview({
           subscription: restaurant.stripeSubscriptionId,
         });
-        // Sum the proration line items (positive = charge, negative = credit)
+        // For a plan switch the upcoming invoice is mostly proration line items
+        // (a credit for unused time on the old plan + a charge for remaining time
+        // on the new plan). Sum them to get the net proration.
+        // (Stripe v18 moved the per-line `proration` flag, so we sum all lines.)
         for (const line of upcoming.lines.data) {
-          if (line.proration) prorationCents += line.amount;
+          prorationCents += line.amount;
         }
         nextInvoiceTotalCents = upcoming.total;
         if (upcoming.next_payment_attempt) {
