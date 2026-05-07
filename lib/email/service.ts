@@ -420,7 +420,8 @@ export async function sendSubscriptionChangedEmail(
     let nextInvoiceDate: Date | null = null;
     if (stripe && restaurant.stripeSubscriptionId) {
       try {
-        const upcoming = await stripe.invoices.retrieveUpcoming({
+        // Stripe SDK v18 renamed `invoices.retrieveUpcoming` → `invoices.createPreview`.
+        const upcoming = await stripe.invoices.createPreview({
           subscription: restaurant.stripeSubscriptionId,
         });
         // Sum the proration line items (positive = charge, negative = credit)
