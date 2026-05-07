@@ -60,8 +60,10 @@ export default async function AdminOrderDetailPage({
       specialInstructions: String(formData.get("specialInstructions") || ""),
       adminNote: String(formData.get("adminNote") || "") || undefined,
     });
-    // Send notification email to parent (best-effort — never block the save)
-    sendOrderModifiedEmail(orderId, order.restaurantId).catch(() => {});
+    // Send notification email to parent (best-effort — never block the save).
+    // We use restaurant.id (already in scope) instead of order.restaurantId because
+    // TS doesn't carry the post-notFound() narrowing into this server-action closure.
+    sendOrderModifiedEmail(orderId, restaurant.id).catch(() => {});
     revalidatePath(`/admin/orders/${orderId}`);
     revalidatePath("/admin/orders");
     redirect("/admin/orders");
