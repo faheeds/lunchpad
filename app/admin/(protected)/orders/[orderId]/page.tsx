@@ -72,7 +72,7 @@ export default async function AdminOrderDetailPage({
   const badge = statusStyle[order.status] ?? { bg: "#f1f5f9", color: "#64748b" };
 
   return (
-    <div className="space-y-4 pb-10">
+    <div className="space-y-4 pb-10 max-w-3xl">
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2">

@@ -137,7 +137,7 @@ export default async function AdminSettingsPage({
   const error = params.error ?? null;
 
   return (
-    <div className="space-y-4 pb-10 max-w-lg">
+    <div className="space-y-4 pb-10 max-w-lg lg:max-w-4xl">
       <h1 className="text-[17px] font-semibold text-ink">Settings</h1>
 
       {/* ── Feedback banner ─────────────────────────────────────── */}

@@ -185,6 +185,8 @@ export default async function AdminReportsPage({
         ))}
       </div>
 
+      {/* ── Two-up on desktop: by-date + by-school side by side ───── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* ── By delivery date ───────────────────────────────────────── */}
       {dateBreakdown.length > 0 && (
         <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
@@ -247,6 +249,7 @@ export default async function AdminReportsPage({
           </div>
         </div>
       )}
+      </div>
 
       {/* ── Menu item performance ───────────────────────────────────── */}
       {reports.itemBreakdown.length > 0 && (
