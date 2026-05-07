@@ -144,6 +144,12 @@ export default async function AdminSettingsPage({
   ]);
   await requireAdminRole("OWNER");
 
+  // Plan details now live exclusively on /admin/subscription. Redirect any
+  // legacy ?tab=plan visit there so old bookmarks don't dead-end.
+  if (params.tab === "plan") {
+    redirect("/admin/subscription");
+  }
+
   const tab = (params.tab as SettingsTabId | undefined) ?? "general";
   const saved = params.saved === "1";
   const connectSuccess = params.connect_success === "1";
@@ -505,42 +511,6 @@ export default async function AdminSettingsPage({
             </button>
           </div>
         </form>
-      )}
-
-      {/* ── PLAN ────────────────────────────────────────────────────── */}
-      {tab === "plan" && (
-        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden max-w-2xl">
-          <div className="px-4 py-3 border-b border-slate-50">
-            <p className="text-[13px] font-semibold text-ink">Plan & account</p>
-          </div>
-          <div className="px-4 py-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-[12px] text-slate-500">Subdomain</span>
-              <span className="text-[12px] font-mono text-ink">{restaurant.slug}.lunchpad.us</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-[12px] text-slate-500">Plan</span>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wide">
-                  {restaurant.plan}
-                </span>
-                <Link href="/admin/subscription" className="text-[11px] text-brand-700 font-medium no-underline">
-                  Manage →
-                </Link>
-              </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-[12px] text-slate-500">Status</span>
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-                restaurant.subscriptionStatus === "ACTIVE" || restaurant.subscriptionStatus === "TRIAL"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}>
-                {restaurant.subscriptionStatus}
-              </span>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* ── DANGER ──────────────────────────────────────────────────── */}
