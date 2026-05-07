@@ -17,6 +17,34 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+/**
+ * GET — diagnostics. Lets the operator verify config without uploading.
+ * Reports whether the Blob token is present and what the current session
+ * looks like. Hit /api/admin/upload?diagnose=1 in a browser tab.
+ */
+export async function GET(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  if (url.searchParams.get("diagnose") !== "1") {
+    return NextResponse.json({ error: "POST only" }, { status: 405 });
+  }
+  const session = await auth();
+  return NextResponse.json({
+    blobTokenSet: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    blobTokenPreview: process.env.BLOB_READ_WRITE_TOKEN
+      ? `${process.env.BLOB_READ_WRITE_TOKEN.slice(0, 12)}…(${process.env.BLOB_READ_WRITE_TOKEN.length} chars)`
+      : null,
+    sessionExists: Boolean(session),
+    sessionUser: session?.user
+      ? {
+          adminUserId: session.user.adminUserId ?? null,
+          restaurantId: session.user.restaurantId ?? null,
+          role: session.user.role ?? null,
+          adminRole: session.user.adminRole ?? null,
+        }
+      : null,
+  });
+}
+
 export async function POST(request: Request): Promise<Response> {
   const body = (await request.json()) as HandleUploadBody;
 
@@ -32,7 +60,13 @@ export async function POST(request: Request): Promise<Response> {
         const adminUserId = session?.user?.adminUserId;
         const restaurantId = session?.user?.restaurantId;
 
+        if (!process.env.BLOB_READ_WRITE_TOKEN) {
+          console.error("[upload] BLOB_READ_WRITE_TOKEN missing in env");
+          throw new Error("Server misconfigured: BLOB_READ_WRITE_TOKEN not set in Vercel env");
+        }
+
         if (!adminUserId || !restaurantId) {
+          console.error("[upload] no admin session", { sessionExists: Boolean(session), userKeys: Object.keys(session?.user ?? {}) });
           throw new Error("Unauthorized: no admin session");
         }
 
@@ -42,6 +76,7 @@ export async function POST(request: Request): Promise<Response> {
           select: { id: true, restaurantId: true },
         });
         if (!admin || admin.restaurantId !== restaurantId) {
+          console.error("[upload] admin/restaurant mismatch", { adminUserId, restaurantId, found: Boolean(admin) });
           throw new Error("Unauthorized: admin/restaurant mismatch");
         }
 
