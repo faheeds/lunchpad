@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
 import { SubscriptionActions } from "./subscription-actions";
+import { planSummary } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,23 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
     : 0;
 
   const trialExpired = full.subscriptionStatus === "TRIAL" && trialDaysLeft === 0;
+
+  // Usage meter: count active locations, team seats, paid orders this month.
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const [locationCount, teamSeatCount, ordersThisMonth] = await Promise.all([
+    prisma.school.count({ where: { restaurantId: full.id, isActive: true } }),
+    prisma.adminUser.count({ where: { restaurantId: full.id } }),
+    prisma.order.count({
+      where: { restaurantId: full.id, status: "PAID", createdAt: { gte: monthStart } },
+    }),
+  ]);
+  const usage = planSummary(full.plan, {
+    locations: locationCount,
+    teamSeats: teamSeatCount,
+    ordersThisMonth,
+  });
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -95,6 +113,47 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
             Your last payment failed. Please update your billing information to avoid losing access.
           </div>
         )}
+      </div>
+
+      {/* Usage meter */}
+      <div style={{
+        background: "white", borderRadius: 16, padding: "20px 22px",
+        border: "1px solid #e5e7eb", marginBottom: 24,
+      }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94a3b8", marginBottom: 12 }}>
+          Usage this month
+        </p>
+        <div className="space-y-3">
+          {usage.rows.map((row) => {
+            const pct = row.limit === null ? 0 : Math.min(100, Math.round((row.used / row.limit) * 100));
+            const isUnlimited = row.limit === null;
+            const atLimit = !isUnlimited && row.used >= (row.limit ?? 0);
+            return (
+              <div key={row.resource}>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[12px] font-medium text-ink">{row.label}</p>
+                  <p className="text-[12px] font-semibold tabular-nums" style={{ color: atLimit ? "#dc2626" : "#1c0505" }}>
+                    {row.used}{isUnlimited ? "" : ` / ${row.limit}`}
+                  </p>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#f1f5f9" }}>
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: isUnlimited ? "100%" : `${pct}%`,
+                      background: isUnlimited
+                        ? "linear-gradient(90deg, #10b981, #34d399)"
+                        : atLimit ? "#dc2626" : pct > 80 ? "#f59e0b" : "#10b981",
+                    }}
+                  />
+                </div>
+                {atLimit && (
+                  <p className="text-[10px] text-red-600 mt-1">At limit — upgrade to add more.</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Upgrade / manage section */}

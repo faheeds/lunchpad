@@ -16,6 +16,7 @@ export default async function AdminOrdersPage({
     schoolId?: string;
     status?: string;
     archived?: string;
+    q?: string;
   }>;
 }) {
   const [params, restaurant] = await Promise.all([searchParams, requireRestaurant()]);
@@ -27,6 +28,7 @@ export default async function AdminOrdersPage({
       schoolIds: params.schoolId ? [params.schoolId] : [],
       status: params.status,
       archived: params.archived,
+      search: params.q,
     }),
     prisma.school.findMany({
       where: { restaurantId: restaurant.id, isActive: true },
@@ -122,6 +124,22 @@ export default async function AdminOrdersPage({
 
       {/* ── Filter bar ─────────────────────────────────────────────── */}
       <form className="rounded-[14px] border border-slate-100 bg-white p-3">
+        <div className="mb-2">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Search</label>
+          <div className="relative">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="search"
+              name="q"
+              defaultValue={params.q ?? ""}
+              placeholder="Search by name, email, or order number…"
+              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 pl-8 pr-3"
+            />
+          </div>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
           <div>
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Location</label>

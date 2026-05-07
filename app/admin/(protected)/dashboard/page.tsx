@@ -23,6 +23,11 @@ export default async function AdminDashboardPage() {
   weekEnd.setDate(weekEnd.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);
 
+  // Cutoffs for the "Attention" inbox.
+  const stalePendingThreshold = new Date(Date.now() - 30 * 60 * 1000); // older than 30m
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const next24h = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
   const [
     todayOrderCount,
     todayRevenue,
@@ -31,6 +36,10 @@ export default async function AdminDashboardPage() {
     allTimePaid,
     upcomingDeliveryDates,
     recentOrders,
+    stalePendingOrders,
+    failedPayments,
+    failedEmails,
+    cuttingOffSoon,
   ] = await Promise.all([
     prisma.order.count({
       where: {
@@ -80,6 +89,53 @@ export default async function AdminDashboardPage() {
       take: 5,
       orderBy: { createdAt: "desc" },
     }),
+    // Inbox: pending orders older than 30 minutes (likely abandoned)
+    prisma.order.findMany({
+      where: {
+        restaurantId: restaurant.id,
+        status: "PENDING",
+        createdAt: { lt: stalePendingThreshold },
+        archivedAt: null,
+      },
+      include: { student: true, school: true },
+      take: 5,
+      orderBy: { createdAt: "asc" },
+    }),
+    // Inbox: failed payments in the last 7 days
+    prisma.payment.findMany({
+      where: {
+        order: { restaurantId: restaurant.id },
+        status: "FAILED",
+        createdAt: { gte: sevenDaysAgo },
+      },
+      include: { order: { include: { student: true } } },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+    }),
+    // Inbox: failed email logs in the last 7 days
+    prisma.emailLog.findMany({
+      where: {
+        order: { restaurantId: restaurant.id },
+        status: "FAILED",
+        createdAt: { gte: sevenDaysAgo },
+      },
+      include: { order: { include: { student: true } } },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+    }),
+    // Inbox: delivery dates with cutoff in next 24h
+    prisma.deliveryDate.findMany({
+      where: {
+        school: { restaurantId: restaurant.id },
+        cutoffAt: { gte: new Date(), lte: next24h },
+        orderingOpen: true,
+      },
+      include: {
+        school: true,
+        _count: { select: { orders: { where: { status: "PAID" } } } },
+      },
+      orderBy: { cutoffAt: "asc" },
+    }),
   ]);
 
   const todayRevenueAmount = todayRevenue._sum.amountCents ?? 0;
@@ -94,6 +150,63 @@ export default async function AdminDashboardPage() {
   };
 
   const orderingUrl = `https://${restaurant.slug}.lunchpad.us`;
+
+  // Build the inbox feed.
+  type InboxItem = {
+    key: string;
+    severity: "warn" | "info" | "danger";
+    icon: string;
+    label: string;
+    sub: string;
+    href: string;
+  };
+
+  const inbox: InboxItem[] = [];
+
+  for (const o of stalePendingOrders) {
+    inbox.push({
+      key: `pending-${o.id}`,
+      severity: "warn",
+      icon: "clock",
+      label: `${o.student?.studentName ?? "Order"} — payment not completed`,
+      sub: `${o.school.name} · started ${Math.round((Date.now() - o.createdAt.getTime()) / 60000)}m ago`,
+      href: `/admin/orders/${o.id}`,
+    });
+  }
+  for (const p of failedPayments) {
+    inbox.push({
+      key: `pay-${p.id}`,
+      severity: "danger",
+      icon: "alert",
+      label: `Payment failed for ${p.order.student?.studentName ?? "order"}`,
+      sub: `$${(p.amountCents / 100).toFixed(2)} · contact the customer`,
+      href: `/admin/orders/${p.orderId}`,
+    });
+  }
+  for (const e of failedEmails) {
+    inbox.push({
+      key: `mail-${e.id}`,
+      severity: "warn",
+      icon: "mail",
+      label: `Email bounced — ${e.recipient}`,
+      sub: `${e.emailType} · ${e.errorMessage?.slice(0, 60) ?? "delivery failed"}`,
+      href: `/admin/orders/${e.orderId}`,
+    });
+  }
+  for (const d of cuttingOffSoon) {
+    const hoursToCutoff = Math.max(0, Math.round((d.cutoffAt.getTime() - Date.now()) / 3600000));
+    if (d._count.orders < 5) {
+      inbox.push({
+        key: `cutoff-${d.id}`,
+        severity: "info",
+        icon: "calendar",
+        label: `Cutoff in ${hoursToCutoff}h — only ${d._count.orders} ${d._count.orders === 1 ? "order" : "orders"}`,
+        sub: `${d.school.name} · share the URL or send a reminder`,
+        href: `/admin/orders?deliveryDateId=${d.id}`,
+      });
+    }
+  }
+
 
   return (
     <div className="space-y-5 pb-10">
@@ -253,42 +366,80 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* ── Recent orders ─────────────────────────────────────────── */}
-      {recentOrders.length > 0 && (
-        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
-            <p className="text-[13px] font-semibold text-ink">Recent orders</p>
-            <Link href="/admin/orders" className="text-[11px] text-brand-700 no-underline font-medium">All orders →</Link>
+      {/* ── Attention inbox ───────────────────────────────────────── */}
+      <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <p className="text-[13px] font-semibold text-ink">Needs attention</p>
+            {inbox.length > 0 && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                {inbox.length}
+              </span>
+            )}
           </div>
-          <div className="divide-y divide-slate-50">
-            {recentOrders.map((order) => {
-              const badge = STATUS_COLORS[order.status] ?? STATUS_COLORS.PENDING;
+          {inbox.length > 0 && (
+            <Link href="/admin/orders?status=PENDING" className="text-[11px] text-brand-700 no-underline font-medium">View all →</Link>
+          )}
+        </div>
+        {inbox.length === 0 ? (
+          <div className="px-4 py-8 text-center">
+            <div style={{
+              width: 40, height: 40, borderRadius: "50%", margin: "0 auto 8px",
+              background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+            </div>
+            <p className="text-[12px] font-semibold text-ink">All clear</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Nothing needs your attention right now.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-50 max-h-[360px] overflow-y-auto">
+            {inbox.slice(0, 8).map((item) => {
+              const tone =
+                item.severity === "danger" ? { bg: "#fee2e2", fg: "#b91c1c" } :
+                item.severity === "warn"   ? { bg: "#fef9c3", fg: "#854d0e" } :
+                                              { bg: "#dbeafe", fg: "#1e40af" };
               return (
-                <Link key={order.id} href={`/admin/orders/${order.id}`}
+                <Link key={item.key} href={item.href}
                   className="px-4 py-3 flex items-center gap-3 no-underline hover:bg-slate-50 transition">
                   <div style={{
-                    width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                    background: "#fff1f3", display: "flex", alignItems: "center",
-                    justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#c41230",
+                    width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                    background: tone.bg, display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    {(order.student?.studentName ?? "?")[0].toUpperCase()}
+                    {item.icon === "clock" && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={tone.fg} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                    )}
+                    {item.icon === "alert" && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={tone.fg} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                    )}
+                    {item.icon === "mail" && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={tone.fg} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                    )}
+                    {item.icon === "calendar" && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={tone.fg} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-ink truncate">{order.student?.studentName ?? "Unknown"}</p>
-                    <p className="text-[11px] text-slate-400 truncate">{order.school.name}</p>
+                    <p className="text-[12px] font-semibold text-ink truncate">{item.label}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{item.sub}</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <p className="text-[13px] font-semibold text-ink">{formatCurrency(order.totalCents)}</p>
-                    <span style={{ fontSize: 10, fontWeight: 700, background: badge.bg, color: badge.text, borderRadius: 100, padding: "3px 8px" }}>
-                      {badge.label}
-                    </span>
-                  </div>
+                  <span className="text-slate-300 text-[14px]">›</span>
                 </Link>
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
       </div>
 
       {/* ── Quick actions ─────────────────────────────────────────── */}

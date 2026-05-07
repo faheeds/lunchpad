@@ -60,6 +60,38 @@ export default async function KitchenSheetPage({
   }
   const sortedSummary = [...itemSummary.entries()].sort((a, b) => b[1] - a[1]);
 
+  // Allergen rollup: group students with allergyNotes for at-a-glance kitchen heads-up
+  const allergyAlerts = orders
+    .filter((o) => o.student?.allergyNotes)
+    .map((o) => ({
+      orderId: o.id,
+      name: o.student?.studentName ?? "Unknown",
+      school: o.school.name,
+      classroom: o.student?.classroom ?? null,
+      note: o.student?.allergyNotes ?? "",
+    }));
+
+  // Dietary-tag rollup: aggregate tags across items in this delivery
+  const itemNames = [...new Set(orders.flatMap((o) => o.items.map((i) => i.itemNameSnapshot)))];
+  const tagsByItem = itemNames.length > 0
+    ? await prisma.menuItem.findMany({
+        where: { restaurantId: restaurant.id, name: { in: itemNames } },
+        select: { name: true, dietaryTags: true },
+      })
+    : [];
+  const tagsByItemName = new Map(tagsByItem.map((t) => [t.name, t.dietaryTags]));
+  const tagCounts = new Map<string, number>();
+  for (const order of orders) {
+    const orderTags = new Set<string>();
+    for (const item of order.items) {
+      for (const tag of tagsByItemName.get(item.itemNameSnapshot) ?? []) {
+        orderTags.add(tag);
+      }
+    }
+    for (const t of orderTags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  }
+  const sortedTagCounts = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+
   // Group orders by school
   const bySchool = new Map<string, { schoolName: string; orders: typeof orders }>();
   for (const order of orders) {
@@ -129,6 +161,50 @@ export default async function KitchenSheetPage({
               <p className="text-[14px] text-gray-600">{dateLabel}</p>
               <p className="text-[12px] text-gray-400 mt-1">Printed {new Date().toLocaleString()}</p>
             </div>
+
+            {/* ── Allergen + dietary rollup ─────────────────────────── */}
+            {(allergyAlerts.length > 0 || sortedTagCounts.length > 0) && (
+              <div className="rounded-[14px] border border-amber-200 bg-amber-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-amber-100 bg-amber-100/40 flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#92400e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  <p className="text-[12px] font-semibold text-amber-900">Heads up — allergens & dietary needs</p>
+                </div>
+                <div className="px-4 py-3 space-y-3">
+                  {allergyAlerts.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-800 mb-1.5">
+                        {allergyAlerts.length} {allergyAlerts.length === 1 ? "person" : "people"} with allergies
+                      </p>
+                      <div className="space-y-1">
+                        {allergyAlerts.map((a) => (
+                          <div key={a.orderId} className="text-[11px] text-amber-900">
+                            <span className="font-semibold">{a.name}</span>
+                            {a.classroom && <span className="text-amber-700"> · {a.classroom}</span>}
+                            <span className="text-amber-700"> · {a.school}</span>
+                            <span className="text-amber-900"> — {a.note}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {sortedTagCounts.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-800 mb-1.5">Dietary tag rollup (orders containing each tag)</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {sortedTagCounts.map(([tag, count]) => (
+                          <span key={tag} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white border border-amber-300 text-amber-900">
+                            {tag} · {count}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ── Item summary ───────────────────────────────────────── */}
             <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">

@@ -65,6 +65,103 @@ async function createDeliveryDate(formData: FormData) {
   revalidatePath("/admin/delivery-dates");
 }
 
+async function generateRecurringSchedule(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+
+  const schoolId = String(formData.get("schoolId") || "");
+  const startDateStr = String(formData.get("startDate") || "");
+  const endDateStr = String(formData.get("endDate") || "");
+  const weekdays = formData.getAll("weekdays").map((v) => parseInt(String(v), 10)).filter((n) => !isNaN(n));
+  const cutoffDaysBefore = parseInt(String(formData.get("cutoffDaysBefore") || "1"), 10);
+  const cutoffHour = parseInt(String(formData.get("cutoffHour") || "9"), 10);
+  const cutoffMinute = parseInt(String(formData.get("cutoffMinute") || "0"), 10);
+  const skipHolidays = formData.get("skipHolidays") === "on";
+  const orderingOpen = formData.get("orderingOpen") === "on";
+
+  if (!schoolId || !startDateStr || !endDateStr || weekdays.length === 0) return;
+
+  const school = await prisma.school.findFirst({
+    where: { id: schoolId, restaurantId: restaurant.id },
+    select: { timezone: true },
+  });
+  if (!school) return;
+
+  // US federal holidays (rough common-case list — operators can delete generated
+  // dates that fall on local holidays not in this list).
+  const US_HOLIDAYS_2025_2027: ReadonlySet<string> = new Set([
+    "2025-01-01", "2025-01-20", "2025-02-17", "2025-05-26", "2025-06-19",
+    "2025-07-04", "2025-09-01", "2025-10-13", "2025-11-11", "2025-11-27", "2025-12-25",
+    "2026-01-01", "2026-01-19", "2026-02-16", "2026-05-25", "2026-06-19",
+    "2026-07-03", "2026-09-07", "2026-10-12", "2026-11-11", "2026-11-26", "2026-12-25",
+    "2027-01-01", "2027-01-18", "2027-02-15", "2027-05-31", "2027-06-18",
+    "2027-07-05", "2027-09-06", "2027-10-11", "2027-11-11", "2027-11-25", "2027-12-24",
+  ]);
+
+  // Walk the date range day-by-day in UTC and emit dates whose weekday matches.
+  // We use UTC walking + zone conversion so we don't double-shift across DST.
+  const start = new Date(`${startDateStr}T00:00:00Z`);
+  const end = new Date(`${endDateStr}T00:00:00Z`);
+  if (end < start) return;
+
+  const activeMenuItems = await prisma.menuItem.findMany({
+    where: { restaurantId: restaurant.id, isActive: true },
+    select: { id: true, schoolRestrictions: { select: { schoolId: true } } },
+  });
+  const eligibleMenuItems = activeMenuItems.filter(
+    (item) =>
+      item.schoolRestrictions.length === 0 ||
+      item.schoolRestrictions.some((r) => r.schoolId === schoolId)
+  );
+
+  const targetWeekdays = new Set(weekdays); // 0 = Sunday … 6 = Saturday
+  const created: { id: string }[] = [];
+
+  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    const weekday = d.getUTCDay();
+    if (!targetWeekdays.has(weekday)) continue;
+
+    const ymd = d.toISOString().slice(0, 10); // YYYY-MM-DD
+    if (skipHolidays && US_HOLIDAYS_2025_2027.has(ymd)) continue;
+
+    // Cutoff = (delivery date − cutoffDaysBefore) at HH:MM in school's timezone.
+    const cutoffWalk = new Date(d);
+    cutoffWalk.setUTCDate(cutoffWalk.getUTCDate() - cutoffDaysBefore);
+    const cutoffYmd = cutoffWalk.toISOString().slice(0, 10);
+    const hh = String(cutoffHour).padStart(2, "0");
+    const mm = String(cutoffMinute).padStart(2, "0");
+
+    try {
+      const created_date = await prisma.deliveryDate.create({
+        data: {
+          schoolId,
+          deliveryDate: fromZonedTime(`${ymd} 11:00:00`, school.timezone),
+          cutoffAt: fromZonedTime(`${cutoffYmd} ${hh}:${mm}:00`, school.timezone),
+          orderingOpen,
+        },
+      });
+      created.push({ id: created_date.id });
+
+      if (eligibleMenuItems.length > 0) {
+        await prisma.deliveryMenuItem.createMany({
+          data: eligibleMenuItems.map((m) => ({
+            deliveryDateId: created_date.id,
+            menuItemId: m.id,
+            schoolId,
+            isAvailable: true,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    } catch {
+      // Most likely a duplicate (schoolId + deliveryDate unique) — skip silently.
+    }
+  }
+
+  revalidatePath("/admin/delivery-dates");
+}
+
 async function toggleDateOpen(formData: FormData) {
   "use server";
   const restaurant = await requireRestaurant();
@@ -227,6 +324,122 @@ export default async function DeliveryDatesPage() {
             className="w-full py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
             Create delivery date
           </button>
+        </form>
+      </details>
+
+      {/* ── Generate recurring schedule ─────────────────────────────── */}
+      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/>
+            </svg>
+            Generate recurring schedule
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">New</span>
+          </span>
+          <span className="text-[11px] text-slate-400">tap to expand</span>
+        </summary>
+
+        <form action={generateRecurringSchedule} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-4">
+          <p className="text-[12px] text-slate-500 leading-relaxed">
+            Generate every Monday/Wednesday/Friday for the semester in one click. Auto-attaches active menu items and skips US federal holidays if you choose.
+          </p>
+
+          <div>
+            <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location</label>
+            <select name="schoolId" required
+              className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+              <option value="">Select location…</option>
+              {schools.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">From</label>
+              <input type="date" name="startDate" required
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Through</label>
+              <input type="date" name="endDate" required
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] text-slate-500 font-semibold block mb-1">On these weekdays</label>
+            <div className="grid grid-cols-7 gap-1.5">
+              {[
+                { v: 1, l: "Mon", on: true },
+                { v: 2, l: "Tue", on: false },
+                { v: 3, l: "Wed", on: true },
+                { v: 4, l: "Thu", on: false },
+                { v: 5, l: "Fri", on: true },
+                { v: 6, l: "Sat", on: false },
+                { v: 0, l: "Sun", on: false },
+              ].map((d) => (
+                <label key={d.v}
+                  className="flex flex-col items-center justify-center cursor-pointer rounded-lg border border-slate-200 py-2 has-[:checked]:bg-brand-700 has-[:checked]:text-white has-[:checked]:border-brand-700 transition">
+                  <input type="checkbox" name="weekdays" value={d.v} defaultChecked={d.on} className="sr-only" />
+                  <span className="text-[11px] font-semibold">{d.l}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Cutoff</label>
+              <select name="cutoffDaysBefore" defaultValue="1"
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                <option value="0">Same day</option>
+                <option value="1">1 day before</option>
+                <option value="2">2 days before</option>
+                <option value="3">3 days before</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Cutoff hour</label>
+              <select name="cutoffHour" defaultValue="9"
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Minute</label>
+              <select name="cutoffMinute" defaultValue="0"
+                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                <option value="0">:00</option>
+                <option value="15">:15</option>
+                <option value="30">:30</option>
+                <option value="45">:45</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
+              <input type="checkbox" name="skipHolidays" defaultChecked className="rounded" />
+              Skip US federal holidays
+            </label>
+            <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
+              <input type="checkbox" name="orderingOpen" defaultChecked className="rounded" />
+              Open all generated dates for ordering immediately
+            </label>
+          </div>
+
+          <button type="submit"
+            className="w-full py-2.5 rounded-lg bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-700 transition">
+            Generate dates
+          </button>
+          <p className="text-[10px] text-slate-400 text-center">
+            Existing dates won&apos;t be duplicated. Review the generated dates below and remove any you don&apos;t want.
+          </p>
         </form>
       </details>
 

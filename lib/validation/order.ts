@@ -48,8 +48,17 @@ export const menuItemSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
   description: z.string().optional().default(""),
+  imageUrl: z.string().url().optional().nullable().or(z.literal("")).transform((v) => v || null),
   basePriceCents: z.coerce.number().int().min(0),
-  isActive: z.coerce.boolean().default(true)
+  isActive: z.coerce.boolean().default(true),
+  dietaryTags: z.preprocess(
+    (v) => {
+      if (typeof v !== "string") return [];
+      return v.split(",").map((s) => s.trim()).filter(Boolean);
+    },
+    z.array(z.string()).default([])
+  ),
+  category: z.string().optional().nullable().or(z.literal("")).transform((v) => v || null),
 });
 
 export const menuOptionSchema = z.object({

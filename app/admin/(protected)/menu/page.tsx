@@ -6,6 +6,8 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { BulkMenuUpload } from "@/components/admin/bulk-menu-upload";
 import { ConfirmButton } from "@/components/admin/confirm-button";
+import { ImageUpload } from "@/components/admin/image-upload";
+import { DietaryTagsPicker } from "@/components/admin/dietary-tags-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +21,11 @@ async function createMenuItem(formData: FormData) {
     name: formData.get("name"),
     slug: slugify(String(formData.get("name") || "")),
     description: formData.get("description"),
+    imageUrl: formData.get("imageUrl"),
     basePriceCents,
-    isActive: formData.get("isActive") === "on"
+    isActive: formData.get("isActive") === "on",
+    dietaryTags: formData.get("dietaryTags"),
+    category: formData.get("category"),
   });
   await prisma.menuItem.create({ data: { ...parsed, restaurantId: restaurant.id } });
   revalidatePath("/admin/menu");
@@ -142,6 +147,25 @@ async function updateItemImageUrl(formData: FormData) {
   revalidatePath("/menu");
 }
 
+async function updateItemTagsAndCategory(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+  const id = String(formData.get("id"));
+  const tagsRaw = String(formData.get("dietaryTags") || "");
+  const dietaryTags = tagsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+  const category = String(formData.get("category") || "").trim() || null;
+  // Tenant-scoped
+  const item = await prisma.menuItem.findFirst({
+    where: { id, restaurantId: restaurant.id },
+    select: { id: true },
+  });
+  if (!item) throw new Error("Item not found");
+  await prisma.menuItem.update({ where: { id }, data: { dietaryTags, category } });
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+}
+
 async function updateSchoolRestrictions(formData: FormData) {
   "use server";
   const restaurant = await requireRestaurant();
@@ -239,26 +263,40 @@ export default async function AdminMenuPage() {
           <span className="text-[13px] font-semibold text-ink">+ Add menu item</span>
           <span className="text-[11px] text-slate-400">tap to expand</span>
         </summary>
-        <form action={createMenuItem} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
+        <form action={createMenuItem} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Item name</label>
-              <input name="name" placeholder="e.g. Crispy Chicken Sandwich" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              <ImageUpload name="imageUrl" label="Photo" aspect="square" />
             </div>
-            <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Price</label>
-              <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 pointer-events-none">$</span>
-                <input name="price" type="number" step="0.01" min="0" placeholder="12.99" required
-                  className="w-full rounded-lg border-slate-200 text-[13px] pl-6 pr-3 py-2" />
+            <div className="space-y-2">
+              <div>
+                <label className="text-[11px] text-slate-500 mb-1 block">Item name</label>
+                <input name="name" placeholder="e.g. Crispy Chicken Sandwich" required
+                  className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              </div>
+              <div>
+                <label className="text-[11px] text-slate-500 mb-1 block">Price</label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 pointer-events-none">$</span>
+                  <input name="price" type="number" step="0.01" min="0" placeholder="12.99" required
+                    className="w-full rounded-lg border-slate-200 text-[13px] pl-6 pr-3 py-2" />
+                </div>
               </div>
             </div>
           </div>
           <div>
-            <label className="text-[11px] text-slate-500 mb-1 block">Description (start with category name)</label>
-            <input name="description" placeholder="Signature Burgers & Sandwiches. Description here..."
+            <label className="text-[11px] text-slate-500 mb-1 block">Description</label>
+            <input name="description" placeholder="A short, mouth-watering description"
               className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-500 mb-1 block">Category <span className="text-slate-400 font-normal">(optional)</span></label>
+            <input name="category" placeholder="e.g. Sandwiches, Salads, Pizza"
+              className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-500 mb-1 block">Dietary tags</label>
+            <DietaryTagsPicker />
           </div>
           <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
             <input type="checkbox" name="isActive" defaultChecked className="rounded" />
@@ -364,29 +402,50 @@ export default async function AdminMenuPage() {
                     </summary>
 
                     <div className="border-t border-slate-50 px-4 py-3 space-y-3">
-                      {/* Photo URL */}
-                      <form action={updateItemImageUrl} className="space-y-1.5">
+                      {/* Photo */}
+                      <form action={updateItemImageUrl} className="space-y-2">
                         <input type="hidden" name="id" value={item.id} />
-                        <label className="text-[11px] text-slate-500 block">Photo URL</label>
-                        <div className="flex gap-2 items-start">
-                          {item.imageUrl && (
-                            <img src={item.imageUrl} alt={item.name}
-                              className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-200" />
-                          )}
-                          <div className="flex-1 flex gap-2">
-                            <input
+                        <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3 items-start">
+                          <div className="max-w-[140px]">
+                            <ImageUpload
                               name="imageUrl"
-                              type="url"
-                              defaultValue={item.imageUrl ?? ""}
-                              placeholder="Paste image URL from your restaurant site…"
-                              className="flex-1 rounded-lg border border-slate-200 text-[12px] px-3 py-1.5 min-w-0"
+                              defaultValue={item.imageUrl}
+                              label="Photo"
+                              aspect="square"
                             />
+                          </div>
+                          <div className="flex flex-col gap-2 pt-5">
+                            <p className="text-[11px] text-slate-500 leading-relaxed">
+                              A clear, well-lit shot of the dish helps parents pick faster. Square crops, ~600&times;600 minimum.
+                            </p>
                             <button type="submit"
-                              className="px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold flex-shrink-0 hover:bg-brand-800 transition">
-                              Save
+                              className="self-start px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold hover:bg-brand-800 transition">
+                              Save photo
                             </button>
                           </div>
                         </div>
+                      </form>
+
+                      {/* Category + dietary tags */}
+                      <form action={updateItemTagsAndCategory} className="space-y-2 border-t border-slate-50 pt-3">
+                        <input type="hidden" name="id" value={item.id} />
+                        <div>
+                          <label className="text-[11px] text-slate-500 block mb-1">Category</label>
+                          <input
+                            name="category"
+                            defaultValue={item.category ?? ""}
+                            placeholder="e.g. Sandwiches, Salads, Pizza"
+                            className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-1.5"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-slate-500 block mb-1">Dietary tags</label>
+                          <DietaryTagsPicker defaultValue={item.dietaryTags ?? []} />
+                        </div>
+                        <button type="submit"
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-900 transition">
+                          Save tags & category
+                        </button>
                       </form>
 
                       {/* Toggle active */}

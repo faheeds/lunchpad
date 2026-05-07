@@ -60,6 +60,11 @@ enum SubscriptionStatus {
   PAUSED
 }
 
+enum LocationType {
+  SCHOOL
+  OFFICE
+}
+
 // ─── RESTAURANT (root tenant) ─────────────────────────────────────────────────
 
 model Restaurant {
@@ -130,6 +135,7 @@ model School {
   restaurantId         String
   name                 String
   slug                 String
+  locationType         LocationType       @default(SCHOOL)
   timezone             String             @default("America/Los_Angeles")
   defaultCutoffHour    Int                @default(17)
   defaultCutoffMinute  Int                @default(0)
@@ -196,6 +202,15 @@ model MenuItem {
   imageUrl            String?
   basePriceCents      Int
   isActive            Boolean            @default(true)
+  // Structured dietary tags — surfaced as filter chips on the parent
+  // ordering page and as a rollup on the kitchen sheet. Free-form so
+  // operators can add their own (e.g. "halal", "gluten-free", "spicy").
+  dietaryTags         String[]           @default([])
+  // User-defined category. NULL = uncategorized. We keep the field a
+  // simple string (rather than a Category model) so bulk Excel uploads
+  // and AI categorization can write any value without prior setup.
+  category            String?
+  sortOrder           Int                @default(0)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   restaurant          Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)

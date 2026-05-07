@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { slugify } from "@/lib/utils";
+import { checkLimit, PlanLimitError, PLAN_LIMITS } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -24,22 +25,37 @@ async function createSchool(formData: FormData) {
   await requireAdminRole("OWNER");
 
   const name = String(formData.get("name") || "").trim();
+  const locationType = String(formData.get("locationType") || "SCHOOL") === "OFFICE" ? "OFFICE" : "SCHOOL";
   const timezone = String(formData.get("timezone") || "America/Los_Angeles");
   const cutoffTime = String(formData.get("cutoffTime") || "21:00");
   const [hourStr, minStr] = cutoffTime.split(":");
 
   if (!name) throw new Error("Location name is required");
 
+  // Plan-limit check: count *active* locations against the plan max.
+  const currentCount = await prisma.school.count({
+    where: { restaurantId: restaurant.id, isActive: true },
+  });
+  try {
+    checkLimit(restaurant.plan, "locations", currentCount);
+  } catch (e) {
+    if (e instanceof PlanLimitError) {
+      redirect(`/admin/locations?error=${encodeURIComponent(e.message)}&upgrade=1`);
+    }
+    throw e;
+  }
+
   await prisma.school.create({
     data: {
       restaurantId: restaurant.id,
       name,
       slug: slugify(name),
+      locationType,
       timezone,
       defaultCutoffHour: parseInt(hourStr ?? "21", 10),
       defaultCutoffMinute: parseInt(minStr ?? "0", 10),
-      collectTeacher: formData.get("collectTeacher") === "on",
-      collectClassroom: formData.get("collectClassroom") === "on",
+      collectTeacher: locationType === "SCHOOL" && formData.get("collectTeacher") === "on",
+      collectClassroom: locationType === "SCHOOL" && formData.get("collectClassroom") === "on",
       isActive: true,
     },
   });
@@ -93,7 +109,7 @@ async function toggleSchool(formData: FormData) {
 export default async function AdminSchoolsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; error?: string; upgrade?: string }>;
 }) {
   const [params, restaurant] = await Promise.all([
     searchParams,
@@ -101,18 +117,65 @@ export default async function AdminSchoolsPage({
     requireAdminRole("OWNER"),
   ]);
 
-  const schools = await prisma.school.findMany({
-    where: { restaurantId: restaurant.id },
-    include: {
-      _count: {
-        select: {
-          orders: { where: { status: "PAID", archivedAt: null } },
-          deliveryDates: true,
+  const planLimits = PLAN_LIMITS[restaurant.plan];
+
+  // Per-location stats: this month revenue + active menu items + next delivery
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const [schools, monthRevenueBySchool, nextDeliveryBySchool] = await Promise.all([
+    prisma.school.findMany({
+      where: { restaurantId: restaurant.id },
+      include: {
+        _count: {
+          select: {
+            orders: { where: { status: "PAID", archivedAt: null } },
+            deliveryDates: true,
+          },
         },
       },
-    },
-    orderBy: [{ isActive: "desc" }, { name: "asc" }],
-  });
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
+    }),
+    prisma.payment.groupBy({
+      by: ["orderId"],
+      where: {
+        order: { restaurantId: restaurant.id, status: "PAID" },
+        status: "PAID",
+        createdAt: { gte: monthStart },
+      },
+      _sum: { amountCents: true },
+    }),
+    prisma.deliveryDate.findMany({
+      where: { school: { restaurantId: restaurant.id }, deliveryDate: { gte: new Date() } },
+      orderBy: { deliveryDate: "asc" },
+      select: { id: true, schoolId: true, deliveryDate: true },
+    }),
+  ]);
+
+  // Build a per-school revenue map by joining payment.orderId → order.schoolId
+  const monthRevenueOrderIds = monthRevenueBySchool.map((p) => p.orderId);
+  const monthOrders = monthRevenueOrderIds.length > 0
+    ? await prisma.order.findMany({
+        where: { id: { in: monthRevenueOrderIds } },
+        select: { id: true, schoolId: true },
+      })
+    : [];
+  const orderToSchool = new Map(monthOrders.map((o) => [o.id, o.schoolId]));
+  const monthRevenueMap = new Map<string, number>();
+  for (const p of monthRevenueBySchool) {
+    const sid = orderToSchool.get(p.orderId);
+    if (!sid) continue;
+    monthRevenueMap.set(sid, (monthRevenueMap.get(sid) ?? 0) + (p._sum.amountCents ?? 0));
+  }
+
+  // Next-delivery map (first by date)
+  const nextDeliveryMap = new Map<string, Date>();
+  for (const d of nextDeliveryBySchool) {
+    if (!nextDeliveryMap.has(d.schoolId)) {
+      nextDeliveryMap.set(d.schoolId, d.deliveryDate);
+    }
+  }
 
   const editingId = params.edit ?? null;
 
@@ -133,12 +196,35 @@ export default async function AdminSchoolsPage({
     <div className="space-y-5 pb-10">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-[17px] font-semibold text-ink">Locations</h1>
-        <p className="text-[11px] text-slate-400 mt-0.5">
-          {schools.filter((s) => s.isActive).length} active · {schools.length} total
-        </p>
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-[17px] font-semibold text-ink">Locations</h1>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            {schools.filter((s) => s.isActive).length} active · {schools.length} total
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Plan limit</p>
+          <p className="text-[12px] font-semibold text-ink">
+            {schools.filter((s) => s.isActive).length} of {planLimits.maxLocations ?? "∞"}
+          </p>
+        </div>
       </div>
+
+      {/* ── Plan-limit error / upgrade banner ─────────────────────── */}
+      {params.error && (
+        <div className="rounded-[12px] bg-amber-50 border border-amber-200 px-4 py-3 flex items-center gap-3 flex-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p className="text-[12px] text-amber-800 flex-1 min-w-[200px]">{params.error}</p>
+          {params.upgrade === "1" && (
+            <a href="/admin/subscription" className="text-[11px] font-semibold text-white bg-amber-600 hover:bg-amber-700 px-3 py-1.5 rounded-lg no-underline">
+              Upgrade →
+            </a>
+          )}
+        </div>
+      )}
 
       {/* ── School list ────────────────────────────────────────────── */}
       <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
@@ -176,18 +262,25 @@ export default async function AdminSchoolsPage({
                     <p className="text-[11px] text-slate-400 mt-0.5">
                       {tzLabel(school.timezone)} · Cutoff {cutoffLabel(school.defaultCutoffHour, school.defaultCutoffMinute)}
                     </p>
-                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                        school.locationType === "OFFICE" ? "bg-blue-50 text-blue-700" : "bg-rose-50 text-rose-700"
+                      }`}>
+                        {school.locationType === "OFFICE" ? "Office" : "School"}
+                      </span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: "#15803d", background: "#dcfce7", borderRadius: 100, padding: "2px 8px" }}>
-                        {school._count.orders} orders
+                        {school._count.orders} orders all-time
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#0369a1", background: "#eff6ff", borderRadius: 100, padding: "2px 8px" }}>
+                        ${((monthRevenueMap.get(school.id) ?? 0) / 100).toFixed(0)} this month
                       </span>
                       <span style={{ fontSize: 11, color: "#6b7280", background: "#f3f4f6", borderRadius: 100, padding: "2px 8px" }}>
-                        {school._count.deliveryDates} delivery dates
+                        {school._count.deliveryDates} dates
                       </span>
-                      {school.collectTeacher && (
-                        <span style={{ fontSize: 10, color: "#6b7280" }}>Teacher</span>
-                      )}
-                      {school.collectClassroom && (
-                        <span style={{ fontSize: 10, color: "#6b7280" }}>· Room</span>
+                      {nextDeliveryMap.get(school.id) && (
+                        <span style={{ fontSize: 11, color: "#7c3aed", background: "#f5f3ff", borderRadius: 100, padding: "2px 8px" }}>
+                          Next: {nextDeliveryMap.get(school.id)!.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -292,6 +385,25 @@ export default async function AdminSchoolsPage({
           <span className="text-[11px] text-slate-400">tap to expand</span>
         </summary>
         <form action={createSchool} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
+          <div>
+            <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location type</label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-slate-200 px-3 py-2.5 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-700 transition">
+                <input type="radio" name="locationType" value="SCHOOL" defaultChecked className="mt-0.5" />
+                <div>
+                  <p className="text-[12px] font-semibold text-ink">School</p>
+                  <p className="text-[10px] text-slate-400">Students, classrooms, teachers</p>
+                </div>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-slate-200 px-3 py-2.5 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-700 transition">
+                <input type="radio" name="locationType" value="OFFICE" className="mt-0.5" />
+                <div>
+                  <p className="text-[12px] font-semibold text-ink">Office</p>
+                  <p className="text-[10px] text-slate-400">Employees, teams, floors</p>
+                </div>
+              </label>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location name</label>

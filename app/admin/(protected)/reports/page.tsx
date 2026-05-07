@@ -5,6 +5,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { formatCurrency } from "@/lib/utils";
 import { formatInTimeZone } from "date-fns-tz";
+import { ReportsCharts } from "@/components/admin/reports-charts";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,7 @@ export default async function AdminReportsPage({
 
   // Per-delivery-date breakdown from the orders already fetched in getAdminReports
   // We need raw orders for this — re-query scoped to date range
-  const dateBreakdown = await (async () => {
+  const { dateBreakdown, revenueSeries } = await (async () => {
     const { OrderStatus } = await import("@prisma/client");
     const orders = await prisma.order.findMany({
       where: {
@@ -78,7 +79,7 @@ export default async function AdminReportsPage({
     });
 
     const map = new Map<string, {
-      dateLabel: string; schoolName: string; orders: number; items: number; revenue: number;
+      dateLabel: string; schoolName: string; orders: number; items: number; revenue: number; sortKey: number;
     }>();
     for (const order of orders) {
       const key = order.deliveryDateId;
@@ -87,14 +88,32 @@ export default async function AdminReportsPage({
         dateLabel: formatInTimeZone(order.deliveryDate.deliveryDate, tz, "EEE, MMM d yyyy"),
         schoolName: order.deliveryDate.school.name,
         orders: 0, items: 0, revenue: 0,
+        sortKey: order.deliveryDate.deliveryDate.getTime(),
       };
       existing.orders  += 1;
       existing.items   += order.items.length;
       existing.revenue += order.totalCents;
       map.set(key, existing);
     }
-    return [...map.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 20);
+    const all = [...map.values()];
+    return {
+      dateBreakdown: all.slice().sort((a, b) => b.revenue - a.revenue).slice(0, 20),
+      revenueSeries: all
+        .slice()
+        .sort((a, b) => a.sortKey - b.sortKey)
+        .slice(-30)
+        .map((d) => ({
+          date: formatInTimeZone(new Date(d.sortKey), "UTC", "MMM d"),
+          revenue: d.revenue,
+          orders: d.orders,
+        })),
+    };
   })();
+
+  const topItemsSeries = reports.itemBreakdown.slice(0, 8).map((i) => ({
+    name: i.itemName.length > 14 ? i.itemName.slice(0, 14) + "…" : i.itemName,
+    quantity: i.quantity,
+  }));
 
   // Build CSV export URL
   const csvParams = new URLSearchParams();
@@ -184,6 +203,9 @@ export default async function AdminReportsPage({
           </div>
         ))}
       </div>
+
+      {/* ── Charts ──────────────────────────────────────────────────── */}
+      <ReportsCharts revenue={revenueSeries} topItems={topItemsSeries} />
 
       {/* ── Two-up on desktop: by-date + by-school side by side ───── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

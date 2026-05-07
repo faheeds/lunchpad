@@ -293,6 +293,8 @@ export async function listOrders(filters: {
   schoolIds?: string[];
   status?: string;
   archived?: string;
+  /** Free-text search across student name, parent name, parent email, order number. */
+  search?: string;
 }) {
   const where: Prisma.OrderWhereInput = { restaurantId: filters.restaurantId };
 
@@ -311,6 +313,15 @@ export async function listOrders(filters: {
     where.archivedAt = { not: null };
   } else if (filters.archived !== "include") {
     where.archivedAt = null;
+  }
+  if (filters.search && filters.search.trim()) {
+    const q = filters.search.trim();
+    where.OR = [
+      { orderNumber: { contains: q, mode: "insensitive" } },
+      { parentName: { contains: q, mode: "insensitive" } },
+      { parentEmail: { contains: q, mode: "insensitive" } },
+      { student: { studentName: { contains: q, mode: "insensitive" } } },
+    ];
   }
 
   return prisma.order.findMany({
