@@ -38,6 +38,43 @@ export async function POST(request: Request) {
   const full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
   if (!full) return NextResponse.json({ error: "Restaurant not found." }, { status: 404 });
 
+  // ── Plan switch path ────────────────────────────────────────────────────
+  // If the restaurant already has an active Stripe subscription, update the
+  // existing subscription's price item rather than creating a new subscription.
+  // Stripe handles proration automatically. This avoids double-charging the
+  // customer (which would happen if we created a parallel subscription).
+  if (full.stripeSubscriptionId && full.subscriptionStatus === "ACTIVE") {
+    try {
+      const existing = await stripe.subscriptions.retrieve(full.stripeSubscriptionId);
+      const itemId = existing.items.data[0]?.id;
+      if (!itemId) {
+        return NextResponse.json({ error: "Existing subscription has no items to update." }, { status: 500 });
+      }
+      await stripe.subscriptions.update(full.stripeSubscriptionId, {
+        items: [{ id: itemId, price: priceId }],
+        proration_behavior: "create_prorations",
+        metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
+      });
+      // Update Restaurant immediately — no webhook round-trip needed for in-place switch.
+      await prisma.restaurant.update({
+        where: { id: full.id },
+        data: { plan: body.plan as "STARTER" | "GROWTH" | "SCALE" },
+      });
+      // No Stripe Checkout redirect — return a direct URL the client navigates to.
+      return NextResponse.json({ url: `${env.APP_BASE_URL}/admin/subscription?success=1` });
+    } catch (err) {
+      // If the stored subscription ID is stale/cancelled in Stripe, fall through
+      // to the regular new-subscription path below.
+      const message = err instanceof Error ? err.message : "Subscription update failed.";
+      // Only fall through for "not found" errors; surface anything else.
+      if (!/No such subscription|resource_missing/i.test(message)) {
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+      // Fall through to checkout below.
+    }
+  }
+
+  // ── First-time / lapsed subscription path ───────────────────────────────
   // Reuse or create Stripe customer
   let customerId = full.stripeCustomerId ?? undefined;
   if (!customerId) {
