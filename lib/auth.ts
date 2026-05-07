@@ -8,6 +8,22 @@ import { env } from "@/lib/env";
 import { adminLoginSchema } from "@/lib/validation/order";
 import { verifyMobileToken } from "@/lib/mobile-jwt";
 
+// Production runs on multiple subdomains of lunchpad.us (faheeds.lunchpad.us,
+// hk.lunchpad.us, etc.). Auth callbacks happen on the apex (NEXTAUTH_URL),
+// so we explicitly scope the session cookie to `.lunchpad.us` so it's visible
+// on every subdomain. In dev / preview deployments, fall back to host-only.
+const COOKIE_DOMAIN = (() => {
+  try {
+    const url = new URL(env.NEXTAUTH_URL);
+    // Only use the cookie domain when running on the production apex.
+    // For *.vercel.app or localhost we want host-only cookies.
+    if (url.hostname.endsWith(".lunchpad.us") || url.hostname === "lunchpad.us") {
+      return ".lunchpad.us";
+    }
+  } catch {}
+  return undefined;
+})();
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   secret: env.NEXTAUTH_SECRET,
@@ -15,6 +31,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/account/sign-in"
   },
+  cookies: COOKIE_DOMAIN
+    ? {
+        sessionToken: {
+          name: "__Secure-next-auth.session-token",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: true,
+            domain: COOKIE_DOMAIN,
+          },
+        },
+        callbackUrl: {
+          name: "__Secure-next-auth.callback-url",
+          options: { sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN },
+        },
+        csrfToken: {
+          name: "__Host-next-auth.csrf-token",
+          options: { httpOnly: true, sameSite: "lax", path: "/", secure: true },
+        },
+      }
+    : undefined,
   callbacks: {
     async jwt({ token, user, account }) {
       const isAdminCredentialsLogin =
