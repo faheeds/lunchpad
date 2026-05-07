@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { stripe } from "@/lib/payments/stripe";
 import { markOrderPaidByCheckoutSession } from "@/lib/orders";
-import { sendOrderConfirmationEmail, scheduleCutoffReminderEmail } from "@/lib/email/service";
+import { sendOrderConfirmationEmail, scheduleCutoffReminderEmail, sendSubscriptionChangedEmail } from "@/lib/email/service";
 import { isDuplicateWebhookEvent } from "@/lib/payments/webhook";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 
@@ -102,6 +102,11 @@ export async function POST(request: Request) {
             ? session.subscription
             : session.subscription?.id;
           if (restaurantId && plan && stripeSubscriptionId) {
+            // Capture previous plan before overwriting so we can include it in the email.
+            const before = await prisma.restaurant.findUnique({
+              where: { id: restaurantId },
+              select: { plan: true },
+            });
             await prisma.restaurant.update({
               where: { id: restaurantId },
               data: {
@@ -111,6 +116,8 @@ export async function POST(request: Request) {
                 trialEndsAt: null,
               },
             });
+            // Best-effort confirmation email with proration details.
+            sendSubscriptionChangedEmail(restaurantId, before?.plan ?? "FREE", plan).catch(() => {});
           }
         } else if (session.metadata?.checkoutType === "weekly_batch") {
           const result = await markWeeklyBatchPaidByCheckoutSession(

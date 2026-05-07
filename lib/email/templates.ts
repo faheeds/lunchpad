@@ -459,3 +459,115 @@ export function buildOrderModifiedEmail(args: OrderModifiedTemplateArgs) {
 
   return { subject, text, html };
 }
+
+// ─── Subscription plan change ────────────────────────────────────────────────
+
+type SubscriptionChangedTemplateArgs = {
+  ownerName: string;
+  restaurantName: string;
+  oldPlan: string;
+  newPlan: string;
+  newPriceLabel: string;            // e.g. "$149/mo"
+  prorationCents: number;           // positive = charge, negative = credit
+  nextInvoiceDate: Date | null;
+  nextInvoiceTotalCents: number | null;
+  billingPortalUrl?: string | null;
+};
+
+export function buildSubscriptionChangedEmail(args: SubscriptionChangedTemplateArgs) {
+  const direction =
+    args.prorationCents > 0 ? "upgrade" : args.prorationCents < 0 ? "downgrade" : "change";
+  const subject = `Your LunchPad plan: ${args.oldPlan} → ${args.newPlan}`;
+
+  const prorationLabel =
+    args.prorationCents > 0
+      ? `Prorated charge today: ${formatCurrency(args.prorationCents)}`
+      : args.prorationCents < 0
+      ? `Credit applied to your account: ${formatCurrency(Math.abs(args.prorationCents))}`
+      : "No proration needed.";
+
+  const nextLine =
+    args.nextInvoiceDate && args.nextInvoiceTotalCents !== null
+      ? `Next invoice: ${formatCurrency(args.nextInvoiceTotalCents)} on ${
+          args.nextInvoiceDate.toISOString().slice(0, 10)
+        }`
+      : "Your next invoice will reflect the new plan.";
+
+  const text = [
+    `Hi ${args.ownerName},`,
+    "",
+    `Your LunchPad subscription for ${args.restaurantName} has been ${direction === "change" ? "updated" : direction === "upgrade" ? "upgraded" : "downgraded"}.`,
+    "",
+    `Previous plan: ${args.oldPlan}`,
+    `New plan: ${args.newPlan} (${args.newPriceLabel})`,
+    "",
+    prorationLabel,
+    nextLine,
+    "",
+    "The change is effective immediately. You can review billing details and history in your admin dashboard.",
+    "",
+    "— The LunchPad Team",
+  ].join("\n");
+
+  const isUpgrade = args.prorationCents > 0;
+
+  const html = `
+    <div style="${base}">
+      <div style="background:linear-gradient(135deg,#0f1923,#1a2d42);border-radius:10px;padding:24px;margin-bottom:16px;text-align:center">
+        <h1 style="font-size:20px;font-weight:800;color:white;margin:0 0 6px;letter-spacing:-0.02em">
+          Plan ${direction === "upgrade" ? "upgraded" : direction === "downgrade" ? "downgraded" : "updated"}
+        </h1>
+        <p style="font-size:13px;color:rgba(255,255,255,0.6);margin:0">
+          ${args.restaurantName} is now on ${args.newPlan}
+        </p>
+      </div>
+
+      <div style="${card}">
+        <p style="font-size:14px;margin:0 0 18px">Hi ${args.ownerName},</p>
+
+        <table role="presentation" style="width:100%;border-collapse:collapse;margin-bottom:18px">
+          <tr>
+            <td style="padding:8px 0;font-size:12px;color:#6b7280;width:140px">Previous plan</td>
+            <td style="padding:8px 0;font-size:13px;color:#1c2a35">${args.oldPlan}</td>
+          </tr>
+          <tr style="border-top:1px solid #f1f5f9">
+            <td style="padding:8px 0;font-size:12px;color:#6b7280">New plan</td>
+            <td style="padding:8px 0;font-size:13px;font-weight:700;color:#1c2a35">
+              ${args.newPlan} <span style="color:#6b7280;font-weight:400">· ${args.newPriceLabel}</span>
+            </td>
+          </tr>
+          <tr style="border-top:1px solid #f1f5f9">
+            <td style="padding:8px 0;font-size:12px;color:#6b7280">${args.prorationCents >= 0 ? "Prorated charge" : "Credit applied"}</td>
+            <td style="padding:8px 0;font-size:13px;font-weight:700;color:${isUpgrade ? "#1c2a35" : "#15803d"}">
+              ${args.prorationCents === 0 ? "—" : formatCurrency(Math.abs(args.prorationCents))}
+              ${args.prorationCents < 0 ? `<span style="${pill("#dcfce7", "#15803d")};margin-left:8px">CREDIT</span>` : ""}
+            </td>
+          </tr>
+          ${args.nextInvoiceDate && args.nextInvoiceTotalCents !== null ? `
+          <tr style="border-top:1px solid #f1f5f9">
+            <td style="padding:8px 0;font-size:12px;color:#6b7280">Next invoice</td>
+            <td style="padding:8px 0;font-size:13px;color:#1c2a35">
+              ${formatCurrency(args.nextInvoiceTotalCents)} on ${args.nextInvoiceDate.toISOString().slice(0, 10)}
+            </td>
+          </tr>` : ""}
+        </table>
+
+        <p style="font-size:12px;color:#6b7280;margin:0;line-height:1.6">
+          The change is effective immediately. ${
+            args.prorationCents < 0
+              ? "Your credit will be applied automatically to your next invoice."
+              : args.prorationCents > 0
+              ? "The prorated charge has been added to your current billing cycle."
+              : ""
+          }
+        </p>
+      </div>
+
+      <p style="font-size:11px;color:#9ca3af;text-align:center;margin:0">
+        Questions? Reply to this email or visit your admin dashboard.
+      </p>
+    </div>
+  `;
+
+  return { subject, text, html };
+}

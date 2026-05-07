@@ -4,6 +4,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { assertAdminApiRequest } from "@/lib/admin-auth";
 import { stripe } from "@/lib/payments/stripe";
 import { env } from "@/lib/env";
+import { sendSubscriptionChangedEmail } from "@/lib/email/service";
 
 const PRICE_MAP: Record<string, string | undefined> = {
   STARTER: env.STRIPE_PRICE_STARTER,
@@ -56,10 +57,13 @@ export async function POST(request: Request) {
         metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
       });
       // Update Restaurant immediately — no webhook round-trip needed for in-place switch.
+      const oldPlan = full.plan;
       await prisma.restaurant.update({
         where: { id: full.id },
         data: { plan: body.plan as "STARTER" | "GROWTH" | "SCALE" },
       });
+      // Best-effort confirmation email with proration details. Never block on it.
+      sendSubscriptionChangedEmail(full.id, oldPlan, body.plan).catch(() => {});
       // No Stripe Checkout redirect — return a direct URL the client navigates to.
       return NextResponse.json({ url: `${env.APP_BASE_URL}/admin/subscription?success=1` });
     } catch (err) {
