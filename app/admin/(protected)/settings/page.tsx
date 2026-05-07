@@ -137,7 +137,7 @@ export default async function AdminSettingsPage({
   const error = params.error ?? null;
 
   return (
-    <div className="space-y-4 pb-10 max-w-lg lg:max-w-4xl">
+    <div className="space-y-5 pb-10">
       <h1 className="text-[17px] font-semibold text-ink">Settings</h1>
 
       {/* ── Feedback banner ─────────────────────────────────────── */}
@@ -253,6 +253,7 @@ export default async function AdminSettingsPage({
         </div>
       </form>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* ── Account info ────────────────────────────────────────── */}
       <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-50">
@@ -532,6 +533,7 @@ export default async function AdminSettingsPage({
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
