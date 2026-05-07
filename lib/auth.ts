@@ -33,26 +33,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   cookies: COOKIE_DOMAIN
     ? {
+        // All cookies need domain=.lunchpad.us so the sign-in flow that starts on
+        // a restaurant subdomain (faheeds.lunchpad.us) survives the OAuth bounce
+        // through Google/Apple back to the apex (lunchpad.us). Without a shared
+        // domain, NextAuth's state/nonce/PKCE cookies are invisible on the
+        // callback host and the OAuth handshake fails with `Configuration`.
         sessionToken: {
           name: "__Secure-next-auth.session-token",
-          options: {
-            httpOnly: true,
-            sameSite: "lax",
-            path: "/",
-            secure: true,
-            domain: COOKIE_DOMAIN,
-          },
+          options: { httpOnly: true, sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN },
         },
         callbackUrl: {
           name: "__Secure-next-auth.callback-url",
           options: { sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN },
         },
-        // CSRF cookie must be readable across subdomains — sign-in flow starts on
-        // a restaurant subdomain (e.g. faheeds.lunchpad.us) and OAuth callback
-        // lands on the apex (lunchpad.us). __Host- prefix is host-only and would
-        // break that cross-subdomain handoff, so we use __Secure- with domain.
         csrfToken: {
           name: "__Secure-next-auth.csrf-token",
+          options: { httpOnly: true, sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN },
+        },
+        pkceCodeVerifier: {
+          name: "__Secure-next-auth.pkce.code_verifier",
+          options: { httpOnly: true, sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN, maxAge: 900 },
+        },
+        state: {
+          name: "__Secure-next-auth.state",
+          options: { httpOnly: true, sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN, maxAge: 900 },
+        },
+        nonce: {
+          name: "__Secure-next-auth.nonce",
           options: { httpOnly: true, sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN },
         },
       }
