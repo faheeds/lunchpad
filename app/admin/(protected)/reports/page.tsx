@@ -127,10 +127,10 @@ export default async function AdminReportsPage({
       <form className="rounded-[14px] border border-slate-100 bg-white p-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Location</label>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">School</label>
             <select name="schoolIds" defaultValue={selectedSchoolIds[0] ?? ""}
               className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
-              <option value="">All locations</option>
+              <option value="">All schools</option>
               {schools.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -308,4 +308,10 @@ export default async function AdminReportsPage({
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
             <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
           </svg>
-          <p className="text-[13px] font-medium text-slate-400">No paid orders match the current filte
+          <p className="text-[13px] font-medium text-slate-400">No paid orders match the current filters.</p>
+          <p className="text-[11px] text-slate-300 mt-1">Try widening the date range or clearing filters.</p>
+        </div>
+      )}
+    </div>
+  );
+}

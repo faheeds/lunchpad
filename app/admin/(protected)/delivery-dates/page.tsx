@@ -191,10 +191,10 @@ export default async function DeliveryDatesPage() {
         <form action={createDeliveryDate} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location</label>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">School</label>
               <select name="schoolId" required
                 className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
-                <option value="">Select location…</option>
+                <option value="">Select school…</option>
                 {schools.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -474,4 +474,41 @@ export default async function DeliveryDatesPage() {
                     </div>
                     <div>
                       <p className="text-[12px] font-medium text-slate-600">{date.school.name}</p>
-                    
+                      <p className="text-[11px] text-slate-400">
+                        {formatInTimeZone(date.deliveryDate, tz, "EEE, MMM d yyyy")}
+                        {date.notes ? ` · ${date.notes}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {orderCount > 0 && (
+                      <>
+                        <Link href={`/admin/orders?deliveryDateId=${date.id}&archived=include`}
+                          className="text-[11px] font-semibold no-underline"
+                          style={{ color: "#6b7280" }}>
+                          {orderCount} orders
+                        </Link>
+                        <a href={`/api/admin/labels?deliveryDateId=${date.id}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="text-[11px] font-medium no-underline hover:underline flex items-center gap-1"
+                          style={{ color: "#94a3b8" }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                          </svg>
+                          Labels
+                        </a>
+                      </>
+                    )}
+                    <span className="text-[10px] text-slate-400">
+                      {date.menuAvailability.length} items
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
