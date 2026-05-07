@@ -35,7 +35,7 @@ export async function requireAdminRole(minRole: import("@/lib/roles").AdminRole)
  */
 export async function assertAdminApiRequest(
   minRole?: import("@/lib/roles").AdminRole
-): Promise<{ restaurantId: string; adminId: string }> {
+): Promise<{ restaurantId: string; adminUserId: string }> {
   const { hasRole } = await import("@/lib/roles");
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") {
@@ -45,10 +45,10 @@ export async function assertAdminApiRequest(
     throw new Error("Insufficient permissions");
   }
   const restaurantId = (session.user as { restaurantId?: string }).restaurantId;
-  const adminId = (session.user as { adminId?: string; id?: string }).adminId
-    ?? (session.user as { id?: string }).id;
-  if (!restaurantId || !adminId) {
-    throw new Error("Admin session missing tenant context");
+  const adminUserId = (session.user as { adminUserId?: string }).adminUserId;
+  if (!restaurantId) {
+    throw new Error("Admin session missing tenant context (no restaurantId)");
   }
-  return { restaurantId, adminId };
+  // adminUserId is helpful for audit logs but not strictly required for tenant scoping.
+  return { restaurantId, adminUserId: adminUserId ?? "" };
 }
