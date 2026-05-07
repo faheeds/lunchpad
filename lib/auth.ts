@@ -47,9 +47,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: "__Secure-next-auth.callback-url",
           options: { sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN },
         },
+        // CSRF cookie must be readable across subdomains — sign-in flow starts on
+        // a restaurant subdomain (e.g. faheeds.lunchpad.us) and OAuth callback
+        // lands on the apex (lunchpad.us). __Host- prefix is host-only and would
+        // break that cross-subdomain handoff, so we use __Secure- with domain.
         csrfToken: {
-          name: "__Host-next-auth.csrf-token",
-          options: { httpOnly: true, sameSite: "lax", path: "/", secure: true },
+          name: "__Secure-next-auth.csrf-token",
+          options: { httpOnly: true, sameSite: "lax", path: "/", secure: true, domain: COOKIE_DOMAIN },
         },
       }
     : undefined,
