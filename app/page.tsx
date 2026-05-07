@@ -392,12 +392,14 @@ export default async function HomePage() {
       </nav>
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
-      <section style={{
-        background: "linear-gradient(160deg, #0f1923 0%, #1a2d42 55%, #0f2336 100%)",
-        padding: "64px 24px 0",
-        overflow: "hidden",
-        position: "relative",
-      }}>
+      <section
+        className="px-6 lg:px-12 py-16 lg:py-24"
+        style={{
+          background: "linear-gradient(160deg, #0f1923 0%, #1a2d42 55%, #0f2336 100%)",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
         {/* Subtle grid lines */}
         <div style={{
           position: "absolute", inset: 0, opacity: 0.04,
@@ -414,7 +416,9 @@ export default async function HomePage() {
           borderRadius: "50%", background: "rgba(59,130,246,0.08)", filter: "blur(60px)",
         }} />
 
-        <div style={{ position: "relative", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center pb-12">
+          <div>
           {/* Badge */}
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 6,
@@ -428,25 +432,31 @@ export default async function HomePage() {
           </div>
 
           {/* Headline */}
-          <h1 style={{
-            fontSize: 40, fontWeight: 900, lineHeight: 1.1,
-            color: "white", marginBottom: 18,
-            letterSpacing: "-0.02em",
-          }}>
+          <h1
+            className="text-[40px] lg:text-[56px] xl:text-[64px]"
+            style={{
+              fontWeight: 900, lineHeight: 1.05,
+              color: "white", marginBottom: 18,
+              letterSpacing: "-0.025em",
+            }}
+          >
             The platform built for
             <br />
             <span style={{ color: "#f87171" }}>school lunch</span>{" "}
             <span style={{ color: "rgba(255,255,255,0.5)" }}>operators</span>
           </h1>
 
-          <p style={{
-            fontSize: 16, color: "rgba(255,255,255,0.62)", lineHeight: 1.65,
-            marginBottom: 32, maxWidth: 480,
-          }}>
+          <p
+            className="text-[16px] lg:text-[18px]"
+            style={{
+              color: "rgba(255,255,255,0.62)", lineHeight: 1.65,
+              marginBottom: 32, maxWidth: 520,
+            }}
+          >
             LunchPad handles ordering, payments, and delivery scheduling so you can focus on the food. Set up in a day, not a semester.
           </p>
 
-          <div style={{ display: "flex", gap: 12, marginBottom: 48, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Link href="/signup" style={{
               padding: "14px 28px", borderRadius: 10, fontSize: 14, fontWeight: 700,
               textDecoration: "none", color: "white",
@@ -466,13 +476,14 @@ export default async function HomePage() {
               See how it works
             </Link>
           </div>
+          </div>
 
-          {/* Dashboard preview card */}
+          {/* Dashboard preview card — right column on desktop */}
           <div style={{
             background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "16px 16px 0 0",
+            borderRadius: 16,
             overflow: "hidden",
-            boxShadow: "0 -4px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)",
           }}>
             {/* Window chrome */}
             <div style={{
@@ -563,6 +574,7 @@ export default async function HomePage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </section>
 
