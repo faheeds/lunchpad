@@ -26,21 +26,23 @@ export async function POST(request: Request): Promise<Response> {
       request,
       onBeforeGenerateToken: async (pathname) => {
         // Verify admin session before issuing a signed token.
+        // adminUserId / restaurantId are stored on session.user (see auth.ts
+        // session callback), NOT at the top level of the session object.
         const session = await auth();
-        const adminUserId = (session as unknown as { adminUserId?: string })?.adminUserId;
-        const restaurantId = (session as unknown as { restaurantId?: string })?.restaurantId;
+        const adminUserId = session?.user?.adminUserId;
+        const restaurantId = session?.user?.restaurantId;
 
         if (!adminUserId || !restaurantId) {
-          throw new Error("Unauthorized");
+          throw new Error("Unauthorized: no admin session");
         }
 
-        // Confirm the admin user is real and active.
+        // Confirm the admin user is real and belongs to this restaurant.
         const admin = await prisma.adminUser.findUnique({
           where: { id: adminUserId },
           select: { id: true, restaurantId: true },
         });
         if (!admin || admin.restaurantId !== restaurantId) {
-          throw new Error("Unauthorized");
+          throw new Error("Unauthorized: admin/restaurant mismatch");
         }
 
         // Scope the path under the restaurant so blobs can't collide
