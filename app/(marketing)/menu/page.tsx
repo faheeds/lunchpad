@@ -54,13 +54,17 @@ export default async function MenuPage() {
   const restaurant = await getCurrentRestaurant();
   const restaurantName = restaurant?.name ?? "Hot Lunch";
 
-  const items = await prisma.menuItem.findMany({
-    where: { isActive: true },
-    include: {
-      options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] },
-    },
-    orderBy: { name: "asc" },
-  });
+  // Multi-tenant: only show menu items for the current restaurant.
+  // If no restaurant context (e.g. apex /menu), show none.
+  const items = restaurant
+    ? await prisma.menuItem.findMany({
+        where: { restaurantId: restaurant.id, isActive: true },
+        include: {
+          options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] },
+        },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   // Group by category
   const grouped = CATEGORIES.reduce<Record<string, typeof items>>((acc, cat) => {

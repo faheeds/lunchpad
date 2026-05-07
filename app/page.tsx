@@ -152,7 +152,7 @@ export default async function HomePage() {
     ];
 
     const itemsWithPhotos = await prisma.menuItem.findMany({
-      where: { isActive: true, imageUrl: { not: null } },
+      where: { restaurantId: restaurant.id, isActive: true, imageUrl: { not: null } },
       select: { name: true, imageUrl: true },
       orderBy: { name: "asc" },
     });
