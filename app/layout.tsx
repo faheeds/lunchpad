@@ -20,18 +20,41 @@ const inter = Inter({
 
 export async function generateMetadata(): Promise<Metadata> {
   const restaurant = await getCurrentRestaurant();
+  const title = restaurant ? restaurant.name : "LunchPad";
+  const description = restaurant
+    ? `Order lunch from ${restaurant.name} — powered by LunchPad.`
+    : "LunchPad — lunch ordering software built for operators. Schools, offices, anywhere lunch is delivered daily.";
+
   return {
     title: restaurant
       ? { default: restaurant.name, template: `%s | ${restaurant.name}` }
       : { default: "LunchPad", template: "%s | LunchPad" },
-    description: restaurant
-      ? `Order lunch from ${restaurant.name} — powered by LunchPad.`
-      : "LunchPad — lunch ordering software built for operators. Schools, offices, anywhere lunch is delivered daily.",
+    description,
     icons: {
       icon: [
         { url: "/favicon.svg", type: "image/svg+xml" },
         { url: "/icon.png" },
       ],
+    },
+    // Open Graph (link previews in iMessage, WhatsApp, Slack, etc.)
+    // For the platform landing (no restaurant), force LunchPad branding so the
+    // share preview is never the most-recently-loaded restaurant's logo.
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: "LunchPad",
+      // Next.js auto-resolves /opengraph-image.png from app/ — explicit URL avoids
+      // any ambiguity about which image to use for restaurant vs platform context.
+      images: restaurant
+        ? undefined  // each restaurant page can opt into its own og:image later
+        : [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "LunchPad — built for lunch operators." }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: restaurant ? undefined : ["/twitter-image.png"],
     },
   };
 }

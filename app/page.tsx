@@ -76,6 +76,27 @@ const platformFeatures = [
     title: "Live Order Dashboard",
     body: "See every order in real time. Export kitchen sheets, track payments, manage refunds.",
   },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+        <line x1="7" y1="7" x2="7.01" y2="7"/>
+      </svg>
+    ),
+    title: "Auto Label Printing",
+    body: "Print individual kitchen labels for every order — name, allergens, add-ons. No manual sorting on delivery day.",
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18"/>
+        <path d="M7 14l4-4 4 4 5-5"/>
+        <path d="M14 5h6v6"/>
+      </svg>
+    ),
+    title: "Built-in Reporting",
+    body: "Revenue, top items, orders by location — all the analytics you need to grow, no spreadsheets required.",
+  },
 ];
 
 const howItWorks = [
