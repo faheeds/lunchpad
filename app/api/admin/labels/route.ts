@@ -5,8 +5,9 @@ import { generateLabelsPdfBuffer, mapOrderToLabelRows } from "@/lib/pdf/labels";
 import { assertAdminApiRequest } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
+  let restaurantId: string;
   try {
-    await assertAdminApiRequest();
+    ({ restaurantId } = await assertAdminApiRequest());
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -14,8 +15,10 @@ export async function GET(request: Request) {
   const deliveryDateId = searchParams.get("deliveryDateId");
   const format = searchParams.get("format") ?? "pdf";
 
+  // Tenant-scoped: only return orders for this admin's restaurant.
   const orders = await prisma.order.findMany({
     where: {
+      restaurantId,
       deliveryDateId: deliveryDateId ?? undefined,
       status: OrderStatus.PAID,
       archivedAt: null

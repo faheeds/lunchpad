@@ -13,9 +13,9 @@ import {
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
-export async function sendOrderConfirmationEmail(orderId: string) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
+export async function sendOrderConfirmationEmail(orderId: string, restaurantId: string) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
     include: { school: true, deliveryDate: true, student: true, items: true }
   });
 
@@ -91,9 +91,9 @@ export async function sendOrderConfirmationEmail(orderId: string) {
   }
 }
 
-export async function sendCancellationEmail(orderId: string) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
+export async function sendCancellationEmail(orderId: string, restaurantId: string) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
     include: { school: true, deliveryDate: true, student: true, items: true },
   });
 
@@ -155,10 +155,10 @@ export async function sendCancellationEmail(orderId: string) {
   }
 }
 
-export async function scheduleCutoffReminderEmail(orderId: string) {
+export async function scheduleCutoffReminderEmail(orderId: string, restaurantId: string) {
   try {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, restaurantId },
       include: { school: true, deliveryDate: true, student: true },
     });
 
@@ -281,9 +281,9 @@ export async function sendKitchenPrepEmail(deliveryDateId: string) {
  * Sends an "order updated" email to the parent after an admin modifies their order.
  * Best-effort — caller should `.catch(() => {})` so a mail failure never blocks saves.
  */
-export async function sendOrderModifiedEmail(orderId: string) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
+export async function sendOrderModifiedEmail(orderId: string, restaurantId: string) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
     include: { school: true, deliveryDate: true, student: true, items: true },
   });
 

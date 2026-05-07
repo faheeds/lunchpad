@@ -31,8 +31,11 @@ export async function requireAdminRole(minRole: import("@/lib/roles").AdminRole)
 
 /**
  * For use in API routes — throws instead of redirecting.
+ * Returns the admin session's restaurantId so callers can scope DB queries to it.
  */
-export async function assertAdminApiRequest(minRole?: import("@/lib/roles").AdminRole): Promise<void> {
+export async function assertAdminApiRequest(
+  minRole?: import("@/lib/roles").AdminRole
+): Promise<{ restaurantId: string; adminId: string }> {
   const { hasRole } = await import("@/lib/roles");
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") {
@@ -41,4 +44,11 @@ export async function assertAdminApiRequest(minRole?: import("@/lib/roles").Admi
   if (minRole && !hasRole(session.user.adminRole, minRole)) {
     throw new Error("Insufficient permissions");
   }
+  const restaurantId = (session.user as { restaurantId?: string }).restaurantId;
+  const adminId = (session.user as { adminId?: string; id?: string }).adminId
+    ?? (session.user as { id?: string }).id;
+  if (!restaurantId || !adminId) {
+    throw new Error("Admin session missing tenant context");
+  }
+  return { restaurantId, adminId };
 }

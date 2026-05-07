@@ -25,7 +25,17 @@ export async function getAdminDashboardSummary(restaurantId: string) {
   };
 }
 
-export async function setOrderStatus(orderId: string, status: OrderStatus) {
+/**
+ * Set the status of an order. Tenant-scoped: throws if the order doesn't
+ * belong to the given restaurant.
+ */
+export async function setOrderStatus(restaurantId: string, orderId: string, status: OrderStatus) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
+    select: { id: true },
+  });
+  if (!order) throw new Error(`Order ${orderId} not found in this restaurant.`);
+
   const now = new Date();
   return prisma.order.update({
     where: { id: orderId },
@@ -41,14 +51,15 @@ export async function setOrderStatus(orderId: string, status: OrderStatus) {
 /**
  * Admin-only cancel + refund. Skips cutoff and parentUserId checks.
  * Issues a Stripe refund if a paymentIntent exists, then marks the order cancelled.
+ * Tenant-scoped: throws if the order doesn't belong to the given restaurant.
  */
-export async function adminCancelOrderWithRefund(orderId: string) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
+export async function adminCancelOrderWithRefund(restaurantId: string, orderId: string) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
     include: { payment: true },
   });
 
-  if (!order) throw new Error(`Order ${orderId} not found.`);
+  if (!order) throw new Error(`Order ${orderId} not found in this restaurant.`);
   if (order.status !== OrderStatus.PAID) {
     throw new Error(`Order ${orderId} is not in PAID status.`);
   }
@@ -81,7 +92,16 @@ export async function adminCancelOrderWithRefund(orderId: string) {
   ]);
 }
 
-export async function setOrderArchived(orderId: string, archived: boolean) {
+/**
+ * Tenant-scoped: throws if the order doesn't belong to the given restaurant.
+ */
+export async function setOrderArchived(restaurantId: string, orderId: string, archived: boolean) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
+    select: { id: true },
+  });
+  if (!order) throw new Error(`Order ${orderId} not found in this restaurant.`);
+
   return prisma.order.update({
     where: { id: orderId },
     data: {

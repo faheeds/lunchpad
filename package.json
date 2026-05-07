@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
+    "audit:tenancy": "tsx scripts/audit-tenant-scoping.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

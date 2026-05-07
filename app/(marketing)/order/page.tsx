@@ -2,7 +2,6 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { requireRestaurant } from "@/lib/restaurant";
-import { getWeekdayNumber } from "@/lib/weekly-week";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { OrderForm } from "@/components/forms/order-form";
@@ -38,11 +37,9 @@ export default async function OrderPage({
     orderBy: [{ deliveryDate: "asc" }, { school: { name: "asc" } }]
   });
 
-  // Filter to Mon–Thu only
-  const deliveryDates = allDeliveryDates.filter((d) => {
-    const weekday = getWeekdayNumber(d.deliveryDate, d.school.timezone);
-    return weekday >= 1 && weekday <= 4;
-  });
+  // All weekdays accepted — restaurants control which days they schedule deliveries for
+  // by which DeliveryDate rows they create in admin.
+  const deliveryDates = allDeliveryDates;
 
   const parent =
     session?.user?.role === "PARENT" && session.user.parentUserId

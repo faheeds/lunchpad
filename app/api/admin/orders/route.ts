@@ -6,13 +6,15 @@ import { setOrderArchived, setOrderStatus, adminCancelOrderWithRefund } from "@/
 import { OrderStatus } from "@prisma/client";
 
 export async function GET(request: Request) {
+  let restaurantId: string;
   try {
-    await assertAdminApiRequest();
+    ({ restaurantId } = await assertAdminApiRequest());
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { searchParams } = new URL(request.url);
   const orders = await listOrders({
+    restaurantId,
     deliveryDateId: searchParams.get("deliveryDateId") ?? undefined,
     schoolIds: searchParams.getAll("schoolIds"),
     status: searchParams.get("status") ?? undefined,
@@ -23,8 +25,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let restaurantId: string;
   try {
-    await assertAdminApiRequest();
+    ({ restaurantId } = await assertAdminApiRequest());
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -39,14 +42,14 @@ export async function POST(request: Request) {
   try {
     switch (body.action) {
       case "archive":
-        await Promise.all(orderIds.map((orderId: string) => setOrderArchived(orderId, true)));
+        await Promise.all(orderIds.map((orderId: string) => setOrderArchived(restaurantId, orderId, true)));
         return NextResponse.json({ ok: true, updated: orderIds.length });
       case "cancel":
-        await Promise.all(orderIds.map((orderId: string) => adminCancelOrderWithRefund(orderId)));
+        await Promise.all(orderIds.map((orderId: string) => adminCancelOrderWithRefund(restaurantId, orderId)));
         return NextResponse.json({ ok: true, updated: orderIds.length });
       case "resend_confirmation":
         for (const orderId of orderIds) {
-          await sendOrderConfirmationEmail(orderId);
+          await sendOrderConfirmationEmail(orderId, restaurantId);
         }
         return NextResponse.json({ ok: true, updated: orderIds.length });
       default:

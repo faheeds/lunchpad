@@ -6,8 +6,9 @@ import { setOrderArchived, setOrderStatus } from "@/lib/admin";
 import { assertAdminApiRequest } from "@/lib/admin-auth";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ orderId: string }> }) {
+  let restaurantId: string;
   try {
-    await assertAdminApiRequest();
+    ({ restaurantId } = await assertAdminApiRequest());
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -17,19 +18,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
   try {
     switch (body.action) {
       case "resend_confirmation":
-        await sendOrderConfirmationEmail(orderId);
+        await sendOrderConfirmationEmail(orderId, restaurantId);
         return NextResponse.json({ ok: true });
       case "refund":
-        await setOrderStatus(orderId, OrderStatus.REFUNDED);
+        await setOrderStatus(restaurantId, orderId, OrderStatus.REFUNDED);
         return NextResponse.json({ ok: true });
       case "cancel":
-        await setOrderStatus(orderId, OrderStatus.CANCELLED);
+        await setOrderStatus(restaurantId, orderId, OrderStatus.CANCELLED);
         return NextResponse.json({ ok: true });
       case "archive":
-        await setOrderArchived(orderId, true);
+        await setOrderArchived(restaurantId, orderId, true);
         return NextResponse.json({ ok: true });
       case "unarchive":
-        await setOrderArchived(orderId, false);
+        await setOrderArchived(restaurantId, orderId, false);
         return NextResponse.json({ ok: true });
       default:
         return NextResponse.json({ error: "Unsupported action." }, { status: 400 });
@@ -41,15 +42,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ orderId: string }> }) {
+  let restaurantId: string;
   try {
-    await assertAdminApiRequest();
+    ({ restaurantId } = await assertAdminApiRequest());
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { orderId } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
+  // Tenant-scoped: only return the order if it belongs to this admin's restaurant.
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
     include: { school: true, deliveryDate: true, student: true, items: true, payment: true, emailLogs: true }
   });
+  if (!order) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
   return NextResponse.json({ order });
 }

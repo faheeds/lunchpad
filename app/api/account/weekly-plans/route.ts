@@ -39,8 +39,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Saved child not found." }, { status: 404 });
     }
 
-    const menuItem = await prisma.menuItem.findUnique({
-      where: { id: menuItemId },
+    // Tenant-scoped: menu item must belong to the same restaurant as the parent's school.
+    // (Defense in depth — the deliveryDate availability check below would also catch this.)
+    const menuItem = await prisma.menuItem.findFirst({
+      where: { id: menuItemId, restaurantId: parentChild.school.restaurantId },
       include: { options: true }
     });
 

@@ -11,6 +11,8 @@ export const dynamic = "force-dynamic";
 
 async function createDeliveryDate(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
   const schoolId       = String(formData.get("schoolId") || "");
   const deliveryDateStr = String(formData.get("deliveryDate") || "");
   const cutoffAtStr    = String(formData.get("cutoffAt") || "");
@@ -19,8 +21,11 @@ async function createDeliveryDate(formData: FormData) {
 
   if (!schoolId || !deliveryDateStr || !cutoffAtStr) return;
 
-  // Use the school's own timezone — not a hardcoded value
-  const school = await prisma.school.findUnique({ where: { id: schoolId }, select: { timezone: true } });
+  // Tenant-scoped: school must belong to this restaurant
+  const school = await prisma.school.findFirst({
+    where: { id: schoolId, restaurantId: restaurant.id },
+    select: { timezone: true },
+  });
   if (!school) return;
 
   await prisma.deliveryDate.create({
@@ -37,21 +42,37 @@ async function createDeliveryDate(formData: FormData) {
 
 async function toggleDateOpen(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
   const id = String(formData.get("id"));
-  const current = await prisma.deliveryDate.findUnique({ where: { id }, select: { orderingOpen: true } });
-  await prisma.deliveryDate.update({ where: { id }, data: { orderingOpen: !current?.orderingOpen } });
+  // Tenant-scoped: delivery date must belong to a school in this restaurant
+  const current = await prisma.deliveryDate.findFirst({
+    where: { id, school: { restaurantId: restaurant.id } },
+    select: { orderingOpen: true },
+  });
+  if (!current) throw new Error("Delivery date not found");
+  await prisma.deliveryDate.update({ where: { id }, data: { orderingOpen: !current.orderingOpen } });
   revalidatePath("/admin/delivery-dates");
 }
 
 async function attachMenuItems(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
   const deliveryDateId = String(formData.get("deliveryDateId"));
   const schoolId       = String(formData.get("schoolId"));
   const submittedIds   = new Set(formData.getAll("menuItemIds").map(String));
 
-  // Only operate on items that are active AND allowed for this school
+  // Tenant-scoped: verify deliveryDate and school belong to this restaurant
+  const verifiedDate = await prisma.deliveryDate.findFirst({
+    where: { id: deliveryDateId, school: { restaurantId: restaurant.id, id: schoolId } },
+    select: { id: true },
+  });
+  if (!verifiedDate) throw new Error("Delivery date not found");
+
+  // Only operate on items that are active AND allowed for this school AND in this restaurant
   const allActiveMenuItems = await prisma.menuItem.findMany({
-    where: { isActive: true },
+    where: { restaurantId: restaurant.id, isActive: true },
     select: { id: true, schoolRestrictions: { select: { schoolId: true } } },
   });
   const activeMenuItems = allActiveMenuItems.filter(

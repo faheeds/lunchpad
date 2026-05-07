@@ -1,6 +1,8 @@
 import { OrderStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { mapOrderToLabelRows } from "@/lib/pdf/labels";
+import { requireRestaurant } from "@/lib/restaurant";
+import { requireAdminRole } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +11,13 @@ export default async function LabelsPrintPage({
 }: {
   searchParams: Promise<{ deliveryDateId?: string }>;
 }) {
+  await requireAdminRole("STAFF");
+  const restaurant = await requireRestaurant();
   const params = await searchParams;
+  // Tenant-scoped: only show orders for the current restaurant.
   const orders = await prisma.order.findMany({
     where: {
+      restaurantId: restaurant.id,
       deliveryDateId: params.deliveryDateId ?? undefined,
       status: OrderStatus.PAID,
       archivedAt: null

@@ -69,12 +69,14 @@ async function createMenuItem(formData: FormData) {
 
 async function createDeliveryDate(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
   const schoolId = String(formData.get("schoolId") || "");
   const deliveryDateStr = String(formData.get("deliveryDate") || "");
   const cutoffAtStr = String(formData.get("cutoffAt") || "");
   if (!schoolId || !deliveryDateStr || !cutoffAtStr) return;
 
-  const school = await prisma.school.findUnique({ where: { id: schoolId } });
+  // Tenant-scoped: school must belong to this restaurant
+  const school = await prisma.school.findFirst({ where: { id: schoolId, restaurantId: restaurant.id } });
   if (!school) return;
 
   await prisma.deliveryDate.create({

@@ -1,7 +1,7 @@
 /**
  * GET /api/mobile/native/delivery-dates
  *
- * Returns open delivery dates (Mon–Thu only) with menu items for each date.
+ * Returns all open delivery dates (regardless of weekday) with menu items.
  * Public — no auth required. Called immediately after school code entry.
  *
  * Response: DeliveryDateWithMenu[]
@@ -13,15 +13,6 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
 
 export { corsOptions as OPTIONS };
-
-function getWeekday(date: Date, timezone: string): number {
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    weekday: "short",
-  });
-  const day = fmt.format(date);
-  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(day);
-}
 
 export async function GET() {
   try {
@@ -56,11 +47,8 @@ export async function GET() {
       orderBy: [{ deliveryDate: "asc" }, { school: { name: "asc" } }],
     });
 
-    // Filter Mon–Thu
-    const dates = allDates.filter((d) => {
-      const wd = getWeekday(d.deliveryDate, d.school.timezone);
-      return wd >= 1 && wd <= 4;
-    });
+    // All weekdays accepted — restaurants control delivery days by what they schedule.
+    const dates = allDates;
 
     const result = dates.map((d) => {
       // Build sold-out set

@@ -100,11 +100,20 @@ export async function POST(request: Request) {
             String(session.payment_intent || ""),
             session.amount_total ?? null
           );
-          for (const orderId of result.createdOrderIds) {
-            try {
-              await sendOrderConfirmationEmail(orderId);
-            } catch {
-              // Email failures are logged and can be retried in admin.
+          // All orders in a weekly batch belong to the same restaurant — pull from one.
+          if (result.createdOrderIds.length > 0) {
+            const sample = await prisma.order.findUnique({
+              where: { id: result.createdOrderIds[0] },
+              select: { restaurantId: true },
+            });
+            if (sample) {
+              for (const orderId of result.createdOrderIds) {
+                try {
+                  await sendOrderConfirmationEmail(orderId, sample.restaurantId);
+                } catch {
+                  // Email failures are logged and can be retried in admin.
+                }
+              }
             }
           }
         } else {
@@ -114,12 +123,12 @@ export async function POST(request: Request) {
             session.amount_total ?? null
           );
           try {
-            await sendOrderConfirmationEmail(order.id);
+            await sendOrderConfirmationEmail(order.id, order.restaurantId);
           } catch {
             // Email failures are logged and can be retried in admin.
           }
           // Schedule a reminder 24h before cutoff - best-effort, never throws.
-          scheduleCutoffReminderEmail(order.id).catch(() => {});
+          scheduleCutoffReminderEmail(order.id, order.restaurantId).catch(() => {});
         }
       }
     }

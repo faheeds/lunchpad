@@ -25,7 +25,7 @@ export async function POST(
     const order = await cancelOrderWithRefund(orderId, parentUserId);
 
     // Best-effort cancellation email — don't let email failure block the response.
-    sendCancellationEmail(order.id).catch(() => {});
+    sendCancellationEmail(order.id, order.restaurantId).catch(() => {});
 
     return NextResponse.json({ ok: true, orderId: order.id });
   } catch (error) {

@@ -36,9 +36,9 @@ export function buildConfiguredCutoff(deliveryDateISO: string, timezone: string,
   );
 }
 
-export async function getOrderFormData() {
+export async function getOrderFormData(restaurantId: string) {
   const schools = await prisma.school.findMany({
-    where: { isActive: true },
+    where: { restaurantId, isActive: true },
     include: {
       deliveryDates: {
         where: { orderingOpen: true },
@@ -49,7 +49,7 @@ export async function getOrderFormData() {
   });
 
   const menuItems = await prisma.menuItem.findMany({
-    where: { isActive: true },
+    where: { restaurantId, isActive: true },
     include: {
       options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] }
     },
@@ -286,16 +286,16 @@ export async function markOrderPaidByCheckoutSession(
 }
 
 export async function listOrders(filters: {
-  restaurantId?: string;
+  /** REQUIRED — multi-tenant scoping. Pass restaurant.id from requireRestaurant(). */
+  restaurantId: string;
   deliveryDateId?: string;
   schoolId?: string;
   schoolIds?: string[];
   status?: string;
   archived?: string;
 }) {
-  const where: Prisma.OrderWhereInput = {};
+  const where: Prisma.OrderWhereInput = { restaurantId: filters.restaurantId };
 
-  if (filters.restaurantId) where.restaurantId = filters.restaurantId;
   if (filters.deliveryDateId) where.deliveryDateId = filters.deliveryDateId;
   if (filters.schoolIds?.length) {
     where.schoolId = { in: filters.schoolIds };
@@ -333,6 +333,8 @@ export async function listOrders(filters: {
 
 export async function updateOrderBeforeCutoff(args: {
   orderId: string;
+  /** REQUIRED — verifies the order belongs to the calling parent. */
+  parentUserId: string;
   teacherName?: string;
   classroom?: string;
   additions: string[];
@@ -341,8 +343,9 @@ export async function updateOrderBeforeCutoff(args: {
   dietaryNotes?: string;
   specialInstructions?: string;
 }) {
-  const order = await prisma.order.findUnique({
-    where: { id: args.orderId },
+  // Tenant-scoped: only the order's owning parent can modify it.
+  const order = await prisma.order.findFirst({
+    where: { id: args.orderId, parentUserId: args.parentUserId },
     include: {
       school: true,
       deliveryDate: true,
@@ -432,6 +435,8 @@ export async function updateOrderBeforeCutoff(args: {
  */
 export async function updateOrderAsAdmin(args: {
   orderId: string;
+  /** REQUIRED — multi-tenant scoping. The admin's restaurantId. */
+  restaurantId: string;
   teacherName?: string;
   classroom?: string;
   additions: string[];
@@ -441,8 +446,9 @@ export async function updateOrderAsAdmin(args: {
   specialInstructions?: string;
   adminNote?: string;
 }) {
-  const order = await prisma.order.findUnique({
-    where: { id: args.orderId },
+  // Tenant-scoped: order must belong to the admin's restaurant.
+  const order = await prisma.order.findFirst({
+    where: { id: args.orderId, restaurantId: args.restaurantId },
     include: {
       school: true,
       deliveryDate: true,

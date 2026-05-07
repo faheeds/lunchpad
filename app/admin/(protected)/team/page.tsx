@@ -44,7 +44,7 @@ async function removeAdmin(formData: FormData) {
 
 async function changePassword(formData: FormData) {
   "use server";
-  await requireRestaurant();
+  const restaurant = await requireRestaurant();
   const session = await auth();
   const adminId = (session?.user as { adminUserId?: string } | undefined)?.adminUserId;
   if (!adminId) throw new Error("Not authenticated");
@@ -57,7 +57,8 @@ async function changePassword(formData: FormData) {
   if (newPassword.length < 8) throw new Error("New password must be at least 8 characters");
   if (newPassword !== confirmPassword) throw new Error("Passwords do not match");
 
-  const admin = await prisma.adminUser.findUnique({ where: { id: adminId } });
+  // Tenant-scoped: belt-and-braces, since adminId is from the session anyway
+  const admin = await prisma.adminUser.findFirst({ where: { id: adminId, restaurantId: restaurant.id } });
   if (!admin) throw new Error("User not found");
 
   const valid = await bcrypt.compare(currentPassword, admin.passwordHash);

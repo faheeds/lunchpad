@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { updateOrderAsAdmin } from "@/lib/orders";
 import { sendOrderModifiedEmail } from "@/lib/email/service";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { requireRestaurant } from "@/lib/restaurant";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 
@@ -23,9 +24,11 @@ export default async function AdminOrderDetailPage({
   params: Promise<{ orderId: string }>;
 }) {
   const { orderId } = await params;
+  const restaurant = await requireRestaurant();
 
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
+  // Tenant-scoped: only return the order if it belongs to this admin's restaurant.
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId: restaurant.id },
     include: {
       school: true,
       deliveryDate: true,
@@ -48,6 +51,7 @@ export default async function AdminOrderDetailPage({
     await requireAdminRole("MANAGER");
     await updateOrderAsAdmin({
       orderId,
+      restaurantId: restaurant.id,
       teacherName: String(formData.get("teacherName") || ""),
       classroom: String(formData.get("classroom") || ""),
       additions: formData.getAll("additions").map(String),
@@ -57,7 +61,7 @@ export default async function AdminOrderDetailPage({
       adminNote: String(formData.get("adminNote") || "") || undefined,
     });
     // Send notification email to parent (best-effort — never block the save)
-    sendOrderModifiedEmail(orderId).catch(() => {});
+    sendOrderModifiedEmail(orderId, order.restaurantId).catch(() => {});
     revalidatePath(`/admin/orders/${orderId}`);
     revalidatePath("/admin/orders");
     redirect("/admin/orders");

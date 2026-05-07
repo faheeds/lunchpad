@@ -52,7 +52,7 @@ export default async function CheckoutSuccessPage({
           session.amount_total ?? null
         );
         if (!order.confirmationSentAt) {
-          try { await sendOrderConfirmationEmail(order.id); } catch {}
+          try { await sendOrderConfirmationEmail(order.id, order.restaurantId); } catch {}
         }
       }
     } catch {}
@@ -68,8 +68,17 @@ export default async function CheckoutSuccessPage({
           session.amount_total ?? null
         );
         batch = result.batch;
-        for (const orderId of result.createdOrderIds) {
-          try { await sendOrderConfirmationEmail(orderId); } catch {}
+        // All orders in a weekly batch belong to the same restaurant
+        if (result.createdOrderIds.length > 0) {
+          const sample = await prisma.order.findUnique({
+            where: { id: result.createdOrderIds[0] },
+            select: { restaurantId: true },
+          });
+          if (sample) {
+            for (const orderId of result.createdOrderIds) {
+              try { await sendOrderConfirmationEmail(orderId, sample.restaurantId); } catch {}
+            }
+          }
         }
       }
     } catch {}

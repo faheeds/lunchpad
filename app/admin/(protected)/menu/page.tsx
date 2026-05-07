@@ -46,18 +46,33 @@ async function createMenuOption(formData: FormData) {
 
 async function toggleItemActive(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
   const id = String(formData.get("id"));
-  const current = await prisma.menuItem.findUnique({ where: { id }, select: { isActive: true } });
-  await prisma.menuItem.update({ where: { id }, data: { isActive: !current?.isActive } });
+  // Tenant-scoped: verify item belongs to this restaurant
+  const current = await prisma.menuItem.findFirst({
+    where: { id, restaurantId: restaurant.id },
+    select: { isActive: true },
+  });
+  if (!current) throw new Error("Item not found");
+  await prisma.menuItem.update({ where: { id }, data: { isActive: !current.isActive } });
   revalidatePath("/admin/menu");
 }
 
 async function updateItemPrice(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
   const id = String(formData.get("id"));
   const dollars = parseFloat(String(formData.get("price") || "0"));
   if (isNaN(dollars) || dollars < 0) throw new Error("Invalid price");
   const basePriceCents = Math.round(dollars * 100);
+  // Tenant-scoped
+  const item = await prisma.menuItem.findFirst({
+    where: { id, restaurantId: restaurant.id },
+    select: { id: true },
+  });
+  if (!item) throw new Error("Item not found");
   await prisma.menuItem.update({ where: { id }, data: { basePriceCents } });
   revalidatePath("/admin/menu");
 }
@@ -96,16 +111,32 @@ async function updateMenuOption(formData: FormData) {
 
 async function updateItemDescription(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
   const id = String(formData.get("id"));
   const description = String(formData.get("description") || "").trim() || null;
+  // Tenant-scoped
+  const item = await prisma.menuItem.findFirst({
+    where: { id, restaurantId: restaurant.id },
+    select: { id: true },
+  });
+  if (!item) throw new Error("Item not found");
   await prisma.menuItem.update({ where: { id }, data: { description } });
   revalidatePath("/admin/menu");
 }
 
 async function updateItemImageUrl(formData: FormData) {
   "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
   const id = String(formData.get("id"));
   const imageUrl = String(formData.get("imageUrl") || "").trim() || null;
+  // Tenant-scoped
+  const item = await prisma.menuItem.findFirst({
+    where: { id, restaurantId: restaurant.id },
+    select: { id: true },
+  });
+  if (!item) throw new Error("Item not found");
   await prisma.menuItem.update({ where: { id }, data: { imageUrl } });
   revalidatePath("/admin/menu");
   revalidatePath("/menu");

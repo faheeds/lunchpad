@@ -30,6 +30,7 @@ export async function POST(
   try {
     const order = await updateOrderBeforeCutoff({
       orderId,
+      parentUserId,
       additions: body.additions ?? [],
       removals: body.removals ?? [],
       allergyNotes: body.allergyNotes,
