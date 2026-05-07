@@ -20,8 +20,11 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const showUpgrade = !hasActiveSubscription || subscriptionStatus === "TRIAL" || subscriptionStatus === "CANCELLED";
-  const availablePlans = UPGRADE_PLANS.filter((p) => p.id !== currentPlan || !hasActiveSubscription);
+  // Always show plan options — active users can upgrade/downgrade themselves.
+  // Excludes the plan they're currently on (no point selling them what they have).
+  const showUpgrade = subscriptionStatus !== "PAST_DUE";
+  const availablePlans = UPGRADE_PLANS.filter((p) => p.id !== currentPlan);
+  const isActiveSubscriber = hasActiveSubscription && subscriptionStatus === "ACTIVE";
 
   async function handleUpgrade(plan: string) {
     setLoading(true);
@@ -64,10 +67,12 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
       border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
     }}>
       <p style={{ fontSize: 15, fontWeight: 700, color: "#1c0505", marginBottom: 4 }}>
-        Upgrade your plan
+        {isActiveSubscriber ? "Change your plan" : "Upgrade your plan"}
       </p>
       <p style={{ fontSize: 13, color: "#78716c", marginBottom: 20 }}>
-        Choose a plan to unlock full access. You can change plans anytime.
+        {isActiveSubscriber
+          ? "Switch plans anytime. Stripe will prorate the difference automatically."
+          : "Choose a plan to unlock full access. You can change plans anytime."}
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
@@ -90,7 +95,7 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
                 border: "none", cursor: loading ? "not-allowed" : "pointer",
               }}
             >
-              {loading ? "..." : "Select"}
+              {loading ? "..." : (isActiveSubscriber ? "Switch to" : "Select")}
             </button>
           </div>
         ))}
