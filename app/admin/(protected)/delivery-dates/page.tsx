@@ -28,7 +28,7 @@ async function createDeliveryDate(formData: FormData) {
   });
   if (!school) return;
 
-  await prisma.deliveryDate.create({
+  const newDeliveryDate = await prisma.deliveryDate.create({
     data: {
       schoolId,
       deliveryDate: fromZonedTime(`${deliveryDateStr} 11:00:00`, school.timezone),
@@ -37,6 +37,31 @@ async function createDeliveryDate(formData: FormData) {
       notes,
     },
   });
+
+  // Auto-attach all active menu items to this delivery date so the customer
+  // ordering page has options out of the box. Admins can un-check items they
+  // don't want available on this date via the existing attach-menu-items UI.
+  const activeMenuItems = await prisma.menuItem.findMany({
+    where: { restaurantId: restaurant.id, isActive: true },
+    select: { id: true, schoolRestrictions: { select: { schoolId: true } } },
+  });
+  const eligibleForThisSchool = activeMenuItems.filter(
+    (item) =>
+      item.schoolRestrictions.length === 0 ||
+      item.schoolRestrictions.some((r) => r.schoolId === schoolId)
+  );
+  if (eligibleForThisSchool.length > 0) {
+    await prisma.deliveryMenuItem.createMany({
+      data: eligibleForThisSchool.map((m) => ({
+        deliveryDateId: newDeliveryDate.id,
+        menuItemId: m.id,
+        schoolId,
+        isAvailable: true,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
   revalidatePath("/admin/delivery-dates");
 }
 

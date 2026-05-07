@@ -79,7 +79,7 @@ async function createDeliveryDate(formData: FormData) {
   const school = await prisma.school.findFirst({ where: { id: schoolId, restaurantId: restaurant.id } });
   if (!school) return;
 
-  await prisma.deliveryDate.create({
+  const newDeliveryDate = await prisma.deliveryDate.create({
     data: {
       schoolId,
       deliveryDate: fromZonedTime(`${deliveryDateStr} 11:00:00`, school.timezone),
@@ -87,6 +87,29 @@ async function createDeliveryDate(formData: FormData) {
       orderingOpen: true,
     },
   });
+
+  // Auto-attach all active menu items so the date is orderable immediately.
+  const activeMenuItems = await prisma.menuItem.findMany({
+    where: { restaurantId: restaurant.id, isActive: true },
+    select: { id: true, schoolRestrictions: { select: { schoolId: true } } },
+  });
+  const eligibleForThisSchool = activeMenuItems.filter(
+    (item) =>
+      item.schoolRestrictions.length === 0 ||
+      item.schoolRestrictions.some((r) => r.schoolId === schoolId)
+  );
+  if (eligibleForThisSchool.length > 0) {
+    await prisma.deliveryMenuItem.createMany({
+      data: eligibleForThisSchool.map((m) => ({
+        deliveryDateId: newDeliveryDate.id,
+        menuItemId: m.id,
+        schoolId,
+        isAvailable: true,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
   revalidatePath("/admin/setup");
 }
 
