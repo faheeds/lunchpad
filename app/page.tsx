@@ -414,7 +414,7 @@ export default async function HomePage() {
           borderRadius: "50%", background: "rgba(59,130,246,0.08)", filter: "blur(60px)",
         }} />
 
-        <div style={{ position: "relative", maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ position: "relative", maxWidth: 1100, margin: "0 auto" }}>
           {/* Badge */}
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 6,
@@ -572,7 +572,7 @@ export default async function HomePage() {
         borderBottom: "1px solid #1e2d3d",
       }}>
         <div style={{
-          maxWidth: 640, margin: "0 auto",
+          maxWidth: 1100, margin: "0 auto",
           display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8,
         }}>
           {[
@@ -594,7 +594,7 @@ export default async function HomePage() {
 
       {/* ── Features ────────────────────────────────────────────────── */}
       <section style={{ padding: "64px 24px", background: "#f8f9fb" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <span style={{
               fontSize: 11, fontWeight: 700, color: "#c41230",
@@ -639,7 +639,7 @@ export default async function HomePage() {
 
       {/* ── How it works ────────────────────────────────────────────── */}
       <section id="how-it-works" style={{ padding: "64px 24px", background: "white" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <span style={{
               fontSize: 11, fontWeight: 700, color: "#c41230",
@@ -690,7 +690,7 @@ export default async function HomePage() {
 
       {/* ── Pricing ─────────────────────────────────────────────────── */}
       <section style={{ padding: "64px 24px", background: "#f8f9fb" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <span style={{
               fontSize: 11, fontWeight: 700, color: "#c41230",
