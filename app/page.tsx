@@ -31,7 +31,7 @@ const platformFeatures = [
       </svg>
     ),
     title: "Cutoff Scheduling",
-    body: "Set ordering deadlines per delivery date. Parents get reminder emails 24h before close.",
+    body: "Set ordering deadlines per delivery date. Customers get reminder emails 24h before close.",
   },
   {
     icon: (
@@ -62,8 +62,8 @@ const platformFeatures = [
         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
     ),
-    title: "Multi-School Support",
-    body: "Serve any number of schools from a single dashboard. Each gets its own delivery schedule.",
+    title: "Multi-Location Support",
+    body: "Serve any number of locations from a single dashboard. Each gets its own delivery schedule.",
   },
   {
     icon: (
@@ -86,8 +86,8 @@ const howItWorks = [
   },
   {
     step: "02",
-    title: "Invite your schools",
-    body: "Share your branded ordering link with parent communities. Parents sign up, add their kids, and order in seconds.",
+    title: "Invite your customers",
+    body: "Share your branded ordering link with parents, employees, or whoever you serve. They sign up and order in seconds.",
   },
   {
     step: "03",
@@ -102,7 +102,7 @@ const pricingPlans = [
     price: "$49",
     period: "/mo",
     description: "Perfect for single-location operations just getting started.",
-    features: ["Up to 2 schools", "Unlimited menu items", "Stripe payouts", "Email confirmations", "Order dashboard"],
+    features: ["Up to 2 locations", "Unlimited menu items", "Stripe payouts", "Email confirmations", "Order dashboard"],
     cta: "Start free trial",
     featured: false,
   },
@@ -110,8 +110,8 @@ const pricingPlans = [
     name: "Growth",
     price: "$149",
     period: "/mo",
-    description: "For growing operators serving multiple school communities.",
-    features: ["Up to 10 schools", "Weekly batch checkout", "Cutoff reminders", "Priority support", "Everything in Starter"],
+    description: "For growing operators serving multiple locations.",
+    features: ["Up to 10 locations", "Weekly batch checkout", "Cutoff reminders", "Priority support", "Everything in Starter"],
     cta: "Start free trial",
     featured: true,
   },
@@ -120,7 +120,7 @@ const pricingPlans = [
     price: "$349",
     period: "/mo",
     description: "Enterprise-grade for large districts and multi-brand operators.",
-    features: ["Unlimited schools", "Custom branding", "Dedicated onboarding", "SLA support", "Everything in Growth"],
+    features: ["Unlimited locations", "Custom branding", "Dedicated onboarding", "SLA support", "Everything in Growth"],
     cta: "Contact us",
     featured: false,
   },
@@ -129,7 +129,7 @@ const pricingPlans = [
 // ─── Restaurant ordering page steps ──────────────────────────────────────────
 
 const orderSteps = [
-  { n: "1", title: "Pick school & date", body: "Select your child's school and an available delivery date. Ordering closes at 9 PM the night before." },
+  { n: "1", title: "Pick location & date", body: "Select a location and an available delivery date. Ordering closes at 9 PM the night before." },
   { n: "2", title: "Build your order",   body: "Choose from our full menu — burgers, chicken, salads, sides & more. Full customization available." },
   { n: "3", title: "Pay & confirm",      body: "Secure Stripe checkout. Confirmation email sent right away." },
 ];
@@ -427,7 +427,7 @@ export default async function HomePage() {
           }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#ef4444" }} />
             <span style={{ fontSize: 11, fontWeight: 700, color: "#fca5a5", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              School lunch, fully automated
+              By an operator · For operators
             </span>
           </div>
 
@@ -442,8 +442,9 @@ export default async function HomePage() {
           >
             The platform built for
             <br />
-            <span style={{ color: "#f87171" }}>school lunch</span>{" "}
-            <span style={{ color: "rgba(255,255,255,0.5)" }}>operators</span>
+            <span style={{ color: "#f87171" }}>lunch operators.</span>
+            <br />
+            <span style={{ color: "rgba(255,255,255,0.5)" }}>By one.</span>
           </h1>
 
           <p
@@ -453,7 +454,7 @@ export default async function HomePage() {
               marginBottom: 32, maxWidth: 520,
             }}
           >
-            LunchPad handles ordering, payments, and delivery scheduling so you can focus on the food. Set up in a day, not a semester.
+            LunchPad handles ordering, payments, and delivery scheduling so you can focus on the food. Schools, offices, anyone running a daily lunch operation. Set up in a day, not a season.
           </p>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -511,7 +512,7 @@ export default async function HomePage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
                 {[
                   { label: "Today's Orders", value: "47", delta: "+12 vs last week" },
-                  { label: "Revenue", value: "$681", delta: "3 schools active" },
+                  { label: "Revenue", value: "$681", delta: "3 locations active" },
                   { label: "Pending Cutoff", value: "9h 22m", delta: "Closes tonight" },
                 ].map((stat) => (
                   <div key={stat.label} style={{
@@ -589,7 +590,7 @@ export default async function HomePage() {
         }}>
           {[
             { value: "10,000+", label: "Orders processed" },
-            { value: "200+",    label: "Schools served" },
+            { value: "200+",    label: "Locations served" },
             { value: "50+",     label: "Restaurants" },
           ].map((stat) => (
             <div key={stat.label} style={{ textAlign: "center" }}>
@@ -615,10 +616,10 @@ export default async function HomePage() {
               Everything you need
             </span>
             <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f1923", marginTop: 8, marginBottom: 12, letterSpacing: "-0.02em" }}>
-              Built for operators, loved by parents
+              Built for operators, loved by their customers
             </h2>
             <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, maxWidth: 440, margin: "0 auto" }}>
-              From your first school to your fiftieth, LunchPad scales with your business.
+              From your first location to your fiftieth, LunchPad scales with your business.
             </p>
           </div>
 
@@ -805,7 +806,7 @@ export default async function HomePage() {
             Ready to modernize your lunch program?
           </h2>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.58)", lineHeight: 1.65, marginBottom: 28 }}>
-            Join the operators already using LunchPad to save time, eliminate payment headaches, and serve their school communities better.
+            Join the operators already using LunchPad to save time, eliminate payment headaches, and serve their customers better.
           </p>
           <Link href="/signup" style={{
             display: "inline-block", padding: "15px 36px", borderRadius: 10,

@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
       : { default: "LunchPad", template: "%s | LunchPad" },
     description: restaurant
       ? `Order lunch from ${restaurant.name} — powered by LunchPad.`
-      : "LunchPad — school lunch ordering made simple for restaurants and parents.",
+      : "LunchPad — lunch ordering software built for operators. Schools, offices, anywhere lunch is delivered daily.",
     icons: {
       icon: [
         { url: "/favicon.svg", type: "image/svg+xml" },
