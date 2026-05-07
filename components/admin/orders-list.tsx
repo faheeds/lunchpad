@@ -211,8 +211,11 @@ export function OrdersList({ orders }: { orders: OrderListItem[] }) {
                 </p>
               </div>
 
-              {/* Items preview */}
-              <p style={{ fontSize: 11, color: "#64748b", flexShrink: 0, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {/* Items preview — narrow on mobile, expands on desktop */}
+              <p
+                className="hidden sm:block max-w-[140px] lg:max-w-[260px] xl:max-w-[400px]"
+                style={{ fontSize: 11, color: "#64748b", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              >
                 {order.items.map((i) => i.itemNameSnapshot).join(", ")}
               </p>
 
@@ -238,7 +241,7 @@ export function OrdersList({ orders }: { orders: OrderListItem[] }) {
             {/* Expanded detail */}
             {isOpen && (
               <div style={{ borderTop: "1px solid #f8fafc", padding: "10px 14px 12px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-2">
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#475569" }}>
                     {addons.length > 0 && (
                       <p><span style={{ color: "#94a3b8", fontWeight: 600 }}>Add-ons: </span>{formatList(addons)}</p>

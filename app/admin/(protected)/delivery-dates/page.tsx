@@ -236,7 +236,7 @@ export default async function DeliveryDatesPage() {
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-2">
             Upcoming ({upcoming.length})
           </p>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {upcoming.map((date) => {
               const tz              = date.school.timezone;
               const orderCount      = date._count.orders;

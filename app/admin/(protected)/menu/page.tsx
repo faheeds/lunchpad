@@ -339,7 +339,7 @@ export default async function AdminMenuPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{cat}</p>
               <span className="text-[10px] text-slate-300">{catItems.length} items</span>
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
               {catItems.map((item) => {
                 const addons = item.options.filter((o) => o.optionType === "ADD_ON");
                 const removals = item.options.filter((o) => o.optionType === "REMOVAL");

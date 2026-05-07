@@ -129,7 +129,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* ── Stat tiles ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: "Orders",  sub: "today",     value: String(todayOrderCount),       color: "#c41230", bg: "#fff1f3", border: "#fecdd3" },
           { label: "Orders",  sub: "this week",  value: String(weekOrderCount),         color: "#c41230", bg: "#fff1f3", border: "#fecdd3" },
@@ -201,6 +201,8 @@ export default async function AdminDashboardPage() {
         </div>
       )}
 
+      {/* ── Two-up layout on desktop: schedule + recent orders ─────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* ── Upcoming schedule ─────────────────────────────────────── */}
       <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
@@ -287,6 +289,7 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       )}
+      </div>
 
       {/* ── Quick actions ─────────────────────────────────────────── */}
       <div>
