@@ -622,7 +622,7 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
             {platformFeatures.map((feature) => (
               <div key={feature.title} style={{
                 background: "white", borderRadius: 14, padding: "20px",
@@ -716,7 +716,7 @@ export default async function HomePage() {
             <p style={{ fontSize: 13, color: "#6b7280" }}>No credit card required to start. Cancel anytime.</p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 items-stretch">
             {pricingPlans.map((plan) => (
               <div key={plan.name} style={{
                 background: plan.featured ? "linear-gradient(135deg, #0f1923 0%, #1a2d42 100%)" : "white",
