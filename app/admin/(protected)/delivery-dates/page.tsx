@@ -288,10 +288,10 @@ export default async function DeliveryDatesPage() {
         <form action={createDeliveryDate} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">School</label>
+              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location</label>
               <select name="schoolId" required
                 className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
-                <option value="">Select school…</option>
+                <option value="">Select location…</option>
                 {schools.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}

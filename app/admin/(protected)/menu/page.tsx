@@ -504,25 +504,25 @@ export default async function AdminMenuPage() {
                         </button>
                       </form>
 
-                      {/* School availability */}
+                      {/* Location availability */}
                       {schools.length > 1 && (
                         <div>
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                            School availability
+                            Location availability
                           </p>
                           {item.schoolRestrictions.length === 0 ? (
                             <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-2">
-                              ✓ Available to all schools
+                              ✓ Available at all locations
                             </p>
                           ) : (
                             <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-2">
-                              ⚠ Restricted to {item.schoolRestrictions.length} school{item.schoolRestrictions.length !== 1 ? "s" : ""}
+                              ⚠ Restricted to {item.schoolRestrictions.length} location{item.schoolRestrictions.length !== 1 ? "s" : ""}
                             </p>
                           )}
                           <form action={updateSchoolRestrictions} className="space-y-1.5">
                             <input type="hidden" name="menuItemId" value={item.id} />
                             <p className="text-[11px] text-slate-400 mb-1.5">
-                              Check schools that should see this item. Leave all unchecked = visible to everyone.
+                              Check the locations that should see this item. Leave all unchecked = visible at every location.
                             </p>
                             {schools.map((school) => {
                               const isChecked = item.schoolRestrictions.some((r) => r.schoolId === school.id);
@@ -534,7 +534,16 @@ export default async function AdminMenuPage() {
                                     defaultChecked={isChecked}
                                     className="rounded border-slate-300 text-brand-700"
                                   />
-                                  <span className="text-[12px] text-ink">{school.name}</span>
+                                  <span className="text-[12px] text-ink">
+                                    {school.name}
+                                    <span className="text-[10px] uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded-full"
+                                      style={{
+                                        background: school.locationType === "OFFICE" ? "#eff6ff" : "#fff1f3",
+                                        color: school.locationType === "OFFICE" ? "#1e40af" : "#9f1239",
+                                      }}>
+                                      {school.locationType === "OFFICE" ? "Office" : "School"}
+                                    </span>
+                                  </span>
                                 </label>
                               );
                             })}

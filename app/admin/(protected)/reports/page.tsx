@@ -146,10 +146,10 @@ export default async function AdminReportsPage({
       <form className="rounded-[14px] border border-slate-100 bg-white p-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">School</label>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Location</label>
             <select name="schoolIds" defaultValue={selectedSchoolIds[0] ?? ""}
               className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
-              <option value="">All schools</option>
+              <option value="">All locations</option>
               {schools.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -252,7 +252,7 @@ export default async function AdminReportsPage({
       {reports.schoolBreakdown.length > 0 && (
         <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-50">
-            <p className="text-[13px] font-semibold text-ink">By school</p>
+            <p className="text-[13px] font-semibold text-ink">By location</p>
           </div>
           <div className="divide-y divide-slate-50">
             {reports.schoolBreakdown.map((school) => (

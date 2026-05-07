@@ -8,6 +8,7 @@ import { requireAdminRole } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
+import { getLabels } from "@/lib/location-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function AdminOrderDetailPage({
   const now = new Date();
   const cutoffPassed = now >= order.deliveryDate.cutoffAt;
   const cutoffStr = formatInTimeZone(order.deliveryDate.cutoffAt, order.school.timezone, "MMM d 'at' h:mm a zzz");
+  const labels = getLabels(order.school.locationType);
 
   async function saveOrder(formData: FormData) {
     "use server";
@@ -111,7 +113,7 @@ export default async function AdminOrderDetailPage({
           <div>
             <p className="text-[13px] font-semibold text-ink">{order.student.studentName}</p>
             <p className="text-[11px] text-slate-500">
-              Grade {order.student.grade} &middot; {order.school.name}
+              {labels.showGrade && order.student.grade ? `${labels.grade} ${order.student.grade} · ` : ""}{order.school.name}
             </p>
           </div>
           <span style={{
@@ -135,7 +137,7 @@ export default async function AdminOrderDetailPage({
           <p className="text-[16px] font-semibold text-ink">{formatCurrency(order.totalCents)}</p>
         </div>
         <div className="px-4 py-3">
-          <p className="text-[11px] text-slate-500 mb-1">Parent</p>
+          <p className="text-[11px] text-slate-500 mb-1">{labels.orderer}</p>
           <p className="text-[13px] text-ink">{order.parentName}</p>
           <p className="text-[11px] text-slate-500">{order.parentEmail}</p>
         </div>
@@ -154,16 +156,20 @@ export default async function AdminOrderDetailPage({
           </div>
 
           <div className="px-4 py-3 space-y-3">
-            {/* Teacher / classroom */}
+            {/* Supervisor / group */}
             <div className="grid grid-cols-2 gap-2">
+              {labels.showSupervisor && (
+                <div>
+                  <label className="text-[11px] text-slate-500 mb-1 block">{labels.supervisor}</label>
+                  <input name="teacherName" defaultValue={order.student.teacherName ?? ""}
+                    placeholder={labels.supervisorPlaceholder}
+                    className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                </div>
+              )}
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Teacher</label>
-                <input name="teacherName" defaultValue={order.student.teacherName ?? ""}
-                  className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
-              </div>
-              <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Classroom</label>
+                <label className="text-[11px] text-slate-500 mb-1 block">{labels.group}</label>
                 <input name="classroom" defaultValue={order.student.classroom ?? ""}
+                  placeholder={labels.groupPlaceholder}
                   className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
               </div>
             </div>
