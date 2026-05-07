@@ -94,7 +94,25 @@ export async function POST(request: Request) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.id) {
-        if (session.metadata?.checkoutType === "weekly_batch") {
+        if (session.metadata?.checkoutType === "subscription") {
+          // Restaurant SaaS subscription — activate the plan on the Restaurant row.
+          const restaurantId = session.metadata.restaurantId;
+          const plan = session.metadata.plan as "STARTER" | "GROWTH" | "SCALE" | undefined;
+          const stripeSubscriptionId = typeof session.subscription === "string"
+            ? session.subscription
+            : session.subscription?.id;
+          if (restaurantId && plan && stripeSubscriptionId) {
+            await prisma.restaurant.update({
+              where: { id: restaurantId },
+              data: {
+                plan,
+                subscriptionStatus: "ACTIVE",
+                stripeSubscriptionId,
+                trialEndsAt: null,
+              },
+            });
+          }
+        } else if (session.metadata?.checkoutType === "weekly_batch") {
           const result = await markWeeklyBatchPaidByCheckoutSession(
             session.id,
             String(session.payment_intent || ""),

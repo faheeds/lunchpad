@@ -59,9 +59,9 @@ export async function POST(request: Request) {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${env.APP_BASE_URL}/admin/subscription?success=1`,
     cancel_url: `${env.APP_BASE_URL}/admin/subscription`,
-    metadata: { restaurantId: full.id, plan: body.plan },
+    metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
     subscription_data: {
-      metadata: { restaurantId: full.id, plan: body.plan },
+      metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
     },
   });
 
