@@ -186,24 +186,13 @@ async function markTestOrderPlaced() {
   redirect("/admin/onboarding?step=9");
 }
 
-async function markShareAcked() {
+async function launchAndComplete() {
   "use server";
   const restaurant = await requireRestaurant();
   await requireAdminRole("OWNER");
   await prisma.restaurant.update({
     where: { id: restaurant.id },
-    data: { onboardingShareAcked: true },
-  });
-  redirect("/admin/onboarding?step=11");
-}
-
-async function markOnboardingComplete() {
-  "use server";
-  const restaurant = await requireRestaurant();
-  await requireAdminRole("OWNER");
-  await prisma.restaurant.update({
-    where: { id: restaurant.id },
-    data: { onboardingComplete: true },
+    data: { onboardingShareAcked: true, onboardingComplete: true },
   });
   redirect("/admin/dashboard");
 }
@@ -266,7 +255,7 @@ export default async function OnboardingPage({
     }),
   ]);
 
-  // Step status detection
+  // Step status detection (10 steps total — share + launch are one combined final step)
   const status = {
     1: restaurant.operatorType ? "done" : "todo",
     2: restaurant.logoUrl || restaurant.heroImageUrl ? "done" : "todo",
@@ -277,8 +266,7 @@ export default async function OnboardingPage({
     7: teamCount > 1 ? "done" : "todo",
     8: restaurant.testOrderPlacedAt ? "done" : "todo",
     9: restaurant.kitchenSheetSendHour !== null && restaurant.kitchenSheetSendHour !== undefined ? "done" : "todo",
-    10: restaurant.onboardingShareAcked ? "done" : "todo",
-    11: restaurant.onboardingComplete ? "done" : "todo",
+    10: restaurant.onboardingComplete ? "done" : "todo",
   } as const;
 
   const orderingUrl = `https://${restaurant.slug}.lunchpad.us`;
@@ -286,9 +274,9 @@ export default async function OnboardingPage({
   // Determine active step: explicit ?step=, else first non-done step.
   const requestedStep = params.step ? parseInt(params.step, 10) : NaN;
   const firstTodoStep =
-    (Object.entries(status).find(([, s]) => s !== "done")?.[0] as string | undefined) ?? "11";
+    (Object.entries(status).find(([, s]) => s !== "done")?.[0] as string | undefined) ?? "10";
   const activeStep =
-    requestedStep && requestedStep >= 1 && requestedStep <= 11
+    requestedStep && requestedStep >= 1 && requestedStep <= 10
       ? requestedStep
       : parseInt(firstTodoStep, 10);
 
@@ -302,8 +290,7 @@ export default async function OnboardingPage({
     { id: 7,  title: "Invite team",        blurb: "Co-owners & staff",              status: status[7] === "done" ? "done" : (activeStep === 7 ? "current" : "todo"), optional: true },
     { id: 8,  title: "Test order",         blurb: "Try it as a customer",           status: status[8] === "done" ? "done" : (activeStep === 8 ? "current" : "todo") },
     { id: 9,  title: "Notifications",      blurb: "Kitchen sheet, reminders",       status: status[9] === "done" ? "done" : (activeStep === 9 ? "current" : "todo"), optional: true },
-    { id: 10, title: "Share your URL",     blurb: "Tell your customers",            status: status[10] === "done" ? "done" : (activeStep === 10 ? "current" : "todo") },
-    { id: 11, title: "Done",               blurb: "Wrap up & launch",               status: status[11] === "done" ? "done" : (activeStep === 11 ? "current" : "todo") },
+    { id: 10, title: "Share & launch",     blurb: "Tell customers, go live",        status: status[10] === "done" ? "done" : (activeStep === 10 ? "current" : "todo") },
   ];
 
   return (
@@ -337,7 +324,7 @@ export default async function OnboardingPage({
           {activeStep === 1 && (
             <form action={saveOperatorType} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 1 of 11</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 1 of 10</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">What kind of operation are you?</h2>
                 <p className="text-[12px] text-slate-500 mt-1">We&apos;ll seed sensible defaults for you. You can change this later.</p>
               </div>
@@ -370,7 +357,7 @@ export default async function OnboardingPage({
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
               <form id="onboarding-branding-form" action={saveBranding} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 2 of 11</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 2 of 10</p>
                   <h2 className="text-[18px] font-bold text-ink mt-1">Make it yours</h2>
                   <p className="text-[12px] text-slate-500 mt-1">Watch the preview update as you change things.</p>
                 </div>
@@ -434,7 +421,7 @@ export default async function OnboardingPage({
           {activeStep === 3 && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 11</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 10</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Connect Stripe so customers can pay you</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   Customer payments go directly to your Stripe account. LunchPad takes a small platform fee automatically.
@@ -473,7 +460,7 @@ export default async function OnboardingPage({
           {activeStep === 4 && (
             <form action={createFirstLocation} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 4 of 11</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 4 of 10</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Add your first location</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   {locationCount > 0
@@ -546,7 +533,7 @@ export default async function OnboardingPage({
           {activeStep === 5 && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 11</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 10</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Build your menu</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   You currently have <strong>{menuItemCount}</strong> active item{menuItemCount === 1 ? "" : "s"}. We recommend at least 3 to launch.
@@ -584,7 +571,7 @@ export default async function OnboardingPage({
           {activeStep === 6 && (
             <form action={generateRecurringForWizard} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 6 of 11</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 6 of 10</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Generate a recurring schedule</h2>
                 <p className="text-[12px] text-slate-500 mt-1">Pick a date range and weekday pattern. We&apos;ll create the dates and auto-attach your menu items.</p>
               </div>
@@ -684,7 +671,7 @@ export default async function OnboardingPage({
           {activeStep === 7 && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 7 of 11 (optional)</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 7 of 10 (optional)</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Invite your team</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   You currently have <strong>{teamCount}</strong> team member{teamCount === 1 ? "" : "s"}.
@@ -709,7 +696,7 @@ export default async function OnboardingPage({
           {activeStep === 8 && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 8 of 11</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 8 of 10</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Place a test order</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   Open your customer ordering page in a new tab. Place a real order — use a $0.50 menu item or your real card; you&apos;ll refund yourself in a click. This is the moment you&apos;ll feel confident sharing the URL with customers.
@@ -749,7 +736,7 @@ export default async function OnboardingPage({
           {activeStep === 9 && (
             <form action={saveNotifications} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 9 of 11 (optional)</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 9 of 10 (optional)</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Notification preferences</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   Auto-email the kitchen prep sheet on each delivery day. You can change this any time in Settings → Notifications.
@@ -783,24 +770,31 @@ export default async function OnboardingPage({
             </form>
           )}
 
-          {/* ── STEP 10: Share URL ───────────────────────────────── */}
+          {/* ── STEP 10 (FINAL): Share & launch ────────────────── */}
           {activeStep === 10 && (
-            <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <div className="rounded-[14px] border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6 space-y-5">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 10 of 11</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">Share your ordering URL</h2>
-                <p className="text-[12px] text-slate-500 mt-1">Tell your customers where to order.</p>
+                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Step 10 of 10 — last one!</p>
+                <h2 className="text-[22px] font-bold text-ink mt-1">You&apos;re ready to launch.</h2>
+                <p className="text-[13px] text-slate-600 mt-1">
+                  Share the URL below with your customers, then click <strong>Launch</strong> when you&apos;re done.
+                  You can change anything later from your dashboard.
+                </p>
               </div>
 
-              <div className="rounded-lg bg-slate-50 border border-slate-100 px-4 py-3 flex items-center gap-3 flex-wrap">
-                <p className="text-[12px] font-mono text-slate-600 flex-1 min-w-0 truncate">{orderingUrl}</p>
+              <div className="rounded-lg bg-white border border-slate-200 px-4 py-3 flex items-center gap-3 flex-wrap">
+                <p className="text-[13px] font-mono text-ink flex-1 min-w-0 truncate font-semibold">{orderingUrl}</p>
                 <CopyUrlButton url={orderingUrl} />
               </div>
 
-              <details className="rounded-lg border border-slate-100">
-                <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">📧 Email template (click to expand)</summary>
-                <div className="px-4 pb-3 border-t border-slate-50 pt-2">
-                  <pre className="text-[11px] text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{`Hi everyone,
+              <div className="space-y-2">
+                <details className="rounded-lg border border-slate-200 bg-white">
+                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">📧 Email template (click to expand)</summary>
+                  <div className="px-4 pb-3 border-t border-slate-50 pt-2">
+                    <pre className="text-[11px] text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{`Hi everyone,
 
 We're excited to share our online lunch ordering page!
 
@@ -810,77 +804,51 @@ ${orderingUrl}
 Orders close the night before delivery. Questions? Reply to this email.
 
 — ${restaurant.name}`}</pre>
-                </div>
-              </details>
+                  </div>
+                </details>
 
-              <details className="rounded-lg border border-slate-100">
-                <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">💬 SMS template</summary>
-                <div className="px-4 pb-3 border-t border-slate-50 pt-2">
-                  <pre className="text-[11px] text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{`Order lunch from ${restaurant.name}: ${orderingUrl}`}</pre>
-                </div>
-              </details>
+                <details className="rounded-lg border border-slate-200 bg-white">
+                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">💬 SMS template</summary>
+                  <div className="px-4 pb-3 border-t border-slate-50 pt-2">
+                    <pre className="text-[11px] text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{`Order lunch from ${restaurant.name}: ${orderingUrl}`}</pre>
+                  </div>
+                </details>
 
-              <details className="rounded-lg border border-slate-100">
-                <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">📷 QR code</summary>
-                <div className="px-4 pb-3 border-t border-slate-50 pt-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(orderingUrl)}`}
-                    alt="QR code for ordering page"
-                    width={240}
-                    height={240}
-                    className="rounded-lg border border-slate-200"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-2">Right-click → Save image. Print on flyers, put on a counter card, etc.</p>
-                </div>
-              </details>
-
-              <form action={markShareAcked} className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=9" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
-                  I&apos;ve shared the URL →
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* ── STEP 11: Done ───────────────────────────────────── */}
-          {activeStep === 11 && (
-            <div className="rounded-[14px] border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6 space-y-5">
-              <div>
-                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-3">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                </div>
-                <h2 className="text-[22px] font-bold text-ink">You&apos;re ready to go.</h2>
-                <p className="text-[13px] text-slate-600 mt-1">Your ordering page is live and customers can place orders right now.</p>
+                <details className="rounded-lg border border-slate-200 bg-white">
+                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">📷 QR code (print on flyers, counter cards, etc.)</summary>
+                  <div className="px-4 pb-3 border-t border-slate-50 pt-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(orderingUrl)}`}
+                      alt="QR code for ordering page"
+                      width={240}
+                      height={240}
+                      className="rounded-lg border border-slate-200"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-2">Right-click → Save image.</p>
+                  </div>
+                </details>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {steps.slice(0, 10).map((s) => (
-                  <div key={s.id} className="flex items-center gap-2">
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+              {/* Step recap */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
+                {steps.slice(0, 9).map((s) => (
+                  <div key={s.id} className="flex items-center gap-1.5">
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
                       s.status === "done" ? "bg-green-500 text-white" : "bg-slate-200 text-slate-500"
                     }`}>
                       {s.status === "done" ? "✓" : s.id}
                     </span>
-                    <span className={`text-[12px] ${s.status === "done" ? "text-ink" : "text-slate-400"}`}>{s.title}</span>
+                    <span className={`text-[11px] ${s.status === "done" ? "text-ink" : "text-slate-400"}`}>{s.title}</span>
                   </div>
                 ))}
               </div>
 
-              <form action={markOnboardingComplete} className="flex flex-wrap gap-2 pt-2">
-                <button type="submit" className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-[13px] font-semibold">
-                  Take me to the dashboard →
-                </button>
-                <a href={orderingUrl} target="_blank" rel="noopener noreferrer"
-                  className="px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-ink no-underline">
-                  Visit my ordering page ↗
-                </a>
-              </form>
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
-  );
-}
+              <form action={launchAndComplete} className="flex flex-wrap items-center justify-between gap-2 pt-3">
+                <Link href="/admin/onboarding?step=9" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                <div className="flex flex-wrap gap-2">
+                  <a href={orderingUrl} target="_blank" rel="noopener noreferrer"
+                    className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-ink no-underline">
+                    Preview ordering page ↗
+                  </a>
+                  <button type="submit" className="px-
