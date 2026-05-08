@@ -3,8 +3,9 @@ import { prisma } from "@/lib/db";
 import { createWeeklyStripeCheckoutSession } from "@/lib/payments/checkout";
 import { createWeeklyCheckoutBatch } from "@/lib/weekly-checkout";
 import { assertParentApiRequest } from "@/lib/parent-auth";
+import { getRequestBaseUrl } from "@/lib/request-base-url";
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const session = await assertParentApiRequest();
     const parentUserId = session.user?.parentUserId;
@@ -25,10 +26,15 @@ export async function POST() {
         ? restaurantStripe.stripeAccountId
         : null;
 
+    // Build success/cancel URLs from the request's tenant subdomain so the
+    // parent lands back on the right host after Stripe.
+    const baseUrl = await getRequestBaseUrl(request);
     const stripeSession = await createWeeklyStripeCheckoutSession({
       batchId: batch.id,
       parentEmail: batch.parentUser.email,
       stripeAccountId,
+      successUrl: `${baseUrl}/checkout/success?batch=${batch.id}&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${baseUrl}/account?cancelled=1`,
       lineItems: batch.items.map((item) => ({
         name: `${item.parentChild.studentName}: ${item.itemNameSnapshot}`,
         description: `${item.deliveryDate.school.name} - ${item.deliveryDate.deliveryDate.toISOString().slice(0, 10)}`,

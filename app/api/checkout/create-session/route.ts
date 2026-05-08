@@ -5,6 +5,7 @@ import { createStripeCheckoutSession } from "@/lib/payments/checkout";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
 import { auth } from "@/lib/auth";
+import { getRequestBaseUrl } from "@/lib/request-base-url";
 
 export async function POST(request: Request) {
   try {
@@ -59,11 +60,17 @@ export async function POST(request: Request) {
         ? restaurantStripe.stripeAccountId
         : null;
 
+    // Build success/cancel URLs from the request's actual host so customers
+    // come back to the same tenant subdomain (or custom domain) after Stripe
+    // Checkout instead of getting bounced to the apex.
+    const baseUrl = await getRequestBaseUrl(request);
     const session = await createStripeCheckoutSession({
       orderId: provisionalOrder.id,
       orderNumber: provisionalOrder.orderNumber,
       parentEmail: provisionalOrder.parentEmail,
       stripeAccountId,
+      successUrl: `${baseUrl}/checkout/success?order=${provisionalOrder.id}&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${baseUrl}/order?cancelled=1`,
       lineItems: provisionalOrder.items.map((item) => ({
         name: `School lunch preorder: ${item.itemNameSnapshot}`,
         description: `Order ${provisionalOrder.orderNumber}`,
