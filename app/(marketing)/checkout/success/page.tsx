@@ -47,14 +47,20 @@ export default async function CheckoutSuccessPage({
     try {
       const session = await stripe.checkout.sessions.retrieve(params.session_id);
       if (session.payment_status === "paid") {
-        order = await markOrderPaidByCheckoutSession(
+        const marked = await markOrderPaidByCheckoutSession(
           session.id,
           typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id,
           session.amount_total ?? null
         );
-        if (!order.confirmationSentAt) {
-          try { await sendOrderConfirmationEmail(order.id, order.restaurantId); } catch {}
+        if (!marked.confirmationSentAt) {
+          try { await sendOrderConfirmationEmail(marked.id, marked.restaurantId); } catch {}
         }
+        // Re-fetch with the same `include` shape so the rest of the page
+        // (which expects `order.restaurant`) keeps working.
+        order = await prisma.order.findUnique({
+          where: { id: marked.id },
+          include: { student: true, deliveryDate: true, school: true, items: true, payment: true, restaurant: true },
+        });
       }
     } catch {}
   }
