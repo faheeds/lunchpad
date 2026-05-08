@@ -108,11 +108,16 @@ export default async function AdminProtectedLayout({
   }
 
   // ── Setup completion check ───────────────────────────────────────────────
+  // The new onboarding wizard owns this signal via Restaurant.onboardingComplete.
+  // If the operator has finished the wizard (even with optional steps skipped),
+  // we trust their decision and let them into the rest of the admin. The legacy
+  // "must have schools + menu + dates" check is now only a fallback for old
+  // restaurants whose onboardingComplete flag isn't set yet.
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") ?? "";
   const isSetupExempt = SETUP_EXEMPT.some((p) => pathname.startsWith(p));
 
-  if (!isSetupExempt) {
+  if (!isSetupExempt && !full?.onboardingComplete) {
     const [schoolCount, menuCount, dateCount] = await Promise.all([
       prisma.school.count({ where: { restaurantId: restaurant.id, isActive: true } }),
       prisma.menuItem.count({ where: { restaurantId: restaurant.id, isActive: true } }),
@@ -122,7 +127,7 @@ export default async function AdminProtectedLayout({
     ]);
 
     if (schoolCount === 0 || menuCount === 0 || dateCount === 0) {
-      redirect("/admin/setup");
+      redirect("/admin/onboarding");
     }
   }
 
