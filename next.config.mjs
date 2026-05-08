@@ -36,11 +36,21 @@ export default withSentryConfig(nextConfig, {
   // Hide source maps from the client bundle
   hideSourceMaps: true,
 
-  // Sentry's release-tagging API has intermittent 504s. Catching the error here
-  // means a Sentry outage no longer blocks our deploys — source maps still
-  // upload best-effort, we just don't insist on registering the release tag.
+  // Sentry's release-tagging API has been intermittently 504-ing during our
+  // builds. The CLI subprocess crashes with unhandledRejection that the
+  // errorHandler can't catch. Disabling the release lifecycle calls
+  // (create/finalize) skips those API hits entirely while still uploading
+  // source maps — runtime error reporting is unaffected, traces just won't
+  // be tagged with a release version.
+  release: {
+    create: false,
+    finalize: false,
+  },
+
+  // Catch anything else that might still throw during build (covers source-
+  // map upload edge cases from Sentry's API).
   errorHandler: (err) => {
     // eslint-disable-next-line no-console
-    console.warn("[sentry-build] non-fatal error during release upload:", err.message ?? err);
+    console.warn("[sentry-build] non-fatal error:", err.message ?? err);
   },
 });
