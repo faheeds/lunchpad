@@ -35,4 +35,12 @@ export default withSentryConfig(nextConfig, {
 
   // Hide source maps from the client bundle
   hideSourceMaps: true,
+
+  // Sentry's release-tagging API has intermittent 504s. Catching the error here
+  // means a Sentry outage no longer blocks our deploys — source maps still
+  // upload best-effort, we just don't insist on registering the release tag.
+  errorHandler: (err) => {
+    // eslint-disable-next-line no-console
+    console.warn("[sentry-build] non-fatal error during release upload:", err.message ?? err);
+  },
 });
