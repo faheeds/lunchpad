@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { ConfirmButton } from "@/components/admin/confirm-button";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +161,57 @@ async function generateRecurringSchedule(formData: FormData) {
   }
 
   revalidatePath("/admin/delivery-dates");
+}
+
+async function cancelDeliveryDate(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+
+  const id = String(formData.get("id") || "");
+  const reason = String(formData.get("reason") || "").trim() || null;
+  if (!id) return;
+
+  // Tenant-scoped: verify the date belongs to this restaurant.
+  const date = await prisma.deliveryDate.findFirst({
+    where: { id, school: { restaurantId: restaurant.id } },
+    include: {
+      orders: {
+        where: { status: "PAID", archivedAt: null },
+        select: { id: true },
+      },
+    },
+  });
+  if (!date) throw new Error("Delivery date not found");
+  if (date.cancelledAt) return; // already cancelled — idempotent
+
+  // Refund every PAID order tied to this date. Reuse the admin cancel-with-
+  // refund helper so the Stripe refund + order-state update + email logging
+  // all happen the same way as a manual cancel.
+  const { adminCancelOrderWithRefund } = await import("@/lib/admin");
+  for (const o of date.orders) {
+    try {
+      await adminCancelOrderWithRefund(restaurant.id, o.id);
+    } catch (e) {
+      // Log and keep going — partial cancellation is better than aborting halfway.
+      console.error(`[cancel-date] order ${o.id} refund failed:`, e instanceof Error ? e.message : e);
+    }
+  }
+
+  // Soft-delete the date. orderingOpen=false so it disappears from any
+  // surface that already filters by that flag.
+  await prisma.deliveryDate.update({
+    where: { id },
+    data: {
+      cancelledAt: new Date(),
+      cancelledReason: reason,
+      orderingOpen: false,
+    },
+  });
+
+  revalidatePath("/admin/delivery-dates");
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/dashboard");
 }
 
 async function toggleDateOpen(formData: FormData) {
@@ -533,7 +585,7 @@ export default async function DeliveryDatesPage() {
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2 flex-shrink-0">
+                      <div className="flex gap-2 flex-shrink-0 flex-wrap">
                         {cutoffPassed ? (
                           <span style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>Cutoff passed</span>
                         ) : (
@@ -551,6 +603,54 @@ export default async function DeliveryDatesPage() {
                         )}
                       </div>
                     </div>
+
+                    {/* ── Cancel this date ─────────────────────────────────── */}
+                    <details className="rounded-lg border border-red-100 bg-red-50/30 overflow-hidden">
+                      <summary className="px-3 py-2 text-[11px] text-red-700 font-semibold cursor-pointer list-none flex items-center gap-1.5 hover:bg-red-50 transition">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        Cancel this delivery date
+                      </summary>
+                      <form action={cancelDeliveryDate} className="px-3 pb-3 border-t border-red-100 pt-3 space-y-2">
+                        <input type="hidden" name="id" value={date.id} />
+                        {orderCount > 0 ? (
+                          <div className="rounded-lg border border-red-200 bg-white px-3 py-2.5">
+                            <p className="text-[12px] font-bold text-red-800 mb-1">⚠ This date has {orderCount} paid order{orderCount !== 1 ? "s" : ""}.</p>
+                            <p className="text-[11px] text-red-700 leading-relaxed">
+                              Cancelling will issue a Stripe refund for every order, set them all to CANCELLED, and notify customers by email.
+                              The date will be hidden from the parent ordering page. This <strong>cannot be undone</strong>.
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-600">No orders on this date — cancelling just removes it from the schedule.</p>
+                        )}
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide block mb-1">Reason (optional)</label>
+                          <input
+                            type="text"
+                            name="reason"
+                            placeholder="e.g. Snow day, school closure"
+                            className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-1.5"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <ConfirmButton
+                            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-[11px] font-semibold hover:bg-red-700 transition"
+                            message={
+                              orderCount > 0
+                                ? `Cancel this delivery date and refund ${orderCount} paid order${orderCount !== 1 ? "s" : ""}? This cannot be undone.`
+                                : "Cancel this delivery date? It will be removed from the schedule."
+                            }
+                          >
+                            {orderCount > 0
+                              ? `Refund ${orderCount} order${orderCount !== 1 ? "s" : ""} & cancel`
+                              : "Cancel this date"}
+                          </ConfirmButton>
+                        </div>
+                      </form>
+                    </details>
 
                     {/* Menu items currently on this date */}
                     {date.menuAvailability.length > 0 && (

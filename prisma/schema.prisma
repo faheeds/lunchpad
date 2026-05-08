@@ -189,6 +189,12 @@ model DeliveryDate {
   cutoffAt            DateTime
   orderingOpen        Boolean              @default(true)
   notes               String?
+  // Soft-cancel for operator-initiated cancellations (snow days, school
+  // closures, etc). When set, hide from parent-facing UIs and treat as
+  // dead for kitchen sheets. Existing orders on this date are refunded
+  // by the cancelDeliveryDate server action before this is set.
+  cancelledAt         DateTime?
+  cancelledReason     String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   school              School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)

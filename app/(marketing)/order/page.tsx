@@ -19,6 +19,7 @@ export default async function OrderPage({
   const allDeliveryDates = await prisma.deliveryDate.findMany({
     where: {
       orderingOpen: true,
+      cancelledAt: null,
       cutoffAt: { gt: new Date() },
       school: { isActive: true, restaurantId: restaurant.id }
     },

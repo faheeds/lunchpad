@@ -46,6 +46,7 @@ export default async function WeeklyPage() {
         where: {
           schoolId: { in: schoolIds },
           orderingOpen: true,
+          cancelledAt: null,
           cutoffAt: { gt: now },
           deliveryDate: { gte: range.start, lte: range.end },
           school: { isActive: true, restaurantId: restaurant.id }
