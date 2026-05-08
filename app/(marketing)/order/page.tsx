@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
-import { requireRestaurant } from "@/lib/restaurant";
+import { getCurrentRestaurant, requireRestaurant } from "@/lib/restaurant";
+import { requireParentTenant } from "@/lib/parent-auth";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { OrderForm } from "@/components/forms/order-form";
@@ -13,7 +14,18 @@ export default async function OrderPage({
 }: {
   searchParams: Promise<{ reorder?: string; item?: string; childId?: string }>;
 }) {
-  const [session, restaurant] = await Promise.all([auth(), requireRestaurant()]);
+  const session = await auth();
+  // If a parent is on the apex (no slug header), bounce them to their
+  // tenant subdomain instead of throwing.
+  const tenantFromHeader = await getCurrentRestaurant();
+  let restaurant;
+  if (tenantFromHeader) {
+    restaurant = tenantFromHeader;
+  } else if (session?.user?.role === "PARENT" && session.user.parentUserId) {
+    restaurant = await requireParentTenant(session.user.parentUserId, "/order");
+  } else {
+    restaurant = await requireRestaurant();
+  }
   const params = await searchParams;
 
   const allDeliveryDates = await prisma.deliveryDate.findMany({

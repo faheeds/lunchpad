@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireParent } from "@/lib/parent-auth";
-import { requireRestaurant } from "@/lib/restaurant";
+import { requireParent, requireParentTenant } from "@/lib/parent-auth";
 import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
@@ -11,9 +10,10 @@ import { WeeklyCheckoutButton } from "@/components/account/weekly-checkout-butto
 export const dynamic = "force-dynamic";
 
 export default async function WeeklyPage() {
-  const [session, restaurant] = await Promise.all([requireParent(), requireRestaurant()]);
+  const session = await requireParent();
   const parentUserId = session.user?.parentUserId;
   if (!parentUserId) redirect("/account/sign-in");
+  const restaurant = await requireParentTenant(parentUserId, "/weekly");
 
   const parent = await prisma.parentUser.findUnique({
     where: { id: parentUserId },

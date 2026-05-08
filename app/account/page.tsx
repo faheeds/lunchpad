@@ -4,8 +4,7 @@ import { redirect } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { signOut } from "@/lib/auth";
-import { requireParent } from "@/lib/parent-auth";
-import { requireRestaurant } from "@/lib/restaurant";
+import { requireParent, requireParentTenant } from "@/lib/parent-auth";
 import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
@@ -15,9 +14,14 @@ import { WeeklyCheckoutButton } from "@/components/account/weekly-checkout-butto
 import { WeeklyPlanPlanner } from "@/components/account/weekly-plan-planner";
 
 export default async function ParentAccountPage() {
-  const [session, restaurant] = await Promise.all([requireParent(), requireRestaurant()]);
+  const session = await requireParent();
   const parentUserId = session.user?.parentUserId;
   if (!parentUserId) redirect("/account/sign-in");
+
+  // Resolve the tenant. If we're on the apex (no x-restaurant-slug header)
+  // this redirects the parent to their restaurant's subdomain so the rest
+  // of the page can rely on a real Restaurant.
+  const restaurant = await requireParentTenant(parentUserId, "/account");
 
   // ── Server actions ──────────────────────────────────────────────────────
 
