@@ -1,19 +1,16 @@
 "use client";
 
 /**
- * Reusable image-upload widget backed by Vercel Blob.
+ * Reusable image-upload widget that POSTs the file to /api/admin/upload as
+ * multipart/form-data. The route uploads to Vercel Blob server-side and
+ * returns the public URL, which we write into a hidden <input name=...>
+ * so the parent form picks it up on submit.
  *
- * Usage in a server-action form:
- *   <ImageUpload name="logoUrl" defaultValue={restaurant.logoUrl} aspect="square" />
- *
- * On select, the file is uploaded directly to Vercel Blob via /api/admin/upload,
- * then the resulting public URL is written into a hidden <input name=...>
- * so the parent form picks it up on submit. There's also a "paste URL"
- * fallback for operators who already have a CDN-hosted image.
+ * Server-side upload avoids the CORS issues with browser-direct uploads.
+ * Capped at 4MB to stay under Vercel's 4.5MB function body limit.
  */
 
 import { useId, useRef, useState } from "react";
-import { upload } from "@vercel/blob/client";
 
 type Aspect = "square" | "wide" | "free";
 
@@ -48,13 +45,18 @@ export function ImageUpload({
     setError(null);
     setBusy(true);
     try {
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const blob = await upload(safeName, file, {
-        access: "public",
-        handleUploadUrl: "/api/admin/upload",
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: fd,
       });
-      setUrl(blob.url);
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `Upload failed (${res.status})`);
+      }
+      const data = (await res.json()) as { url: string };
+      setUrl(data.url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -145,7 +147,7 @@ export function ImageUpload({
           <p className="text-[12px] font-medium text-slate-500">
             {busy ? "Uploading…" : "Click to upload an image"}
           </p>
-          <p className="text-[10px] text-slate-400">PNG, JPG, WebP up to 8MB</p>
+          <p className="text-[10px] text-slate-400">PNG, JPG, WebP up to 4MB</p>
         </label>
       )}
 

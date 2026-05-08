@@ -1,26 +1,33 @@
 /**
- * Vercel Blob upload endpoint.
+ * Server-side image upload to Vercel Blob.
  *
- * Handles signed-URL generation for client-side direct uploads. The client
- * uses `upload()` from `@vercel/blob/client` which posts to this route to
- * get a token, then uploads directly to Blob storage — bypassing the
- * 4.5MB Vercel function body limit.
+ * Browser POSTs a multipart/form-data with field `file`. We verify the admin
+ * session, validate the file, and call put() server-to-server. Returns the
+ * public URL. This avoids CORS / SDK-version issues with browser-direct
+ * client uploads.
  *
- * Auth: requires an active admin session. Limits enforced server-side
- * via the allowedContentTypes / maximumSizeInBytes fields below.
+ * Trade-off: subject to Vercel's 4.5MB function body limit. Adequate for
+ * menu photos and logos. If we ever need 4.5MB+ uploads, switch this route
+ * to handleUpload (client-direct) and live with the CORS-config dance.
  */
 
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { put } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+const MAX_BYTES = 4 * 1024 * 1024; // 4MB — under Vercel's 4.5MB body cap
+const ALLOWED_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
 /**
- * GET — diagnostics. Lets the operator verify config without uploading.
- * Reports whether the Blob token is present and what the current session
- * looks like. Hit /api/admin/upload?diagnose=1 in a browser tab.
+ * GET — diagnostics. /api/admin/upload?diagnose=1
  */
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -46,72 +53,73 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const body = (await request.json()) as HandleUploadBody;
+  // Auth check
+  const session = await auth();
+  const adminUserId = session?.user?.adminUserId;
+  const restaurantId = session?.user?.restaurantId;
+  if (!adminUserId || !restaurantId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Confirm admin/restaurant alignment
+  const admin = await prisma.adminUser.findUnique({
+    where: { id: adminUserId },
+    select: { id: true, restaurantId: true },
+  });
+  if (!admin || admin.restaurantId !== restaurantId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      { error: "Server misconfigured: BLOB_READ_WRITE_TOKEN not set" },
+      { status: 500 }
+    );
+  }
+
+  // Parse the multipart upload
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "Missing file field" }, { status: 400 });
+  }
+
+  if (!ALLOWED_TYPES.has(file.type)) {
+    return NextResponse.json(
+      { error: `Unsupported file type: ${file.type}. Use PNG, JPG, WebP, or GIF.` },
+      { status: 400 }
+    );
+  }
+
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json(
+      { error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max ${MAX_BYTES / 1024 / 1024}MB.` },
+      { status: 400 }
+    );
+  }
+
+  // Build a tenant-scoped pathname so blobs can't collide across restaurants
+  const ext = file.name.split(".").pop() ?? "bin";
+  const safeExt = /^[a-z0-9]{1,8}$/i.test(ext) ? ext : "bin";
+  const random = Math.random().toString(36).slice(2, 10);
+  const pathname = `restaurants/${restaurantId}/${Date.now()}-${random}.${safeExt}`;
 
   try {
-    const result = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (pathname) => {
-        // Verify admin session before issuing a signed token.
-        // adminUserId / restaurantId are stored on session.user (see auth.ts
-        // session callback), NOT at the top level of the session object.
-        const session = await auth();
-        const adminUserId = session?.user?.adminUserId;
-        const restaurantId = session?.user?.restaurantId;
-
-        if (!process.env.BLOB_READ_WRITE_TOKEN) {
-          console.error("[upload] BLOB_READ_WRITE_TOKEN missing in env");
-          throw new Error("Server misconfigured: BLOB_READ_WRITE_TOKEN not set in Vercel env");
-        }
-
-        if (!adminUserId || !restaurantId) {
-          console.error("[upload] no admin session", { sessionExists: Boolean(session), userKeys: Object.keys(session?.user ?? {}) });
-          throw new Error("Unauthorized: no admin session");
-        }
-
-        // Confirm the admin user is real and belongs to this restaurant.
-        const admin = await prisma.adminUser.findUnique({
-          where: { id: adminUserId },
-          select: { id: true, restaurantId: true },
-        });
-        if (!admin || admin.restaurantId !== restaurantId) {
-          console.error("[upload] admin/restaurant mismatch", { adminUserId, restaurantId, found: Boolean(admin) });
-          throw new Error("Unauthorized: admin/restaurant mismatch");
-        }
-
-        // Scope the path under the restaurant so blobs can't collide
-        // across tenants and so we can audit per-tenant storage later.
-        return {
-          allowedContentTypes: [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "image/gif",
-          ],
-          maximumSizeInBytes: 8 * 1024 * 1024, // 8MB cap on uploads
-          tokenPayload: JSON.stringify({
-            restaurantId,
-            originalPathname: pathname,
-          }),
-          addRandomSuffix: true,
-        };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // Optional hook fired by Vercel after the upload finishes.
-        // Could log to an Asset table here in a future migration; for now
-        // we just leave the blob in place — restaurants reference URLs
-        // directly on the MenuItem / Restaurant rows.
-        if (process.env.NODE_ENV !== "production") {
-          // eslint-disable-next-line no-console
-          console.log("[upload] blob ready", blob.url, "tokenPayload:", tokenPayload);
-        }
-      },
+    const blob = await put(pathname, file, {
+      access: "public",
+      contentType: file.type,
+      addRandomSuffix: false, // pathname already includes random component
     });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Upload failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ url: blob.url, pathname: blob.pathname });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Upload failed";
+    console.error("[upload] blob put failed", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
