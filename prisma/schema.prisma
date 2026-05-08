@@ -123,17 +123,34 @@ model Restaurant {
 // ─── ADMIN USERS ─────────────────────────────────────────────────────────────
 
 model AdminUser {
-  id           String     @id @default(cuid())
-  restaurantId String
-  email        String
-  name         String
-  passwordHash String
-  role         AdminRole  @default(MANAGER)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  id            String                     @id @default(cuid())
+  restaurantId  String
+  email         String
+  name          String
+  passwordHash  String
+  role          AdminRole                  @default(MANAGER)
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  restaurant    Restaurant                 @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  resetTokens   AdminPasswordResetToken[]
 
   @@unique([restaurantId, email])
+}
+
+// Password reset tokens. We never store the raw token — only its SHA-256
+// hash — so a DB read can't recover live reset URLs. Tokens expire after
+// an hour and are marked single-use via `usedAt`. Issuing a new token
+// invalidates the user's previous unused tokens (handled in code).
+model AdminPasswordResetToken {
+  id          String    @id @default(cuid())
+  adminUserId String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
 }
 
 // ─── SCHOOLS (locations within a restaurant) ─────────────────────────────────

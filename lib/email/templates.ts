@@ -666,3 +666,61 @@ export function buildSubscriptionChangedEmail(args: SubscriptionChangedTemplateA
 
   return { subject, text, html };
 }
+
+// ─── Admin password reset ────────────────────────────────────────────────────
+
+type AdminPasswordResetTemplateArgs = {
+  adminName: string;
+  restaurantName: string;
+  resetUrl: string;
+  /** Lifetime in minutes — surfaced in copy so the recipient knows when the
+   *  link will stop working. */
+  expiresInMinutes: number;
+};
+
+export function buildAdminPasswordResetEmail(args: AdminPasswordResetTemplateArgs) {
+  const { adminName, restaurantName, resetUrl, expiresInMinutes } = args;
+
+  const subject = `Reset your ${restaurantName} admin password`;
+
+  const text = `Hi ${adminName},
+
+We received a request to reset the password on your ${restaurantName} admin account.
+
+Reset link (expires in ${expiresInMinutes} minutes):
+${resetUrl}
+
+If you didn't request this, you can safely ignore the email — your current password stays the same.`;
+
+  const html = `
+    <div style="${base}">
+      <div style="${card}">
+        <h1 style="font-size:18px;font-weight:600;margin:0 0 12px;color:#0f172a">
+          Reset your admin password
+        </h1>
+        <p style="margin:0 0 16px;font-size:14px;color:#334155">
+          Hi ${adminName}, we received a request to reset the password on your <strong>${restaurantName}</strong> admin account.
+        </p>
+        <p style="margin:0 0 20px">
+          <a href="${resetUrl}"
+             style="display:inline-block;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;padding:12px 22px">
+            Set a new password
+          </a>
+        </p>
+        <p style="margin:0 0 14px;font-size:12px;color:#64748b">
+          This link expires in ${expiresInMinutes} minutes and can only be used once.
+        </p>
+        <p style="margin:0 0 14px;font-size:12px;color:#64748b">
+          If the button doesn't work, paste this URL into your browser:<br>
+          <span style="font-size:11px;color:#475569;word-break:break-all">${resetUrl}</span>
+        </p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:18px 0" />
+        <p style="margin:0;font-size:12px;color:#64748b">
+          Didn't request this? You can safely ignore the email — your current password stays the same.
+        </p>
+      </div>
+    </div>
+  `;
+
+  return { subject, text, html };
+}

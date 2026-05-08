@@ -484,3 +484,43 @@ export async function sendSubscriptionChangedEmail(
     console.error("[subscription-changed-email] failed:", err);
   }
 }
+
+// ─── Admin password reset ────────────────────────────────────────────────────
+import { buildAdminPasswordResetEmail } from "@/lib/email/templates";
+
+/**
+ * Sends a password reset link to an admin user. Caller is responsible for
+ * generating the raw token and persisting its hash — this function just
+ * formats and sends the email. Throws when delivery is misconfigured so the
+ * caller can surface a clear error to the operator.
+ */
+export async function sendAdminPasswordResetEmail(args: {
+  toEmail: string;
+  adminName: string;
+  restaurantName: string;
+  resetUrl: string;
+  expiresInMinutes: number;
+}) {
+  if (!resend || !env.EMAIL_FROM) {
+    throw new Error("Email delivery is not configured. Add a valid RESEND_API_KEY and EMAIL_FROM.");
+  }
+
+  const message = buildAdminPasswordResetEmail({
+    adminName: args.adminName,
+    restaurantName: args.restaurantName,
+    resetUrl: args.resetUrl,
+    expiresInMinutes: args.expiresInMinutes,
+  });
+
+  // Send from the restaurant's display name so the email reads as coming
+  // from their tenant (consistent with the customer-facing emails).
+  const fromAddress = `${args.restaurantName} <${env.EMAIL_FROM}>`;
+
+  await resend.emails.send({
+    from: fromAddress,
+    to: args.toEmail,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+  });
+}
