@@ -104,10 +104,35 @@ async function updateCustomDomain(formData: FormData) {
     if (customDomain && !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(customDomain)) {
       throw new Error("Invalid domain format. Use something like lunch.yourdomain.com");
     }
+
+    // Read the previous value so we can deregister the old domain if changed.
+    const prev = await prisma.restaurant.findUnique({
+      where: { id: restaurant.id },
+      select: { customDomain: true },
+    });
+    const previousDomain = prev?.customDomain ?? null;
+
     await prisma.restaurant.update({
       where: { id: restaurant.id },
       data: { customDomain },
     });
+
+    // Auto-register / deregister the domain in Vercel if the API token is set.
+    // Silently skip if the operator hasn't set up the token (still works in dev,
+    // they'd just need to add the domain manually as before).
+    if (process.env.VERCEL_API_TOKEN && process.env.VERCEL_PROJECT_ID) {
+      const { addDomainToProject, removeDomainFromProject } = await import("@/lib/vercel-domains");
+      if (previousDomain && previousDomain !== customDomain) {
+        await removeDomainFromProject(previousDomain);
+      }
+      if (customDomain && customDomain !== previousDomain) {
+        const result = await addDomainToProject(customDomain);
+        if (!result.ok) {
+          throw new Error(`Couldn't register domain in Vercel: ${result.error}`);
+        }
+      }
+    }
+
     revalidatePath("/admin/settings");
   } catch (e: unknown) {
     errorMsg = e instanceof Error ? e.message : "Something went wrong";

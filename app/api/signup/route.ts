@@ -80,6 +80,25 @@ export async function POST(request: Request) {
     // Fire-and-forget welcome email — never blocks or throws
     sendWelcomeRestaurantEmail(restaurant.id).catch(() => {});
 
+    // Auto-register the restaurant's subdomain in Vercel if the API token is
+    // configured. With Vercel Pro + a *.lunchpad.us wildcard this isn't
+    // needed, but on Hobby (no wildcard) we rely on this. Fire-and-forget so
+    // signup latency isn't tied to Vercel API round-trips. If it fails, the
+    // operator's site won't resolve until someone adds the domain manually —
+    // we log loudly so it can be picked up in Vercel logs.
+    if (process.env.VERCEL_API_TOKEN && process.env.VERCEL_PROJECT_ID) {
+      const rootDomain = process.env.ROOT_DOMAIN || "lunchpad.us";
+      const subdomain = `${restaurant.slug}.${rootDomain}`;
+      import("@/lib/vercel-domains")
+        .then(({ addDomainToProject }) => addDomainToProject(subdomain))
+        .then((result) => {
+          if (!result.ok) {
+            console.error(`[signup] failed to register ${subdomain} in Vercel:`, result.error);
+          }
+        })
+        .catch((e) => console.error(`[signup] vercel domain registration error:`, e));
+    }
+
     return NextResponse.json({ ok: true, restaurantId: restaurant.id, slug: restaurant.slug });
 
   } catch (error) {
