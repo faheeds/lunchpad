@@ -2,14 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
+import type { LocationType } from "@prisma/client";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { getGradesForSchoolName } from "@/lib/grades";
+import { getLabels } from "@/lib/location-labels";
 import { cn } from "@/lib/utils";
 
 type DeliveryDate = {
   id: string; schoolId: string; deliveryDate: string; cutoffAt: string; orderingOpen: boolean;
-  school: { id: string; name: string; timezone: string };
+  school: { id: string; name: string; timezone: string; locationType: LocationType };
 };
+
+// Threshold above which the location selector switches from tile UI to a
+// grouped dropdown. Tiles are friendlier for tap targets, but past 4 they
+// wrap awkwardly on phones and a single dropdown scrolls cleaner.
+const LOCATION_DROPDOWN_THRESHOLD = 4;
 type MenuOption = { id: string; name: string; optionType: "ADD_ON" | "REMOVAL"; priceDeltaCents: number };
 type MenuItem = { id: string; slug: string; name: string; description: string | null; imageUrl: string | null; basePriceCents: number; options: MenuOption[] };
 type CartItem = { id: string; menuItemId: string; itemName: string; choice?: string; additions: string[]; removals: string[]; lineTotalCents: number };
@@ -84,6 +91,10 @@ export function OrderForm({
   const [studentName, setStudentName] = useState(initialParentProfile?.studentName ?? "");
   const [grade, setGrade] = useState(initialParentProfile?.grade ?? "");
   const [allergyNotes, setAllergyNotes] = useState(initialParentProfile?.allergyNotes ?? "");
+  // For OFFICE locations the orderer is usually the recipient — default the
+  // "ordering for myself" toggle on. Reset to true whenever the user picks
+  // an office (covers switching from a school location mid-flow).
+  const [orderForSelf, setOrderForSelf] = useState(false);
   const menuScrollRef = useRef<HTMLDivElement>(null);
   const customizePanelRef = useRef<HTMLDivElement>(null);
   const itemSlugAutoSelected = useRef(false);
@@ -117,8 +128,24 @@ export function OrderForm({
       return acc;
     }, []), [deliveryDates]);
 
-  const selectedSchoolName = schools.find((s) => s.id === selectedSchoolId)?.name ?? "";
+  const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
+  const selectedSchoolName = selectedSchool?.name ?? "";
+  // Labels track the *currently selected* location's type. Before any
+  // selection we default to school labels (the more common case) but the
+  // form re-renders the moment the user picks a location.
+  const labels = getLabels(selectedSchool?.locationType);
+  const isOffice = selectedSchool?.locationType === "OFFICE";
   const gradeOptions = getGradesForSchoolName(selectedSchoolName);
+
+  // Group locations by type for the dropdown — when the tenant has both
+  // schools and offices we render two <optgroup>s so the selector doesn't
+  // mix them visually.
+  const groupedSchools = useMemo(() => {
+    const schoolList = schools.filter((s) => s.locationType === "SCHOOL");
+    const officeList = schools.filter((s) => s.locationType === "OFFICE");
+    return { school: schoolList, office: officeList };
+  }, [schools]);
+  const useDropdown = schools.length > LOCATION_DROPDOWN_THRESHOLD;
 
   const schoolDeliveryDates = useMemo(() => deliveryDates.filter((d) => d.school.id === selectedSchoolId), [deliveryDates, selectedSchoolId]);
   const selectedDelivery = deliveryDates.find((d) => d.id === selectedDeliveryDateId);
@@ -181,6 +208,19 @@ export function OrderForm({
     setAllergyNotes(child.allergyNotes);
   }, [deliveryDates, savedChildren, selectedParentChildId]);
 
+  // Default "ordering for myself" on whenever an OFFICE location becomes
+  // active and there's no saved profile in play. The user can still untick
+  // it to order for a coworker.
+  useEffect(() => {
+    if (isOffice && !selectedParentChildId) setOrderForSelf(true);
+    if (!isOffice) setOrderForSelf(false);
+  }, [isOffice, selectedParentChildId]);
+
+  // Mirror parentName into studentName whenever "ordering for myself" is on.
+  useEffect(() => {
+    if (orderForSelf && parentName) setStudentName(parentName);
+  }, [orderForSelf, parentName]);
+
   function toggle(value: string, current: string[], setter: (v: string[]) => void) {
     setter(current.includes(value) ? current.filter((i) => i !== value) : [...current, value]);
   }
@@ -199,12 +239,19 @@ export function OrderForm({
   async function handleSubmit() {
     setError("");
     if (!cartItems.length) { setError("Add at least one item to continue."); return; }
+    // For office self-orders, the recipient name mirrors the orderer's name.
+    // For school orders, grade is required and gets sent through; for office
+    // orders, grade is omitted and the server fills "—" so the non-null DB
+    // column stays clean without forcing a meaningless field on the form.
+    const effectiveStudentName = isOffice && orderForSelf ? parentName : studentName;
+    const effectiveGrade = labels.showGrade ? grade : "";
     const payload = {
       parentName, parentEmail,
       schoolId: selectedDelivery?.school.id,
       deliveryDateId: selectedDeliveryDateId,
       parentChildId: selectedParentChildId || undefined,
-      studentName, grade,
+      studentName: effectiveStudentName,
+      grade: effectiveGrade,
       cartItems: cartItems.map((i) => ({ menuItemId: i.menuItemId, choice: i.choice, additions: i.additions, removals: i.removals })),
       allergyNotes, dietaryNotes: null, specialInstructions: null,
     };
@@ -214,7 +261,10 @@ export function OrderForm({
     window.location.href = data.checkoutUrl;
   }
 
-  const progressSteps = ["Date", "Student", "Menu", "Review"];
+  // Step 2 label tracks the location: "Student" for schools, "Diner" for offices,
+  // and "Recipient" before a location is picked (we don't yet know which one).
+  const step2Label = selectedSchool ? labels.unit : "Recipient";
+  const progressSteps = ["Date", step2Label, "Menu", "Review"];
 
   return (
     <div className="pb-32">
@@ -263,27 +313,73 @@ export function OrderForm({
         ))}
       </div>
 
-      {/* STEP 1: School + Date */}
+      {/* STEP 1: Location + Date */}
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Campus</p>
-            {schools.map((school) => (
-              <button
-                key={school.id}
-                type="button"
-                onClick={() => { setSelectedSchoolId(school.id); setSelectedDeliveryDateId(deliveryDates.find((d) => d.school.id === school.id)?.id ?? ""); setCartItems([]); setSelectedMenuItemId(""); }}
-                className={cn("w-full rounded-[14px] border p-3.5 text-left mb-2 transition", selectedSchoolId === school.id ? "border-brand-600 bg-brand-50 border-2" : "border-slate-100 bg-white")}
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">
+              {/* "School" / "Office" — or "Location" when the tenant mixes both */}
+              {(() => {
+                const types = new Set(schools.map((s) => s.locationType));
+                if (types.size > 1) return "Location";
+                if (types.has("OFFICE")) return "Office";
+                return "School";
+              })()}
+            </p>
+            {useDropdown ? (
+              <select
+                value={selectedSchoolId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedSchoolId(id);
+                  setSelectedDeliveryDateId(deliveryDates.find((d) => d.school.id === id)?.id ?? "");
+                  setCartItems([]);
+                  setSelectedMenuItemId("");
+                }}
+                className="w-full rounded-[14px] border border-slate-200 bg-white p-3.5 text-[13px] font-semibold text-ink"
               >
-                <p className={cn("text-[13px] font-semibold", selectedSchoolId === school.id ? "text-brand-900" : "text-ink")}>{school.name}</p>
-                <p className={cn("text-[11px] mt-0.5", selectedSchoolId === school.id ? "text-brand-700" : "text-slate-500")}>Pacific Time</p>
-              </button>
-            ))}
+                <option value="" disabled>Select a location</option>
+                {groupedSchools.school.length > 0 && groupedSchools.office.length > 0 ? (
+                  <>
+                    <optgroup label="Schools">
+                      {groupedSchools.school.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Offices">
+                      {groupedSchools.office.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </optgroup>
+                  </>
+                ) : (
+                  schools.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))
+                )}
+              </select>
+            ) : (
+              schools.map((school) => (
+                <button
+                  key={school.id}
+                  type="button"
+                  onClick={() => { setSelectedSchoolId(school.id); setSelectedDeliveryDateId(deliveryDates.find((d) => d.school.id === school.id)?.id ?? ""); setCartItems([]); setSelectedMenuItemId(""); }}
+                  className={cn("w-full rounded-[14px] border p-3.5 text-left mb-2 transition", selectedSchoolId === school.id ? "border-brand-600 bg-brand-50 border-2" : "border-slate-100 bg-white")}
+                >
+                  <p className={cn("text-[13px] font-semibold", selectedSchoolId === school.id ? "text-brand-900" : "text-ink")}>{school.name}</p>
+                  <p className={cn("text-[11px] mt-0.5", selectedSchoolId === school.id ? "text-brand-700" : "text-slate-500")}>
+                    {school.locationType === "OFFICE" ? "Office" : "School"}
+                  </p>
+                </button>
+              ))
+            )}
           </div>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Delivery date</p>
             {!selectedSchoolId && (
-              <p className="text-[12px] text-slate-400 bg-slate-50 rounded-xl px-3 py-2.5">Choose a campus above to see available dates.</p>
+              <p className="text-[12px] text-slate-400 bg-slate-50 rounded-xl px-3 py-2.5">
+                Choose {schools.some((s) => s.locationType === "OFFICE") && schools.some((s) => s.locationType === "SCHOOL") ? "a location" : isOffice ? "an office" : "a school"} above to see available dates.
+              </p>
             )}
             <div className="flex gap-2 overflow-x-auto pb-1">
               {schoolDeliveryDates.map((date) => {
@@ -317,7 +413,16 @@ export function OrderForm({
               </div>
             )}
           </div>
-          <button type="button" onClick={() => { if (!selectedSchoolId) { setError("Choose a campus."); return; } if (!selectedDeliveryDateId) { setError("Choose a delivery date."); return; } setError(""); window.history.pushState({ orderStep: 2 }, ""); setStep(2); }}
+          <button type="button" onClick={() => {
+            if (!selectedSchoolId) {
+              setError(`Choose a ${isOffice ? "office" : "school"}.`);
+              return;
+            }
+            if (!selectedDeliveryDateId) { setError("Choose a delivery date."); return; }
+            setError("");
+            window.history.pushState({ orderStep: 2 }, "");
+            setStep(2);
+          }}
             className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold">
             Continue →
           </button>
@@ -325,14 +430,17 @@ export function OrderForm({
         </div>
       )}
 
-      {/* STEP 2: Student */}
+      {/* STEP 2: Recipient (Student / Employee / Self) */}
       {step === 2 && (
         <div className="space-y-4">
           <button type="button" onClick={() => window.history.back()} className="text-[12px] text-slate-500 flex items-center gap-1 mb-2">← Back</button>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Ordering for</p>
-            {savedChildren.length > 0 && (
-              <div className="flex gap-2 flex-wrap mb-3">
+
+          {/* Saved profiles — only shown for school locations. Office orders
+              are typically self-service and don't carry "saved coworkers". */}
+          {!isOffice && savedChildren.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Ordering for</p>
+              <div className="flex gap-2 flex-wrap mb-1">
                 {savedChildren.filter((c) => c.schoolId === selectedSchoolId).map((child) => (
                   <button
                     key={child.id}
@@ -340,7 +448,7 @@ export function OrderForm({
                     onClick={() => setSelectedParentChildId(child.id)}
                     className={cn("px-3 py-1.5 rounded-full text-[12px] font-medium border transition", selectedParentChildId === child.id ? "bg-ink text-white border-ink" : "bg-white text-slate-600 border-slate-200")}
                   >
-                    {child.studentName}, Gr {child.grade}
+                    {child.studentName}{labels.showGrade ? `, Gr ${child.grade}` : ""}
                   </button>
                 ))}
                 <button
@@ -351,38 +459,101 @@ export function OrderForm({
                   + Manual entry
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Office: "Ordering for myself" toggle. When on we hide the
+              recipient name field and mirror parentName → studentName on
+              submit. Toggling it off lets the orderer place an order for a
+              coworker. */}
+          {isOffice && (
+            <label className="flex items-center gap-2 rounded-[14px] border border-slate-100 bg-white px-3 py-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={orderForSelf}
+                onChange={(e) => setOrderForSelf(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              <span className="text-[12px] text-ink">Ordering for myself</span>
+              <span className="text-[11px] text-slate-400 ml-auto">Uncheck if ordering for a coworker</span>
+            </label>
+          )}
+
           <div className="rounded-[18px] border border-slate-100 bg-white p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Parent name</label>
+                <label className="text-[11px] text-slate-500 mb-1 block">
+                  {isOffice ? "Your name" : "Parent name"}
+                </label>
                 <input className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="Your name" required />
               </div>
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Parent email</label>
+                <label className="text-[11px] text-slate-500 mb-1 block">
+                  {isOffice ? "Your email" : "Parent email"}
+                </label>
                 <input type="email" className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="email@example.com" required />
               </div>
-              <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Student name</label>
-                <input className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Student name" required />
-              </div>
-              <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Grade</label>
-                <select className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" value={grade} onChange={(e) => setGrade(e.target.value)} required>
-                  <option value="" disabled>Select grade</option>
-                  {gradeOptions.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
+
+              {/* Recipient name — hidden for office self-orders, shown otherwise */}
+              {!(isOffice && orderForSelf) && (
+                <div>
+                  <label className="text-[11px] text-slate-500 mb-1 block">{labels.unitName}</label>
+                  <input
+                    className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2"
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                    placeholder={isOffice ? "Coworker's name" : "Student name"}
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Grade — schools only */}
+              {labels.showGrade && (
+                <div>
+                  <label className="text-[11px] text-slate-500 mb-1 block">{labels.grade}</label>
+                  <select className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" value={grade} onChange={(e) => setGrade(e.target.value)} required>
+                    <option value="" disabled>Select {labels.grade.toLowerCase()}</option>
+                    {gradeOptions.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Allergy notes</label>
-              <textarea className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2 resize-none" rows={2} value={allergyNotes} onChange={(e) => setAllergyNotes(e.target.value)} placeholder="e.g. nut allergy, no dairy..." />
+              <label className="text-[11px] text-slate-500 mb-1 block">
+                {isOffice ? "Allergies / dietary notes" : "Allergy notes"}
+              </label>
+              <textarea
+                className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2 resize-none"
+                rows={2}
+                value={allergyNotes}
+                onChange={(e) => setAllergyNotes(e.target.value)}
+                placeholder={isOffice ? "e.g. vegan, gluten-free..." : "e.g. nut allergy, no dairy..."}
+              />
             </div>
           </div>
-          <button type="button" onClick={() => { if (!studentName || !grade || !parentName || !parentEmail) { setError("Fill in all required fields."); return; } setError(""); window.history.pushState({ orderStep: 3 }, ""); setStep(3); }}
+          <button type="button" onClick={() => {
+            // For office self-orders, auto-fill recipient with the orderer's name
+            const effectiveStudentName = isOffice && orderForSelf ? parentName : studentName;
+            if (!parentName || !parentEmail) {
+              setError("Fill in your name and email.");
+              return;
+            }
+            if (!effectiveStudentName) {
+              setError(`Enter the ${labels.unitName.toLowerCase()}.`);
+              return;
+            }
+            if (labels.showGrade && !grade) {
+              setError(`Select a ${labels.grade.toLowerCase()}.`);
+              return;
+            }
+            if (isOffice && orderForSelf) setStudentName(parentName);
+            setError("");
+            window.history.pushState({ orderStep: 3 }, "");
+            setStep(3);
+          }}
             className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold">
             Choose meals →
           </button>
@@ -590,9 +761,13 @@ export function OrderForm({
               <p className="text-[12px] text-slate-500">{selectedDelivery?.school.name}</p>
             </div>
             <div className="p-4">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Student</p>
-              <p className="text-[13px] font-semibold text-ink">{studentName}</p>
-              <p className="text-[12px] text-slate-500">Grade {grade}{allergyNotes ? ` · Allergy: ${allergyNotes}` : ""}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{labels.unit}</p>
+              <p className="text-[13px] font-semibold text-ink">{studentName || (isOffice && orderForSelf ? parentName : "")}</p>
+              <p className="text-[12px] text-slate-500">
+                {labels.showGrade && grade ? `${labels.grade} ${grade}` : ""}
+                {labels.showGrade && grade && allergyNotes ? " · " : ""}
+                {allergyNotes ? `${isOffice ? "Notes" : "Allergy"}: ${allergyNotes}` : ""}
+              </p>
             </div>
             <div className="p-4">
               <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Order</p>

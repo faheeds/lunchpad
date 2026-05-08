@@ -169,7 +169,12 @@ export default async function OrderPage({
                 deliveryDate: date.deliveryDate.toISOString(),
                 cutoffAt: date.cutoffAt.toISOString(),
                 orderingOpen: date.orderingOpen,
-                school: { id: date.school.id, name: date.school.name, timezone: date.school.timezone }
+                school: {
+                  id: date.school.id,
+                  name: date.school.name,
+                  timezone: date.school.timezone,
+                  locationType: date.school.locationType,
+                }
               }))}
               menuItemsByDeliveryDate={Object.fromEntries(
                 Object.entries(menuItemsByDeliveryDate).map(([key, value]) => [

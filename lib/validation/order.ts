@@ -19,7 +19,10 @@ export const orderFormSchema = z.object({
   deliveryDateId: z.string().min(1),
   parentChildId: z.string().optional(),
   studentName: z.string().min(2),
-  grade: z.string().min(1),
+  // Grade is required for SCHOOL locations and not collected at all for OFFICE
+  // locations — accept it as optional here and let createPendingOrder fill in
+  // a sensible default ("—") for offices (the underlying DB column is non-null).
+  grade: optionalTextField,
   teacherName: optionalTextField,
   classroom: optionalTextField,
   cartItems: z.array(orderCartItemSchema).min(1, "Add at least one item to the cart."),

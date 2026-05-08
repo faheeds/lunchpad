@@ -176,11 +176,20 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
   )}`;
 
   return prisma.$transaction(async (tx) => {
+    // Reject SCHOOL orders that arrive with no grade — the form normally
+    // enforces this, but the validation schema is permissive so OFFICE
+    // orders pass through. For OFFICE, fall back to "—" so the non-null
+    // DB column stays clean without forcing a meaningless field on the form.
+    if (deliveryDate.school.locationType === "SCHOOL" && !parsed.grade) {
+      throw new Error("Grade is required for school orders.");
+    }
+    const gradeValue = parsed.grade || (deliveryDate.school.locationType === "OFFICE" ? "—" : "");
+
     const student = await tx.student.create({
       data: {
         schoolId: parsed.schoolId,
         studentName: parsed.studentName,
-        grade: parsed.grade,
+        grade: gradeValue,
         teacherName: parsed.teacherName || null,
         classroom: parsed.classroom || null,
         allergyNotes: parsed.allergyNotes || null,
