@@ -49,6 +49,10 @@ export default function SignupPage() {
   // Step 2 field
   const [plan, setPlan] = useState("GROWTH");
 
+  // Captured after a successful signup — used by step 3 to route to the
+  // correct tenant subdomain.
+  const [createdSlug, setCreatedSlug] = useState<string>("");
+
   function handleNameChange(value: string) {
     setRestaurantName(value);
     // Auto-generate slug from name
@@ -102,6 +106,8 @@ export default function SignupPage() {
       });
 
       if (result?.error) throw new Error("Account created but sign-in failed. Please log in manually.");
+      // Stash the slug so step 3 can route to the right subdomain.
+      setCreatedSlug(data.slug);
       setStep(3);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -149,12 +155,14 @@ export default function SignupPage() {
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1c0505", marginBottom: 8 }}>
             You&apos;re all set!
           </h1>
-          <p style={{ fontSize: 14, color: "#78716c", lineHeight: 1.6, marginBottom: 28 }}>
-            Your 14-day free trial has started. Head to your dashboard to set up your menu,
-            add your first school, and start taking orders.
+          <p style={{ fontSize: 14, color: "#78716c", lineHeight: 1.6, marginBottom: 12 }}>
+            Your 14-day free trial has started. Let&apos;s walk through setup — branding, your first location, menu, and a test order — then you&apos;re live.
+          </p>
+          <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: 28, fontFamily: "monospace" }}>
+            {createdSlug ? `${createdSlug}.lunchpad.us` : "yoursite.lunchpad.us"}
           </p>
           <a
-            href="/admin/dashboard"
+            href={createdSlug ? `https://${createdSlug}.lunchpad.us/admin/onboarding` : "/admin/onboarding"}
             style={{
               display: "block", width: "100%", padding: "14px",
               background: "#c41230", color: "white",
@@ -162,8 +170,12 @@ export default function SignupPage() {
               textDecoration: "none", textAlign: "center",
             }}
           >
-            Go to dashboard
+            Get started →
           </a>
+          <p style={{ fontSize: 11, color: "#cbd5e1", marginTop: 14, lineHeight: 1.5 }}>
+            New subdomain may take 30–60 seconds to issue an SSL certificate the first time.
+            If you see a security warning, refresh.
+          </p>
         </div>
       )}
 

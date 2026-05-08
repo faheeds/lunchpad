@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { fromZonedTime } from "date-fns-tz";
 import { prisma } from "@/lib/db";
-import { requireRestaurant } from "@/lib/restaurant";
+import { getCurrentRestaurant, requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { slugify } from "@/lib/utils";
 import { ImageUpload } from "@/components/admin/image-upload";
@@ -223,6 +224,27 @@ export default async function OnboardingPage({
 }: {
   searchParams: Promise<{ step?: string; error?: string }>;
 }) {
+  // If we're on the apex (no x-restaurant-slug header) but the operator is
+  // signed in to a real tenant, send them to their subdomain. The wizard
+  // is much more reliable when the middleware has set the slug header,
+  // because the layout, server actions, and revalidation paths all assume
+  // a single canonical host. Without this, RSC fetches loop while the
+  // session-fallback resolves restaurant context.
+  const headerList = await headers();
+  const slugHeader = headerList.get("x-restaurant-slug");
+  if (!slugHeader) {
+    const subdomainRestaurant = await getCurrentRestaurant();
+    if (!subdomainRestaurant) {
+      // Fall back to session — find the operator's restaurant via requireRestaurant().
+      const sessionRestaurant = await requireRestaurant();
+      const params = await searchParams;
+      const qs = new URLSearchParams();
+      if (params.step) qs.set("step", String(params.step));
+      const suffix = qs.toString();
+      redirect(`https://${sessionRestaurant.slug}.lunchpad.us/admin/onboarding${suffix ? `?${suffix}` : ""}`);
+    }
+  }
+
   const [params, restaurant] = await Promise.all([
     searchParams,
     requireRestaurant(),
