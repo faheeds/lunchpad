@@ -16,7 +16,7 @@ const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 export async function sendOrderConfirmationEmail(orderId: string, restaurantId: string) {
   const order = await prisma.order.findFirst({
     where: { id: orderId, restaurantId },
-    include: { school: true, deliveryDate: true, student: true, items: true }
+    include: { school: true, deliveryDate: true, student: true, items: true, restaurant: true }
   });
 
   if (!order) {
@@ -34,16 +34,25 @@ export async function sendOrderConfirmationEmail(orderId: string, restaurantId: 
     })),
     allergyNotes: order.items.map((item) => item.allergyNotes).find(Boolean) ?? order.student.allergyNotes,
     amountCents: order.totalCents,
-    orderNumber: order.orderNumber
+    orderNumber: order.orderNumber,
+    restaurantName: order.restaurant.name,
+    restaurantLogoUrl: order.restaurant.logoUrl,
+    restaurantPrimaryColor: order.restaurant.primaryColor,
   });
 
   try {
     let providerId: string | undefined;
 
     if (resend && env.EMAIL_FROM) {
+      // Use the restaurant's name as the From display so the email reads as
+      // coming from the restaurant, not the platform. The actual address has
+      // to stay on the verified domain (support@lunchpad.us). Reply-To points
+      // at the restaurant's contact email so customer replies route correctly.
+      const fromAddress = `${order.restaurant.name} <${env.EMAIL_FROM}>`;
       const result = await resend.emails.send({
-        from: env.EMAIL_FROM_NAME ? `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>` : env.EMAIL_FROM,
+        from: fromAddress,
         to: order.parentEmail,
+        replyTo: order.restaurant.contactEmail || undefined,
         subject: message.subject,
         text: message.text,
         html: message.html
@@ -94,7 +103,7 @@ export async function sendOrderConfirmationEmail(orderId: string, restaurantId: 
 export async function sendCancellationEmail(orderId: string, restaurantId: string) {
   const order = await prisma.order.findFirst({
     where: { id: orderId, restaurantId },
-    include: { school: true, deliveryDate: true, student: true, items: true },
+    include: { school: true, deliveryDate: true, student: true, items: true, restaurant: true },
   });
 
   if (!order) throw new Error("Order not found.");
@@ -107,17 +116,20 @@ export async function sendCancellationEmail(orderId: string, restaurantId: strin
     items: order.items.map((i) => ({ itemName: i.itemNameSnapshot })),
     amountCents: order.totalCents,
     orderNumber: order.orderNumber,
+    restaurantName: order.restaurant.name,
+    restaurantLogoUrl: order.restaurant.logoUrl,
+    restaurantPrimaryColor: order.restaurant.primaryColor,
   });
 
   try {
     let providerId: string | undefined;
 
     if (resend && env.EMAIL_FROM) {
+      const fromAddress = `${order.restaurant.name} <${env.EMAIL_FROM}>`;
       const result = await resend.emails.send({
-        from: env.EMAIL_FROM_NAME
-          ? `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>`
-          : env.EMAIL_FROM,
+        from: fromAddress,
         to: order.parentEmail,
+        replyTo: order.restaurant.contactEmail || undefined,
         subject: message.subject,
         text: message.text,
         html: message.html,
@@ -284,7 +296,7 @@ export async function sendKitchenPrepEmail(deliveryDateId: string) {
 export async function sendOrderModifiedEmail(orderId: string, restaurantId: string) {
   const order = await prisma.order.findFirst({
     where: { id: orderId, restaurantId },
-    include: { school: true, deliveryDate: true, student: true, items: true },
+    include: { school: true, deliveryDate: true, student: true, items: true, restaurant: true },
   });
 
   if (!order) throw new Error("Order not found.");
@@ -310,9 +322,11 @@ export async function sendOrderModifiedEmail(orderId: string, restaurantId: stri
     adminNote,
   });
 
+  const fromAddress = `${order.restaurant.name} <${env.EMAIL_FROM}>`;
   const result = await resend.emails.send({
-    from: env.EMAIL_FROM_NAME ? `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>` : env.EMAIL_FROM,
+    from: fromAddress,
     to: order.parentEmail,
+    replyTo: order.restaurant.contactEmail || undefined,
     subject: message.subject,
     text: message.text,
     html: message.html,
