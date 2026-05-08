@@ -35,6 +35,9 @@ type WeeklyBatchCheckoutArgs = {
   parentEmail: string;
   lineItems: SharedLineItem[];
   stripeAccountId?: string | null;
+  /** Optional overrides so the redirect lands on the tenant subdomain. */
+  successUrl?: string;
+  cancelUrl?: string;
 };
 
 async function createSession(args: SharedCheckoutArgs) {
@@ -95,8 +98,8 @@ export async function createStripeCheckoutSession(args: OrderCheckoutArgs) {
 export async function createWeeklyStripeCheckoutSession(args: WeeklyBatchCheckoutArgs) {
   return createSession({
     parentEmail: args.parentEmail,
-    successUrl: `${env.APP_BASE_URL}/checkout/success?batch=${args.batchId}&session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${env.APP_BASE_URL}/account?cancelled=1`,
+    successUrl: args.successUrl ?? `${env.APP_BASE_URL}/checkout/success?batch=${args.batchId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: args.cancelUrl ?? `${env.APP_BASE_URL}/account?cancelled=1`,
     metadata: {
       checkoutType: "weekly_batch",
       batchId: args.batchId,
