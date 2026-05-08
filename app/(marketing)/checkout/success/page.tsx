@@ -9,6 +9,7 @@ import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 import { OrderStatus } from "@prisma/client";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
+import { OrderSelfService } from "@/components/order/order-self-service";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function CheckoutSuccessPage({
   let order = params.order
     ? await prisma.order.findUnique({
         where: { id: params.order },
-        include: { student: true, deliveryDate: true, school: true, items: true, payment: true },
+        include: { student: true, deliveryDate: true, school: true, items: true, payment: true, restaurant: true },
       })
     : null;
 
@@ -312,8 +313,19 @@ export default async function CheckoutSuccessPage({
             </div>
           )}
 
+          {/* ── Self-service: cancel + contact restaurant ──────────── */}
+          {order && (
+            <OrderSelfService
+              orderId={order.id}
+              cutoffAt={order.deliveryDate.cutoffAt.toISOString()}
+              restaurantName={order.restaurant.name}
+              contactEmail={order.restaurant.contactEmail}
+              contactPhone={order.restaurant.contactPhone}
+            />
+          )}
+
           {/* ── Action buttons ─────────────────────────────────────── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
             <Link href="/history" style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               borderRadius: 14, padding: "13px 0",

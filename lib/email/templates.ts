@@ -25,7 +25,54 @@ type ConfirmationTemplateArgs = {
   restaurantName: string;
   restaurantLogoUrl?: string | null;
   restaurantPrimaryColor?: string | null;
+  restaurantContactEmail?: string | null;
+  restaurantContactPhone?: string | null;
 };
+
+/**
+ * "Need help?" contact card rendered near the bottom of customer-facing
+ * emails. Tells parents who to reach out to (the restaurant, not the
+ * platform) and gives them email + phone if available. Returns empty
+ * strings for both text + html when neither contact is set.
+ */
+function helpBlock(args: {
+  restaurantName: string;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+}): { text: string; html: string } {
+  const { restaurantName, contactEmail, contactPhone } = args;
+  if (!contactEmail && !contactPhone) {
+    return {
+      text: `Need to change or cancel? Just reply to this email and the ${restaurantName} team will help.`,
+      html: `
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#1c2a35;">Need help?</p>
+          <p style="margin:0;font-size:13px;color:#475569;line-height:1.5">
+            Just reply to this email and the <strong>${restaurantName}</strong> team will help.
+          </p>
+        </div>`,
+    };
+  }
+  const lines: string[] = [`Need to change or cancel your order? Reach the ${restaurantName} team:`];
+  if (contactEmail) lines.push(`  Email: ${contactEmail}`);
+  if (contactPhone) lines.push(`  Phone: ${contactPhone}`);
+  const htmlLinks: string[] = [];
+  if (contactEmail) htmlLinks.push(`<a href="mailto:${contactEmail}" style="color:#1c2a35;text-decoration:underline">${contactEmail}</a>`);
+  if (contactPhone) htmlLinks.push(`<a href="tel:${contactPhone.replace(/[^+\d]/g, "")}" style="color:#1c2a35;text-decoration:underline">${contactPhone}</a>`);
+  return {
+    text: lines.join("\n"),
+    html: `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin:20px 0;">
+        <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1c2a35;">Need help?</p>
+        <p style="margin:0 0 4px;font-size:13px;color:#475569;line-height:1.5">
+          To change or cancel your order, reach the <strong>${restaurantName}</strong> team:
+        </p>
+        <p style="margin:4px 0 0;font-size:13px;color:#1c2a35;line-height:1.6">
+          ${htmlLinks.join("&nbsp;&middot;&nbsp;")}
+        </p>
+      </div>`,
+  };
+}
 
 /** Small reusable header band that brands the email with the restaurant. */
 function brandHeader(name: string, logoUrl?: string | null, primaryColor?: string | null) {
@@ -45,6 +92,11 @@ function brandHeader(name: string, logoUrl?: string | null, primaryColor?: strin
 
 export function buildConfirmationEmail(args: ConfirmationTemplateArgs) {
   const deliveryDate = formatInTimeZone(args.deliveryDate, args.timezone, "EEEE, MMMM d");
+  const help = helpBlock({
+    restaurantName: args.restaurantName,
+    contactEmail: args.restaurantContactEmail,
+    contactPhone: args.restaurantContactPhone,
+  });
 
   return {
     subject: `${args.restaurantName} — order confirmed (${args.orderNumber})`,
@@ -61,8 +113,9 @@ export function buildConfirmationEmail(args: ConfirmationTemplateArgs) {
       `Amount paid: ${formatCurrency(args.amountCents)}`,
       `Order number: ${args.orderNumber}`,
       "",
-      `Thanks for ordering with ${args.restaurantName}.`,
+      help.text,
       "",
+      `Thanks for ordering with ${args.restaurantName}.`,
       `— The ${args.restaurantName} team`
     ].join("\n"),
     html: `
@@ -85,6 +138,7 @@ export function buildConfirmationEmail(args: ConfirmationTemplateArgs) {
             <tr><td style="padding: 6px 0;"><strong>Amount paid</strong></td><td>${formatCurrency(args.amountCents)}</td></tr>
             <tr><td style="padding: 6px 0;"><strong>Order number</strong></td><td>${args.orderNumber}</td></tr>
           </table>
+          ${help.html}
           <p style="margin:16px 0 4px">Thanks for ordering with <strong>${args.restaurantName}</strong>.</p>
           <p style="margin:0;color:#64748b;font-size:13px">— The ${args.restaurantName} team</p>
         </div>
@@ -104,11 +158,18 @@ type CancellationTemplateArgs = {
   restaurantName: string;
   restaurantLogoUrl?: string | null;
   restaurantPrimaryColor?: string | null;
+  restaurantContactEmail?: string | null;
+  restaurantContactPhone?: string | null;
 };
 
 export function buildCancellationEmail(args: CancellationTemplateArgs) {
   const deliveryDateStr = formatInTimeZone(args.deliveryDate, args.timezone, "EEEE, MMMM d");
   const itemsList = args.items.map((i) => i.itemName).join(", ");
+  const help = helpBlock({
+    restaurantName: args.restaurantName,
+    contactEmail: args.restaurantContactEmail,
+    contactPhone: args.restaurantContactPhone,
+  });
 
   return {
     subject: `${args.restaurantName} — order cancelled (${args.orderNumber})`,
@@ -138,7 +199,8 @@ export function buildCancellationEmail(args: CancellationTemplateArgs) {
             <tr><td style="padding: 6px 0;"><strong>Order number</strong></td><td>${args.orderNumber}</td></tr>
           </table>
           <p style="margin:0 0 8px">Your refund will be returned to the original payment method within <strong>5-10 business days</strong>.</p>
-          <p style="color:#64748b;font-size:13px;margin:8px 0 0">If you did not request this cancellation, please reply to this email and the ${args.restaurantName} team will help.</p>
+          ${help.html}
+          <p style="color:#64748b;font-size:13px;margin:8px 0 0">If you did not request this cancellation, please contact the ${args.restaurantName} team using the info above.</p>
         </div>
       </div>
     `

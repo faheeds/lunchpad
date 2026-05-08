@@ -38,6 +38,8 @@ export async function sendOrderConfirmationEmail(orderId: string, restaurantId: 
     restaurantName: order.restaurant.name,
     restaurantLogoUrl: order.restaurant.logoUrl,
     restaurantPrimaryColor: order.restaurant.primaryColor,
+    restaurantContactEmail: order.restaurant.contactEmail,
+    restaurantContactPhone: order.restaurant.contactPhone,
   });
 
   try {
@@ -119,6 +121,8 @@ export async function sendCancellationEmail(orderId: string, restaurantId: strin
     restaurantName: order.restaurant.name,
     restaurantLogoUrl: order.restaurant.logoUrl,
     restaurantPrimaryColor: order.restaurant.primaryColor,
+    restaurantContactEmail: order.restaurant.contactEmail,
+    restaurantContactPhone: order.restaurant.contactPhone,
   });
 
   try {

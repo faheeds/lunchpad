@@ -25,9 +25,20 @@ async function saveOperatorType(formData: FormData) {
   if (!["school", "office", "hybrid"].includes(operatorType)) {
     redirect("/admin/onboarding?step=1&error=invalid");
   }
+
+  // Capture support contact info on the same step. These are the email +
+  // phone that get rendered into customer-facing transactional emails and
+  // the parent ordering page footer, so it's important they're set early.
+  const contactEmail = String(formData.get("contactEmail") || "").trim() || null;
+  const contactPhone = String(formData.get("contactPhone") || "").trim() || null;
+
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    redirect("/admin/onboarding?step=1&error=invalid_email");
+  }
+
   await prisma.restaurant.update({
     where: { id: restaurant.id },
-    data: { operatorType },
+    data: { operatorType, contactEmail, contactPhone },
   });
   redirect("/admin/onboarding?step=2");
 }
@@ -306,6 +317,7 @@ export default async function OnboardingPage({
         <div className="rounded-[12px] bg-amber-50 border border-amber-200 px-4 py-3">
           <p className="text-[12px] text-amber-800">
             {params.error === "name_required" ? "Please enter a location name." :
+             params.error === "invalid_email" ? "That doesn't look like a valid email address." :
              params.error === "missing_fields" ? "Please fill in the date range, weekdays, and cutoff." :
              params.error === "invalid_range" ? "End date must be after start date." :
              params.error === "invalid_location" ? "Couldn't find that location." :
@@ -342,6 +354,42 @@ export default async function OnboardingPage({
                     <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">{opt.blurb}</p>
                   </label>
                 ))}
+              </div>
+
+              {/* Support contact — used in transactional emails & ordering page footer.
+                  Contact email is pre-filled from signup; phone is new info. */}
+              <div className="border-t border-slate-100 pt-4 mt-2 space-y-3">
+                <div>
+                  <p className="text-[12px] font-semibold text-ink">Customer support contact</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                    These appear in your customers&apos; order confirmation emails and on your ordering page footer
+                    so they know where to reach you with questions.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] text-slate-500 font-medium block mb-1">Support email</label>
+                    <input
+                      type="email"
+                      name="contactEmail"
+                      defaultValue={restaurant.contactEmail ?? ""}
+                      placeholder="orders@yourrestaurant.com"
+                      className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-slate-500 font-medium block mb-1">
+                      Support phone <span className="text-slate-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="contactPhone"
+                      defaultValue={restaurant.contactPhone ?? ""}
+                      placeholder="+1 (555) 123-4567"
+                      className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end pt-2">
