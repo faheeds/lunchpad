@@ -239,7 +239,7 @@ export default async function AdminMenuPage() {
     }),
     prisma.school.findMany({
       where: { restaurantId: restaurant.id, isActive: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, locationType: true },
       orderBy: { name: "asc" },
     }),
   ]);
