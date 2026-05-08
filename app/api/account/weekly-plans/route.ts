@@ -190,4 +190,10 @@ export async function DELETE(request: Request) {
       where: { id: planId }
     });
 
-    return Ne
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to delete weekly plan.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
