@@ -565,13 +565,11 @@ export function OrderForm({
       {step === 3 && (
         <div ref={menuScrollRef}>
           <button type="button" onClick={() => window.history.back()} className="text-[12px] text-slate-500 flex items-center gap-1 mb-3">← Back</button>
-          <div className="rounded-[14px] bg-green-50 border border-green-100 px-3 py-2.5 mb-3 flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-semibold text-green-800">☪ Hand Slaughtered Halal</span>
-            <span className="text-green-200 text-[11px]">|</span>
-            <span className="text-[11px] font-semibold text-green-800">HFSAA Certified</span>
-            <span className="text-green-200 text-[11px]">|</span>
-            <span className="text-[11px] text-green-700">⚠ Contains Dairy</span>
-          </div>
+          {/* (Per-restaurant menu disclaimers — e.g. "Hand Slaughtered Halal" —
+              previously hardcoded here for one tenant; removed so every
+              restaurant's menu starts clean. If we ever need this back, drive
+              it from a configurable field on the Restaurant model so each
+              tenant controls their own copy.) */}
           <div className="rounded-[14px] bg-brand-50 border border-brand-100 px-3 py-2.5 mb-4 text-[12px] text-brand-900 flex justify-between items-center">
             <span>{studentName} &middot; {formatInTimeZone(selectedDelivery!.deliveryDate, selectedDelivery!.school.timezone, "EEE MMM d")}</span>
             <span className="font-semibold">{selectedDelivery?.school.name}</span>
