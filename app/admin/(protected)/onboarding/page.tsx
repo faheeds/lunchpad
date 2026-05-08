@@ -851,4 +851,15 @@ Orders close the night before delivery. Questions? Reply to this email.
                     className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-ink no-underline">
                     Preview ordering page ↗
                   </a>
-                  <button type="submit" className="px-
+                  <button type="submit" className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-[13px] font-semibold">
+                    Launch — go to dashboard →
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
