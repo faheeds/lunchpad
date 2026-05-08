@@ -37,7 +37,15 @@ const ROLE_BADGE: Record<string, { label: string; color: string }> = {
   STAFF:   { label: "Staff",   color: "#374151" },
 };
 
-export function AdminNav({ adminRole, restaurantSlug }: { adminRole: string; restaurantSlug?: string }) {
+export function AdminNav({
+  adminRole,
+  restaurantSlug,
+  onboardingPill,
+}: {
+  adminRole: string;
+  restaurantSlug?: string;
+  onboardingPill?: { done: number; total: number } | null;
+}) {
   const pathname = usePathname();
   const [urlCopied, setUrlCopied] = useState(false);
   const links = ALL_LINKS.filter((l) => hasRole(adminRole, l.minRole));
@@ -78,6 +86,23 @@ export function AdminNav({ adminRole, restaurantSlug }: { adminRole: string; res
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {onboardingPill && (
+              <Link
+                href="/admin/onboarding"
+                className="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full no-underline transition"
+                style={{
+                  background: "#fef3c7",
+                  color: "#92400e",
+                  border: "1px solid #fde68a",
+                }}
+                title="Continue setup"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Setup {onboardingPill.done}/{onboardingPill.total}
+              </Link>
+            )}
             {orderingUrl && (
               <button
                 type="button"

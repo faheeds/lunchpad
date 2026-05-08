@@ -7,7 +7,50 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
 
 // Pages that bypass the setup-completion check
-const SETUP_EXEMPT = ["/admin/setup", "/admin/subscription"];
+const SETUP_EXEMPT = ["/admin/setup", "/admin/onboarding", "/admin/subscription"];
+
+/**
+ * Quick step-completion count for the nav pill. Mirrors the logic in the
+ * wizard page itself (app/admin/(protected)/onboarding/page.tsx).
+ * Returns null when the operator has marked onboarding complete.
+ */
+async function computeOnboardingPill(full: {
+  id: string;
+  operatorType: string | null;
+  logoUrl: string | null;
+  heroImageUrl: string | null;
+  stripeOnboardingComplete: boolean;
+  testOrderPlacedAt: Date | null;
+  kitchenSheetSendHour: number | null;
+  onboardingShareAcked: boolean;
+  onboardingComplete: boolean;
+} | null): Promise<{ done: number; total: number } | null> {
+  if (!full) return null;
+  if (full.onboardingComplete) return null;
+
+  const [locationCount, menuItemCount, deliveryDateCount, teamCount] = await Promise.all([
+    prisma.school.count({ where: { restaurantId: full.id, isActive: true } }),
+    prisma.menuItem.count({ where: { restaurantId: full.id, isActive: true } }),
+    prisma.deliveryDate.count({
+      where: { school: { restaurantId: full.id }, deliveryDate: { gte: new Date() } },
+    }),
+    prisma.adminUser.count({ where: { restaurantId: full.id } }),
+  ]);
+
+  const checks = [
+    Boolean(full.operatorType),
+    Boolean(full.logoUrl || full.heroImageUrl),
+    full.stripeOnboardingComplete,
+    locationCount > 0,
+    menuItemCount >= 3,
+    deliveryDateCount > 0,
+    teamCount > 1,
+    Boolean(full.testOrderPlacedAt),
+    full.kitchenSheetSendHour !== null && full.kitchenSheetSendHour !== undefined,
+    full.onboardingShareAcked,
+  ];
+  return { done: checks.filter(Boolean).length, total: checks.length };
+}
 
 export default async function AdminProtectedLayout({
   children,
@@ -115,7 +158,8 @@ export default async function AdminProtectedLayout({
           </Link>
         </div>
       )}
-      <AdminNav adminRole={adminRole} restaurantSlug={restaurant.slug} />
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <AdminNav adminRole={adminRole} restaurantSlug={restaurant.slug} onboardingPill={await computeOnboardingPill(full as any)} />
       <div className="max-w-7xl mx-auto px-4 py-4">
         {children}
       </div>

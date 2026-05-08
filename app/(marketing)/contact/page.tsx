@@ -15,23 +15,24 @@ export default async function ContactPage() {
       <main className="app-content">
         {/* Header */}
         <div style={{
-          background: "linear-gradient(135deg, #1c0505 0%, #3b0a0a 100%)",
-          padding: "28px 20px 24px",
+          background: "linear-gradient(135deg, var(--dark-bg) 0%, color-mix(in srgb, var(--dark-bg) 80%, #000) 100%)",
+          padding: "28px 20px 28px",
+          boxShadow: "0 4px 16px -8px rgba(0,0,0,0.25)",
         }}>
           <p style={{
             fontSize: 9, fontWeight: 700, letterSpacing: "0.22em",
-            textTransform: "uppercase", color: "#f59e0b", marginBottom: 6,
+            textTransform: "uppercase", color: "var(--accent-on-dark)", marginBottom: 6,
           }}>
             ★ {restaurantName} ★
           </p>
           <h1 style={{
-            fontSize: 26, fontWeight: 800, color: "white",
+            fontSize: 26, fontWeight: 800, color: "var(--hero-title)",
             textTransform: "uppercase", letterSpacing: "0.02em",
             lineHeight: 1.1, marginBottom: 8,
           }}>
             Contact Us
           </h1>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.55 }}>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.55 }}>
             Questions about an order or general feedback? We&apos;d love to hear from you.
           </p>
         </div>

@@ -42,7 +42,7 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 /** WCAG relative luminance of a hex color */
-function relativeLuminance(hex: string): number {
+export function relativeLuminance(hex: string): number {
   const clean = hex.replace("#", "").slice(0, 6).padEnd(6, "0");
   const toLinear = (c: number) => {
     const s = c / 255;
@@ -59,7 +59,7 @@ function relativeLuminance(hex: string): number {
  * Darken `hex` (same hue/sat) until it achieves `minContrast` against white.
  * Used for brand-on-white: ensures icons and labels on cards are always readable.
  */
-function darkenForWhite(hex: string, minContrast = 4.5): string {
+export function darkenForWhite(hex: string, minContrast = 4.5): string {
   const { h, s, l: startL } = hexToHsl(hex);
   let l = startL;
   while (l > 4) {
@@ -75,7 +75,7 @@ function darkenForWhite(hex: string, minContrast = 4.5): string {
  * Lighten `hex` (same hue/sat) until it achieves `minContrast` against `darkHex`.
  * Used for accent-on-dark: ensures accent text/icons on the header are always readable.
  */
-function lightenForDark(hex: string, darkHex: string, minContrast = 3.5): string {
+export function lightenForDark(hex: string, darkHex: string, minContrast = 3.5): string {
   const darkLum = relativeLuminance(darkHex);
   const { h, s, l: startL } = hexToHsl(hex);
   let l = startL;

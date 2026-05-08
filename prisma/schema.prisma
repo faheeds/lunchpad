@@ -101,6 +101,14 @@ model Restaurant {
   // Kitchen sheet automation (0–23 = UTC hour to send; null = disabled)
   kitchenSheetSendHour     Int?
 
+  // Onboarding wizard state. Most steps detect completion from existing
+  // data (locations, menu items, etc.) — these flags cover the steps that
+  // don't have a natural data signature.
+  operatorType             String?       // "school" | "office" | "hybrid" — seeds defaults
+  onboardingComplete       Boolean       @default(false)
+  testOrderPlacedAt        DateTime?     // step 8 of wizard — operator placed a test order
+  onboardingShareAcked     Boolean       @default(false) // step 10 — operator confirmed they shared the URL
+
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 
