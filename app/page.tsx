@@ -684,7 +684,15 @@ export default async function HomePage() {
             </h2>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {/* The section's header is centered, but each step row is left-aligned
+              by nature (badge on the left, text to the right). Wrapping the
+              list in a narrower, centered column keeps it visually anchored
+              to the page center on wide desktop instead of stretching to the
+              full 1100px container. */}
+          <div style={{
+            display: "flex", flexDirection: "column", gap: 0,
+            maxWidth: 640, margin: "0 auto",
+          }}>
             {howItWorks.map((step, i) => (
               <div key={step.step} style={{
                 display: "flex", gap: 20, position: "relative",
