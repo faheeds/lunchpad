@@ -302,8 +302,17 @@ export async function listOrders(filters: {
   schoolIds?: string[];
   status?: string;
   archived?: string;
-  /** Free-text search across student name, parent name, parent email, order number. */
+  /** Free-text search across student name, parent name, parent email, order
+   *  number, school name, and the snapshot name of any item on the order.
+   *  Empty/whitespace-only strings are ignored. */
   search?: string;
+  /** "yyyy-MM-dd" (inclusive). Filters by deliveryDate.deliveryDate.
+   *  Both ends optional — open-ended ranges are supported. */
+  fromDate?: string;
+  toDate?: string;
+  /** Sort key. Defaults to "delivery-asc" (matches the kitchen workflow:
+   *  earliest upcoming delivery first). */
+  sort?: "delivery-asc" | "delivery-desc" | "created-desc" | "amount-desc" | "amount-asc";
 }) {
   const where: Prisma.OrderWhereInput = { restaurantId: filters.restaurantId };
 
@@ -323,6 +332,25 @@ export async function listOrders(filters: {
   } else if (filters.archived !== "include") {
     where.archivedAt = null;
   }
+
+  // Date range filter — applied against the linked DeliveryDate.deliveryDate
+  // (the calendar day the lunch is for, not when the order was placed).
+  // Operators care about "show me everything for next week" not "show me
+  // orders placed last week".
+  const dateRange: { gte?: Date; lte?: Date } = {};
+  if (filters.fromDate && /^\d{4}-\d{2}-\d{2}$/.test(filters.fromDate)) {
+    dateRange.gte = new Date(`${filters.fromDate}T00:00:00.000Z`);
+  }
+  if (filters.toDate && /^\d{4}-\d{2}-\d{2}$/.test(filters.toDate)) {
+    // End-of-day inclusive — pick the moment just before the next day starts
+    // so an order with deliveryDate 2026-05-09T17:00 still matches when
+    // toDate=2026-05-09.
+    dateRange.lte = new Date(`${filters.toDate}T23:59:59.999Z`);
+  }
+  if (dateRange.gte || dateRange.lte) {
+    where.deliveryDate = { deliveryDate: dateRange };
+  }
+
   if (filters.search && filters.search.trim()) {
     const q = filters.search.trim();
     where.OR = [
@@ -330,7 +358,32 @@ export async function listOrders(filters: {
       { parentName: { contains: q, mode: "insensitive" } },
       { parentEmail: { contains: q, mode: "insensitive" } },
       { student: { studentName: { contains: q, mode: "insensitive" } } },
+      { school: { name: { contains: q, mode: "insensitive" } } },
+      { items: { some: { itemNameSnapshot: { contains: q, mode: "insensitive" } } } },
     ];
+  }
+
+  // Sort options — operators use different defaults depending on what
+  // they're doing. Kitchen prep wants delivery-asc (earliest upcoming
+  // first). Refund triage wants created-desc (newest first). Reports want
+  // amount-desc.
+  let orderBy: Prisma.OrderOrderByWithRelationInput[];
+  switch (filters.sort) {
+    case "delivery-desc":
+      orderBy = [{ deliveryDate: { deliveryDate: "desc" } }, { createdAt: "desc" }];
+      break;
+    case "created-desc":
+      orderBy = [{ createdAt: "desc" }];
+      break;
+    case "amount-desc":
+      orderBy = [{ totalCents: "desc" }, { createdAt: "desc" }];
+      break;
+    case "amount-asc":
+      orderBy = [{ totalCents: "asc" }, { createdAt: "desc" }];
+      break;
+    case "delivery-asc":
+    default:
+      orderBy = [{ deliveryDate: { deliveryDate: "asc" } }, { createdAt: "asc" }];
   }
 
   return prisma.order.findMany({
@@ -347,7 +400,7 @@ export async function listOrders(filters: {
       items: true,
       payment: true
     },
-    orderBy: [{ deliveryDate: { deliveryDate: "asc" } }, { createdAt: "asc" }]
+    orderBy,
   });
 }
 

@@ -19,6 +19,12 @@ export async function GET(request: Request) {
   const schoolId = searchParams.get("schoolId") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
   const archived = searchParams.get("archived") ?? "exclude";
+  // Pass through the same date-range and search params the orders page uses,
+  // so a CSV export reflects exactly what the operator was looking at when
+  // they clicked "CSV" — not the unfiltered universe.
+  const fromDate = searchParams.get("fromDate") ?? undefined;
+  const toDate = searchParams.get("toDate") ?? undefined;
+  const search = searchParams.get("q") ?? undefined;
 
   const orders = await listOrders({
     restaurantId: restaurant.id,
@@ -26,6 +32,9 @@ export async function GET(request: Request) {
     schoolIds: schoolId ? [schoolId] : [],
     status,
     archived,
+    fromDate,
+    toDate,
+    search,
   });
 
   const rows = orders.map((order) => ({

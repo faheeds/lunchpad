@@ -8,6 +8,29 @@ import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Returns a query-string with one parameter removed — used by the active
+ * filter chips so each chip's "x" link points to "the same URL minus this
+ * filter." Operating on a clone keeps the source URLSearchParams safe to
+ * reuse for other things (CSV export, labels, etc.).
+ */
+function stripParam(base: URLSearchParams, key: string): string {
+  const next = new URLSearchParams(base);
+  next.delete(key);
+  const qs = next.toString();
+  return qs ? `/admin/orders?${qs}` : "/admin/orders";
+}
+
+type OrderSortKey = "delivery-asc" | "delivery-desc" | "created-desc" | "amount-desc" | "amount-asc";
+
+const SORT_OPTIONS: { value: OrderSortKey; label: string }[] = [
+  { value: "delivery-asc",  label: "Delivery date — earliest first" },
+  { value: "delivery-desc", label: "Delivery date — latest first" },
+  { value: "created-desc",  label: "Newest first (placed)" },
+  { value: "amount-desc",   label: "Amount — highest" },
+  { value: "amount-asc",    label: "Amount — lowest" },
+];
+
 export default async function AdminOrdersPage({
   searchParams,
 }: {
@@ -17,9 +40,17 @@ export default async function AdminOrdersPage({
     status?: string;
     archived?: string;
     q?: string;
+    fromDate?: string;
+    toDate?: string;
+    sort?: string;
   }>;
 }) {
   const [params, restaurant] = await Promise.all([searchParams, requireRestaurant()]);
+
+  const sortKey: OrderSortKey =
+    SORT_OPTIONS.some((o) => o.value === params.sort)
+      ? (params.sort as OrderSortKey)
+      : "delivery-asc";
 
   const [orders, schools, allDeliveryDates] = await Promise.all([
     listOrders({
@@ -29,6 +60,9 @@ export default async function AdminOrdersPage({
       status: params.status,
       archived: params.archived,
       search: params.q,
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      sort: sortKey,
     }),
     prisma.school.findMany({
       where: { restaurantId: restaurant.id, isActive: true },
@@ -61,7 +95,36 @@ export default async function AdminOrdersPage({
   if (params.schoolId) exportParams.set("schoolId", params.schoolId);
   if (params.status && params.status !== "ALL") exportParams.set("status", params.status);
   if (params.archived) exportParams.set("archived", params.archived);
+  if (params.fromDate) exportParams.set("fromDate", params.fromDate);
+  if (params.toDate) exportParams.set("toDate", params.toDate);
+  if (params.q) exportParams.set("q", params.q);
   const exportBase = exportParams.toString() ? `?${exportParams.toString()}` : "";
+
+  // Detect "any filter active" so the Clear button only renders when there's
+  // something to clear, and so we can show a chip strip summarizing the
+  // active filter set above the form.
+  const activeFilterChips: { label: string; href: string }[] = [];
+  if (params.q) activeFilterChips.push({ label: `"${params.q}"`, href: stripParam(exportParams, "q") });
+  if (params.schoolId) {
+    const s = schools.find((x) => x.id === params.schoolId);
+    if (s) activeFilterChips.push({ label: s.name, href: stripParam(exportParams, "schoolId") });
+  }
+  if (params.deliveryDateId) {
+    const d = allDeliveryDates.find((x) => x.id === params.deliveryDateId);
+    if (d) activeFilterChips.push({
+      label: formatInTimeZone(d.deliveryDate, d.school.timezone, "EEE, MMM d"),
+      href: stripParam(exportParams, "deliveryDateId"),
+    });
+  }
+  if (params.fromDate) activeFilterChips.push({ label: `From ${params.fromDate}`, href: stripParam(exportParams, "fromDate") });
+  if (params.toDate) activeFilterChips.push({ label: `Through ${params.toDate}`, href: stripParam(exportParams, "toDate") });
+  if (params.status && params.status !== "ALL") activeFilterChips.push({ label: params.status, href: stripParam(exportParams, "status") });
+  if (params.archived === "only") activeFilterChips.push({ label: "Archived only", href: stripParam(exportParams, "archived") });
+  if (params.archived === "include") activeFilterChips.push({ label: "Inc. archived", href: stripParam(exportParams, "archived") });
+  if (sortKey !== "delivery-asc") activeFilterChips.push({
+    label: `Sort: ${SORT_OPTIONS.find((o) => o.value === sortKey)?.label ?? sortKey}`,
+    href: stripParam(exportParams, "sort"),
+  });
 
   return (
     <div className="space-y-4 pb-10">
@@ -122,6 +185,33 @@ export default async function AdminOrdersPage({
         ))}
       </div>
 
+      {/* ── Active filter chips — let operators see at a glance what's
+          narrowing the result set, with a 1-click way to drop any one
+          filter without clearing the whole form. */}
+      {activeFilterChips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+            Active filters:
+          </span>
+          {activeFilterChips.map((chip) => (
+            <Link
+              key={chip.label}
+              href={chip.href}
+              className="inline-flex items-center gap-1 rounded-full bg-slate-100 hover:bg-slate-200 transition px-2.5 py-1 text-[11px] font-medium text-slate-700 no-underline"
+            >
+              {chip.label}
+              <span aria-hidden="true" className="text-slate-400 hover:text-slate-700">×</span>
+            </Link>
+          ))}
+          <Link
+            href="/admin/orders"
+            className="text-[11px] text-slate-500 underline-offset-2 hover:underline"
+          >
+            Clear all
+          </Link>
+        </div>
+      )}
+
       {/* ── Filter bar ─────────────────────────────────────────────── */}
       <form className="rounded-[14px] border border-slate-100 bg-white p-3">
         <div className="mb-2">
@@ -135,11 +225,37 @@ export default async function AdminOrdersPage({
               type="search"
               name="q"
               defaultValue={params.q ?? ""}
-              placeholder="Search by name, email, or order number…"
+              placeholder="Name, email, order #, school, or item…"
               className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 pl-8 pr-3"
             />
           </div>
         </div>
+
+        {/* Date range — operators looking at a week or month of orders need
+            a span, not just a single calendar day. fromDate/toDate are
+            inclusive on both ends. The single-date dropdown below still
+            works for picking one specific delivery date. */}
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">From date</label>
+            <input
+              type="date"
+              name="fromDate"
+              defaultValue={params.fromDate ?? ""}
+              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Through date</label>
+            <input
+              type="date"
+              name="toDate"
+              defaultValue={params.toDate ?? ""}
+              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2"
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
           <div>
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Location</label>
@@ -184,6 +300,17 @@ export default async function AdminOrdersPage({
             </select>
           </div>
         </div>
+
+        <div className="mb-2">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Sort by</label>
+          <select name="sort" defaultValue={sortKey}
+            className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="flex gap-2">
           <button type="submit" className="flex-1 py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
             Apply filters
