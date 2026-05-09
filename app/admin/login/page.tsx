@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { LoginForm } from "./login-form";
 
@@ -20,10 +21,40 @@ export default async function AdminLoginPage() {
           <h1 className="text-[20px] font-semibold text-ink">
             {restaurant?.name ?? "LunchPad"} Admin
           </h1>
-          <p className="text-[12px] text-slate-500 mt-1">Sign in to manage your restaurant</p>
+          <p className="text-[12px] text-slate-500 mt-1">
+            {restaurant ? "Sign in to manage your restaurant" : "Sign in from your restaurant URL"}
+          </p>
         </div>
+
         <div className="rounded-[20px] border border-slate-100 bg-white p-6">
-          <LoginForm restaurantId={restaurant?.id ?? ""} />
+          {restaurant ? (
+            <LoginForm restaurantId={restaurant.id} />
+          ) : (
+            // Apex / unknown host — admins sign in only from their tenant
+            // subdomain. Showing the form here would either silently reject
+            // (auth provider requires restaurantId) or, worse, behave
+            // unpredictably across tenants. Send the operator to where
+            // they need to be.
+            <div className="space-y-4">
+              <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-3 text-[13px] text-amber-900">
+                Open your restaurant&apos;s admin URL — for example{" "}
+                <code className="bg-white/60 rounded px-1">your-restaurant.lunchpad.us/admin/login</code>.
+                The exact URL is in the welcome email we sent when you signed up.
+              </div>
+              <Link
+                href="/signup"
+                className="block w-full text-center py-3 rounded-xl bg-ink text-white text-[13px] font-semibold no-underline"
+              >
+                Create a new restaurant
+              </Link>
+              <Link
+                href="/"
+                className="block text-center text-[12px] text-slate-500 no-underline"
+              >
+                Back to lunchpad.us
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

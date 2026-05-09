@@ -395,12 +395,10 @@ export default async function HomePage() {
           <span style={{ fontSize: 15, fontWeight: 800, color: "#0f1923", letterSpacing: "-0.3px" }}>LunchPad</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Link href="/admin/login" style={{
-            fontSize: 13, fontWeight: 600, color: "#4b5563", textDecoration: "none",
-            padding: "6px 12px",
-          }}>
-            Sign in
-          </Link>
+          {/* Operators sign in from their tenant subdomain
+              (e.g. shake-shack.lunchpad.us/admin/login), not from the apex.
+              Removing the apex sign-in link prevents the cross-tenant
+              lookup that the auth provider would otherwise fall back to. */}
           <Link href="/signup" style={{
             fontSize: 13, fontWeight: 700, color: "white", textDecoration: "none",
             padding: "8px 16px", borderRadius: 8,

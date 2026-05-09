@@ -140,13 +140,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // restaurantId is passed from the login form (resolved from subdomain)
+        // restaurantId comes from the login form (resolved from the tenant
+        // subdomain). It MUST be present — without it, a query by email
+        // alone would return whichever admin row Prisma returned first
+        // across all tenants, which is both a multi-tenant data leak and
+        // a confusing UX. Operators sign in only from their subdomain.
         const restaurantId = String((credentials as Record<string, unknown>).restaurantId ?? "");
+        if (!restaurantId) {
+          return null;
+        }
 
         const admin = await prisma.adminUser.findFirst({
           where: {
             email: parsed.data.email.toLowerCase(),
-            ...(restaurantId ? { restaurantId } : {}),
+            restaurantId,
           }
         });
 
