@@ -80,8 +80,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     displayFont:     restaurant?.displayFont,
     bodyFont:        restaurant?.bodyFont,
   });
+  // Tag the document so CSS can branch between the platform marketing site
+  // (apex / lunchpad.us) and the tenant ordering app (e.g. shake-shack.lunchpad.us).
+  // Tenant pages keep the centered phone-card aesthetic on desktop; the
+  // platform landing page expands to a real desktop layout.
+  const shellMode = restaurant ? "is-tenant" : "is-platform";
   return (
-    <html lang="en" className={`${oswald.variable} ${inter.variable}`}>
+    <html lang="en" className={`${oswald.variable} ${inter.variable} ${shellMode}`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

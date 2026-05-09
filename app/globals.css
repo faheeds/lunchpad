@@ -27,14 +27,19 @@ body {
   background: #ffffff;
 }
 
-/* Tablet & desktop: phone-card aesthetic — centered column with shadow.
- * The parent-facing app is mobile-first; on wider screens we keep it
- * constrained as a phone-card rather than stretching, which previously
- * left the order rows running across 1900px of empty space.
+/* Tablet & up: phone-card aesthetic — centered column with shadow.
  *
- * Base width stays at 480px on tablet; bump to 560px on real desktop so
- * the column feels a touch more comfortable without becoming a full
- * desktop layout (which would require redesigning every screen). */
+ * Tenant ordering pages (shake-shack.lunchpad.us, etc.) are mobile-first,
+ * so we keep them constrained as a phone-card on wider screens rather than
+ * stretching the order rows across 1900px of empty space.
+ *
+ * The platform marketing page (lunchpad.us) is a real desktop site — it
+ * opts out of the phone-card on desktop via the .is-platform branch below.
+ *
+ * Base width stays at 480px on tablet; tenant bumps to 560px on real
+ * desktop so the column feels a touch roomier without becoming a full
+ * desktop layout (which would require redesigning every screen).
+ */
 @media (min-width: 640px) {
   .app-shell {
     margin: 24px auto;
@@ -46,8 +51,20 @@ body {
 }
 
 @media (min-width: 1024px) {
-  .app-shell {
+  .is-tenant .app-shell {
     max-width: 560px;
+  }
+
+  /* Platform landing — drop the phone constraint and let the marketing
+   * page fill the viewport like a normal desktop site. */
+  .is-platform .app-shell {
+    max-width: none;
+    margin: 0;
+    min-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    background: transparent;
   }
 }
 
