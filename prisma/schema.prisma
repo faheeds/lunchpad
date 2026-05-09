@@ -113,6 +113,7 @@ model Restaurant {
   updatedAt                DateTime       @updatedAt
 
   admins                   AdminUser[]
+  adminInvites             AdminInvite[]
   schools                  School[]
   menuItems                MenuItem[]
   orders                   Order[]
@@ -129,12 +130,48 @@ model AdminUser {
   name          String
   passwordHash  String
   role          AdminRole                  @default(MANAGER)
+  // Updated on every successful sign-in. Surfaced on the team page so
+  // owners can see who's still actively using their dashboard. Nullable
+  // until first login (existing rows backfill to null until they sign in).
+  lastActiveAt  DateTime?
   createdAt     DateTime                   @default(now())
   updatedAt     DateTime                   @updatedAt
   restaurant    Restaurant                 @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   resetTokens   AdminPasswordResetToken[]
+  invitesSent   AdminInvite[]              @relation("InvitesSent")
+  invitesAccepted AdminInvite[]            @relation("InvitesAccepted")
 
   @@unique([restaurantId, email])
+}
+
+// Magic-link invitations to join an admin team. The owner (or a manager,
+// scoped down to their own role) creates the invite; the invitee gets an
+// email with a single-use link, follows it, and lands on a page that lets
+// them set their own name + password to create their AdminUser row.
+//
+// We store only a SHA-256 hash of the token, never the raw value. Tokens
+// expire 14 days after creation and become single-use once acceptedAt is
+// set.
+model AdminInvite {
+  id              String     @id @default(cuid())
+  restaurantId    String
+  email           String     // who the invite was sent to (lowercased)
+  name            String?    // pre-filled name; invitee can override
+  role            AdminRole
+  invitedById     String
+  tokenHash       String     @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  acceptedAdminId String?    @unique
+  revokedAt       DateTime?  // owner cancelled the invite before acceptance
+  createdAt       DateTime   @default(now())
+
+  restaurant      Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  invitedBy       AdminUser  @relation("InvitesSent", fields: [invitedById], references: [id], onDelete: Restrict)
+  acceptedBy      AdminUser? @relation("InvitesAccepted", fields: [acceptedAdminId], references: [id], onDelete: SetNull)
+
+  @@index([restaurantId, email])
+  @@index([restaurantId, acceptedAt, revokedAt])
 }
 
 // Password reset tokens. We never store the raw token — only its SHA-256

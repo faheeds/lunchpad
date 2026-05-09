@@ -667,6 +667,65 @@ export function buildSubscriptionChangedEmail(args: SubscriptionChangedTemplateA
   return { subject, text, html };
 }
 
+// ─── Admin team invite ───────────────────────────────────────────────────────
+
+type AdminInviteTemplateArgs = {
+  inviterName: string;
+  restaurantName: string;
+  /** Display label for the role: "Owner" / "Manager" / "Staff". */
+  roleLabel: string;
+  acceptUrl: string;
+  /** How long until the invite link expires — surfaced in copy. */
+  expiresInDays: number;
+};
+
+export function buildAdminInviteEmail(args: AdminInviteTemplateArgs) {
+  const { inviterName, restaurantName, roleLabel, acceptUrl, expiresInDays } = args;
+
+  const subject = `${inviterName} invited you to join ${restaurantName} on LunchPad`;
+
+  const text = `${inviterName} invited you to join the ${restaurantName} admin team as ${roleLabel}.
+
+Accept your invite (expires in ${expiresInDays} days):
+${acceptUrl}
+
+After clicking the link you'll be able to set your name and password.
+
+If you weren't expecting this invitation, you can safely ignore the email.`;
+
+  const html = `
+    <div style="${base}">
+      <div style="${card}">
+        <h1 style="font-size:18px;font-weight:600;margin:0 0 12px;color:#0f172a">
+          You're invited to ${restaurantName}
+        </h1>
+        <p style="margin:0 0 16px;font-size:14px;color:#334155">
+          <strong>${inviterName}</strong> invited you to join the <strong>${restaurantName}</strong> admin team on LunchPad as <strong>${roleLabel}</strong>.
+        </p>
+        <p style="margin:0 0 20px">
+          <a href="${acceptUrl}"
+             style="display:inline-block;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;padding:12px 22px">
+            Accept invitation
+          </a>
+        </p>
+        <p style="margin:0 0 14px;font-size:12px;color:#64748b">
+          This link expires in ${expiresInDays} days and can only be used once. After clicking it you'll set your own name and password.
+        </p>
+        <p style="margin:0 0 14px;font-size:12px;color:#64748b">
+          If the button doesn't work, paste this URL into your browser:<br>
+          <span style="font-size:11px;color:#475569;word-break:break-all">${acceptUrl}</span>
+        </p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:18px 0" />
+        <p style="margin:0;font-size:12px;color:#64748b">
+          Didn't expect this? You can safely ignore the email — no account will be created without you accepting.
+        </p>
+      </div>
+    </div>
+  `;
+
+  return { subject, text, html };
+}
+
 // ─── Admin password reset ────────────────────────────────────────────────────
 
 type AdminPasswordResetTemplateArgs = {

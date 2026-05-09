@@ -14,6 +14,10 @@ export function LoginForm({ restaurantId }: { restaurantId: string }) {
   const searchParams = useSearchParams();
   // Surfaced when an admin lands here after completing /admin/reset-password.
   const justReset = searchParams.get("reset") === "1";
+  // Surfaced after a teammate accepts an invite. `existing` means their
+  // email was already on the team, so the invite was just consumed without
+  // creating a new admin row.
+  const invitedFlag = searchParams.get("invited");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +34,16 @@ export function LoginForm({ restaurantId }: { restaurantId: string }) {
       {justReset && (
         <p className="text-[12px] text-green-800 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
           Password updated. Sign in with your new password.
+        </p>
+      )}
+      {invitedFlag === "1" && (
+        <p className="text-[12px] text-green-800 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+          Account created — sign in with your new password.
+        </p>
+      )}
+      {invitedFlag === "existing" && (
+        <p className="text-[12px] text-blue-800 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+          You&apos;re already on this team — sign in with your existing password.
         </p>
       )}
       <div>

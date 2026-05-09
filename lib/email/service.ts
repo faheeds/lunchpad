@@ -485,6 +485,49 @@ export async function sendSubscriptionChangedEmail(
   }
 }
 
+// ─── Admin team invite ───────────────────────────────────────────────────────
+import { buildAdminInviteEmail } from "@/lib/email/templates";
+
+/**
+ * Sends a magic-link invitation email so a new teammate can join an admin
+ * team without the inviter setting their password. Caller is responsible
+ * for generating the raw token and persisting its hash; this function just
+ * formats and sends. Throws when delivery is misconfigured so the inviter
+ * sees a clear error rather than a silent drop.
+ */
+export async function sendAdminInviteEmail(args: {
+  toEmail: string;
+  inviterName: string;
+  restaurantName: string;
+  roleLabel: string;
+  acceptUrl: string;
+  expiresInDays: number;
+}) {
+  if (!resend || !env.EMAIL_FROM) {
+    throw new Error("Email delivery is not configured. Add a valid RESEND_API_KEY and EMAIL_FROM.");
+  }
+
+  const message = buildAdminInviteEmail({
+    inviterName: args.inviterName,
+    restaurantName: args.restaurantName,
+    roleLabel: args.roleLabel,
+    acceptUrl: args.acceptUrl,
+    expiresInDays: args.expiresInDays,
+  });
+
+  // Send from the restaurant's display name so the recipient sees who they're
+  // joining, not a generic platform sender.
+  const fromAddress = `${args.restaurantName} <${env.EMAIL_FROM}>`;
+
+  await resend.emails.send({
+    from: fromAddress,
+    to: args.toEmail,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+  });
+}
+
 // ─── Admin password reset ────────────────────────────────────────────────────
 import { buildAdminPasswordResetEmail } from "@/lib/email/templates";
 

@@ -166,6 +166,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        // Stamp lastActiveAt on every successful login. Best-effort — a
+        // failed update shouldn't block the user from signing in. Surfaced
+        // on the team page so owners can see who's actively using the
+        // dashboard. Update isn't awaited critically; we await it because
+        // it's a single fast write and we want it visible on the very
+        // next render.
+        try {
+          await prisma.adminUser.update({
+            where: { id: admin.id },
+            data: { lastActiveAt: new Date() },
+          });
+        } catch {
+          // Swallow — login should still succeed if the column hasn't been
+          // pushed to the DB yet (covers the brief window between code
+          // deploy and `prisma db push` running).
+        }
+
         return {
           id: admin.id,
           email: admin.email,
