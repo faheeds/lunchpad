@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { prisma } from "@/lib/db";
 import { signMobileToken } from "@/lib/mobile-jwt";
+import { getCurrentRestaurant } from "@/lib/restaurant";
 
 // CORS headers for Capacitor iOS WebView (origin: capacitor://localhost)
 const CORS_HEADERS = {
@@ -65,18 +66,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email in Apple token" }, { status: 400, headers: CORS_HEADERS });
     }
 
+    // Tenant resolved from the request subdomain — the app must hit the
+    // restaurant's own host for the parent record to scope correctly.
+    const restaurant = await getCurrentRestaurant();
+    if (!restaurant) {
+      return NextResponse.json(
+        { error: "Sign-in must hit a restaurant subdomain (e.g. <slug>.lunchpad.us)." },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
     // Build display name from fullName (only provided on first sign-in by Apple)
     const name = [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ") || undefined;
 
-    // Upsert the parent user
+    // Upsert the parent user — scoped per-tenant so the same Apple ID
+    // can be a separate ParentUser at each restaurant they use.
     const parent = await prisma.parentUser.upsert({
-      where: { email },
+      where: { restaurantId_email: { restaurantId: restaurant.id, email } },
       update: {
         ...(name ? { name } : {}),
         provider: "apple",
         providerId: payload.sub as string,
       },
       create: {
+        restaurantId: restaurant.id,
         email,
         name,
         provider: "apple",

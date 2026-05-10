@@ -117,6 +117,7 @@ model Restaurant {
   schools                  School[]
   menuItems                MenuItem[]
   orders                   Order[]
+  parentUsers              ParentUser[]
   weeklyCheckoutBatches    WeeklyCheckoutBatch[]
   processedWebhookEvents   ProcessedWebhookEvent[]
   activityLogs             ActivityLog[]
@@ -343,19 +344,29 @@ model Student {
 
 // ParentUser is global — one account works across restaurants.
 // Their children are scoped to schools (which belong to restaurants).
+// Parent (customer) accounts are scoped per-tenant. The same email may
+// exist as separate ParentUser records at different restaurants — each is
+// fully isolated (its own children, orders, weekly plans). Without this
+// scoping, signing in with the same Google account at a different
+// restaurant would surface the previous restaurant's data.
 model ParentUser {
   id                    String                @id @default(cuid())
-  email                 String                @unique
+  restaurantId          String
+  email                 String
   name                  String?
   image                 String?
   provider              String?
   providerId            String?
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
+  restaurant            Restaurant            @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   children              ParentChild[]
   orders                Order[]
   weeklyPlans           WeeklyLunchPlan[]
   weeklyCheckoutBatches WeeklyCheckoutBatch[]
+
+  @@unique([restaurantId, email])
+  @@index([email])
 }
 
 model ParentChild {

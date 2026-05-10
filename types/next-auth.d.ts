@@ -6,11 +6,12 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role?: string;           // "ADMIN" | "PARENT"
-      adminRole?: string;      // "OWNER" | "MANAGER" | "STAFF"
+      role?: string;                  // "ADMIN" | "PARENT"
+      adminRole?: string;             // "OWNER" | "MANAGER" | "STAFF"
       parentUserId?: string;
       adminUserId?: string;
-      restaurantId?: string;
+      restaurantId?: string;          // tenant id for admins
+      parentRestaurantId?: string;    // tenant id for parents (per-tenant scoping)
     };
   }
 
@@ -28,5 +29,6 @@ declare module "next-auth/jwt" {
     parentUserId?: string;
     adminUserId?: string;
     restaurantId?: string;
+    parentRestaurantId?: string;
   }
 }

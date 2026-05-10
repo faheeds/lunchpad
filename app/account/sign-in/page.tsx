@@ -4,9 +4,18 @@ import { NativeAppRedirect } from "./native-app-redirect";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 
-export default function ParentSignInPage() {
+export default async function ParentSignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ "different-tenant"?: string }>;
+}) {
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   const appleEnabled = Boolean(env.AUTH_APPLE_ID && env.AUTH_APPLE_SECRET);
+  const params = await searchParams;
+  // Surfaced when requireParent() detects the existing session belongs
+  // to a different restaurant. Lets the user know why they're back at
+  // the sign-in page even though they were "already signed in."
+  const differentTenant = params["different-tenant"] === "1";
 
   return (
     <>
@@ -21,6 +30,11 @@ export default function ParentSignInPage() {
               Save children, view order history, and plan weekly lunches in one place.
             </p>
           </div>
+          {differentTenant && (
+            <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-[12px] text-amber-900">
+              You were signed in to a different restaurant. Each restaurant on LunchPad has its own account — sign in here to use this one.
+            </div>
+          )}
           <ParentSignInButtons googleEnabled={googleEnabled} appleEnabled={appleEnabled} />
         </div>
       </main>

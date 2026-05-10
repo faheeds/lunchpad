@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Apple from "next-auth/providers/apple";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -88,27 +89,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       if (account?.provider === "google" || account?.provider === "apple") {
         const email = user?.email?.toLowerCase();
-        if (email) {
-          const parent = await prisma.parentUser.upsert({
-            where: { email },
-            update: {
-              name: user.name ?? undefined,
-              image: user.image ?? undefined,
-              provider: account.provider,
-              providerId: account.providerAccountId
-            },
-            create: {
-              email,
-              name: user.name ?? undefined,
-              image: user.image ?? undefined,
-              provider: account.provider,
-              providerId: account.providerAccountId
-            }
-          });
+        // The tenant cookie was dropped by startParentOAuth() in the
+        // sign-in flow before the OAuth redirect. It tells us which
+        // restaurant the parent is signing into so we can scope the
+        // ParentUser upsert to (restaurantId, email) and avoid
+        // cross-tenant data leaks.
+        const cookieStore = await cookies();
+        const tenantId = cookieStore.get("lp-tenant-id")?.value;
 
-          token.role = "PARENT";
-          token.parentUserId = parent.id;
-          token.adminUserId = undefined;
+        if (email && tenantId) {
+          // Verify the tenant exists and is active before upserting.
+          const tenant = await prisma.restaurant.findUnique({
+            where: { id: tenantId, isActive: true },
+            select: { id: true },
+          });
+          if (tenant) {
+            const parent = await prisma.parentUser.upsert({
+              where: { restaurantId_email: { restaurantId: tenant.id, email } },
+              update: {
+                name: user.name ?? undefined,
+                image: user.image ?? undefined,
+                provider: account.provider,
+                providerId: account.providerAccountId,
+              },
+              create: {
+                restaurantId: tenant.id,
+                email,
+                name: user.name ?? undefined,
+                image: user.image ?? undefined,
+                provider: account.provider,
+                providerId: account.providerAccountId,
+              },
+            });
+
+            token.role = "PARENT";
+            token.parentUserId = parent.id;
+            token.parentRestaurantId = parent.restaurantId;
+            token.adminUserId = undefined;
+
+            // Burn the cookie now that we've used it. Prevents a stale
+            // value from a prior sign-in attempt from leaking into a
+            // future tenant context.
+            cookieStore.delete("lp-tenant-id");
+          }
         }
       }
 
@@ -121,6 +144,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.adminUserId = token.adminUserId as string | undefined;
         session.user.restaurantId = token.restaurantId as string | undefined;
         session.user.adminRole = token.adminRole as string | undefined;
+        // Tenant the parent record belongs to. Different from
+        // `restaurantId` (admin tenant) because parents are scoped per
+        // restaurant. requireParent() checks this matches the current
+        // tenant on every page load.
+        session.user.parentRestaurantId = token.parentRestaurantId as string | undefined;
       }
       return session;
     }

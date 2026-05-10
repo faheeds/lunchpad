@@ -14,6 +14,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { prisma } from "@/lib/db";
 import { signNativeToken } from "@/lib/native-jwt";
 import { CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
+import { getCurrentRestaurant } from "@/lib/restaurant";
 
 export { corsOptions as OPTIONS };
 
@@ -62,18 +63,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Tenant context comes from the request host (e.g. shake-shack.lunchpad.us
+    // sets x-restaurant-slug via middleware). The iOS app should hit the
+    // restaurant's subdomain — same scoping as the web flow.
+    const restaurant = await getCurrentRestaurant();
+    if (!restaurant) {
+      return NextResponse.json(
+        { error: "Sign-in must hit a restaurant subdomain (e.g. <slug>.lunchpad.us)." },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
     const name =
       [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ") ||
       undefined;
 
     const parent = await prisma.parentUser.upsert({
-      where: { email },
+      where: { restaurantId_email: { restaurantId: restaurant.id, email } },
       update: {
         ...(name ? { name } : {}),
         provider: "apple",
         providerId: payload.sub as string,
       },
       create: {
+        restaurantId: restaurant.id,
         email,
         name,
         provider: "apple",

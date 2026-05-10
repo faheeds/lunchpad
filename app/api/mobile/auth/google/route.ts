@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { prisma } from "@/lib/db";
 import { signMobileToken } from "@/lib/mobile-jwt";
+import { getCurrentRestaurant } from "@/lib/restaurant";
 
 // CORS headers for Capacitor iOS WebView (origin: capacitor://localhost)
 const CORS_HEADERS = {
@@ -65,12 +66,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email in Google token" }, { status: 400, headers: CORS_HEADERS });
     }
 
+    // Tenant resolved from the request subdomain — same scoping as web flow.
+    const restaurant = await getCurrentRestaurant();
+    if (!restaurant) {
+      return NextResponse.json(
+        { error: "Sign-in must hit a restaurant subdomain (e.g. <slug>.lunchpad.us)." },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
     const name = (payload.name as string | undefined) || undefined;
     const image = (payload.picture as string | undefined) || undefined;
 
-    // Upsert the parent user
+    // Upsert per-tenant — same Google account at two restaurants = two parents.
     const parent = await prisma.parentUser.upsert({
-      where: { email },
+      where: { restaurantId_email: { restaurantId: restaurant.id, email } },
       update: {
         ...(name ? { name } : {}),
         ...(image ? { image } : {}),
@@ -78,6 +88,7 @@ export async function POST(request: NextRequest) {
         providerId: payload.sub as string,
       },
       create: {
+        restaurantId: restaurant.id,
         email,
         name,
         image,

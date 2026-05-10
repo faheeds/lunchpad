@@ -1,7 +1,7 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { startParentOAuth } from "./actions";
 
 function GoogleIcon() {
   return (
@@ -28,7 +28,15 @@ export function ParentSignInButtons({ googleEnabled, appleEnabled }: { googleEna
   async function handleSignIn(provider: "google" | "apple", enabled: boolean) {
     if (!enabled) { setMessage(`${provider === "google" ? "Google" : "Apple"} sign-in is not configured yet.`); return; }
     setMessage("");
-    await signIn(provider, { callbackUrl: "/account" });
+    // Goes through a server action that drops a tenant-scope cookie
+    // before redirecting to the provider — the JWT callback reads that
+    // cookie to upsert the ParentUser scoped to (restaurantId, email)
+    // instead of by email alone.
+    try {
+      await startParentOAuth(provider);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Sign-in failed. Try again.");
+    }
   }
 
   return (

@@ -8,6 +8,21 @@ export async function requireParent() {
   if (!session?.user?.email || session.user.role !== "PARENT" || !session.user.parentUserId) {
     redirect("/account/sign-in");
   }
+  // Per-tenant session check: a parent signed in at Restaurant A cannot
+  // operate on Restaurant B with the same session. The cookie domain is
+  // .lunchpad.us so it travels across subdomains, but each tenant has
+  // its own ParentUser record — so if the session's parentRestaurantId
+  // doesn't match the current tenant, force a fresh sign-in here.
+  // Without this, navigating between tenants would silently surface the
+  // previous tenant's children/orders/restaurant URL.
+  const currentRestaurant = await getCurrentRestaurant();
+  if (
+    currentRestaurant &&
+    session.user.parentRestaurantId &&
+    session.user.parentRestaurantId !== currentRestaurant.id
+  ) {
+    redirect("/account/sign-in?different-tenant=1");
+  }
   return session;
 }
 
@@ -15,6 +30,17 @@ export async function assertParentApiRequest() {
   const session = await auth();
   if (!session?.user?.email || session.user.role !== "PARENT" || !session.user.parentUserId) {
     throw new Error("Unauthorized");
+  }
+  // Same per-tenant check as requireParent — API routes can be called
+  // from a different subdomain than the one the session was issued for,
+  // so we re-verify here.
+  const currentRestaurant = await getCurrentRestaurant();
+  if (
+    currentRestaurant &&
+    session.user.parentRestaurantId &&
+    session.user.parentRestaurantId !== currentRestaurant.id
+  ) {
+    throw new Error("Session is for a different restaurant. Sign in here to continue.");
   }
   return session;
 }
@@ -41,29 +67,19 @@ export async function requireParentTenant(parentUserId: string, redirectPath = "
   const restaurant = await getCurrentRestaurant();
   if (restaurant) return restaurant;
 
-  // Apex path — find the parent's restaurant and bounce.
-  const child = await prisma.parentChild.findFirst({
-    where: { parentUserId, archivedAt: null },
-    include: { school: { include: { restaurant: true } } },
-    orderBy: { createdAt: "asc" },
+  // Apex path — read the parent's home restaurant directly. Parents are
+  // scoped per-tenant so this is now a direct lookup; no need to walk
+  // through children/orders.
+  const parent = await prisma.parentUser.findUnique({
+    where: { id: parentUserId },
+    include: { restaurant: true },
   });
-  let resolvedSlug = child?.school.restaurant?.slug;
 
-  if (!resolvedSlug) {
-    const lastOrder = await prisma.order.findFirst({
-      where: { parentUserId },
-      include: { restaurant: true },
-      orderBy: { createdAt: "desc" },
-    });
-    resolvedSlug = lastOrder?.restaurant?.slug ?? undefined;
-  }
-
-  if (resolvedSlug) {
+  if (parent?.restaurant) {
     const rootDomain = process.env.ROOT_DOMAIN || "lunchpad.us";
-    redirect(`https://${resolvedSlug}.${rootDomain}${redirectPath}`);
+    redirect(`https://${parent.restaurant.slug}.${rootDomain}${redirectPath}`);
   }
 
-  // Parent has no children + no orders — send them to sign-in instead of
-  // throwing. This shouldn't happen in practice but it's the safest dead-end.
+  // Orphan parent (shouldn't happen with the new schema) — dead-end at sign-in.
   redirect("/account/sign-in");
 }
