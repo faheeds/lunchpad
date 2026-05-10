@@ -4,22 +4,47 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 
-export function SiteHeader({ restaurantName = "Hot Lunch" }: { restaurantName?: string }) {
+export function SiteHeader({
+  restaurantName = "Hot Lunch",
+  logoUrl = null,
+}: {
+  restaurantName?: string;
+  /** Restaurant's uploaded logo URL (Vercel Blob). When null, falls back to
+   *  the default LunchPad cloche SVG so the header always renders something. */
+  logoUrl?: string | null;
+}) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
   const [menuOpen, setMenuOpen] = useState(false);
+  // If the uploaded image fails to load (404, expired blob, etc.) we
+  // swap to the SVG fallback. Tracked locally so a single bad URL doesn't
+  // permanently break the brand.
+  const [logoFailed, setLogoFailed] = useState(false);
+  const showUploadedLogo = Boolean(logoUrl) && !logoFailed;
 
   return (
     <header className="app-header" style={{ flexDirection: "column", padding: 0, background: "var(--dark-bg)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px" }}>
         <Link href="/" className="no-underline flex items-center gap-2" onClick={() => setMenuOpen(false)}>
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="7" fill="#c41230"/>
-            <path d="M 4 19 A 12 10 0 0 1 28 19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="16" y1="5.5" x2="16" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <rect x="3" y="20.5" width="26" height="5.5" rx="2.75" fill="white"/>
-          </svg>
+          {showUploadedLogo ? (
+            // Plain <img> rather than next/image so any Vercel Blob host
+            // works without a remotePatterns entry per restaurant.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl!}
+              alt={`${restaurantName} logo`}
+              onError={() => setLogoFailed(true)}
+              style={{ width: 28, height: 28, borderRadius: 7, objectFit: "cover", flexShrink: 0 }}
+            />
+          ) : (
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="7" fill="#c41230"/>
+              <path d="M 4 19 A 12 10 0 0 1 28 19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+              <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+              <line x1="16" y1="5.5" x2="16" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <rect x="3" y="20.5" width="26" height="5.5" rx="2.75" fill="white"/>
+            </svg>
+          )}
           <p style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
             {restaurantName}
           </p>
