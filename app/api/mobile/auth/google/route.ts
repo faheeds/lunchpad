@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
       parentUserId: parent.id,
       email: parent.email,
       name: parent.name ?? undefined,
+      restaurantId: parent.restaurantId,
     });
 
     return NextResponse.json({ token }, { headers: CORS_HEADERS });

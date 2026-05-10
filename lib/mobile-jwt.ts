@@ -22,6 +22,11 @@ export type MobileTokenPayload = {
   parentUserId: string;
   email: string;
   name?: string;
+  /** Restaurant the parent record belongs to. Verified against the
+   *  request's tenant subdomain by requireMobileAuth so a JWT issued for
+   *  Restaurant A can't be replayed against Restaurant B. Optional for
+   *  back-compat with tokens minted before per-tenant scoping. */
+  restaurantId?: string;
 };
 
 export async function signMobileToken(payload: MobileTokenPayload): Promise<string> {
@@ -43,5 +48,6 @@ export async function verifyMobileToken(token: string): Promise<MobileTokenPaylo
     parentUserId: payload.parentUserId as string,
     email: payload.email as string,
     name: payload.name as string | undefined,
+    restaurantId: payload.restaurantId as string | undefined,
   };
 }

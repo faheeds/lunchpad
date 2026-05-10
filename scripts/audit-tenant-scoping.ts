@@ -57,42 +57,82 @@ type Hit = {
 
 function gatherHits(): Hit[] {
   const hits: Hit[] = [];
-  const pattern = TENANT_MODELS.map((m) => `prisma\\.${m}\\.(${FINDERS.join("|")})`).join("|");
-  const cmd = `git ls-files "*.ts" "*.tsx" | xargs grep -nE "${pattern}" 2>/dev/null || true`;
-  const output = execSync(cmd, { cwd: resolve(__dirname, ".."), encoding: "utf8" });
+  const repoRoot = resolve(__dirname, "..");
 
-  for (const rawLine of output.split("\n")) {
-    if (!rawLine.trim()) continue;
-    const m = rawLine.match(/^([^:]+):(\d+):(.*)$/);
-    if (!m) continue;
-    const [, file, lineStr, snippet] = m;
-    const line = parseInt(lineStr, 10);
+  // Cross-platform file enumeration. The previous implementation relied on
+  // `git ls-files | xargs grep` which fails on Windows because `xargs`
+  // isn't a native Windows command. Using `git ls-files` alone (which IS
+  // cross-platform — git ships its own bundled tools on Windows) and
+  // doing the regex match in Node makes this work everywhere.
+  const fileList = execSync(`git ls-files "*.ts" "*.tsx"`, {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  const files = fileList.split(/\r?\n/).map((f) => f.trim()).filter(Boolean);
 
-    // Skip the audit script itself, schema, tests, generated code.
-    if (
-      file.includes("scripts/audit-tenant-scoping") ||
-      file.includes("prisma/schema") ||
-      file.includes(".test.") ||
-      file.includes(".spec.") ||
-      file.includes("node_modules/")
-    ) continue;
+  const callRegex = new RegExp(
+    `prisma\\.(${TENANT_MODELS.join("|")})\\.(${FINDERS.join("|")})`,
+    "g",
+  );
 
-    // Identify which model + finder hit. Take the first match.
-    let model = "?";
-    let finder = "?";
-    for (const candidate of TENANT_MODELS) {
-      const regex = new RegExp(`prisma\\.${candidate}\\.(${FINDERS.join("|")})`);
-      const mm = snippet.match(regex);
-      if (mm) {
-        model = candidate;
-        finder = mm[1];
-        break;
-      }
+  for (const file of files) {
+    let content: string;
+    try {
+      content = readFileSync(resolve(repoRoot, file), "utf8");
+    } catch {
+      continue; // file may be tracked but missing on disk
     }
-
-    hits.push({ file, line, model, finder, snippet: snippet.trim() });
+    const lines = content.split(/\r?\n/);
+    lines.forEach((lineText, idx) => {
+      callRegex.lastIndex = 0;
+      const match = callRegex.exec(lineText);
+      if (!match) return;
+      // synthesize the same shape the old grep output produced
+      processHit({
+        file,
+        line: idx + 1,
+        snippet: lineText,
+        hits,
+      });
+    });
   }
+
   return hits;
+}
+
+function processHit(args: {
+  file: string;
+  line: number;
+  snippet: string;
+  hits: Hit[];
+}): void {
+  const { file, line, snippet, hits } = args;
+
+  // Skip the audit script itself, schema, tests, generated code.
+  // Use a forward slash for the audit-script self-check so the comparison
+  // works on Windows (git ls-files always returns forward slashes).
+  if (
+    file.includes("scripts/audit-tenant-scoping") ||
+    file.includes("prisma/schema") ||
+    file.includes(".test.") ||
+    file.includes(".spec.") ||
+    file.includes("node_modules/")
+  ) return;
+
+  // Identify which model + finder hit. Take the first match.
+  let model = "?";
+  let finder = "?";
+  for (const candidate of TENANT_MODELS) {
+    const regex = new RegExp(`prisma\\.${candidate}\\.(${FINDERS.join("|")})`);
+    const mm = snippet.match(regex);
+    if (mm) {
+      model = candidate;
+      finder = mm[1];
+      break;
+    }
+  }
+
+  hits.push({ file, line, model, finder, snippet: snippet.trim() });
 }
 
 function isScoped(file: string, hit: Hit): boolean {

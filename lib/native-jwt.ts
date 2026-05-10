@@ -15,6 +15,12 @@ export type NativeTokenPayload = {
   parentUserId: string;
   email: string;
   name?: string;
+  /** Restaurant the parent record belongs to. Verified against the
+   *  request's tenant subdomain by requireMobileAuth so a JWT issued for
+   *  Restaurant A can't be replayed against Restaurant B. Optional in
+   *  the type signature for backward compat with old tokens issued
+   *  before per-tenant scoping landed. */
+  restaurantId?: string;
 };
 
 export async function signNativeToken(
@@ -40,5 +46,6 @@ export async function verifyNativeToken(
     parentUserId: payload.parentUserId as string,
     email: payload.email as string,
     name: payload.name as string | undefined,
+    restaurantId: payload.restaurantId as string | undefined,
   };
 }

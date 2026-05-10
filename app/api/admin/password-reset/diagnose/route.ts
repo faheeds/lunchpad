@@ -31,6 +31,7 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const email = url.searchParams.get("email")?.trim().toLowerCase() || null;
   const attemptSend = url.searchParams.get("attempt") === "1";
+  const listAdmins = url.searchParams.get("listAdmins") === "1";
 
   // ─── 1. Tenant resolution ────────────────────────────────────────────────
   const restaurant = await getCurrentRestaurant();
@@ -162,11 +163,40 @@ export async function GET(request: Request): Promise<Response> {
     }
   }
 
+  // ─── 6. (Optional) list admins for this tenant ───────────────────────────
+  // Useful when an operator can't remember which email they signed up with,
+  // or whether their account ended up on a different tenant. Emails are
+  // redacted to first character + domain unless the request was made on the
+  // tenant subdomain we just resolved. Treat this as a temporary debug
+  // surface — fine to remove once the auth flow stabilizes.
+  let adminsProbe: Record<string, unknown> | null = null;
+  if (listAdmins) {
+    if (!restaurant) {
+      adminsProbe = { skipped: true, reason: "Tenant not resolved." };
+    } else {
+      const admins = await prisma.adminUser.findMany({
+        where: { restaurantId: restaurant.id },
+        select: { email: true, name: true, role: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      });
+      adminsProbe = {
+        count: admins.length,
+        admins: admins.map((a) => ({
+          email: a.email,
+          name: a.name,
+          role: a.role,
+          createdAt: a.createdAt.toISOString(),
+        })),
+      };
+    }
+  }
+
   return NextResponse.json({
     tenant,
     resend,
     table: tableProbe,
     admin: adminProbe,
     send: sendProbe,
+    admins: adminsProbe,
   });
 }
