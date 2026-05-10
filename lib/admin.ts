@@ -1,6 +1,8 @@
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
+import { logActivity } from "@/lib/activity";
+import { formatCurrency } from "@/lib/utils";
 
 export async function getAdminDashboardSummary(restaurantId: string) {
   const [paidOrders, refundedOrders, cancelledOrders, schools, upcomingDeliveryDates] = await Promise.all([
@@ -52,11 +54,18 @@ export async function setOrderStatus(restaurantId: string, orderId: string, stat
  * Admin-only cancel + refund. Skips cutoff and parentUserId checks.
  * Issues a Stripe refund if a paymentIntent exists, then marks the order cancelled.
  * Tenant-scoped: throws if the order doesn't belong to the given restaurant.
+ *
+ * `actorAdminUserId` (optional) attributes the action in the activity log.
+ * Pass it from the caller's session so the change-log shows who did it.
  */
-export async function adminCancelOrderWithRefund(restaurantId: string, orderId: string) {
+export async function adminCancelOrderWithRefund(
+  restaurantId: string,
+  orderId: string,
+  actorAdminUserId?: string,
+) {
   const order = await prisma.order.findFirst({
     where: { id: orderId, restaurantId },
-    include: { payment: true },
+    include: { payment: true, student: true },
   });
 
   if (!order) throw new Error(`Order ${orderId} not found in this restaurant.`);
@@ -80,7 +89,7 @@ export async function adminCancelOrderWithRefund(restaurantId: string, orderId: 
   }
 
   const now = new Date();
-  return prisma.$transaction([
+  const result = await prisma.$transaction([
     prisma.payment.updateMany({
       where: { orderId: order.id },
       data: { status: PaymentStatus.REFUNDED, refundedAt: now },
@@ -90,24 +99,61 @@ export async function adminCancelOrderWithRefund(restaurantId: string, orderId: 
       data: { status: OrderStatus.CANCELLED, cancelledAt: now, refundedAt: now },
     }),
   ]);
+
+  await logActivity({
+    restaurantId,
+    adminUserId: actorAdminUserId,
+    entityType: "ORDER",
+    entityId: order.id,
+    action: "REFUNDED",
+    summary: `Order ${order.orderNumber} cancelled & refunded — ${formatCurrency(order.totalCents)} for ${order.student.studentName}`,
+    metadata: {
+      orderNumber: order.orderNumber,
+      totalCents: order.totalCents,
+      stripeRefundAttempted: Boolean(paymentIntentId),
+    },
+  });
+
+  return result;
 }
 
 /**
  * Tenant-scoped: throws if the order doesn't belong to the given restaurant.
+ *
+ * `actorAdminUserId` (optional) attributes the activity log entry.
  */
-export async function setOrderArchived(restaurantId: string, orderId: string, archived: boolean) {
+export async function setOrderArchived(
+  restaurantId: string,
+  orderId: string,
+  archived: boolean,
+  actorAdminUserId?: string,
+) {
   const order = await prisma.order.findFirst({
     where: { id: orderId, restaurantId },
-    select: { id: true },
+    select: { id: true, orderNumber: true },
   });
   if (!order) throw new Error(`Order ${orderId} not found in this restaurant.`);
 
-  return prisma.order.update({
+  const result = await prisma.order.update({
     where: { id: orderId },
     data: {
       archivedAt: archived ? new Date() : null
     }
   });
+
+  await logActivity({
+    restaurantId,
+    adminUserId: actorAdminUserId,
+    entityType: "ORDER",
+    entityId: orderId,
+    action: archived ? "ARCHIVED" : "UNARCHIVED",
+    summary: archived
+      ? `Order ${order.orderNumber} archived`
+      : `Order ${order.orderNumber} unarchived`,
+    metadata: { orderNumber: order.orderNumber },
+  });
+
+  return result;
 }
 
 export async function getAdminReports(

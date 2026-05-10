@@ -52,8 +52,9 @@ export async function POST(request: Request) {
   // Role-aware admin check — staff can archive/unarchive/resend, but only
   // managers and owners can cancel-with-refund (it touches real money).
   let restaurantId: string;
+  let adminUserId: string;
   try {
-    ({ restaurantId } = await assertAdminApiRequest(requiredRole));
+    ({ restaurantId, adminUserId } = await assertAdminApiRequest(requiredRole));
   } catch (err) {
     const status = err instanceof Error && err.message === "Insufficient permissions" ? 403 : 401;
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unauthorized" }, { status });
@@ -66,13 +67,13 @@ export async function POST(request: Request) {
   async function runOne(orderId: string): Promise<void> {
     switch (action) {
       case "archive":
-        await setOrderArchived(restaurantId, orderId, true);
+        await setOrderArchived(restaurantId, orderId, true, adminUserId);
         return;
       case "unarchive":
-        await setOrderArchived(restaurantId, orderId, false);
+        await setOrderArchived(restaurantId, orderId, false, adminUserId);
         return;
       case "cancel":
-        await adminCancelOrderWithRefund(restaurantId, orderId);
+        await adminCancelOrderWithRefund(restaurantId, orderId, adminUserId);
         return;
       case "resend_confirmation":
         await sendOrderConfirmationEmail(orderId, restaurantId);

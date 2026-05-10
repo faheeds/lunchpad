@@ -6,6 +6,7 @@ import { updateOrderAsAdmin } from "@/lib/orders";
 import { sendOrderModifiedEmail } from "@/lib/email/service";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
+import { listActivity } from "@/lib/activity";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import { getLabels } from "@/lib/location-labels";
@@ -41,6 +42,16 @@ export default async function AdminOrderDetailPage({
   });
 
   if (!order) notFound();
+
+  // Per-order timeline — every audited mutation tied to this order in
+  // reverse-chronological order. Pulled in parallel-ready but kept simple
+  // since the order query is already done above.
+  const timeline = await listActivity({
+    restaurantId: restaurant.id,
+    entityType: "ORDER",
+    entityId: orderId,
+    limit: 50,
+  });
 
   const item = order.items[0];
   const now = new Date();
@@ -263,6 +274,41 @@ export default async function AdminOrderDetailPage({
           {cutoffPassed ? "Save (admin override)" : "Save changes"}
         </button>
       </form>
+
+      {/* ── Activity timeline ─────────────────────────────────────── */}
+      <section className="rounded-[14px] border border-slate-100 bg-white">
+        <div className="px-4 py-2.5 border-b border-slate-100">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Activity timeline
+          </p>
+        </div>
+        {timeline.length === 0 ? (
+          <p className="px-4 py-4 text-[12px] text-slate-400">No events recorded yet.</p>
+        ) : (
+          <ol className="relative">
+            {timeline.map((entry, i) => {
+              const actorName = entry.adminUser?.name ?? (entry.parentUserId ? "Customer" : "System");
+              const isLast = i === timeline.length - 1;
+              return (
+                <li key={entry.id} className="relative flex gap-3 px-4 py-3">
+                  <div className="flex flex-col items-center flex-shrink-0">
+                    <div className="w-2.5 h-2.5 rounded-full bg-brand-700 mt-1.5" />
+                    {!isLast && <div className="w-px flex-1 bg-slate-200 mt-1" />}
+                  </div>
+                  <div className="flex-1 min-w-0 pb-1">
+                    <p className="text-[12px] text-ink leading-snug">{entry.summary}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {actorName}
+                      <span className="text-slate-300 mx-1">·</span>
+                      {formatInTimeZone(entry.createdAt, order.school.timezone, "MMM d, h:mm a zzz")}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </section>
     </div>
   );
 }

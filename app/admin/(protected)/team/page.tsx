@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
 import { sendAdminInviteEmail } from "@/lib/email/service";
 import { roleLevel, type AdminRole } from "@/lib/roles";
+import { logActivity } from "@/lib/activity";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 
 export const dynamic = "force-dynamic";
@@ -79,7 +80,7 @@ async function inviteAdmin(formData: FormData) {
   const tokenHash = createHash("sha256").update(rawToken).digest("hex");
   const expiresAt = new Date(Date.now() + INVITE_LIFETIME_DAYS * 24 * 60 * 60 * 1000);
 
-  await prisma.adminInvite.create({
+  const invite = await prisma.adminInvite.create({
     data: {
       restaurantId: restaurant.id,
       email,
@@ -89,6 +90,16 @@ async function inviteAdmin(formData: FormData) {
       tokenHash,
       expiresAt,
     },
+  });
+
+  await logActivity({
+    restaurantId: restaurant.id,
+    adminUserId: inviterId,
+    entityType: "ADMIN_INVITE",
+    entityId: invite.id,
+    action: "INVITED",
+    summary: `Invited ${name} (${email}) as ${ROLE_LABEL[role]}`,
+    metadata: { email, role, expiresAt: expiresAt.toISOString() },
   });
 
   const baseUrl = await getRequestBaseUrl();
@@ -181,6 +192,18 @@ async function revokeInvite(formData: FormData) {
     where: { id: invite.id },
     data: { revokedAt: new Date() },
   });
+
+  const session2 = await auth();
+  await logActivity({
+    restaurantId: restaurant.id,
+    adminUserId: (session2?.user as { adminUserId?: string } | undefined)?.adminUserId,
+    entityType: "ADMIN_INVITE",
+    entityId: invite.id,
+    action: "INVITE_REVOKED",
+    summary: `Cancelled invite for ${invite.email}`,
+    metadata: { email: invite.email },
+  });
+
   revalidatePath("/admin/team");
 }
 
@@ -208,6 +231,17 @@ async function removeAdmin(formData: FormData) {
   }
 
   await prisma.adminUser.delete({ where: { id: adminId, restaurantId: restaurant.id } });
+
+  await logActivity({
+    restaurantId: restaurant.id,
+    adminUserId: session?.user?.adminUserId,
+    entityType: "TEAM_MEMBER",
+    entityId: adminId,
+    action: "REMOVED",
+    summary: `Removed ${target.name} (${target.email}) from the team`,
+    metadata: { name: target.name, email: target.email, role: target.role },
+  });
+
   revalidatePath("/admin/team");
 }
 
@@ -273,6 +307,17 @@ async function changeRole(formData: FormData) {
   }
 
   await prisma.adminUser.update({ where: { id: adminId, restaurantId: restaurant.id }, data: { role } });
+
+  await logActivity({
+    restaurantId: restaurant.id,
+    adminUserId: session?.user?.adminUserId,
+    entityType: "TEAM_MEMBER",
+    entityId: adminId,
+    action: "ROLE_CHANGED",
+    summary: `Changed ${target.name}'s role from ${ROLE_LABEL[target.role as AdminRole]} to ${ROLE_LABEL[role]}`,
+    metadata: { name: target.name, email: target.email, from: target.role, to: role },
+  });
+
   revalidatePath("/admin/team");
 }
 

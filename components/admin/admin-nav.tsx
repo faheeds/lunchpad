@@ -26,7 +26,10 @@ const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/menu",           label: "Menu",         minRole: "MANAGER" },
   { href: "/admin/delivery-dates", label: "Schedule",     minRole: "MANAGER" },
   { href: "/admin/locations",     label: "Locations",    minRole: "OWNER"   },
-  { href: "/admin/team",           label: "Team",         minRole: "OWNER"   },
+  { href: "/admin/team",           label: "Team",         minRole: "MANAGER" },
+  // Activity log — STAFF+ for transparency. Kept near Team since it's the
+  // "who did what" surface that pairs with team management.
+  { href: "/admin/activity",       label: "Activity",     minRole: "STAFF"   },
   { href: "/admin/settings",       label: "Settings",     minRole: "OWNER"   },
   { href: "/admin/subscription",   label: "Subscription", minRole: "OWNER"   },
 ];

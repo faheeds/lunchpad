@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { getCurrentRestaurant } from "@/lib/restaurant";
+import { logActivity } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ async function acceptInvite(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  await prisma.$transaction(async (tx) => {
+  const newAdmin = await prisma.$transaction(async (tx) => {
     const admin = await tx.adminUser.create({
       data: {
         restaurantId: invite.restaurantId,
@@ -86,6 +87,18 @@ async function acceptInvite(formData: FormData) {
       where: { id: invite.id },
       data: { acceptedAt: new Date(), acceptedAdminId: admin.id },
     });
+
+    return admin;
+  });
+
+  await logActivity({
+    restaurantId: invite.restaurantId,
+    adminUserId: newAdmin.id, // self-event — the new admin accepted
+    entityType: "TEAM_MEMBER",
+    entityId: newAdmin.id,
+    action: "INVITE_ACCEPTED",
+    summary: `${newAdmin.name} (${newAdmin.email}) accepted invite as ${invite.role}`,
+    metadata: { inviteId: invite.id, role: invite.role },
   });
 
   redirect("/admin/login?invited=1");
