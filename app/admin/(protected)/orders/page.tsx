@@ -5,6 +5,8 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { OrdersList } from "@/components/admin/orders-list";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
+import { auth } from "@/lib/auth";
+import type { AdminRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +47,10 @@ export default async function AdminOrdersPage({
     sort?: string;
   }>;
 }) {
-  const [params, restaurant] = await Promise.all([searchParams, requireRestaurant()]);
+  const [params, restaurant, session] = await Promise.all([searchParams, requireRestaurant(), auth()]);
+  // Used to gate destructive bulk actions (cancel/refund) on the client
+  // side so STAFF don't see buttons they can't actually click.
+  const myRole = ((session?.user as { adminRole?: AdminRole } | undefined)?.adminRole ?? "STAFF") as AdminRole;
 
   const sortKey: OrderSortKey =
     SORT_OPTIONS.some((o) => o.value === params.sort)
@@ -323,7 +328,7 @@ export default async function AdminOrdersPage({
       </form>
 
       {/* ── Orders list ────────────────────────────────────────────── */}
-      <OrdersList orders={orders} />
+      <OrdersList orders={orders} myRole={myRole} />
     </div>
   );
 }

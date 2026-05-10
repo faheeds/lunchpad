@@ -32,6 +32,22 @@ type OrderListItem = {
   }[];
 };
 
+type AdminRoleClient = "STAFF" | "MANAGER" | "OWNER";
+
+// Mirror of the API's role gating so the UI hides actions the operator
+// doesn't have permission for (saves a confusing 403 round-trip).
+const ACTION_REQUIRED_ROLE: Record<string, AdminRoleClient> = {
+  archive:             "STAFF",
+  unarchive:           "STAFF",
+  cancel:              "MANAGER",
+  resend_confirmation: "STAFF",
+};
+
+function roleAllows(myRole: AdminRoleClient, required: AdminRoleClient): boolean {
+  const order: AdminRoleClient[] = ["STAFF", "MANAGER", "OWNER"];
+  return order.indexOf(myRole) >= order.indexOf(required);
+}
+
 function fmtDate(value: string | Date, timezone: string) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "short", month: "short", day: "numeric", timeZone: timezone,
@@ -45,17 +61,48 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
   CANCELLED: { bg: "#f3f4f6", text: "#6b7280", label: "Cancelled" },
 };
 
-const BULK_ACTIONS = [
-  { key: "archive",              label: "Archive" },
-  { key: "cancel",               label: "Cancel" },
-  { key: "resend_confirmation",  label: "Resend email" },
-] as const;
+type BulkAction = {
+  key: string;
+  label: string;
+  /** Style: "neutral" (slate) for safe ops, "danger" (red) for destructive ops. */
+  variant: "neutral" | "danger";
+  /** When true, prompt the operator before firing. Used for cancel since
+   *  it issues a Stripe refund and isn't reversible. */
+  confirmTemplate?: (count: number) => string;
+};
 
-export function OrdersList({ orders }: { orders: OrderListItem[] }) {
+const BULK_ACTIONS: BulkAction[] = [
+  { key: "archive",             label: "Archive",     variant: "neutral" },
+  { key: "unarchive",           label: "Unarchive",   variant: "neutral" },
+  { key: "resend_confirmation", label: "Resend email", variant: "neutral" },
+  {
+    key: "cancel",
+    label: "Cancel & refund",
+    variant: "danger",
+    confirmTemplate: (n) =>
+      `Cancel ${n} order${n === 1 ? "" : "s"} and refund the customer${n === 1 ? "" : "s"}? This is permanent and triggers a real Stripe refund.`,
+  },
+];
+
+export function OrdersList({
+  orders,
+  myRole = "STAFF",
+}: {
+  orders: OrderListItem[];
+  /** Current admin's role — controls which bulk actions are shown. Defaults
+   *  to STAFF so a missing prop fails closed. */
+  myRole?: AdminRoleClient;
+}) {
   const [selectedIds, setSelectedIds]  = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds]  = useState<Set<string>>(new Set());
   const [message, setMessage]          = useState<{ text: string; ok: boolean } | null>(null);
   const [isPending, startTransition]   = useTransition();
+
+  // Filter the action set to ones the current role can actually perform.
+  const visibleActions = useMemo(
+    () => BULK_ACTIONS.filter((a) => roleAllows(myRole, ACTION_REQUIRED_ROLE[a.key] ?? "STAFF")),
+    [myRole],
+  );
 
   const allSelected = useMemo(
     () => orders.length > 0 && orders.every((o) => selectedIds.has(o.id)),
@@ -82,25 +129,52 @@ export function OrdersList({ orders }: { orders: OrderListItem[] }) {
     });
   }
 
-  function runBulkAction(action: string) {
+  function runBulkAction(action: BulkAction) {
     if (!selectedIds.size) {
       setMessage({ text: "Select at least one order first.", ok: false });
       return;
     }
+    // Destructive actions get a confirm gate. window.confirm is fine here —
+    // operator-facing UI, not customer-facing, and a custom modal is overkill.
+    if (action.confirmTemplate) {
+      const proceed = window.confirm(action.confirmTemplate(selectedIds.size));
+      if (!proceed) return;
+    }
     startTransition(async () => {
-      const res  = await fetch("/api/admin/orders", {
+      const res = await fetch("/api/admin/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, orderIds: Array.from(selectedIds) }),
+        body: JSON.stringify({ action: action.key, orderIds: Array.from(selectedIds) }),
       });
       const data = await res.json();
-      setMessage({
-        text: res.ok
-          ? `Updated ${data.updated} order${data.updated === 1 ? "" : "s"}.`
-          : (data.error || "Unable to update orders."),
-        ok: res.ok,
-      });
-      if (res.ok) { setSelectedIds(new Set()); window.location.reload(); }
+
+      if (!res.ok) {
+        setMessage({ text: data.error || "Unable to update orders.", ok: false });
+        return;
+      }
+
+      // Partial-failure aware: API returns {updated, failed, firstError}.
+      // Show a clear "5 ok, 1 failed: <reason>" so the operator knows
+      // which orders need a follow-up rather than thinking it all worked.
+      const updated: number = data.updated ?? 0;
+      const failed: number = data.failed ?? 0;
+      const firstError: string | null = data.firstError ?? null;
+      let text: string;
+      if (failed === 0) {
+        text = `Updated ${updated} order${updated === 1 ? "" : "s"}.`;
+      } else if (updated === 0) {
+        text = `Failed: ${firstError ?? "Unable to update any orders."}`;
+      } else {
+        text = `Updated ${updated}, ${failed} failed${firstError ? ` — ${firstError}` : ""}.`;
+      }
+      setMessage({ text, ok: failed === 0 });
+      if (updated > 0) {
+        setSelectedIds(new Set());
+        // Soft refresh: reload the route's RSC payload so the list reflects
+        // the new statuses without losing the message we just set. A hard
+        // window.location.reload() would wipe the message.
+        window.location.reload();
+      }
     });
   }
 
@@ -132,14 +206,24 @@ export function OrdersList({ orders }: { orders: OrderListItem[] }) {
           </span>
         </label>
         <div className="flex gap-1.5 flex-wrap">
-          {BULK_ACTIONS.map(({ key, label }) => (
-            <button key={key} type="button"
-              disabled={isPending || selectedIds.size === 0}
-              onClick={() => runBulkAction(key)}
-              className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-35 disabled:cursor-default">
-              {label}
-            </button>
-          ))}
+          {visibleActions.map((action) => {
+            const isDanger = action.variant === "danger";
+            return (
+              <button
+                key={action.key}
+                type="button"
+                disabled={isPending || selectedIds.size === 0}
+                onClick={() => runBulkAction(action)}
+                className={
+                  isDanger
+                    ? "px-3 py-1.5 rounded-full border border-red-200 text-[11px] font-medium text-red-600 hover:bg-red-50 transition disabled:opacity-35 disabled:cursor-default"
+                    : "px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-35 disabled:cursor-default"
+                }
+              >
+                {action.label}
+              </button>
+            );
+          })}
         </div>
         {message && (
           <p className={`w-full text-[12px] font-medium ${message.ok ? "text-green-700" : "text-red-600"}`}>
