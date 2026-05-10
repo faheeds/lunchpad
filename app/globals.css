@@ -33,15 +33,21 @@ body {
  * so we keep them constrained as a phone-card on wider screens rather than
  * stretching the order rows across 1900px of empty space.
  *
- * The platform marketing page (lunchpad.us) is a real desktop site — it
- * opts out of the phone-card on desktop via the .is-platform branch below.
+ * Admin pages on the same subdomain (/admin/*) are NOT mobile-first — they
+ * have tables, charts, multi-column forms, etc. that need full width even
+ * on iPads. They're explicitly excluded below.
+ *
+ * The platform marketing page (lunchpad.us) is also fine in the phone-card
+ * at tablet width (single-column hero design), but breaks free at desktop
+ * via the .is-platform rule below.
  *
  * Base width stays at 480px on tablet; tenant bumps to 560px on real
  * desktop so the column feels a touch roomier without becoming a full
  * desktop layout (which would require redesigning every screen).
  */
 @media (min-width: 640px) {
-  .app-shell {
+  .is-tenant .app-shell,
+  .is-platform .app-shell {
     margin: 24px auto;
     min-height: calc(100dvh - 48px);
     border-radius: 24px;
@@ -55,9 +61,13 @@ body {
     max-width: 560px;
   }
 
-  /* Platform landing — drop the phone constraint and let the marketing
-   * page fill the viewport like a normal desktop site. */
-  .is-platform .app-shell {
+  /* Platform landing AND admin pages drop the phone constraint and fill
+   * the viewport like a normal desktop site. The phone-card aesthetic is
+   * specifically for the customer ordering experience on a tenant
+   * subdomain — operators managing the restaurant need full screen real
+   * estate for tables, charts, and forms. */
+  .is-platform .app-shell,
+  .is-admin .app-shell {
     max-width: none;
     margin: 0;
     min-height: 100dvh;

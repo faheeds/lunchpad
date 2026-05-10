@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Oswald, Inter } from "next/font/google";
+import { headers } from "next/headers";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { themeCssBlock } from "@/lib/color";
 import { getDisplayFont, getBodyFont } from "@/lib/fonts";
@@ -80,11 +81,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     displayFont:     restaurant?.displayFont,
     bodyFont:        restaurant?.bodyFont,
   });
-  // Tag the document so CSS can branch between the platform marketing site
-  // (apex / lunchpad.us) and the tenant ordering app (e.g. shake-shack.lunchpad.us).
-  // Tenant pages keep the centered phone-card aesthetic on desktop; the
-  // platform landing page expands to a real desktop layout.
-  const shellMode = restaurant ? "is-tenant" : "is-platform";
+  // Tag the document so CSS can branch between three layouts on desktop:
+  //   is-platform — apex marketing pages (full width)
+  //   is-admin    — /admin/* pages on a tenant subdomain (full width)
+  //   is-tenant   — customer-facing pages on a tenant subdomain
+  //                 (centered phone-card)
+  //
+  // Middleware sets x-pathname so we can read the current route at the
+  // root layout without re-resolving it. Falls back to platform when no
+  // restaurant context resolved (apex / unknown host).
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "";
+  const isAdminPath = pathname.startsWith("/admin");
+  let shellMode: "is-platform" | "is-tenant" | "is-admin";
+  if (!restaurant) {
+    shellMode = "is-platform";
+  } else if (isAdminPath) {
+    shellMode = "is-admin";
+  } else {
+    shellMode = "is-tenant";
+  }
   return (
     <html lang="en" className={`${oswald.variable} ${inter.variable} ${shellMode}`}>
       <head>
