@@ -247,6 +247,230 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
   });
 }
 
+// ─── Admin manual order creation ─────────────────────────────────────────────
+
+/**
+ * Payment mode for an admin-created order.
+ *
+ *   stripe_link  — generate a Stripe Checkout URL the admin can share with
+ *                  the parent. Order is PENDING until the parent pays.
+ *   manual       — admin records an off-platform payment (cash, check, etc.).
+ *                  Order is PAID immediately. Funds are not collected by
+ *                  Stripe; the operator handles their own books.
+ *   comped       — free order. totalCents is preserved on the line items
+ *                  (so the kitchen sheet still shows real items) but
+ *                  Order.compedAt is stamped and Payment.amountCents is 0.
+ */
+export type AdminOrderPaymentMode =
+  | { kind: "stripe_link" }
+  | { kind: "manual"; method: string; reference?: string; notes?: string }
+  | { kind: "comped"; reason?: string };
+
+/**
+ * Create an order on behalf of a customer. Used by the admin "+ New order"
+ * flow. Reuses the same validation + cap-checking logic as createPendingOrder
+ * so the kitchen sheet, reports, and emails treat the resulting order
+ * identically to a self-service one.
+ *
+ * Returns the created order with its items + payment relation populated so
+ * the caller can immediately render a confirmation. For Stripe-link mode,
+ * the caller is responsible for generating the Checkout URL afterwards
+ * (we don't import Stripe here to keep this helper testable).
+ */
+export async function createAdminOrder(args: {
+  input: OrderDraftInput;
+  paymentMode: AdminOrderPaymentMode;
+  /** Restaurant the admin belongs to — enforced against the delivery date. */
+  restaurantId: string;
+  /** Admin who's creating the order. Stored on Order.createdByAdminId for
+   *  audit. */
+  adminUserId: string;
+}) {
+  const parsed = orderFormSchema.parse(args.input);
+
+  const deliveryDate = await prisma.deliveryDate.findUnique({
+    where: { id: parsed.deliveryDateId },
+    include: { school: true, menuAvailability: { include: { menuItem: { include: { options: true } } } } },
+  });
+  if (!deliveryDate || deliveryDate.schoolId !== parsed.schoolId) {
+    throw new Error("Invalid delivery date for selected location.");
+  }
+  // Admins are allowed to create orders past the customer cutoff (they
+  // sometimes need to add a late add-on for a kitchen they're already
+  // packing) — but the delivery date itself must belong to the same
+  // tenant or we'd be writing across tenants.
+  if (deliveryDate.school.restaurantId !== args.restaurantId) {
+    throw new Error("Delivery date belongs to a different restaurant.");
+  }
+
+  // SCHOOL location requires grade just like the customer flow; OFFICE
+  // falls through with the "—" placeholder set inside the transaction.
+  if (deliveryDate.school.locationType === "SCHOOL" && !parsed.grade) {
+    throw new Error("Grade is required for school orders.");
+  }
+  const gradeValue = parsed.grade || (deliveryDate.school.locationType === "OFFICE" ? "—" : "");
+
+  // Cap-check: if a menu item has maxQuantity, refuse to over-sell. Admins
+  // can still override by raising the cap on the delivery date itself.
+  for (const cartItem of parsed.cartItems) {
+    const menuEntry = deliveryDate.menuAvailability.find(
+      (entry) => entry.menuItemId === cartItem.menuItemId && entry.isAvailable
+    );
+    if (menuEntry && menuEntry.maxQuantity !== null && menuEntry.maxQuantity !== undefined) {
+      const soldCount = await prisma.orderItem.count({
+        where: {
+          menuItemId: cartItem.menuItemId,
+          order: {
+            deliveryDateId: parsed.deliveryDateId,
+            status: OrderStatus.PAID,
+            archivedAt: null,
+          },
+        },
+      });
+      if (soldCount >= menuEntry.maxQuantity) {
+        throw new Error(`${menuEntry.menuItem.name} is sold out for this delivery date.`);
+      }
+    }
+  }
+
+  const normalizedItems = parsed.cartItems.map((cartItem) => {
+    const menuEntry = deliveryDate.menuAvailability.find(
+      (entry) => entry.menuItemId === cartItem.menuItemId && entry.isAvailable
+    );
+    if (!menuEntry) throw new Error("One or more menu items aren't available for this delivery date.");
+
+    const menuItem = menuEntry.menuItem;
+    const requiredChoices = getRequiredChoicesForMenuItem(menuItem.slug);
+    if (requiredChoices.length && (!cartItem.choice || !requiredChoices.includes(cartItem.choice))) {
+      throw new Error(`Choose a required option for ${menuItem.name} before adding it.`);
+    }
+
+    const additionCost = menuItem.options
+      .filter((option) => cartItem.additions.includes(option.name))
+      .reduce((sum, option) => sum + option.priceDeltaCents, 0);
+    const lineTotalCents = menuItem.basePriceCents + additionCost;
+
+    return {
+      menuItem,
+      choice: cartItem.choice,
+      additions: cartItem.additions,
+      removals: cartItem.removals,
+      lineTotalCents,
+    };
+  });
+
+  const totalCents = normalizedItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
+  const orderNumber = `SL-${formatInTimeZone(new Date(), deliveryDate.school.timezone, "yyyyMMdd")}-${Math.floor(
+    1000 + Math.random() * 9000
+  )}`;
+
+  // Decide order/payment status from the payment mode. We resolve all
+  // status fields up front so the transaction below stays linear.
+  let orderStatus: OrderStatus = OrderStatus.PENDING;
+  let paidAt: Date | null = null;
+  let paymentStatus: PaymentStatus = PaymentStatus.PENDING;
+  let paymentProvider: string = "stripe";
+  let paymentAmountCents: number = totalCents;
+  let paymentMethod: string | null = null;
+  let paymentNotes: string | null = null;
+  let compedAt: Date | null = null;
+  let compedReason: string | null = null;
+
+  switch (args.paymentMode.kind) {
+    case "stripe_link":
+      paymentProvider = "stripe_checkout_link";
+      // Stays PENDING until the parent pays via the link. The Stripe
+      // webhook will mark it PAID just like a regular checkout order.
+      break;
+    case "manual":
+      orderStatus = OrderStatus.PAID;
+      paidAt = new Date();
+      paymentStatus = PaymentStatus.PAID;
+      paymentProvider = "manual";
+      paymentMethod = args.paymentMode.method;
+      paymentNotes =
+        [args.paymentMode.reference, args.paymentMode.notes].filter(Boolean).join(" — ") || null;
+      break;
+    case "comped":
+      orderStatus = OrderStatus.PAID;
+      paidAt = new Date();
+      paymentStatus = PaymentStatus.PAID;
+      paymentProvider = "comped";
+      paymentAmountCents = 0;
+      paymentMethod = "free";
+      paymentNotes = args.paymentMode.reason ?? null;
+      compedAt = new Date();
+      compedReason = args.paymentMode.reason ?? null;
+      break;
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const student = await tx.student.create({
+      data: {
+        schoolId: parsed.schoolId,
+        studentName: parsed.studentName,
+        grade: gradeValue,
+        teacherName: parsed.teacherName || null,
+        classroom: parsed.classroom || null,
+        allergyNotes: parsed.allergyNotes || null,
+        dietaryNotes: parsed.dietaryNotes || null,
+      },
+    });
+
+    const order = await tx.order.create({
+      data: {
+        orderNumber,
+        restaurantId: deliveryDate.school.restaurantId,
+        schoolId: parsed.schoolId,
+        deliveryDateId: parsed.deliveryDateId,
+        studentId: student.id,
+        parentName: parsed.parentName,
+        parentEmail: parsed.parentEmail,
+        specialInstructions: parsed.specialInstructions || null,
+        subtotalCents: totalCents,
+        totalCents,
+        status: orderStatus,
+        paidAt,
+        compedAt,
+        compedReason,
+        createdByAdminId: args.adminUserId,
+        items: {
+          create: normalizedItems.map((item) => ({
+            menuItemId: item.menuItem.id,
+            itemNameSnapshot: item.menuItem.name,
+            basePriceCents: item.menuItem.basePriceCents,
+            additions: item.choice ? [item.choice, ...item.additions] : item.additions,
+            removals: item.removals,
+            allergyNotes: parsed.allergyNotes || null,
+            dietaryNotes: parsed.dietaryNotes || null,
+            specialInstructions: parsed.specialInstructions || null,
+            lineTotalCents: item.lineTotalCents,
+          })),
+        },
+        payment: {
+          create: {
+            provider: paymentProvider,
+            amountCents: paymentAmountCents,
+            status: paymentStatus,
+            paidAt,
+            method: paymentMethod,
+            notes: paymentNotes,
+          },
+        },
+      },
+      include: {
+        school: true,
+        deliveryDate: true,
+        student: true,
+        items: true,
+        payment: true,
+      },
+    });
+
+    return order;
+  });
+}
+
 export async function markOrderPaidByCheckoutSession(
   sessionId: string,
   paymentIntentId?: string | null,

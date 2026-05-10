@@ -140,6 +140,7 @@ model AdminUser {
   resetTokens   AdminPasswordResetToken[]
   invitesSent   AdminInvite[]              @relation("InvitesSent")
   invitesAccepted AdminInvite[]            @relation("InvitesAccepted")
+  ordersCreated Order[]                    @relation("AdminCreatedOrders")
 
   @@unique([restaurantId, email])
 }
@@ -463,6 +464,16 @@ model Order {
   confirmationSentAt  DateTime?
   checkoutSessionId   String?      @unique
   paymentIntentId     String?      @unique
+  /** Set when an admin records this as a comped/free order. The line items
+   *  still carry their menu prices (so kitchen sheets see real items) but
+   *  Payment.amountCents is 0. Reports can filter on `compedAt IS NULL` to
+   *  exclude comps from revenue. */
+  compedAt            DateTime?
+  compedReason        String?
+  /** Admin who created this order via the manual order flow. Null for
+   *  customer self-service orders. SetNull on admin delete so the order
+   *  history survives admin churn. */
+  createdByAdminId    String?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   restaurant          Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
@@ -471,6 +482,7 @@ model Order {
   student             Student      @relation(fields: [studentId], references: [id], onDelete: Restrict)
   parentUser          ParentUser?  @relation(fields: [parentUserId], references: [id], onDelete: SetNull)
   parentChild         ParentChild? @relation(fields: [parentChildId], references: [id], onDelete: SetNull)
+  createdByAdmin      AdminUser?   @relation("AdminCreatedOrders", fields: [createdByAdminId], references: [id], onDelete: SetNull)
   items               OrderItem[]
   payment             Payment?
   emailLogs           EmailLog[]
@@ -497,6 +509,9 @@ model OrderItem {
 model Payment {
   id                    String        @id @default(cuid())
   orderId               String        @unique
+  /** "stripe" | "stripe_checkout_link" | "manual" | "comped" — extends as
+   *  new payment paths are added. The customer-facing flow always uses
+   *  "stripe"; admin-created orders may use any of the others. */
   provider              String        @default("stripe")
   providerSessionId     String?       @unique
   providerPaymentIntent String?       @unique
@@ -505,6 +520,13 @@ model Payment {
   status                PaymentStatus @default(PENDING)
   paidAt                DateTime?
   refundedAt            DateTime?
+  /** For manual payments: "cash" | "check" | "venmo" | "zelle" | "other".
+   *  Free-form so operators can record whatever method makes sense without
+   *  being boxed in by an enum. Null for Stripe / comped / unspecified. */
+  method                String?
+  /** Operator notes — e.g. "Check #1234", "Cash, exact change", "Comped:
+   *  replaced burnt order". Surfaced only in admin views. */
+  notes                 String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   order                 Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
