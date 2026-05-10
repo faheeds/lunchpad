@@ -9,6 +9,21 @@ const nextConfig = {
   },
   // Required for Sentry server-side instrumentation
   instrumentationHook: true,
+  // Image hosts. next/image refuses to render any external src whose
+  // hostname isn't on this allowlist — without it, Vercel Blob URLs (where
+  // we store uploaded logos and hero images) silently fail and the user
+  // sees broken-image placeholders.
+  images: {
+    remotePatterns: [
+      // Vercel Blob storage. Tenants upload logos / hero images / menu
+      // photos here via @vercel/blob, which returns a public URL on this
+      // domain. The wildcard subdomain is per-store.
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+      },
+    ],
+  },
 };
 
 export default withSentryConfig(nextConfig, {
