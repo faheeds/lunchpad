@@ -6,6 +6,8 @@ import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { orderFormSchema } from "@/lib/validation/order";
 import type { OrderDraftInput } from "@/types/order";
 import { stripe } from "@/lib/payments/stripe";
+import { logActivity } from "@/lib/activity";
+import { formatCurrency } from "@/lib/utils";
 
 export function buildPaidState(now = new Date()) {
   return {
@@ -468,6 +470,42 @@ export async function createAdminOrder(args: {
     });
 
     return order;
+  }).then(async (order) => {
+    // Activity log — outside the transaction so a logging blip never rolls
+    // back the order. The action varies by payment mode so the change-log
+    // reads naturally to operators ("created & comped" vs "created via
+    // checkout link").
+    let action: "CREATED" | "COMPED" | "PAID" = "CREATED";
+    let summary = `Admin created order ${order.orderNumber} for ${order.student.studentName} — ${formatCurrency(order.totalCents)}`;
+    if (args.paymentMode.kind === "comped") {
+      action = "COMPED";
+      summary = `Admin comped order ${order.orderNumber} for ${order.student.studentName} (${formatCurrency(order.totalCents)} value)${
+        args.paymentMode.reason ? ` — ${args.paymentMode.reason}` : ""
+      }`;
+    } else if (args.paymentMode.kind === "manual") {
+      action = "PAID";
+      summary = `Admin recorded ${args.paymentMode.method} payment for order ${order.orderNumber} — ${formatCurrency(order.totalCents)}`;
+    } else {
+      summary = `Admin created order ${order.orderNumber} (Stripe link mode) — ${formatCurrency(order.totalCents)} pending`;
+    }
+    await logActivity({
+      restaurantId: args.restaurantId,
+      adminUserId: args.adminUserId,
+      entityType: "ORDER",
+      entityId: order.id,
+      action,
+      summary,
+      metadata: {
+        orderNumber: order.orderNumber,
+        totalCents: order.totalCents,
+        paymentMode: args.paymentMode.kind,
+        ...(args.paymentMode.kind === "manual"
+          ? { method: args.paymentMode.method, reference: args.paymentMode.reference ?? null }
+          : {}),
+        ...(args.paymentMode.kind === "comped" ? { reason: args.paymentMode.reason ?? null } : {}),
+      },
+    });
+    return order;
   });
 }
 
@@ -514,6 +552,18 @@ export async function markOrderPaidByCheckoutSession(
       }
     });
 
+    return updated;
+  }).then(async (updated) => {
+    // Log paid status outside the transaction. Triggered by Stripe webhook —
+    // no admin/parent context, so this lands as a system event.
+    await logActivity({
+      restaurantId: updated.restaurantId,
+      entityType: "ORDER",
+      entityId: updated.id,
+      action: "PAID",
+      summary: `Order ${updated.orderNumber} paid — ${formatCurrency(updated.totalCents)} via Stripe`,
+      metadata: { orderNumber: updated.orderNumber, totalCents: updated.totalCents },
+    });
     return updated;
   });
 }

@@ -119,6 +119,7 @@ model Restaurant {
   orders                   Order[]
   weeklyCheckoutBatches    WeeklyCheckoutBatch[]
   processedWebhookEvents   ProcessedWebhookEvent[]
+  activityLogs             ActivityLog[]
 }
 
 // ─── ADMIN USERS ─────────────────────────────────────────────────────────────
@@ -141,6 +142,7 @@ model AdminUser {
   invitesSent   AdminInvite[]              @relation("InvitesSent")
   invitesAccepted AdminInvite[]            @relation("InvitesAccepted")
   ordersCreated Order[]                    @relation("AdminCreatedOrders")
+  activityLogs  ActivityLog[]
 
   @@unique([restaurantId, email])
 }
@@ -556,4 +558,55 @@ model ProcessedWebhookEvent {
   eventType    String
   processedAt  DateTime    @default(now())
   restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+}
+
+// ─── ACTIVITY LOG ─────────────────────────────────────────────────────────────
+// Single audit-trail model that powers both the per-order timeline and the
+// restaurant-wide change log. Every meaningful mutation (order created,
+// order paid, menu item updated, team invite sent, etc.) writes one row here.
+//
+// Actor:
+//   - adminUserId set → an admin did this
+//   - parentUserId set → a customer did this (e.g. self-cancel)
+//   - both null → system event (Stripe webhook, scheduled job)
+//
+// `entityType` + `entityId` index a specific record so the order detail
+// page can query "everything that happened to this order." `action`
+// describes what happened in machine-readable form; `summary` is the
+// human-readable line shown in the UI; `metadata` is freeform JSON for
+// before/after diffs or other context.
+
+model ActivityLog {
+  id            String      @id @default(cuid())
+  restaurantId  String
+  adminUserId   String?
+  parentUserId  String?
+  /// "ORDER" | "MENU_ITEM" | "DELIVERY_DATE" | "SCHOOL" | "RESTAURANT_SETTINGS"
+  /// | "TEAM_MEMBER" | "ADMIN_INVITE" | "WEEKLY_BATCH". Free-form so we can
+  /// add new types without migrating the enum.
+  entityType    String
+  entityId      String
+  /// "CREATED" | "UPDATED" | "DELETED" | "PAID" | "REFUNDED" | "CANCELLED"
+  /// | "ARCHIVED" | "UNARCHIVED" | "MODIFIED" | "COMPED" | "INVITED"
+  /// | "INVITE_ACCEPTED" | "INVITE_REVOKED" | "ROLE_CHANGED" | "REMOVED"
+  /// | "PASSWORD_CHANGED" | "PASSWORD_RESET" | "LOGGED_IN".
+  action        String
+  /// One-line human description for UI display, e.g.
+  /// "Created order SL-20260509-1234 for $13.99 (Bacon Cheddar)".
+  summary       String
+  /// Optional JSON blob — typically { from, to } for diffs, or
+  /// { method: "cash", reference: "Check #1234" } for context.
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  adminUser     AdminUser?  @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  // Indexes ordered by the most common access pattern. Plain ASC indexes
+  // work fine for our DESC ordering in queries — Postgres can scan either
+  // direction. Keeping the index syntax simple avoids version-specific
+  // Prisma quirks.
+  @@index([restaurantId, createdAt])
+  @@index([restaurantId, entityType, entityId, createdAt])
+  @@index([restaurantId, adminUserId, createdAt])
 }
