@@ -22,8 +22,17 @@ export default async function HistoryPage() {
   const parentUserId = session.user?.parentUserId;
   if (!parentUserId) redirect("/account/sign-in");
 
+  // requireParent already enforces that the session's tenant matches the
+  // current host. Filter orders by that tenant explicitly as defense in
+  // depth — pre-migration data could in theory have orders linked to a
+  // parent at a different restaurant.
+  const parentRestaurantId = session.user?.parentRestaurantId;
   const orders = await prisma.order.findMany({
-    where: { parentUserId, archivedAt: null },
+    where: {
+      parentUserId,
+      ...(parentRestaurantId ? { restaurantId: parentRestaurantId } : {}),
+      archivedAt: null,
+    },
     include: {
       school: true,
       deliveryDate: true,

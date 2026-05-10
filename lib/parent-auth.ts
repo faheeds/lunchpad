@@ -8,19 +8,20 @@ export async function requireParent() {
   if (!session?.user?.email || session.user.role !== "PARENT" || !session.user.parentUserId) {
     redirect("/account/sign-in");
   }
-  // Per-tenant session check: a parent signed in at Restaurant A cannot
-  // operate on Restaurant B with the same session. The cookie domain is
-  // .lunchpad.us so it travels across subdomains, but each tenant has
-  // its own ParentUser record — so if the session's parentRestaurantId
-  // doesn't match the current tenant, force a fresh sign-in here.
-  // Without this, navigating between tenants would silently surface the
-  // previous tenant's children/orders/restaurant URL.
+  // Per-tenant session check. The cookie is domain-scoped to .lunchpad.us
+  // so it travels across subdomains, but each tenant has its own
+  // ParentUser record — the session must be matched against the current
+  // tenant.
+  //
+  // Two cases we treat the same way (force re-auth):
+  //   1. parentRestaurantId is set and doesn't match — the user is on a
+  //      different tenant than the one they signed into.
+  //   2. parentRestaurantId is missing entirely — pre-migration session
+  //      that JWT hydration couldn't recover (orphan parent record, etc.)
+  //      We can't trust this session against the current tenant, so it
+  //      lands on sign-in with the same banner.
   const currentRestaurant = await getCurrentRestaurant();
-  if (
-    currentRestaurant &&
-    session.user.parentRestaurantId &&
-    session.user.parentRestaurantId !== currentRestaurant.id
-  ) {
+  if (currentRestaurant && session.user.parentRestaurantId !== currentRestaurant.id) {
     redirect("/account/sign-in?different-tenant=1");
   }
   return session;
@@ -33,13 +34,10 @@ export async function assertParentApiRequest() {
   }
   // Same per-tenant check as requireParent — API routes can be called
   // from a different subdomain than the one the session was issued for,
-  // so we re-verify here.
+  // so we re-verify here. Treat missing parentRestaurantId the same as
+  // a mismatch (pre-migration session that couldn't be hydrated).
   const currentRestaurant = await getCurrentRestaurant();
-  if (
-    currentRestaurant &&
-    session.user.parentRestaurantId &&
-    session.user.parentRestaurantId !== currentRestaurant.id
-  ) {
+  if (currentRestaurant && session.user.parentRestaurantId !== currentRestaurant.id) {
     throw new Error("Session is for a different restaurant. Sign in here to continue.");
   }
   return session;

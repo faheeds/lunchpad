@@ -96,8 +96,12 @@ export default async function ParentAccountPage() {
       },
     }),
     prisma.school.findMany({ where: { isActive: true, restaurantId: restaurant.id }, orderBy: { name: "asc" } }),
+    // Tenant-scoped: belt-and-braces. With per-tenant ParentUser records
+    // a parent can only have orders at one restaurant, but filtering on
+    // restaurantId here defends against any pre-migration data linkage
+    // that survived the backfill (parent at A with stale orders at B, etc.)
     prisma.order.findMany({
-      where: { parentUserId, archivedAt: null },
+      where: { parentUserId, restaurantId: restaurant.id, archivedAt: null },
       include: { school: true, deliveryDate: true, student: true, items: true },
       orderBy: { createdAt: "desc" },
       take: 12,

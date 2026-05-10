@@ -87,6 +87,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.adminUserId = undefined;
       }
 
+      // Backfill `parentRestaurantId` for sessions that pre-date the
+      // per-tenant ParentUser change. Without this, an old session keeps
+      // working but `requireParent`'s tenant check has nothing to compare
+      // against, so a parent signed in at Restaurant A would see Restaurant
+      // A's data when visiting Restaurant B. Hydrate once from the DB
+      // and the field rides on the JWT for the rest of the session.
+      if (token.parentUserId && !token.parentRestaurantId) {
+        try {
+          const parent = await prisma.parentUser.findUnique({
+            where: { id: token.parentUserId as string },
+            select: { restaurantId: true },
+          });
+          if (parent?.restaurantId) {
+            token.parentRestaurantId = parent.restaurantId;
+          }
+        } catch {
+          // Best-effort. If the lookup fails we leave the token as-is and
+          // requireParent's stricter check below will force a re-auth.
+        }
+      }
+
       if (account?.provider === "google" || account?.provider === "apple") {
         const email = user?.email?.toLowerCase();
         // The tenant cookie was dropped by startParentOAuth() in the
