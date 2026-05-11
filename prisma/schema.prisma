@@ -121,6 +121,7 @@ model Restaurant {
   weeklyCheckoutBatches    WeeklyCheckoutBatch[]
   processedWebhookEvents   ProcessedWebhookEvent[]
   activityLogs             ActivityLog[]
+  discounts                Discount[]
 }
 
 // ─── ADMIN USERS ─────────────────────────────────────────────────────────────
@@ -372,6 +373,7 @@ model ParentUser {
   orders                Order[]
   weeklyPlans           WeeklyLunchPlan[]
   weeklyCheckoutBatches WeeklyCheckoutBatch[]
+  discountRedemptions   DiscountRedemption[]
 
   @@unique([restaurantId, email])
   @@index([email])
@@ -475,6 +477,11 @@ model Order {
   parentEmail         String
   specialInstructions String?
   subtotalCents       Int
+  /// Total dollar value (in cents) deducted by any applied discount.
+  /// Denormalized off DiscountRedemption for fast list / report queries.
+  /// `subtotalCents - discountCents == totalCents` (before tax/fees, which
+  /// we don't currently charge). 0 = no discount.
+  discountCents       Int          @default(0)
   totalCents          Int
   currency            String       @default("usd")
   status              OrderStatus  @default(PENDING)
@@ -507,6 +514,7 @@ model Order {
   items               OrderItem[]
   payment             Payment?
   emailLogs           EmailLog[]
+  discountRedemption  DiscountRedemption?
 }
 
 model OrderItem {
@@ -628,4 +636,133 @@ model ActivityLog {
   @@index([restaurantId, createdAt])
   @@index([restaurantId, entityType, entityId, createdAt])
   @@index([restaurantId, adminUserId, createdAt])
+}
+
+// ─── DISCOUNTS ───────────────────────────────────────────────────────────────
+//
+// One unified model expresses every discount type the platform supports
+// (welcome offers, promo codes, sibling discounts, day-of-week deals,
+// volume thresholds, item-level discounts, BOGO, bundles). The
+// `templateKind` discriminator drives which builder UI opens when an
+// operator edits a discount, but the field set is the same across all
+// templates — empty / null fields just mean "rule doesn't apply".
+//
+// Loyalty is intentionally NOT modelled here (separate concern: needs
+// per-customer spend/redemption tracking + customer-facing progress).
+// It'll get its own model in a later phase.
+//
+// Stacking rule: only the single highest-value discount auto-applies
+// per order unless `allowStackingWithCode = true`. Promo codes always
+// override auto-discounts. Enforced in lib/discounts.ts, not in schema.
+
+model Discount {
+  id                    String              @id @default(cuid())
+  restaurantId          String
+
+  // Operator-facing identity
+  name                  String              // "Welcome offer", "Sibling discount"
+  description           String?             // free-text internal notes
+
+  // Which builder template created this — drives admin UX,
+  // doesn't change runtime behavior.
+  templateKind          DiscountTemplate    @default(CUSTOM)
+
+  // Customer entry. Null = automatic (no code, applies when eligible).
+  // Non-null = customer types this exact string at checkout.
+  code                  String?
+
+  // What it does
+  kind                  DiscountKind        // PERCENT | FIXED_AMOUNT
+  value                 Int                 // 10 (=10%) or 500 (=$5 in cents)
+
+  // What it applies to
+  scope                 DiscountScope       @default(ORDER)
+  // ORDER scope: discount applies to whole-order subtotal.
+  // ITEMS scope: discount applies only to matching line items
+  //   (intersection of itemIds + categories — both empty = all items;
+  //   one populated = restrict to that set).
+  itemIds               String[]            @default([])
+  categories            String[]            @default([])
+
+  // Eligibility — all optional, all AND'd together at check time
+  minOrderCents         Int?                // floor on subtotal (after item-scoping)
+  minItemCount          Int?                // minimum cart-line count (sibling discount uses 2)
+  firstOrderOnly        Boolean             @default(false)
+  schoolIds             String[]            @default([])   // empty = all schools
+  weekdays              Int[]               @default([])   // ISO 1..7, empty = all days
+  startsAt              DateTime?
+  endsAt                DateTime?
+
+  // Limits
+  maxRedemptionsTotal   Int?                // null = unlimited
+  maxRedemptionsPerUser Int?                @default(1)
+  currentRedemptions    Int                 @default(0)
+
+  // Stacking. Defaults are conservative — operators opt into stacking
+  // explicitly per discount.
+  allowStackingWithCode Boolean             @default(false)
+
+  // Special hardcoded behaviors. For BOGO we need a "free item" rule
+  // that doesn't fit the percent/amount model cleanly. Encoded here so
+  // we don't need yet another column when we add it in slice 3.
+  // bogoBuyItemIds / bogoGetItemIds drive that — empty in slice 1.
+  bogoBuyItemIds        String[]            @default([])
+  bogoGetItemIds        String[]            @default([])
+
+  isActive              Boolean             @default(true)
+  createdByAdminId      String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  restaurant            Restaurant          @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  redemptions           DiscountRedemption[]
+
+  // Code must be unique per tenant when present (null codes can repeat —
+  // multiple automatic discounts coexist). Postgres treats NULL as distinct
+  // by default so this @@unique works as expected.
+  @@unique([restaurantId, code])
+  @@index([restaurantId, isActive])
+}
+
+// Records every time a discount was actually applied to an order.
+// One-to-one with Order in v1 (each order has at most one redemption)
+// — when we add stacking we'll relax the @unique on orderId. Survives
+// the discount being edited / deleted because amountCents is a snapshot
+// of what was actually credited at order time.
+model DiscountRedemption {
+  id              String      @id @default(cuid())
+  discountId      String
+  orderId         String      @unique
+  parentUserId    String?
+  amountCents     Int         // snapshot of $ deducted
+  appliedAt       DateTime    @default(now())
+
+  discount        Discount    @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  parentUser      ParentUser? @relation(fields: [parentUserId], references: [id], onDelete: SetNull)
+
+  @@index([discountId])
+  @@index([parentUserId])
+}
+
+enum DiscountTemplate {
+  WELCOME
+  PROMO_CODE
+  SIBLING
+  DAY_OF_WEEK
+  VOLUME
+  ITEM_DISCOUNT
+  BOGO
+  BUNDLE
+  CUSTOM
+}
+
+enum DiscountKind {
+  PERCENT
+  FIXED_AMOUNT
+}
+
+enum DiscountScope {
+  ORDER
+  ITEMS
 }

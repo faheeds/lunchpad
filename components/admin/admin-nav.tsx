@@ -25,6 +25,9 @@ const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/reports",        label: "Reports",      minRole: "MANAGER" },
   { href: "/admin/menu",           label: "Menu",         minRole: "MANAGER" },
   { href: "/admin/delivery-dates", label: "Schedule",     minRole: "MANAGER" },
+  // Discounts — slots between Menu (what you sell) and Locations (where).
+  // MANAGER+ so finance/promo decisions stay scoped above frontline staff.
+  { href: "/admin/discounts",      label: "Discounts",    minRole: "MANAGER" },
   { href: "/admin/locations",     label: "Locations",    minRole: "OWNER"   },
   { href: "/admin/team",           label: "Team",         minRole: "MANAGER" },
   // Activity log — STAFF+ for transparency. Kept near Team since it's the

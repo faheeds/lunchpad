@@ -44,6 +44,7 @@ export type ActivityAction =
   | "UNARCHIVED"
   | "MODIFIED"
   | "COMPED"
+  | "DISCOUNT_APPLIED"
   | "INVITED"
   | "INVITE_ACCEPTED"
   | "INVITE_REVOKED"
