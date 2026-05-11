@@ -19,7 +19,8 @@
  * scoping is needed; we fall through to host-only there.
  */
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { signIn } from "@/lib/auth";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 
@@ -64,7 +65,41 @@ export async function startParentOAuth(provider: "google" | "apple") {
     ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
 
-  // Hand off to NextAuth. callbackUrl brings the user back to the same
-  // tenant subdomain after the OAuth round-trip completes.
+  // ── Apex bouncer ─────────────────────────────────────────────────
+  // When we're on a platform subdomain (e.g. fsskitchen.lunchpad.us), we
+  // redirect to a route handler on the apex (lunchpad.us) that kicks off
+  // OAuth there. That way Google's redirect_uri is always
+  // https://lunchpad.us/api/auth/callback/<provider> — one entry in the
+  // Google Console covers every tenant, present and future. The
+  // platform-wide cookies (sessionToken / csrfToken / pkce / state /
+  // lp-tenant-id) are all already scoped to .lunchpad.us by lib/auth.ts
+  // so they ride along through the apex round-trip unchanged.
+  //
+  // Custom domains (e.g. lunch.example.com) don't share the apex cookie
+  // space — they fall through to local OAuth on their own host and
+  // operators have to register their own callback URL in their own
+  // Google project. That's the price of bring-your-own-domain.
+  const rootDomain = process.env.ROOT_DOMAIN || "lunchpad.us";
+  const hdrs = await headers();
+  // X-Forwarded-Host is set by Vercel; fall back to Host header. Both are
+  // strings like "fsskitchen.lunchpad.us".
+  const currentHost = hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "";
+
+  const onPlatformSubdomain =
+    currentHost.endsWith(`.${rootDomain}`) && currentHost !== rootDomain;
+
+  if (onPlatformSubdomain) {
+    const returnTo = `https://${currentHost}/account`;
+    const params = new URLSearchParams({
+      provider,
+      tenantId: restaurant.id,
+      returnTo,
+    });
+    redirect(`https://${rootDomain}/account/sign-in/oauth-relay?${params.toString()}`);
+  }
+
+  // Apex (lunchpad.us itself) or custom domain — run OAuth locally.
+  // Apex has no parent flow normally, but we keep this branch for
+  // dev/preview hosts where NEXTAUTH_URL maps to the apex.
   await signIn(provider, { redirectTo: "/account" });
 }
