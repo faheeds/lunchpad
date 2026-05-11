@@ -18,8 +18,40 @@ type DeliveryDate = {
 // wrap awkwardly on phones and a single dropdown scrolls cleaner.
 const LOCATION_DROPDOWN_THRESHOLD = 4;
 type MenuOption = { id: string; name: string; optionType: "ADD_ON" | "REMOVAL"; priceDeltaCents: number };
-type MenuItem = { id: string; slug: string; name: string; description: string | null; imageUrl: string | null; basePriceCents: number; options: MenuOption[] };
-type CartItem = { id: string; menuItemId: string; itemName: string; choice?: string; additions: string[]; removals: string[]; lineTotalCents: number };
+type MenuItem = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  basePriceCents: number;
+  /** Operator-set category from MenuItem.category. Optional for back-compat
+   *  with older callers; getCategory() falls back to a sensible default
+   *  when missing. */
+  category?: string | null;
+  options: MenuOption[];
+};
+type CartItem = {
+  id: string;
+  menuItemId: string;
+  itemName: string;
+  choice?: string;
+  additions: string[];
+  removals: string[];
+  /** Per-unit total (base + additions). Multiply by `quantity` for the line total. */
+  lineTotalCents: number;
+  /** Number of identical units of this configuration. Always ≥ 1. */
+  quantity: number;
+};
+
+/** Two cart lines share an identity when they refer to the same menu
+ *  item with the same choice/additions/removals — adding an item with
+ *  matching customizations bumps the quantity instead of duplicating. */
+function buildLineKey(menuItemId: string, choice: string | undefined, additions: string[], removals: string[]): string {
+  const a = [...additions].sort().join("|");
+  const r = [...removals].sort().join("|");
+  return `${menuItemId}::${choice ?? ""}::${a}::${r}`;
+}
 
 type OrderFormProps = {
   deliveryDates: DeliveryDate[];
@@ -40,30 +72,36 @@ function fmt(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-const CATEGORY_ORDER = ["Signature Burgers & Sandwiches", "Salads with Protein", "Comfort Favorites", "Sides & Snacks"];
-
-function getCategory(item: MenuItem) {
-  const prefix = item.description?.split(".")[0]?.trim();
-  if (prefix && CATEGORY_ORDER.includes(prefix)) return prefix;
-  if (item.name.includes("Burger") || item.name.includes("Sandwich")) return "Signature Burgers & Sandwiches";
-  if (item.name.includes("Salad")) return "Salads with Protein";
-  if (item.name.includes("Mac") || item.name.includes("Quesadilla") || item.name.includes("Wings") || item.name.includes("Tender")) return "Comfort Favorites";
-  return "Sides & Snacks";
+// Category resolution now reads from MenuItem.category (operator-set via
+// admin Menu page). Items without a category land in "Other" so they
+// still render. Previously hardcoded to FS's Kitchen's four buckets;
+// that no longer makes sense for the multi-tenant platform.
+function getCategory(item: MenuItem): string {
+  return item.category?.trim() || "Other";
 }
 
-function getDesc(item: MenuItem) {
-  const parts = item.description?.split(". ");
-  if (!parts?.length) return "";
-  if (CATEGORY_ORDER.includes(parts[0].trim())) return parts.slice(1).join(". ").trim();
+function getDesc(item: MenuItem): string {
   return item.description ?? "";
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "Signature Burgers & Sandwiches": "🍔",
-  "Salads with Protein": "🥗",
-  "Comfort Favorites": "🍗",
-  "Sides & Snacks": "🍟",
-};
+// Pick a sensible emoji for whichever category an operator named. Same
+// keyword-match heuristic as the marketing /menu page so the visual
+// vocabulary stays consistent between browse and order flows.
+function getCategoryIcon(category: string): string {
+  const c = category.toLowerCase();
+  if (c.match(/burger|sandwich|wrap|sub/)) return "🍔";
+  if (c.match(/salad|veg|green|bowl/)) return "🥗";
+  if (c.match(/pizza|pasta|italian/)) return "🍕";
+  if (c.match(/chicken|wings|tender|nugget/)) return "🍗";
+  if (c.match(/taco|burrito|mexican|quesadilla/)) return "🌮";
+  if (c.match(/asian|noodle|rice|sushi/)) return "🍜";
+  if (c.match(/breakfast|pancake|waffle|egg/)) return "🥞";
+  if (c.match(/drink|beverage|juice|smoothie|milk|tea|coffee/)) return "🥤";
+  if (c.match(/dessert|cookie|cake|ice cream|sweet/)) return "🍰";
+  if (c.match(/side|snack|fries|chips/)) return "🍟";
+  if (c.match(/comfort|favorite/)) return "🍗";
+  return "🍽";
+}
 
 // Steps: 1=school/date, 2=student, 3=menu, 4=review
 type Step = 1 | 2 | 3 | 4;
@@ -157,17 +195,18 @@ export function OrderForm({
   const selectedMenuItem = menuItems.find((item) => item.id === selectedMenuItemId);
   const requiredChoices = selectedMenuItem ? getRequiredChoicesForMenuItem(selectedMenuItem.slug) : [];
 
+  // Group items by their MenuItem.category. Order of categories is
+  // first-seen — since menu items arrive sorted by sortOrder (admin can
+  // drag-reorder) the categories surface in the operator's intended
+  // sequence. "Other" bucket catches items with no category set.
   const groupedMenuItems = useMemo(() => {
-    const groups = menuItems.reduce<Record<string, MenuItem[]>>((acc, item) => {
+    const groups: Record<string, MenuItem[]> = {};
+    for (const item of menuItems) {
       const cat = getCategory(item);
-      acc[cat] = acc[cat] ?? [];
-      acc[cat].push(item);
-      return acc;
-    }, {});
-    return CATEGORY_ORDER.reduce<Record<string, MenuItem[]>>((ordered, cat) => {
-      if (groups[cat]?.length) ordered[cat] = groups[cat];
-      return ordered;
-    }, {});
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    }
+    return groups;
   }, [menuItems]);
 
   // When arriving at step 3 from an "Order this item →" deep-link, auto-select
@@ -192,7 +231,8 @@ export function OrderForm({
     return selectedMenuItem.basePriceCents + extra;
   }, [selectedAdditions, selectedMenuItem]);
 
-  const totalCents = useMemo(() => cartItems.reduce((s, i) => s + i.lineTotalCents, 0), [cartItems]);
+  const totalCents = useMemo(() => cartItems.reduce((s, i) => s + i.lineTotalCents * i.quantity, 0), [cartItems]);
+  const totalUnits = useMemo(() => cartItems.reduce((s, i) => s + i.quantity, 0), [cartItems]);
 
   useEffect(() => {
     if (!selectedParentChildId) return;
@@ -228,12 +268,34 @@ export function OrderForm({
   function addToCart() {
     if (!selectedMenuItem) { setError("Select an item first."); return; }
     if (requiredChoices.length && !selectedChoice) { setError(`Choose a required option for ${selectedMenuItem.name}.`); return; }
-    setCartItems((cur) => [...cur, {
-      id: crypto.randomUUID(), menuItemId: selectedMenuItem.id, itemName: selectedMenuItem.name,
-      choice: selectedChoice || undefined, additions: selectedAdditions, removals: selectedRemovals,
-      lineTotalCents: selectedItemTotalCents
-    }]);
+    const choice = selectedChoice || undefined;
+    const newKey = buildLineKey(selectedMenuItem.id, choice, selectedAdditions, selectedRemovals);
+    setCartItems((cur) => {
+      // Same item + same customizations → bump qty instead of adding a duplicate row.
+      const existing = cur.findIndex((i) => buildLineKey(i.menuItemId, i.choice, i.additions, i.removals) === newKey);
+      if (existing >= 0) {
+        const next = [...cur];
+        next[existing] = { ...next[existing], quantity: next[existing].quantity + 1 };
+        return next;
+      }
+      return [...cur, {
+        id: crypto.randomUUID(), menuItemId: selectedMenuItem.id, itemName: selectedMenuItem.name,
+        choice, additions: selectedAdditions, removals: selectedRemovals,
+        lineTotalCents: selectedItemTotalCents, quantity: 1,
+      }];
+    });
     setSelectedChoice(""); setSelectedAdditions([]); setSelectedRemovals([]); setSelectedMenuItemId(""); setError("");
+  }
+
+  function incrementCartItem(id: string) {
+    setCartItems((cur) => cur.map((i) => i.id === id ? { ...i, quantity: i.quantity + 1 } : i));
+  }
+  function decrementCartItem(id: string) {
+    setCartItems((cur) => cur.flatMap((i) => {
+      if (i.id !== id) return [i];
+      if (i.quantity > 1) return [{ ...i, quantity: i.quantity - 1 }];
+      return []; // drop the line entirely when stepped down past 1
+    }));
   }
 
   async function handleSubmit() {
@@ -252,7 +314,14 @@ export function OrderForm({
       parentChildId: selectedParentChildId || undefined,
       studentName: effectiveStudentName,
       grade: effectiveGrade,
-      cartItems: cartItems.map((i) => ({ menuItemId: i.menuItemId, choice: i.choice, additions: i.additions, removals: i.removals })),
+      // Expand qty: the server treats each entry as one unit, so qty=3
+      // becomes 3 cart entries (and 3 OrderItem rows). Keeps the API/DB
+      // unchanged while letting the UI collapse identical configurations.
+      cartItems: cartItems.flatMap((i) =>
+        Array.from({ length: i.quantity }, () => ({
+          menuItemId: i.menuItemId, choice: i.choice, additions: i.additions, removals: i.removals,
+        })),
+      ),
       allergyNotes, dietaryNotes: null, specialInstructions: null,
     };
     const response = await fetch("/api/checkout/create-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -578,12 +647,13 @@ export function OrderForm({
           {Object.entries(groupedMenuItems).map(([category, items]) => (
             <div key={category} className="mb-4">
               <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2 flex items-center gap-1.5">
-                <span>{CATEGORY_ICONS[category]}</span>{category}
+                <span>{getCategoryIcon(category)}</span>{category}
               </p>
               <div className="space-y-2">
                 {items.map((item) => {
                   const isSelected = selectedMenuItemId === item.id;
-                  const inCart = cartItems.some((c) => c.menuItemId === item.id);
+                  const cartQty = cartItems.reduce((s, c) => c.menuItemId === item.id ? s + c.quantity : s, 0);
+                  const inCart = cartQty > 0;
                   const isSoldOut = soldOutIds.has(item.id);
                   return (
                     <button
@@ -610,7 +680,7 @@ export function OrderForm({
                         />
                       ) : (
                         <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-lg flex-shrink-0">
-                          {CATEGORY_ICONS[category] || "🍽"}
+                          {getCategoryIcon(category)}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -629,7 +699,11 @@ export function OrderForm({
                           </span>
                         </div>
                         {getDesc(item) && <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{getDesc(item)}</p>}
-                        {inCart && !isSoldOut && <p className="text-[10px] text-green-700 font-medium mt-1">✓ In cart</p>}
+                        {inCart && !isSoldOut && (
+                          <p className="text-[10px] text-green-700 font-medium mt-1">
+                            ✓ In cart{cartQty > 1 ? ` (${cartQty})` : ""}
+                          </p>
+                        )}
                       </div>
                     </button>
                   );
@@ -715,21 +789,49 @@ export function OrderForm({
           {/* Cart */}
           {cartItems.length > 0 && (
             <div className="rounded-[18px] border border-slate-100 bg-white p-4 mb-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-3">Your cart</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-3">
+                Your cart {totalUnits > 0 ? `· ${totalUnits} item${totalUnits === 1 ? "" : "s"}` : ""}
+              </p>
               <div className="divide-y divide-slate-50">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="py-2.5 flex gap-2 items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-ink">{item.itemName}</p>
-                      <p className="text-[11px] text-slate-500 leading-snug">
-                        {[item.choice ? `${item.choice}` : "", item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ") || "No customizations"}
-                      </p>
-                      <button type="button" onClick={() => setCartItems((cur) => cur.filter((i) => i.id !== item.id))}
-                        className="text-[10px] text-red-600 mt-0.5">Remove</button>
+                {cartItems.map((item) => {
+                  const lineTotal = item.lineTotalCents * item.quantity;
+                  return (
+                    <div key={item.id} className="py-2.5 flex gap-3 items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-ink">{item.itemName}</p>
+                        <p className="text-[11px] text-slate-500 leading-snug">
+                          {[item.choice ? `${item.choice}` : "", item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ") || "No customizations"}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {fmt(lineTotal)}
+                          {item.quantity > 1 && <span className="text-slate-400"> · {fmt(item.lineTotalCents)} each</span>}
+                        </p>
+                      </div>
+                      {/* Qty stepper */}
+                      <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-1 py-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => decrementCartItem(item.id)}
+                          aria-label={item.quantity > 1 ? `Decrease ${item.itemName}` : `Remove ${item.itemName}`}
+                          className="w-7 h-7 rounded-full bg-white border border-slate-200 text-slate-700 text-[14px] font-semibold flex items-center justify-center hover:bg-slate-100"
+                        >
+                          {item.quantity > 1 ? "−" : "×"}
+                        </button>
+                        <span className="text-[12px] font-semibold text-ink min-w-[18px] text-center tabular-nums">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => incrementCartItem(item.id)}
+                          aria-label={`Add another ${item.itemName}`}
+                          className="w-7 h-7 rounded-full bg-white border border-slate-200 text-slate-700 text-[14px] font-semibold flex items-center justify-center hover:bg-slate-100"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-[13px] font-semibold text-ink flex-shrink-0">{fmt(item.lineTotalCents)}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="border-t border-slate-100 pt-3 mt-1 flex justify-between">
                 <span className="text-[13px] font-semibold text-ink">Total</span>
@@ -772,10 +874,13 @@ export function OrderForm({
               {cartItems.map((item) => (
                 <div key={item.id} className="flex justify-between mb-2">
                   <div>
-                    <p className="text-[13px] font-semibold text-ink">{item.itemName}</p>
+                    <p className="text-[13px] font-semibold text-ink">
+                      {item.quantity > 1 && <span className="text-slate-500">{item.quantity}× </span>}
+                      {item.itemName}
+                    </p>
                     <p className="text-[11px] text-slate-500">{[item.choice, item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ")}</p>
                   </div>
-                  <p className="text-[13px] font-semibold text-ink">{fmt(item.lineTotalCents)}</p>
+                  <p className="text-[13px] font-semibold text-ink">{fmt(item.lineTotalCents * item.quantity)}</p>
                 </div>
               ))}
               <div className="border-t border-slate-100 pt-3 mt-1 flex justify-between">

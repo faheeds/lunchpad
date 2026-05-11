@@ -282,6 +282,14 @@ model MenuItem {
   // simple string (rather than a Category model) so bulk Excel uploads
   // and AI categorization can write any value without prior setup.
   category            String?
+  // Required top-level choices the customer must pick exactly one of
+  // (e.g. for "Build Your Own Burger": Beef / Chicken / Vegan). These
+  // are conceptually different from MenuOption add-ons/removals — they
+  // gate the order and become part of the OrderItem.choice field.
+  // Empty array = no required choice. Operators populate via the admin
+  // menu item editor. Legacy items without a value fall back to a
+  // hardcoded map (see lib/menu-config.ts) for backward compatibility.
+  requiredChoices     String[]           @default([])
   sortOrder           Int                @default(0)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt

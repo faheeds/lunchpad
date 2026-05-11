@@ -126,9 +126,24 @@ export default async function OrderPage({
       };
     }) ?? [];
 
-  const initialCartItems = reorderCandidates
-    .filter((i) => i.available)
-    .map(({ available: _, ...rest }) => rest);
+  // Collapse identical configurations into a single qty-N cart line.
+  // OrderItem rows are one-per-unit in the DB, but the cart UI groups them
+  // behind a quantity stepper. Key = menuItemId + choice + sorted add-ons + sorted removals.
+  const collapsed = new Map<string, ReturnType<typeof Object> & { quantity: number }>();
+  for (const c of reorderCandidates) {
+    if (!c.available) continue;
+    const a = [...c.additions].sort().join("|");
+    const r = [...c.removals].sort().join("|");
+    const key = `${c.menuItemId}::${c.choice ?? ""}::${a}::${r}`;
+    const existing = collapsed.get(key);
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      const { available: _, ...rest } = c;
+      collapsed.set(key, { ...rest, quantity: 1 });
+    }
+  }
+  const initialCartItems = Array.from(collapsed.values());
 
   const unavailableReorderItems = reorderCandidates
     .filter((i) => !i.available)

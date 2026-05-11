@@ -80,18 +80,14 @@ export const deliveryDateSchema = z.object({
     .min(1)
     .refine(
       (value) => {
-        // Expect a "yyyy-MM-dd" string from the admin <input type="date"> control.
-        // Reject weekend dates — this is a school-lunch app, no deliveries Sat/Sun.
-        // Parse as a local calendar date (not UTC) so the day-of-week matches what
-        // the admin saw when they picked the date.
-        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-        if (!match) return false;
-        const [, y, m, d] = match;
-        const local = new Date(Number(y), Number(m) - 1, Number(d));
-        const dow = local.getDay(); // 0=Sun, 5=Fri, 6=Sat
-        return dow >= 1 && dow <= 4; // Monday–Thursday only
+        // Expect a "yyyy-MM-dd" string from the admin <input type="date">
+        // control. We accept any calendar day — LunchPad is multi-tenant
+        // and different operators have different schedules (offices may
+        // run Mon-Fri, weekend caterers serve Sat/Sun, etc.). Operators
+        // self-select which days they schedule via the admin UI.
+        return /^\d{4}-\d{2}-\d{2}$/.test(value);
       },
-      { message: "Delivery date must be Monday–Thursday (no Friday or weekend deliveries)." }
+      { message: "Delivery date must be in yyyy-MM-dd format." }
     ),
   cutoffAt: z.string().min(1),
   orderingOpen: z.coerce.boolean().default(true),

@@ -64,8 +64,10 @@ const WEEKDAY_LABELS: Record<number, { short: string; long: string }> = {
   1: { short: "Mon", long: "Monday" },
   2: { short: "Tue", long: "Tuesday" },
   3: { short: "Wed", long: "Wednesday" },
-  4: { short: "Thu", long: "Thursday" }
-  // Friday removed — school provides lunch Mon–Thu only
+  4: { short: "Thu", long: "Thursday" },
+  5: { short: "Fri", long: "Friday" },
+  6: { short: "Sat", long: "Saturday" },
+  7: { short: "Sun", long: "Sunday" },
 };
 
 const CATEGORY_ORDER = [
@@ -145,7 +147,7 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
         weekday: getWeekdayNumber(new Date(date.deliveryDate), date.school.timezone),
         deliveryDate: date
       }))
-      .filter((entry) => entry.weekday >= 1 && entry.weekday <= 4) // Mon–Thu only
+      .filter((entry) => entry.weekday >= 1 && entry.weekday <= 7) // any day a delivery is scheduled
       .sort(
         (a, b) =>
           new Date(a.deliveryDate.deliveryDate).getTime() - new Date(b.deliveryDate.deliveryDate).getTime()

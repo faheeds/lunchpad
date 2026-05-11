@@ -7,45 +7,61 @@ import { getCurrentRestaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
 
-// ── Category helpers (mirrors admin/menu logic) ─────────────────────────────
+// ── Category helpers ─────────────────────────────────────────────────────────
+// Categories are read from `MenuItem.category` per item. Each restaurant
+// owns its own taxonomy via the admin Menu page (task #28 — custom
+// categories). We render whatever categories exist, in alphabetical
+// order, with an "Other" bucket for uncategorized items.
+//
+// Decorative icons + gradients are matched on common keywords so a brand
+// new operator's menu looks alive without them needing to configure
+// anything. Unknown categories fall back to a neutral icon.
 
-const CATEGORIES = [
-  "Signature Burgers & Sandwiches",
-  "Salads with Protein",
-  "Comfort Favorites",
-  "Sides & Snacks",
-] as const;
+type CategoryMeta = { icon: string; gradient: string };
 
-const CAT_META: Record<string, { icon: string; gradient: string; label: string }> = {
-  "Signature Burgers & Sandwiches": {
-    icon: "🍔",
-    gradient: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-    label: "Burgers & Sandwiches",
-  },
-  "Salads with Protein": {
-    icon: "🥗",
-    gradient: "linear-gradient(135deg, #86efac 0%, #22c55e 100%)",
-    label: "Salads",
-  },
-  "Comfort Favorites": {
-    icon: "🍗",
-    gradient: "linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)",
-    label: "Comfort Favorites",
-  },
-  "Sides & Snacks": {
-    icon: "🍟",
-    gradient: "linear-gradient(135deg, #fed7aa 0%, #f97316 100%)",
-    label: "Sides & Snacks",
-  },
+const FALLBACK_META: CategoryMeta = {
+  icon: "🍽️",
+  gradient: "linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)",
 };
 
-function getCategory(name: string, description: string | null) {
-  const prefix = description?.split(".")[0]?.trim();
-  if (prefix && CATEGORIES.includes(prefix as typeof CATEGORIES[number])) return prefix;
-  if (name.includes("Burger") || name.includes("Sandwich")) return "Signature Burgers & Sandwiches";
-  if (name.includes("Salad")) return "Salads with Protein";
-  if (name.includes("Mac") || name.includes("Quesadilla") || name.includes("Wings") || name.includes("Tender")) return "Comfort Favorites";
-  return "Sides & Snacks";
+// Keyword → meta heuristic. Picks a sensible visual style for typical
+// restaurant categories without forcing operators to configure them.
+function getCategoryMeta(category: string): CategoryMeta {
+  const c = category.toLowerCase();
+  if (c.match(/burger|sandwich|wrap|sub/)) {
+    return { icon: "🍔", gradient: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)" };
+  }
+  if (c.match(/salad|veg|green|bowl/)) {
+    return { icon: "🥗", gradient: "linear-gradient(135deg, #86efac 0%, #22c55e 100%)" };
+  }
+  if (c.match(/pizza|pasta|italian/)) {
+    return { icon: "🍕", gradient: "linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)" };
+  }
+  if (c.match(/chicken|wings|tender|nugget/)) {
+    return { icon: "🍗", gradient: "linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)" };
+  }
+  if (c.match(/taco|burrito|mexican|quesadilla/)) {
+    return { icon: "🌮", gradient: "linear-gradient(135deg, #fcd34d 0%, #ea580c 100%)" };
+  }
+  if (c.match(/asian|noodle|rice|sushi/)) {
+    return { icon: "🍜", gradient: "linear-gradient(135deg, #fda4af 0%, #e11d48 100%)" };
+  }
+  if (c.match(/breakfast|pancake|waffle|egg/)) {
+    return { icon: "🥞", gradient: "linear-gradient(135deg, #fde68a 0%, #fbbf24 100%)" };
+  }
+  if (c.match(/drink|beverage|juice|smoothie|milk|tea|coffee/)) {
+    return { icon: "🥤", gradient: "linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%)" };
+  }
+  if (c.match(/dessert|cookie|cake|ice cream|sweet/)) {
+    return { icon: "🍰", gradient: "linear-gradient(135deg, #f9a8d4 0%, #ec4899 100%)" };
+  }
+  if (c.match(/side|snack|fries|chips/)) {
+    return { icon: "🍟", gradient: "linear-gradient(135deg, #fed7aa 0%, #f97316 100%)" };
+  }
+  if (c.match(/comfort|favorite/)) {
+    return { icon: "🍗", gradient: "linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)" };
+  }
+  return FALLBACK_META;
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────
@@ -68,11 +84,18 @@ export default async function MenuPage() {
       })
     : [];
 
-  // Group by category
-  const grouped = CATEGORIES.reduce<Record<string, typeof items>>((acc, cat) => {
-    acc[cat] = items.filter((i) => getCategory(i.name, i.description) === cat);
-    return acc;
-  }, {});
+  // Group by MenuItem.category, with an "Other" bucket for uncategorized
+  // items. The order of categories is whatever sortOrder the operator
+  // configured (set on MenuItem.sortOrder, items already ordered by name);
+  // we extract distinct categories in first-seen order so the rendering
+  // matches the admin's intended structure.
+  const grouped = new Map<string, typeof items>();
+  for (const item of items) {
+    const key = item.category?.trim() || "Other";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(item);
+  }
+  const categories = Array.from(grouped.keys());
 
   const totalItems = items.length;
 
@@ -133,9 +156,9 @@ export default async function MenuPage() {
           borderTop: "1px solid rgba(0,0,0,0.04)",
           borderBottom: "1px solid #f1f5f9",
         }}>
-          {CATEGORIES.map((cat) => {
-            const meta = CAT_META[cat];
-            const count = grouped[cat]?.length ?? 0;
+          {categories.map((cat) => {
+            const meta = getCategoryMeta(cat);
+            const count = grouped.get(cat)?.length ?? 0;
             if (!count) return null;
             return (
               <a key={cat} href={`#cat-${cat.replace(/[^a-z]/gi, "-").toLowerCase()}`} style={{
@@ -146,7 +169,7 @@ export default async function MenuPage() {
                 textDecoration: "none",
               }}>
                 <span style={{ fontSize: 14 }}>{meta.icon}</span>
-                {meta.label}
+                {cat}
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: "1px 5px",
                   borderRadius: 10, background: "#f1f5f9", color: "#64748b",
@@ -160,10 +183,10 @@ export default async function MenuPage() {
 
         {/* ── Item grid by category ───────────────────────────────────────── */}
         <div style={{ padding: "4px 0 100px", background: "#f8fafc" }}>
-          {CATEGORIES.map((cat) => {
-            const catItems = grouped[cat];
+          {categories.map((cat) => {
+            const catItems = grouped.get(cat);
             if (!catItems?.length) return null;
-            const meta = CAT_META[cat];
+            const meta = getCategoryMeta(cat);
             return (
               <section
                 key={cat}

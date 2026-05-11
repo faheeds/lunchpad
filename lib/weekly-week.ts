@@ -18,12 +18,16 @@ export function getUpcomingSchoolWeekRange(now: Date, timezone: string) {
   const nextMonday = new Date(now);
   nextMonday.setDate(nextMonday.getDate() + daysUntilNextMonday);
 
-  const nextThursday = new Date(nextMonday);
-  nextThursday.setDate(nextThursday.getDate() + 3); // Mon–Thu only (school schedule)
+  // End on Sunday so the range covers a full calendar week. Previously
+  // capped at Thursday for FS's Kitchen's Mon-Thu schedule; multi-tenant
+  // operators have varied schedules so we let the data drive what's
+  // visible rather than this range.
+  const nextSunday = new Date(nextMonday);
+  nextSunday.setDate(nextSunday.getDate() + 6);
 
   return {
     start: buildLocalDayStart(nextMonday, timezone),
-    end: buildLocalDayEnd(nextThursday, timezone)
+    end: buildLocalDayEnd(nextSunday, timezone)
   };
 }
 
@@ -33,15 +37,14 @@ export function getSchoolWeekRangeForDate(date: Date, timezone: string) {
   const monday = new Date(date);
   monday.setDate(monday.getDate() - daysSinceMonday);
 
-  // End on Thursday — school only provides lunch Mon–Thu.
-  // Friday is kept as end for legacy data grouping so historical Friday
-  // orders (if any) are still associated with the correct week.
-  const thursday = new Date(monday);
-  thursday.setDate(thursday.getDate() + 3);
+  // Full Mon-Sun calendar week. Previously capped at Thursday — see
+  // comment on `getUpcomingSchoolWeekRange` above.
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
 
   return {
     start: buildLocalDayStart(monday, timezone),
-    end: buildLocalDayEnd(thursday, timezone)
+    end: buildLocalDayEnd(sunday, timezone)
   };
 }
 
