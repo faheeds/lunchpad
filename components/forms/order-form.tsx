@@ -29,6 +29,10 @@ type MenuItem = {
    *  with older callers; getCategory() falls back to a sensible default
    *  when missing. */
   category?: string | null;
+  /** Operator-set required choices (e.g. Beef / Crispy Chicken / Vegan for
+   *  a "Build Your Own Burger"). Optional for back-compat — when empty
+   *  the helper falls back to a hardcoded legacy slug map. */
+  requiredChoices?: string[];
   options: MenuOption[];
 };
 type CartItem = {
@@ -193,7 +197,7 @@ export function OrderForm({
     [soldOutByDeliveryDate, selectedDeliveryDateId]
   );
   const selectedMenuItem = menuItems.find((item) => item.id === selectedMenuItemId);
-  const requiredChoices = selectedMenuItem ? getRequiredChoicesForMenuItem(selectedMenuItem.slug) : [];
+  const requiredChoices = selectedMenuItem ? getRequiredChoicesForMenuItem(selectedMenuItem) : [];
 
   // Group items by their MenuItem.category. Order of categories is
   // first-seen — since menu items arrive sorted by sortOrder (admin can
@@ -687,7 +691,7 @@ export function OrderForm({
                         <div className="flex items-start justify-between gap-2">
                           <p className={cn("text-[13px] font-semibold leading-snug", isSelected ? "text-brand-900" : isSoldOut ? "text-slate-400" : "text-ink")}>
                             {item.name}
-                            {!isSoldOut && getRequiredChoicesForMenuItem(item.slug).length > 0 && (
+                            {!isSoldOut && getRequiredChoicesForMenuItem(item).length > 0 && (
                               <span className="ml-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">choose style</span>
                             )}
                             {isSoldOut && (

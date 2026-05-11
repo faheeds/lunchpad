@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ContactPage() {
   const restaurant = await getCurrentRestaurant();
-  const restaurantName = restaurant?.name ?? "Hot Lunch";
+  // Fallback to the platform name when /contact is hit on the apex (no
+  // tenant context). Was hardcoded to "Hot Lunch" (the original tenant's
+  // brand) before LunchPad went multi-tenant.
+  const restaurantName = restaurant?.name ?? "LunchPad";
 
   return (
     <>

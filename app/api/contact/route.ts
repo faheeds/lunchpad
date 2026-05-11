@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
   }
 
   const restaurant = await getCurrentRestaurant();
-  const restaurantName = restaurant?.name ?? "Hot Lunch";
+  // Fallback to the platform brand if /contact is submitted from the apex.
+  // Used to be "Hot Lunch" (the original tenant); now generic.
+  const restaurantName = restaurant?.name ?? "LunchPad";
   const { name, phone, email, feedbackType, orderNumber, message } = parsed.data;
 
   const typeLabel = feedbackType === "order_issue" ? "Order Issue" : "General Feedback";
@@ -73,7 +75,7 @@ export async function POST(req: NextRequest) {
           <p style="font-size: 14px; color: #1c0505; line-height: 1.6; margin: 0; white-space: pre-wrap;">${message}</p>
         </div>
         <p style="font-size: 11px; color: #94a3b8; margin-top: 20px;">
-          Submitted via medina.localbiggerburger.com contact form
+          Submitted via ${restaurantName} contact form
         </p>
       </div>
     </div>
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest) {
       from: env.EMAIL_FROM_NAME ? `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>` : env.EMAIL_FROM,
       to:   env.EMAIL_FROM, // send to yourself (admin inbox)
       replyTo: email,       // hitting Reply goes straight to the parent
-      subject: `[Hot Lunch] ${typeLabel} from ${name}`,
+      subject: `[${restaurantName}] ${typeLabel} from ${name}`,
       html,
       text,
     });

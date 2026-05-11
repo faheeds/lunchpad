@@ -29,6 +29,10 @@ type MenuItem = {
   name: string;
   description: string | null;
   basePriceCents: number;
+  /** Operator-set required choices (e.g. Beef / Crispy Chicken / Vegan).
+   *  Optional for back-compat — when empty the helper falls back to a
+   *  hardcoded legacy slug map. */
+  requiredChoices?: string[];
   options: MenuOption[];
 };
 
@@ -180,7 +184,7 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
   }, [dayMenuItems]);
 
   const selectedMenuItem = dayMenuItems.find((item) => item.id === selectedMenuItemId);
-  const requiredChoices = selectedMenuItem ? getRequiredChoicesForMenuItem(selectedMenuItem.slug) : [];
+  const requiredChoices = selectedMenuItem ? getRequiredChoicesForMenuItem(selectedMenuItem) : [];
 
   const selectedItemTotalCents = useMemo(() => {
     if (!selectedMenuItem) return 0;
@@ -487,7 +491,7 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
                                         )}
                                       >
                                         {item.name}
-                                        {getRequiredChoicesForMenuItem(item.slug).length > 0 && (
+                                        {getRequiredChoicesForMenuItem(item).length > 0 && (
                                           <span className="ml-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
                                             choose style
                                           </span>

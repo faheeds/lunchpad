@@ -143,7 +143,7 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
       return [];
     }
 
-    const requiredChoices = getRequiredChoicesForMenuItem(plan.menuItem.slug);
+    const requiredChoices = getRequiredChoicesForMenuItem(plan.menuItem);
     if (requiredChoices.length && (!plan.choice || !requiredChoices.includes(plan.choice))) {
       skippedItems.push(
         `${weekdayLabel}: ${plan.parentChild.studentName} - ${plan.menuItem.name} is missing a required choice.`

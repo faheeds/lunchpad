@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const requiredChoices = getRequiredChoicesForMenuItem(menuItem.slug);
+    const requiredChoices = getRequiredChoicesForMenuItem(menuItem);
     if (requiredChoices.length && (!choice || !requiredChoices.includes(choice))) {
       return NextResponse.json({ error: `Choose a required option for ${menuItem.name}.` }, { status: 400 });
     }

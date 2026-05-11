@@ -153,7 +153,7 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       throw new Error(`One or more removals are invalid for ${menuItem.name}.`);
     }
 
-    const requiredChoices = getRequiredChoicesForMenuItem(menuItem.slug);
+    const requiredChoices = getRequiredChoicesForMenuItem(menuItem);
     if (requiredChoices.length && (!cartItem.choice || !requiredChoices.includes(cartItem.choice))) {
       throw new Error(`Choose a required option for ${menuItem.name} before adding it to the cart.`);
     }
@@ -342,7 +342,7 @@ export async function createAdminOrder(args: {
     if (!menuEntry) throw new Error("One or more menu items aren't available for this delivery date.");
 
     const menuItem = menuEntry.menuItem;
-    const requiredChoices = getRequiredChoicesForMenuItem(menuItem.slug);
+    const requiredChoices = getRequiredChoicesForMenuItem(menuItem);
     if (requiredChoices.length && (!cartItem.choice || !requiredChoices.includes(cartItem.choice))) {
       throw new Error(`Choose a required option for ${menuItem.name} before adding it.`);
     }

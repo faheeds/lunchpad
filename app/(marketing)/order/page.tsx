@@ -112,7 +112,7 @@ export default async function OrderPage({
 
   const reorderCandidates =
     reorderOrder?.items.map((item) => {
-      const requiredChoices = getRequiredChoicesForMenuItem(item.menuItem.slug);
+      const requiredChoices = getRequiredChoicesForMenuItem(item.menuItem);
       const choice = item.additions.find((v) => requiredChoices.includes(v));
       return {
         id: item.id,

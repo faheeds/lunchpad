@@ -5,7 +5,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 
 export function SiteHeader({
-  restaurantName = "Hot Lunch",
+  restaurantName = "LunchPad",
   logoUrl = null,
 }: {
   restaurantName?: string;

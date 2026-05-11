@@ -38,6 +38,10 @@ type MenuItem = {
   name: string;
   description: string | null;
   basePriceCents: number;
+  /** Operator-set required choices (e.g. Beef / Crispy Chicken / Vegan).
+   *  Optional for back-compat — when empty the helper falls back to a
+   *  hardcoded legacy slug map. */
+  requiredChoices?: string[];
   options: MenuOption[];
 };
 type DeliveryDate = {
@@ -182,7 +186,7 @@ export function AdminOrderForm({
   const cutoffPassed = selectedDate ? new Date(selectedDate.cutoffAt) < new Date() : false;
 
   const activeMenuItem = menuItems.find((m) => m.id === activeMenuItemId);
-  const requiredChoices = activeMenuItem ? getRequiredChoicesForMenuItem(activeMenuItem.slug) : [];
+  const requiredChoices = activeMenuItem ? getRequiredChoicesForMenuItem(activeMenuItem) : [];
   const activeLineTotal = useMemo(() => {
     if (!activeMenuItem) return 0;
     const extras = activeMenuItem.options

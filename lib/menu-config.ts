@@ -2,10 +2,12 @@
 // one of these when adding the item to their cart.
 //
 // As of May 2026 this is a per-tenant field stored on `MenuItem.requiredChoices`
-// (see schema). Older items (and the original FS's Kitchen menu) didn't have
-// this field populated, so we keep a hardcoded fallback map keyed by slug
-// for backward compatibility. The fallback can be removed once every
-// tenant has migrated their menu to use the new field.
+// (see schema). Every call site passes the full menuItem object — the
+// helper prefers `item.requiredChoices` when populated and falls back to
+// the legacy hardcoded map below for items that pre-date the field
+// (FS's Kitchen's original menu). The fallback can be deleted once those
+// legacy items have been re-seeded with their explicit requiredChoices
+// via the admin Menu page editor.
 
 const LEGACY_REQUIRED_CHOICES_BY_SLUG: Record<string, string[]> = {
   "build-your-own-burger": [

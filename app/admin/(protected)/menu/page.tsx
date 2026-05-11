@@ -166,6 +166,45 @@ async function updateItemTagsAndCategory(formData: FormData) {
   revalidatePath("/menu");
 }
 
+// Required choices — top-level "pick one" options that gate the order
+// (e.g. a "Build Your Own Burger" item where the customer must choose
+// Beef / Crispy Chicken / Grilled Chicken / Vegan). Conceptually different
+// from MenuOption (which is add-on / removal). Stored as a String[] on
+// MenuItem.requiredChoices. Empty = no required choice — the helper in
+// lib/menu-config.ts also falls back to a legacy hardcoded slug map for
+// items that pre-date this field, so operators only need to populate it
+// where they want a custom set.
+async function updateItemRequiredChoices(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+  const id = String(formData.get("id"));
+  const raw = String(formData.get("requiredChoices") || "");
+  // Accept newline OR comma separation so operators can paste a list.
+  // Trim each entry, drop blanks, and dedupe (case-insensitive) — choice
+  // names are user-facing labels so duplicates would be confusing.
+  const seen = new Set<string>();
+  const requiredChoices: string[] = [];
+  for (const piece of raw.split(/[\n,]+/)) {
+    const trimmed = piece.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    requiredChoices.push(trimmed);
+  }
+  // Tenant-scoped
+  const item = await prisma.menuItem.findFirst({
+    where: { id, restaurantId: restaurant.id },
+    select: { id: true },
+  });
+  if (!item) throw new Error("Item not found");
+  await prisma.menuItem.update({ where: { id }, data: { requiredChoices } });
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+  revalidatePath("/order");
+}
+
 async function updateSchoolRestrictions(formData: FormData) {
   "use server";
   const restaurant = await requireRestaurant();
@@ -445,6 +484,32 @@ export default async function AdminMenuPage() {
                         <button type="submit"
                           className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-900 transition">
                           Save tags & category
+                        </button>
+                      </form>
+
+                      {/* Required choices — top-level pick-one selector */}
+                      <form action={updateItemRequiredChoices} className="space-y-2 border-t border-slate-50 pt-3">
+                        <input type="hidden" name="id" value={item.id} />
+                        <div>
+                          <label className="text-[11px] text-slate-500 block mb-1">
+                            Required choices
+                            <span className="text-slate-400 font-normal ml-1">(pick one — leave blank if none)</span>
+                          </label>
+                          <textarea
+                            name="requiredChoices"
+                            defaultValue={(item.requiredChoices ?? []).join("\n")}
+                            placeholder={"e.g.\nBeef\nCrispy Chicken\nGrilled Chicken\nBeyond Vegan"}
+                            rows={Math.max(3, (item.requiredChoices?.length ?? 0) + 1)}
+                            className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-2 leading-snug resize-y font-mono"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            One per line. Customers must pick exactly one to add this item to their cart.
+                            Different from add-ons / removals (those are configured in the Options panel).
+                          </p>
+                        </div>
+                        <button type="submit"
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-900 transition">
+                          Save required choices
                         </button>
                       </form>
 
