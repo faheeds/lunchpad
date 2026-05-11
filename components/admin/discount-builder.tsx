@@ -25,8 +25,20 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DiscountPill } from "@/components/admin/discount-pill";
+import { DiscountTemplateBadge, type DiscountIconName } from "@/components/admin/discount-icons";
 import { createDiscount, updateDiscount } from "@/app/admin/(protected)/discounts/actions";
 import type { TemplateMeta } from "@/lib/discount-templates";
+
+/** Server actions that complete with redirect() throw a sentinel error
+ *  with a `digest` starting with "NEXT_REDIRECT". If we swallow that
+ *  in try/catch the redirect never happens and the user briefly sees
+ *  the digest rendered as an error. Detect it and re-throw so Next's
+ *  runtime handles it the way it wants. */
+function isRedirectError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const digest = (err as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -89,9 +101,14 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
         } else {
           await createDiscount(payload);
           // createDiscount redirects via Next's server-action redirect
-          // mechanism — the await above won't return on success.
+          // mechanism — the await above won't return on success; it
+          // throws a NEXT_REDIRECT sentinel that the catch below
+          // re-throws so Next's runtime can act on it.
         }
       } catch (err) {
+        // Don't swallow Next's redirect mechanism — re-throw so the
+        // navigation actually happens. Anything else is a real error.
+        if (isRedirectError(err)) throw err;
         setError(err instanceof Error ? err.message : "Save failed.");
       }
     });
@@ -102,17 +119,15 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
   return (
     <div className="max-w-3xl mx-auto py-6 px-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[12px] text-slate-500 flex items-center gap-1.5">
-            <span>{template.icon}</span>
-            <span>{template.title}</span>
-          </p>
+      <div className="flex items-start gap-3 mb-5">
+        <DiscountTemplateBadge kind={template.kind as DiscountIconName} size="lg" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] text-slate-500">{template.title}</p>
           <input
             value={state.name}
             onChange={(e) => update({ name: e.target.value })}
             placeholder="Discount name"
-            className="text-[20px] font-bold text-ink bg-transparent border-0 border-b-2 border-transparent focus:border-brand-300 focus:outline-none px-0 py-1 mt-1 w-full max-w-md"
+            className="text-[20px] font-bold text-ink bg-transparent border-0 border-b-2 border-transparent focus:border-brand-300 focus:outline-none px-0 py-1 mt-0.5 w-full max-w-md"
           />
         </div>
       </div>

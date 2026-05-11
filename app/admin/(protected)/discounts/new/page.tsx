@@ -17,6 +17,7 @@ import Link from "next/link";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { TEMPLATES } from "@/lib/discount-templates";
+import { DiscountTemplateBadge } from "@/components/admin/discount-icons";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,9 @@ export default async function DiscountTemplateGalleryPage() {
                 COMING SOON
               </span>
             )}
-            <div className="text-[28px] leading-none mb-2">{t.icon}</div>
+            <div className="mb-3">
+              <DiscountTemplateBadge kind={t.kind} size="lg" />
+            </div>
             <h2 className="text-[14px] font-bold text-ink leading-tight">{t.title}</h2>
             <p className="text-[12px] text-slate-500 leading-snug mt-1 min-h-[34px]">
               {t.description}

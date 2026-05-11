@@ -15,6 +15,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { getTemplate, type TemplateMeta } from "@/lib/discount-templates";
 import { DiscountBuilder, type BuilderState } from "@/components/admin/discount-builder";
+import { DiscountTemplateBadge, type DiscountIconName } from "@/components/admin/discount-icons";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,9 @@ function ComingSoon({ template }: { template: TemplateMeta }) {
   return (
     <div className="max-w-xl mx-auto py-10 px-4">
       <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center">
-        <div className="text-[36px] mb-2">{template.icon}</div>
+        <div className="flex justify-center mb-3">
+          <DiscountTemplateBadge kind={template.kind as DiscountIconName} size="lg" />
+        </div>
         <h1 className="text-[17px] font-bold text-ink">{template.title} — coming soon</h1>
         <p className="text-[13px] text-slate-500 mt-2 leading-relaxed max-w-sm mx-auto">
           {template.description} The builder for this template isn't ready yet, but

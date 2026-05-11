@@ -23,6 +23,7 @@ import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { describeDiscount } from "@/lib/discount-describe";
+import { DiscountTemplateBadge, type DiscountIconName } from "@/components/admin/discount-icons";
 
 export const dynamic = "force-dynamic";
 
@@ -101,8 +102,8 @@ export default async function AdminDiscountsPage() {
       {/* Empty state */}
       {!hasAnyDiscounts && (
         <div className="rounded-[18px] border-2 border-dashed border-slate-200 bg-white p-8 text-center">
-          <div className="w-12 h-12 mx-auto rounded-full bg-brand-50 flex items-center justify-center text-2xl mb-3">
-            🎁
+          <div className="flex justify-center mb-3">
+            <DiscountTemplateBadge kind="WELCOME" size="lg" />
           </div>
           <h2 className="text-[15px] font-bold text-ink mb-1">No discounts yet</h2>
           <p className="text-[12px] text-slate-500 max-w-xs mx-auto mb-4 leading-relaxed">
@@ -199,10 +200,10 @@ function DiscountRow({
         dim ? "opacity-60 border-slate-100" : "border-slate-100"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        <DiscountTemplateBadge kind={d.templateKind as DiscountIconName} size="md" />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[14px]">{TEMPLATE_ICON[d.templateKind] ?? "🏷️"}</span>
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
             <p className="text-[14px] font-semibold text-ink">{d.name}</p>
             {d.code && (
               <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-100">
@@ -227,21 +228,6 @@ function DiscountRow({
     </Link>
   );
 }
-
-// Icon palette — picked to read at a glance in the row list. We keep
-// this on the page rather than in a shared registry because the list
-// is small + the icons are pure presentation, not semantic.
-const TEMPLATE_ICON: Record<string, string> = {
-  WELCOME:       "🎁",
-  PROMO_CODE:    "🏷️",
-  SIBLING:       "👨‍👩‍👧",
-  DAY_OF_WEEK:   "📅",
-  VOLUME:        "💰",
-  ITEM_DISCOUNT: "🥗",
-  BOGO:          "🍔",
-  BUNDLE:        "🍱",
-  CUSTOM:        "🛠️",
-};
 
 function fmtCurrency(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
