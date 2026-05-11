@@ -102,6 +102,9 @@ export async function GET(request: NextRequest) {
             description: entry.menuItem.description,
             imageUrl: entry.menuItem.imageUrl,
             basePriceCents: entry.menuItem.basePriceCents,
+            // Pick-one required choices — surfaced so the iOS weekly
+            // planner can render a picker on items that demand one.
+            requiredChoices: entry.menuItem.requiredChoices,
             options: entry.menuItem.options.map((o) => ({
               id: o.id,
               name: o.name,

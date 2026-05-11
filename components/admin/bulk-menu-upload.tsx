@@ -18,6 +18,10 @@ export interface MenuItemDraft {
   basePriceCents: number;
   category: string;
   isActive: boolean;
+  /** Pick-one choices the customer must select before adding to cart
+   *  (e.g. Beef / Chicken / Vegan for a Build-Your-Own-Burger). Empty
+   *  array = no required choice. */
+  requiredChoices: string[];
   options: MenuOptionDraft[];
   _expanded: boolean;
 }
@@ -52,12 +56,27 @@ async function parseExcelFile(file: File): Promise<MenuItemDraft[]> {
     const name = String(row[0] ?? "").trim();
     if (!name) continue;
     const activeStr = String(row[4] ?? "yes").toLowerCase();
+    // Required Choices column (index 5) — comma OR newline separated
+    // since Excel cells can hold multi-line text. Dedupe case-insensitively
+    // so "Beef" and "beef" don't both end up on the cart picker.
+    const rawChoices = String(row[5] ?? "");
+    const seen = new Set<string>();
+    const requiredChoices: string[] = [];
+    for (const piece of rawChoices.split(/[\n,]+/)) {
+      const trimmed = piece.trim();
+      if (!trimmed) continue;
+      const key = trimmed.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      requiredChoices.push(trimmed);
+    }
     itemMap.set(name.toLowerCase(), {
       name,
       description: String(row[2] ?? "").trim(),
       basePriceCents: parseDollars(String(row[1] ?? "0")),
       category: String(row[3] ?? "").trim(),
       isActive: activeStr !== "no" && activeStr !== "false",
+      requiredChoices,
       options: [],
       _expanded: false,
     });
@@ -371,6 +390,17 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                     {item.options.length} opt{item.options.length !== 1 ? "s" : ""}
                   </span>
 
+                  {/* Required choices badge — only shown when populated */}
+                  {item.requiredChoices.length > 0 && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, flexShrink: 0,
+                      color: "#92400e", background: "#fef3c7", border: "1px solid #fde68a",
+                      borderRadius: 100, padding: "2px 8px", whiteSpace: "nowrap",
+                    }}>
+                      {item.requiredChoices.length} choice{item.requiredChoices.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+
                   {/* Active toggle */}
                   <button type="button"
                     onClick={() => updateItem(idx, { isActive: !item.isActive })}
@@ -405,6 +435,33 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                       <input value={item.description}
                         onChange={(e) => updateItem(idx, { description: e.target.value })}
                         placeholder="Optional description shown to parents"
+                        style={{ ...inputCss, fontSize: 12 }} />
+                    </div>
+
+                    {/* Required choices — pick-one selector. Edit as comma-separated
+                        for brevity inside this row, since multi-line textarea would
+                        bloat the table. Operators can polish on the /admin/menu page
+                        post-import where each item gets a full editor. */}
+                    <div style={{ marginTop: 10 }}>
+                      <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}>
+                        Required choices (comma-separated, optional)
+                      </label>
+                      <input
+                        value={item.requiredChoices.join(", ")}
+                        onChange={(e) => {
+                          const seen = new Set<string>();
+                          const next: string[] = [];
+                          for (const piece of e.target.value.split(",")) {
+                            const trimmed = piece.trim();
+                            if (!trimmed) continue;
+                            const k = trimmed.toLowerCase();
+                            if (seen.has(k)) continue;
+                            seen.add(k);
+                            next.push(trimmed);
+                          }
+                          updateItem(idx, { requiredChoices: next });
+                        }}
+                        placeholder="e.g. Beef, Crispy Chicken, Vegan"
                         style={{ ...inputCss, fontSize: 12 }} />
                     </div>
 

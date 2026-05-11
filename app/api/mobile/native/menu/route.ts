@@ -55,6 +55,10 @@ export async function GET() {
         imageUrl: item.imageUrl,
         basePriceCents: item.basePriceCents,
         dietaryTags: item.dietaryTags,
+        // Pick-one selections the customer MUST resolve before adding
+        // the item to their cart (e.g. Beef / Chicken / Vegan for a
+        // Build-Your-Own Burger). Empty array = no required choice.
+        requiredChoices: item.requiredChoices,
         options: item.options.map((o) => ({
           id: o.id,
           name: o.name,

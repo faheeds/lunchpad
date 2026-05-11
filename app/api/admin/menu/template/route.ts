@@ -13,11 +13,11 @@ export async function GET() {
 
   // ── Sheet 1: Menu Items ────────────────────────────────────────────────────
   const itemsData = [
-    ["Name *", "Price * ($)", "Description", "Category", "Active (yes/no)"],
-    ["Smash Burger", "12.99", "Classic smash patty with American cheese", "Mains", "yes"],
-    ["Caesar Salad", "9.99", "Romaine lettuce, croutons, parmesan", "Salads", "yes"],
-    ["Chocolate Milk", "2.50", "", "Drinks", "yes"],
-    ["Fruit Cup", "4.00", "Seasonal fresh fruit", "Sides", "yes"],
+    ["Name *", "Price * ($)", "Description", "Category", "Active (yes/no)", "Required Choices (one per line, optional)"],
+    ["Smash Burger", "12.99", "Classic smash patty with American cheese", "Mains", "yes", "Beef\nCrispy Chicken\nGrilled Chicken\nVegan"],
+    ["Caesar Salad", "9.99", "Romaine lettuce, croutons, parmesan", "Salads", "yes", ""],
+    ["Chocolate Milk", "2.50", "", "Drinks", "yes", ""],
+    ["Fruit Cup", "4.00", "Seasonal fresh fruit", "Sides", "yes", ""],
   ];
   const itemsSheet = XLSX.utils.aoa_to_sheet(itemsData);
   itemsSheet["!cols"] = [
@@ -26,6 +26,7 @@ export async function GET() {
     { wch: 38 }, // Description
     { wch: 18 }, // Category
     { wch: 16 }, // Active
+    { wch: 36 }, // Required Choices
   ];
   // Style header row bold (xlsx supports limited styling via !rows)
   XLSX.utils.book_append_sheet(wb, itemsSheet, "Menu Items");
@@ -59,6 +60,9 @@ export async function GET() {
     ["  Description     Optional. Short description shown to parents."],
     ["  Category        Optional. Used for grouping (e.g. Mains, Sides, Drinks)."],
     ["  Active          'yes' to make item visible, 'no' to hide it. Defaults to yes."],
+    ["  Required Choices  Optional. Comma or newline separated list of pick-one options"],
+    ["                    (e.g. Beef, Crispy Chicken, Vegan). Customers must pick exactly"],
+    ["                    one to add the item to their cart. Leave blank if not needed."],
     [""],
     ["SHEET 2: Options"],
     ["  Item Name *          Must exactly match a name from Sheet 1."],

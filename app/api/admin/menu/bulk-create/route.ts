@@ -17,6 +17,8 @@ interface MenuItemInput {
   basePriceCents: number;
   category: string;
   isActive: boolean;
+  /** Pick-one choices the customer must select before adding to cart. */
+  requiredChoices?: string[];
   options: MenuOptionInput[];
 }
 
@@ -68,14 +70,32 @@ export async function POST(req: NextRequest) {
     const basePriceCents = Math.max(0, Math.round(Number(item.basePriceCents) || 0));
 
     try {
+      // Dedupe required choices case-insensitively, drop blanks. The
+      // shape coming in is already an array (the client parser handles
+      // the textarea→array transform) but we defensively re-normalize.
+      const requiredChoices: string[] = [];
+      if (Array.isArray(item.requiredChoices)) {
+        const seen = new Set<string>();
+        for (const c of item.requiredChoices) {
+          const trimmed = String(c ?? "").trim();
+          if (!trimmed) continue;
+          const k = trimmed.toLowerCase();
+          if (seen.has(k)) continue;
+          seen.add(k);
+          requiredChoices.push(trimmed);
+        }
+      }
+
       await prisma.menuItem.create({
         data: {
           restaurantId: restaurant.id,
           name,
           slug,
           description: String(item.description ?? "").trim() || null,
+          category: String(item.category ?? "").trim() || null,
           basePriceCents,
           isActive: item.isActive !== false,
+          requiredChoices,
           options: {
             create: Array.isArray(item.options)
               ? item.options

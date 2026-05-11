@@ -81,6 +81,11 @@ export async function GET() {
           description: e.menuItem.description,
           imageUrl: e.menuItem.imageUrl,
           basePriceCents: e.menuItem.basePriceCents,
+          // Pick-one selections the customer MUST resolve before adding
+          // to cart (e.g. Beef / Chicken / Vegan). Empty array = no
+          // required choice — the iOS order modal renders a picker
+          // section only when this is non-empty.
+          requiredChoices: e.menuItem.requiredChoices,
           options: e.menuItem.options.map((o) => ({
             id: o.id,
             name: o.name,

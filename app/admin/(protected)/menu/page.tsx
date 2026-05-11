@@ -26,9 +26,11 @@ async function createMenuItem(formData: FormData) {
     isActive: formData.get("isActive") === "on",
     dietaryTags: formData.get("dietaryTags"),
     category: formData.get("category"),
+    requiredChoices: formData.get("requiredChoices"),
   });
   await prisma.menuItem.create({ data: { ...parsed, restaurantId: restaurant.id } });
   revalidatePath("/admin/menu");
+  revalidatePath("/menu");
 }
 
 async function createMenuOption(formData: FormData) {
@@ -336,6 +338,17 @@ export default async function AdminMenuPage() {
           <div>
             <label className="text-[11px] text-slate-500 mb-1 block">Dietary tags</label>
             <DietaryTagsPicker />
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-500 mb-1 block">
+              Required choices <span className="text-slate-400 font-normal">(optional — pick-one)</span>
+            </label>
+            <textarea name="requiredChoices" rows={3}
+              placeholder={"One per line, e.g.\nBeef\nCrispy Chicken\nVegan"}
+              className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2 leading-snug resize-y font-mono" />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Customers must pick exactly one to add this item to their cart. Leave blank if not needed.
+            </p>
           </div>
           <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
             <input type="checkbox" name="isActive" defaultChecked className="rounded" />

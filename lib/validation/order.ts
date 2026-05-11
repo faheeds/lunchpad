@@ -62,6 +62,27 @@ export const menuItemSchema = z.object({
     z.array(z.string()).default([])
   ),
   category: z.string().optional().nullable().or(z.literal("")).transform((v) => v || null),
+  // Required top-level choices the customer must pick exactly one of
+  // (e.g. Beef / Chicken / Vegan for a Build-Your-Own-Burger). Accepts
+  // comma OR newline separation so the same input field works for both
+  // single-line CSV and multi-line textareas, and dedupes case-insensitively.
+  requiredChoices: z.preprocess(
+    (v) => {
+      if (typeof v !== "string") return [];
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const piece of v.split(/[\n,]+/)) {
+        const trimmed = piece.trim();
+        if (!trimmed) continue;
+        const key = trimmed.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(trimmed);
+      }
+      return out;
+    },
+    z.array(z.string()).default([])
+  ),
 });
 
 export const menuOptionSchema = z.object({
