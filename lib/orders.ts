@@ -772,6 +772,23 @@ export async function updateOrderBeforeCutoff(args: {
         items: true
       }
     });
+  }).then(async (updated) => {
+    // Best-effort timeline entry — customer-driven edit before cutoff.
+    await logActivity({
+      restaurantId: updated.restaurantId,
+      parentUserId: args.parentUserId,
+      entityType: "ORDER",
+      entityId: updated.id,
+      action: "MODIFIED",
+      summary: `Customer modified order ${updated.orderNumber} — total ${formatCurrency(totalCents)}`,
+      metadata: {
+        orderNumber: updated.orderNumber,
+        totalCents,
+        additions: args.additions,
+        removals: args.removals,
+      },
+    });
+    return updated;
   });
 }
 
@@ -784,6 +801,10 @@ export async function updateOrderAsAdmin(args: {
   orderId: string;
   /** REQUIRED — multi-tenant scoping. The admin's restaurantId. */
   restaurantId: string;
+  /** Admin user performing the edit. Optional so legacy callers don't
+   *  break, but caller should pass it whenever available so the
+   *  activity timeline can attribute the change. */
+  adminUserId?: string;
   teacherName?: string;
   classroom?: string;
   additions: string[];
@@ -860,6 +881,26 @@ export async function updateOrderAsAdmin(args: {
       },
       include: { school: true, deliveryDate: true, student: true, items: true },
     });
+  }).then(async (updated) => {
+    // Best-effort timeline entry — admin-initiated edit. Captures the
+    // admin note (or lack thereof) so we know why an override happened.
+    const noteFragment = args.adminNote ? ` · note: "${args.adminNote.slice(0, 80)}"` : "";
+    await logActivity({
+      restaurantId: updated.restaurantId,
+      adminUserId: args.adminUserId,
+      entityType: "ORDER",
+      entityId: updated.id,
+      action: "MODIFIED",
+      summary: `Admin modified order ${updated.orderNumber} — total ${formatCurrency(totalCents)}${noteFragment}`,
+      metadata: {
+        orderNumber: updated.orderNumber,
+        totalCents,
+        additions: args.additions,
+        removals: args.removals,
+        adminNote: args.adminNote ?? null,
+      },
+    });
+    return updated;
   });
 }
 
@@ -917,5 +958,26 @@ export async function cancelOrderWithRefund(orderId: string, parentUserId: strin
         items: true,
       },
     });
+  }).then(async (cancelled) => {
+    // Best-effort timeline entry — customer self-cancellation. Tracks
+    // both the cancel and the refund in one row since they always
+    // happen together in this code path.
+    const refundedDescription = paymentIntentId && stripe
+      ? `Customer cancelled order ${cancelled.orderNumber} — ${formatCurrency(cancelled.totalCents)} refunded via Stripe`
+      : `Customer cancelled order ${cancelled.orderNumber} (no payment intent — manual refund may be required)`;
+    await logActivity({
+      restaurantId: cancelled.restaurantId,
+      parentUserId,
+      entityType: "ORDER",
+      entityId: cancelled.id,
+      action: "CANCELLED",
+      summary: refundedDescription,
+      metadata: {
+        orderNumber: cancelled.orderNumber,
+        totalCents: cancelled.totalCents,
+        refundIssued: Boolean(paymentIntentId && stripe),
+      },
+    });
+    return cancelled;
   });
 }

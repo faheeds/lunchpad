@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { updateOrderAsAdmin } from "@/lib/orders";
 import { sendOrderModifiedEmail } from "@/lib/email/service";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { auth } from "@/lib/auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { listActivity } from "@/lib/activity";
 import { formatInTimeZone } from "date-fns-tz";
@@ -62,9 +63,14 @@ export default async function AdminOrderDetailPage({
   async function saveOrder(formData: FormData) {
     "use server";
     await requireAdminRole("MANAGER");
+    // Pull the acting admin's id so the activity timeline can attribute
+    // this edit. requireAdminRole has already ensured a session exists.
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string })?.adminUserId;
     await updateOrderAsAdmin({
       orderId,
       restaurantId: restaurant.id,
+      adminUserId,
       teacherName: String(formData.get("teacherName") || ""),
       classroom: String(formData.get("classroom") || ""),
       additions: formData.getAll("additions").map(String),

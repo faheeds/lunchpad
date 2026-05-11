@@ -1,9 +1,15 @@
 # LunchPad — Claude Code Context
 
 ## What This Is
-LunchPad is a multi-tenant SaaS platform for school lunch operators. Restaurant owners sign up, configure their menu and delivery schedule, and parents order online. Each restaurant gets its own subdomain (e.g. `fsskitchen.lunchpad.us`).
+LunchPad is a multi-tenant SaaS platform for school lunch and office catering operators. Restaurant owners sign up, configure their menu and delivery schedule, and customers order online. Each restaurant gets its own subdomain (e.g. `fsskitchen.lunchpad.us`).
 
-The production deployment lives at a Vercel URL. The owner is Faheed Subhani (faheed.subhani@gmail.com). The demo restaurant added during development is "FS's Kitchen".
+The production deployment lives at `lunchpad.us` (apex marketing site) with per-tenant subdomains at `*.lunchpad.us`. Owner: Faheed Subhani (faheed.subhani@gmail.com).
+
+> The earliest demo tenant was "FS's Kitchen" running a Mon-Thu school-lunch
+> schedule. The platform is now multi-tenant — do NOT hardcode anything around
+> that operator's name, weekday range, menu categories, or required-choices map.
+> Anything that used to assume those values should now read from the
+> Restaurant / School / MenuItem records.
 
 ## Tech Stack
 - **Framework**: Next.js 15 App Router (server components, server actions)
