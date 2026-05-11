@@ -52,7 +52,9 @@ function getCategory(name: string, description: string | null) {
 
 export default async function MenuPage() {
   const restaurant = await getCurrentRestaurant();
-  const restaurantName = restaurant?.name ?? "Hot Lunch";
+  // Fallback to the platform name when /menu is hit on the apex (no tenant
+  // context). Was hardcoded to "Hot Lunch" (the original tenant's brand).
+  const restaurantName = restaurant?.name ?? "LunchPad";
 
   // Multi-tenant: only show menu items for the current restaurant.
   // If no restaurant context (e.g. apex /menu), show none.

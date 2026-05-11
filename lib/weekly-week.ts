@@ -45,19 +45,25 @@ export function getSchoolWeekRangeForDate(date: Date, timezone: string) {
   };
 }
 
-// Used by the parent "Upcoming week planner": include any still-orderable delivery dates
-// for the remainder of the current week, plus the next school week.
+// Used by the parent "Upcoming week planner": include any still-orderable
+// delivery dates for the remainder of the current week, plus the entire
+// next week. The previous implementation cut off at Thursday because
+// LunchPad's first operator (FS's Kitchen) only ran Mon–Thu — but the
+// platform is now multi-tenant and some restaurants schedule Fri / Sat /
+// Sun deliveries too. End on Sunday so every weekday is in scope; the
+// actual delivery dates surfaced are still whatever the operator created
+// (no spurious empty days).
 export function getUpcomingOrderingWindowRange(now: Date, timezone: string) {
   const weekday = getWeekdayNumber(now, timezone);
   const daysUntilNextMonday = weekday === 1 ? 7 : 8 - weekday;
   const nextMonday = new Date(now);
   nextMonday.setDate(nextMonday.getDate() + daysUntilNextMonday);
 
-  const nextThursday = new Date(nextMonday);
-  nextThursday.setDate(nextThursday.getDate() + 3); // Mon–Thu only
+  const nextSunday = new Date(nextMonday);
+  nextSunday.setDate(nextSunday.getDate() + 6); // full Mon–Sun next week
 
   return {
     start: buildLocalDayStart(now, timezone),
-    end: buildLocalDayEnd(nextThursday, timezone)
+    end: buildLocalDayEnd(nextSunday, timezone)
   };
 }

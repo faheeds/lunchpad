@@ -9,17 +9,27 @@ import { env } from "@/lib/env";
 import { adminLoginSchema } from "@/lib/validation/order";
 import { verifyMobileToken } from "@/lib/mobile-jwt";
 
-// Production runs on multiple subdomains of lunchpad.us (faheeds.lunchpad.us,
-// hk.lunchpad.us, etc.). Auth callbacks happen on the apex (NEXTAUTH_URL),
-// so we explicitly scope the session cookie to `.lunchpad.us` so it's visible
-// on every subdomain. In dev / preview deployments, fall back to host-only.
+// Production runs on multiple subdomains of the platform root domain
+// (e.g. faheeds.lunchpad.us, hk.lunchpad.us). Auth callbacks happen on
+// the apex (NEXTAUTH_URL), so we scope the session cookie to the platform
+// root so it's visible on every subdomain. In dev / preview deployments
+// (vercel.app, localhost) we fall back to host-only.
+//
+// Operators on custom domains (e.g. lunch.example.com) used to break here
+// because the cookie was hardcoded to ".lunchpad.us" and wouldn't be sent
+// on their custom host. Now we derive the root from `ROOT_DOMAIN` so the
+// scoping matches whichever platform domain is configured. Custom-domain
+// tenants still work because their entire OAuth round-trip happens on
+// their own host — no cross-domain cookie needed.
 const COOKIE_DOMAIN = (() => {
   try {
     const url = new URL(env.NEXTAUTH_URL);
-    // Only use the cookie domain when running on the production apex.
-    // For *.vercel.app or localhost we want host-only cookies.
-    if (url.hostname.endsWith(".lunchpad.us") || url.hostname === "lunchpad.us") {
-      return ".lunchpad.us";
+    const rootDomain = process.env.ROOT_DOMAIN || "lunchpad.us";
+
+    // Platform root: scope cookies to `.<rootDomain>` so they travel
+    // across all tenant subdomains.
+    if (url.hostname.endsWith(`.${rootDomain}`) || url.hostname === rootDomain) {
+      return `.${rootDomain}`;
     }
   } catch {}
   return undefined;

@@ -215,15 +215,20 @@ export default async function HomePage() {
                 textTransform: "uppercase", color: "var(--hero-accent)",
                 marginBottom: 6, fontFamily: "var(--font-display)"
               }}>
-                ★ {restaurantName} ★
+                ★ Fresh · Daily · Delivered ★
               </p>
+              {/* Hero headline is the restaurant's own name in their
+                  accent color. Previously this was hardcoded to "Hot Lunch"
+                  — leftover from the platform's first single-tenant operator
+                  (FS's Kitchen). For multi-tenant the restaurant name is
+                  the right thing to lead with. */}
               <h1 style={{
                 fontSize: 38, fontWeight: 700, lineHeight: 1.0,
                 color: "white", marginBottom: 10,
                 fontFamily: "var(--font-display)",
                 textTransform: "uppercase", letterSpacing: "0.01em"
               }}>
-                <span style={{ color: "var(--accent)" }}>Hot Lunch</span>
+                <span style={{ color: "var(--accent)" }}>{restaurantName}</span>
               </h1>
               <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.72)", marginBottom: 20, lineHeight: 1.5 }}>
                 Fresh food delivered to your school &mdash; order for tomorrow or plan the whole week.
