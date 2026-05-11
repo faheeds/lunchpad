@@ -326,20 +326,16 @@ export default async function HomePage() {
       }}>
         {/* Hero left — value prop + CTAs + trust signals */}
         <div className="lp-hero-left" style={{
-          padding: "56px 32px 40px 28px",
-          // Was justifyContent: "center" which produced a dead band above
-          // AND below the content (the right column's dashboard fills its
-          // height while the left content was vertically centered, leaving
-          // matching whitespace top+bottom). space-between pushes the
-          // social-proof strip to the bottom edge and keeps the headline
-          // cluster pinned to the top — no awkward middle void.
-          display: "flex", flexDirection: "column", justifyContent: "space-between",
-          gap: 28,
+          padding: "44px 32px 36px 28px",
+          // Plain top-down flow — content reads as a single column from
+          // headline through CTAs to social-proof, no artificial spacing.
+          // Hero element height is governed by the right column (dashboard
+          // mockup); we shrink that mockup elsewhere so both columns end
+          // close to the same vertical position.
+          display: "flex", flexDirection: "column",
           borderRight: "0.5px solid #e2e8f0",
         }}>
-          {/* TOP GROUP — eyeline through trust signals. Wrapped in a
-              single flex child so space-between cleanly pushes the
-              social-proof strip below to the bottom of the column. */}
+          {/* (Single flex column; content sits in natural reading order.) */}
           <div>
           <div style={{
             fontSize: 13, fontWeight: 700, color: "#1D9E75",
@@ -387,7 +383,7 @@ export default async function HomePage() {
             </a>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 22 }}>
             {["No credit card required", "Set up in a day, not a season", "No per-order fees, ever"].map((label) => (
               <div key={label} style={{
                 display: "flex", alignItems: "center", gap: 7,
@@ -400,13 +396,15 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
-          </div>
 
-          {/* BOTTOM GROUP — social-proof strip. Pushed to the bottom of
-              the left column by the parent's justify-content: space-between,
-              filling what used to be a visual void below the trust signals.
-              Avatar overlap + count reads as "real customers, real volume". */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Social-proof strip — sits directly under the trust signals
+              so the column reads as one continuous narrative (intro →
+              action → proof) with no artificial gap. Avatar overlap +
+              count communicates "real customers, real volume". */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            paddingTop: 18, borderTop: "0.5px solid #e2e8f0",
+          }}>
             <div style={{ display: "flex" }}>
               {[
                 { initials: "SR", bg: "#1D9E75" },
@@ -432,6 +430,7 @@ export default async function HomePage() {
             <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
               <strong style={{ color: "#0f172a", fontWeight: 700 }}>200+ operators</strong> trust LunchPad to run their lunch program.
             </div>
+          </div>
           </div>
         </div>
 
@@ -513,12 +512,14 @@ export default async function HomePage() {
               Recent orders
             </div>
             <div style={{ background: "#ffffff", border: "0.5px solid #e2e8f0", borderRadius: 6, overflow: "hidden" }}>
+              {/* Three rows is the sweet spot — enough to show the
+                  PAID/REFUNDED status differentiation + multi-school +
+                  realistic order detail, without making the column so
+                  tall it dwarfs the left side's content. */}
               {[
                 { initial: "E", color: "#1D9E75", name: "Emma T.", detail: "Smash Burger + Fries · Lincoln Elementary", price: "$14.50", status: "PAID" },
                 { initial: "L", color: "#185FA5", name: "Liam K.", detail: "Crispy Chicken Sandwich · Westview Middle", price: "$12.00", status: "PAID" },
                 { initial: "S", color: "#B85A30", name: "Sophia R.", detail: "Garden Salad + Lemonade · Lincoln Elementary", price: "$10.75", status: "REFUNDED" },
-                { initial: "M", color: "#534AB7", name: "Marcus W.", detail: "BBQ Pulled Pork · Westview Middle", price: "$13.25", status: "PAID" },
-                { initial: "A", color: "#0F6E56", name: "Ava L.", detail: "Mac & Cheese + Juice · Lincoln Elementary", price: "$9.50", status: "PAID" },
               ].map((row, i, arr) => (
                 <div key={row.name} style={{
                   display: "flex", alignItems: "center", gap: 8,
