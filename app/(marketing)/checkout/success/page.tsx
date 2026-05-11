@@ -24,7 +24,12 @@ export default async function CheckoutSuccessPage({
   let order = params.order
     ? await prisma.order.findUnique({
         where: { id: params.order },
-        include: { student: true, deliveryDate: true, school: true, items: true, payment: true, restaurant: true },
+        include: {
+          student: true, deliveryDate: true, school: true, items: true, payment: true, restaurant: true,
+          // Surface the applied discount (if any) so the receipt can
+          // render a "−$X · Welcome offer" line. Null when no discount applied.
+          discountRedemption: { include: { discount: { select: { name: true } } } },
+        },
       })
     : null;
 
@@ -60,7 +65,12 @@ export default async function CheckoutSuccessPage({
         // (which expects `order.restaurant`) keeps working.
         order = await prisma.order.findUnique({
           where: { id: marked.id },
-          include: { student: true, deliveryDate: true, school: true, items: true, payment: true, restaurant: true },
+          include: {
+          student: true, deliveryDate: true, school: true, items: true, payment: true, restaurant: true,
+          // Surface the applied discount (if any) so the receipt can
+          // render a "−$X · Welcome offer" line. Null when no discount applied.
+          discountRedemption: { include: { discount: { select: { name: true } } } },
+        },
         });
       }
     } catch {}
@@ -222,6 +232,24 @@ export default async function CheckoutSuccessPage({
                   </div>
                 );
               })}
+
+              {/* Discount line — shown only when a discount applied,
+                  preceded by the subtotal so the math reads receipt-style.
+                  The actual discount name comes from the redemption row
+                  we joined onto the order; falls back to a generic label
+                  if for some reason the join is empty. */}
+              {order.discountCents > 0 && (
+                <>
+                  <div style={{ padding: "8px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#64748b" }}>
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(order.subtotalCents)}</span>
+                  </div>
+                  <div style={{ padding: "4px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, fontWeight: 600, color: "#15803d" }}>
+                    <span>🎁 {order.discountRedemption?.discount.name ?? "Discount"}</span>
+                    <span>−{formatCurrency(order.discountCents)}</span>
+                  </div>
+                </>
+              )}
 
               {/* Total */}
               <div style={{ padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

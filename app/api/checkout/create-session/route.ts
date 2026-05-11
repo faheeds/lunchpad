@@ -60,6 +60,18 @@ export async function POST(request: Request) {
         ? restaurantStripe.stripeAccountId
         : null;
 
+    // If createPendingOrder applied a discount, surface it on the Stripe
+    // Checkout page as a proper coupon line so the customer sees what's
+    // happening (and Stripe's receipt itemizes it correctly too).
+    // We look up the redemption to grab the display name — same one the
+    // operator set in the admin builder.
+    const redemption = provisionalOrder.discountCents > 0
+      ? await prisma.discountRedemption.findUnique({
+          where: { orderId: provisionalOrder.id },
+          include: { discount: { select: { name: true } } },
+        })
+      : null;
+
     // Build success/cancel URLs from the request's actual host so customers
     // come back to the same tenant subdomain (or custom domain) after Stripe
     // Checkout instead of getting bounced to the apex.
@@ -76,6 +88,8 @@ export async function POST(request: Request) {
         description: `Order ${provisionalOrder.orderNumber}`,
         amountCents: item.lineTotalCents,
       })),
+      discountCents: provisionalOrder.discountCents,
+      discountLabel: redemption?.discount.name,
     });
 
     await prisma.order.update({

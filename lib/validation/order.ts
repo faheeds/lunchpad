@@ -28,7 +28,11 @@ export const orderFormSchema = z.object({
   cartItems: z.array(orderCartItemSchema).min(1, "Add at least one item to the cart."),
   allergyNotes: optionalTextField,
   dietaryNotes: optionalTextField,
-  specialInstructions: optionalTextField
+  specialInstructions: optionalTextField,
+  // Optional promo code typed by the customer at checkout. Whitespace
+  // around it is irrelevant — we trim + uppercase in the engine. Auto
+  // discounts apply regardless of this field.
+  discountCode: optionalTextField
 });
 
 export const adminLoginSchema = z.object({

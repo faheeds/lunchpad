@@ -302,6 +302,88 @@ export function OrderForm({
     }));
   }
 
+  // ── Discount state (Step 4) ────────────────────────────────────────────
+  // Auto and code are populated by GET /api/orders/preview-discount.
+  // The preview is read-only; the real numbers get committed by the
+  // server inside createPendingOrder at checkout time.
+  const [previewAuto, setPreviewAuto] = useState<{ name: string; amountCents: number } | null>(null);
+  const [previewCode, setPreviewCode] = useState<{ name: string; amountCents: number } | null>(null);
+  const [codeInputOpen, setCodeInputOpen] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
+  const [codeApplied, setCodeApplied] = useState(""); // the code that actually applied
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
+
+  /** Fetches the current discount preview from the server. Pass the
+   *  optional code to also try a customer-typed promo. The server
+   *  returns the single best auto + the code outcome; we mirror both
+   *  into state so the review UI can render them. */
+  async function refreshDiscountPreview(codeOverride?: string) {
+    if (!selectedDelivery || cartItems.length === 0) return;
+    setPreviewBusy(true);
+    setCodeError(null);
+    try {
+      const res = await fetch("/api/orders/preview-discount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deliveryDateId: selectedDeliveryDateId,
+          schoolId: selectedDelivery.school.id,
+          code: codeOverride ?? codeApplied ?? undefined,
+          cartItems: cartItems.flatMap((i) =>
+            Array.from({ length: i.quantity }, () => ({
+              menuItemId: i.menuItemId,
+              lineTotalCents: i.lineTotalCents,
+            })),
+          ),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        // Don't blow up the whole step on a preview failure — the
+        // customer can still check out at the un-discounted price.
+        setPreviewAuto(null);
+        setPreviewCode(null);
+        return;
+      }
+      setPreviewAuto(data.auto);
+      setPreviewCode(data.code);
+      setCodeError(data.codeError ?? null);
+    } finally {
+      setPreviewBusy(false);
+    }
+  }
+
+  // Fetch when the customer lands on the review step. Re-fetches if the
+  // cart changes while they're on Step 4 (rare, but possible if they
+  // navigate back and forth).
+  useEffect(() => {
+    if (step === 4) {
+      void refreshDiscountPreview();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selectedDeliveryDateId, cartItems]);
+
+  async function handleApplyCode() {
+    const code = codeInput.trim();
+    if (!code) {
+      setCodeError("Enter a promo code.");
+      return;
+    }
+    setCodeApplied(code);
+    await refreshDiscountPreview(code);
+  }
+  function handleRemoveCode() {
+    setCodeInput("");
+    setCodeApplied("");
+    setCodeError(null);
+    setPreviewCode(null);
+    void refreshDiscountPreview(""); // clear-code preview
+  }
+
+  const totalDiscountCents = (previewAuto?.amountCents ?? 0) + (previewCode?.amountCents ?? 0);
+  const finalTotalCents = Math.max(0, totalCents - totalDiscountCents);
+
   async function handleSubmit() {
     setError("");
     if (!cartItems.length) { setError("Add at least one item to continue."); return; }
@@ -327,6 +409,9 @@ export function OrderForm({
         })),
       ),
       allergyNotes, dietaryNotes: null, specialInstructions: null,
+      // Promo code only — auto discounts are re-evaluated server-side
+      // and don't need to be carried by the client.
+      discountCode: codeApplied || undefined,
     };
     const response = await fetch("/api/checkout/create-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const data = await response.json();
@@ -887,9 +972,87 @@ export function OrderForm({
                   <p className="text-[13px] font-semibold text-ink">{fmt(item.lineTotalCents * item.quantity)}</p>
                 </div>
               ))}
-              <div className="border-t border-slate-100 pt-3 mt-1 flex justify-between">
+
+              {/* Subtotal row — shown only when a discount has applied,
+                  so the receipt-style "Subtotal / Discount / Total" stack
+                  reads naturally. With no discount we keep the original
+                  single "Order total" row to avoid visual noise. */}
+              {totalDiscountCents > 0 && (
+                <div className="border-t border-slate-100 pt-3 mt-1 flex justify-between text-[12px] text-slate-500">
+                  <span>Subtotal</span>
+                  <span>{fmt(totalCents)}</span>
+                </div>
+              )}
+
+              {/* Auto-applied discount line */}
+              {previewAuto && (
+                <div className="flex justify-between mt-1 text-[12px]">
+                  <span className="text-green-700 font-semibold">🎁 {previewAuto.name}</span>
+                  <span className="text-green-700 font-semibold">−{fmt(previewAuto.amountCents)}</span>
+                </div>
+              )}
+
+              {/* Code discount line */}
+              {previewCode && (
+                <div className="flex justify-between mt-1 text-[12px]">
+                  <span className="text-green-700 font-semibold">🏷️ {previewCode.name}{codeApplied ? ` (${codeApplied})` : ""}</span>
+                  <span className="text-green-700 font-semibold">−{fmt(previewCode.amountCents)}</span>
+                </div>
+              )}
+
+              {/* Promo code section — collapsed by default. When applied,
+                  we replace the input with a "Remove" affordance so the
+                  customer can clear the code without retyping. */}
+              <div className="border-t border-slate-100 pt-3 mt-3">
+                {!previewCode && !codeInputOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setCodeInputOpen(true)}
+                    className="text-[12px] text-brand-700 font-semibold hover:underline"
+                  >
+                    Have a promo code?
+                  </button>
+                )}
+                {!previewCode && codeInputOpen && (
+                  <div className="flex gap-2 items-stretch">
+                    <input
+                      value={codeInput}
+                      onChange={(e) => { setCodeInput(e.target.value.toUpperCase()); setCodeError(null); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleApplyCode(); } }}
+                      placeholder="Promo code"
+                      autoFocus
+                      className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-mono tracking-wider uppercase focus:outline-none focus:border-brand-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCode}
+                      disabled={previewBusy}
+                      className="px-4 py-2 rounded-lg bg-ink text-white text-[12px] font-semibold disabled:opacity-50"
+                    >
+                      {previewBusy ? "…" : "Apply"}
+                    </button>
+                  </div>
+                )}
+                {previewCode && (
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-slate-500">Code applied</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCode}
+                      className="text-red-600 hover:underline font-medium"
+                    >
+                      Remove code
+                    </button>
+                  </div>
+                )}
+                {codeError && (
+                  <p className="text-[11px] text-red-600 mt-1.5">{codeError}</p>
+                )}
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 mt-3 flex justify-between">
                 <span className="text-[13px] font-semibold">Order total</span>
-                <span className="text-[18px] font-semibold text-ink">{fmt(totalCents)}</span>
+                <span className="text-[18px] font-semibold text-ink">{fmt(finalTotalCents)}</span>
               </div>
             </div>
             <div className="p-4">

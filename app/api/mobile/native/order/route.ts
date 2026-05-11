@@ -97,6 +97,10 @@ export async function POST(request: NextRequest) {
         allergyNotes: body.allergyNotes ?? "",
         specialInstructions: body.specialInstructions ?? "",
         cartItems,
+        // Pass the discount code through (iOS app may send it once the
+        // cart UI ships in a follow-up). Auto-discounts apply regardless
+        // and are re-evaluated server-side.
+        discountCode: typeof body.discountCode === "string" ? body.discountCode : undefined,
       },
       undefined,
       parentUserId
@@ -121,6 +125,15 @@ export async function POST(request: NextRequest) {
     const successUrl = process.env.NEXTAUTH_URL + "/api/mobile/native/order/success?orderId=" + provisionalOrder.id;
     const cancelUrl = process.env.NEXTAUTH_URL + "/api/mobile/native/order/cancel?orderId=" + provisionalOrder.id;
 
+    // Look up the redemption name for the Stripe coupon label so the
+    // customer sees "Welcome offer −$1.20" on the Stripe page + receipt.
+    const redemption = provisionalOrder.discountCents > 0
+      ? await prisma.discountRedemption.findUnique({
+          where: { orderId: provisionalOrder.id },
+          include: { discount: { select: { name: true } } },
+        })
+      : null;
+
     const session = await createStripeCheckoutSession({
       orderId: provisionalOrder.id,
       orderNumber: provisionalOrder.orderNumber,
@@ -133,6 +146,8 @@ export async function POST(request: NextRequest) {
         description: "Order " + provisionalOrder.orderNumber,
         amountCents: item.lineTotalCents,
       })),
+      discountCents: provisionalOrder.discountCents,
+      discountLabel: redemption?.discount.name,
     });
 
     await prisma.order.update({

@@ -8,6 +8,7 @@ import type { OrderDraftInput } from "@/types/order";
 import { stripe } from "@/lib/payments/stripe";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
+import { pickApplicableDiscounts, type CartLine } from "@/lib/discounts";
 
 export function buildPaidState(now = new Date()) {
   return {
@@ -172,10 +173,35 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
     };
   });
 
-  const totalCents = normalizedItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
+  const subtotalCents = normalizedItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
   const orderNumber = `SL-${formatInTimeZone(new Date(), deliveryDate.school.timezone, "yyyyMMdd")}-${Math.floor(
     1000 + Math.random() * 9000
   )}`;
+
+  // ── Discount evaluation ─────────────────────────────────────────────────
+  // Run the discount engine BEFORE the transaction so we have a stable
+  // snapshot of what to apply. Re-evaluating inside the transaction would
+  // introduce phantom-read complexity (counter increments are write-write
+  // serialized anyway, so a race past the cap is harmless and rare). The
+  // engine returns whichever single auto-discount won + whichever promo
+  // code matched, applying stacking rules.
+  const cartLines: CartLine[] = normalizedItems.map((item) => ({
+    menuItemId: item.menuItem.id,
+    category: item.menuItem.category,
+    lineTotalCents: item.lineTotalCents,
+  }));
+  const discountResult = await pickApplicableDiscounts({
+    cart: {
+      restaurantId: deliveryDate.school.restaurantId,
+      schoolId: parsed.schoolId,
+      deliveryDate: deliveryDate.deliveryDate,
+      parentUserId: parentUserId ?? parentChild?.parentUserId ?? null,
+      lines: cartLines,
+    },
+    code: parsed.discountCode,
+  });
+  const discountCentsApplied = discountResult.totalDiscountCents;
+  const totalCents = Math.max(0, subtotalCents - discountCentsApplied);
 
   return prisma.$transaction(async (tx) => {
     // Reject SCHOOL orders that arrive with no grade — the form normally
@@ -211,7 +237,8 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
         parentName: parsed.parentName,
         parentEmail: parsed.parentEmail,
         specialInstructions: parsed.specialInstructions || null,
-        subtotalCents: totalCents,
+        subtotalCents,
+        discountCents: discountCentsApplied,
         totalCents,
         checkoutSessionId: checkoutSessionId ?? null,
         items: {
@@ -245,6 +272,54 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       }
     });
 
+    // Persist redemption rows + bump counters for each discount that
+    // actually applied. Inside the same transaction so the order's
+    // discountCents and the redemption ledger never disagree. If the
+    // transaction rolls back later (e.g. Stripe error), redemption
+    // disappears with the order.
+    //
+    // Schema currently enforces one redemption per order via @@unique on
+    // orderId — for v1 we get either an auto OR a code OR nothing,
+    // never both. The engine's stacking rule (code overrides auto unless
+    // explicitly stackable) makes this safe; we'll relax the @@unique
+    // when we ship loyalty-with-promo-stacking later.
+    const winning = discountResult.code ?? discountResult.auto;
+    if (winning) {
+      await tx.discountRedemption.create({
+        data: {
+          discountId: winning.discount.id,
+          orderId: order.id,
+          parentUserId: parentUserId ?? parentChild?.parentUserId ?? null,
+          amountCents: winning.amountCents,
+        },
+      });
+      await tx.discount.update({
+        where: { id: winning.discount.id },
+        data: { currentRedemptions: { increment: 1 } },
+      });
+    }
+
+    return order;
+  }).then(async (order) => {
+    // Best-effort activity-log entry — discount attribution stays in the
+    // timeline even if it predates the order being marked PAID. Failure
+    // here doesn't roll back the order (audit is a should, not a must).
+    const winning = discountResult.code ?? discountResult.auto;
+    if (winning) {
+      await logActivity({
+        restaurantId: order.restaurantId,
+        parentUserId: parentUserId ?? parentChild?.parentUserId ?? null,
+        entityType: "ORDER",
+        entityId: order.id,
+        action: "DISCOUNT_APPLIED",
+        summary: `${winning.discount.name} applied to order ${order.orderNumber} — saved ${formatCurrency(winning.amountCents)}`,
+        metadata: {
+          discountId: winning.discount.id,
+          amountCents: winning.amountCents,
+          viaCode: Boolean(discountResult.code),
+        },
+      });
+    }
     return order;
   });
 }
