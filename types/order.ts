@@ -19,4 +19,8 @@ export type OrderDraftInput = {
   allergyNotes?: string;
   dietaryNotes?: string;
   specialInstructions?: string;
+  /** Optional promo code the customer typed at checkout. Whitespace
+   *  irrelevant — engine trims + uppercases. Auto discounts apply
+   *  regardless of this field. */
+  discountCode?: string;
 };
