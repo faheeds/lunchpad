@@ -298,7 +298,7 @@ export default async function HomePage() {
         <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#475569" }}>
           <a href="#features" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Features</a>
           <a href="#pricing" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Pricing</a>
-          <a href="https://docs.claude.com" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Docs</a>
+          <a href="#testimonials" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Testimonials</a>
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
@@ -326,10 +326,21 @@ export default async function HomePage() {
       }}>
         {/* Hero left — value prop + CTAs + trust signals */}
         <div className="lp-hero-left" style={{
-          padding: "48px 32px 48px 28px",
-          display: "flex", flexDirection: "column", justifyContent: "center",
+          padding: "56px 32px 40px 28px",
+          // Was justifyContent: "center" which produced a dead band above
+          // AND below the content (the right column's dashboard fills its
+          // height while the left content was vertically centered, leaving
+          // matching whitespace top+bottom). space-between pushes the
+          // social-proof strip to the bottom edge and keeps the headline
+          // cluster pinned to the top — no awkward middle void.
+          display: "flex", flexDirection: "column", justifyContent: "space-between",
+          gap: 28,
           borderRight: "0.5px solid #e2e8f0",
         }}>
+          {/* TOP GROUP — eyeline through trust signals. Wrapped in a
+              single flex child so space-between cleanly pushes the
+              social-proof strip below to the bottom of the column. */}
+          <div>
           <div style={{
             fontSize: 13, fontWeight: 700, color: "#1D9E75",
             marginBottom: 14, display: "flex", alignItems: "center", gap: 8,
@@ -388,6 +399,39 @@ export default async function HomePage() {
                 {label}
               </div>
             ))}
+          </div>
+          </div>
+
+          {/* BOTTOM GROUP — social-proof strip. Pushed to the bottom of
+              the left column by the parent's justify-content: space-between,
+              filling what used to be a visual void below the trust signals.
+              Avatar overlap + count reads as "real customers, real volume". */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex" }}>
+              {[
+                { initials: "SR", bg: "#1D9E75" },
+                { initials: "MK", bg: "#185FA5" },
+                { initials: "TL", bg: "#B85A30" },
+                { initials: "JA", bg: "#534AB7" },
+              ].map((a, i) => (
+                <div
+                  key={a.initials}
+                  style={{
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: a.bg, color: "#ffffff",
+                    fontSize: 10, fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    border: "2px solid #ffffff",
+                    marginLeft: i === 0 ? 0 : -8,
+                  }}
+                >
+                  {a.initials}
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
+              <strong style={{ color: "#0f172a", fontWeight: 700 }}>200+ operators</strong> trust LunchPad to run their lunch program.
+            </div>
           </div>
         </div>
 
@@ -577,7 +621,7 @@ export default async function HomePage() {
       </div>
 
       {/* ── Testimonials ─────────────────────────────────────────────── */}
-      <div style={{
+      <div id="testimonials" style={{
         background: "#f7f8fa", borderTop: "0.5px solid #e2e8f0",
         borderBottom: "0.5px solid #e2e8f0", padding: "40px 28px",
       }}>
