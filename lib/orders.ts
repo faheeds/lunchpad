@@ -904,7 +904,26 @@ export async function updateOrderAsAdmin(args: {
   });
 }
 
-export async function cancelOrderWithRefund(orderId: string, parentUserId: string) {
+/**
+ * Customer-initiated cancel + refund.
+ *
+ * Auth model: caller must prove ownership of the order via ONE of:
+ *   - `parentUserId` matching `order.parentUserId` (authenticated parent)
+ *   - `guestToken` — a signed token issued by the post-checkout success
+ *     page, bound to this specific orderId. Lets guests (no account)
+ *     cancel an order they just placed without having to sign in.
+ *
+ * Either path lands at the same Stripe refund + status update + activity
+ * log. The hard ceiling on cancellability remains `deliveryDate.cutoffAt`
+ * regardless of which proof was presented.
+ */
+export async function cancelOrderWithRefund(args: {
+  orderId: string;
+  parentUserId?: string;
+  guestToken?: string;
+}) {
+  const { orderId, parentUserId, guestToken } = args;
+
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
@@ -917,7 +936,21 @@ export async function cancelOrderWithRefund(orderId: string, parentUserId: strin
   });
 
   if (!order) throw new Error("Order not found.");
-  if (order.parentUserId !== parentUserId) throw new Error("You can only cancel your own orders.");
+
+  // Authorize: either an authenticated parent who owns the order, or a
+  // valid signed token issued specifically for this orderId.
+  let authorized = false;
+  if (parentUserId && order.parentUserId === parentUserId) {
+    authorized = true;
+  } else if (guestToken) {
+    // Lazy import keeps the token module out of any orders.ts consumer
+    // that doesn't need it (the function's signature is fine with
+    // guestToken undefined).
+    const { verifyOrderCancelToken } = await import("@/lib/order-tokens");
+    if (verifyOrderCancelToken(guestToken, order.id)) authorized = true;
+  }
+  if (!authorized) throw new Error("Not authorized to cancel this order.");
+
   if (order.status !== OrderStatus.PAID) throw new Error("Only paid orders can be cancelled.");
 
   assertOrderingOpen(
@@ -962,12 +995,15 @@ export async function cancelOrderWithRefund(orderId: string, parentUserId: strin
     // Best-effort timeline entry — customer self-cancellation. Tracks
     // both the cancel and the refund in one row since they always
     // happen together in this code path.
+    // Attribute the action: signed-in parents get linked via parentUserId;
+    // guests (no session) get a generic "Customer" tag in the timeline.
+    const actorTag = parentUserId ? "Customer" : "Guest customer";
     const refundedDescription = paymentIntentId && stripe
-      ? `Customer cancelled order ${cancelled.orderNumber} — ${formatCurrency(cancelled.totalCents)} refunded via Stripe`
-      : `Customer cancelled order ${cancelled.orderNumber} (no payment intent — manual refund may be required)`;
+      ? `${actorTag} cancelled order ${cancelled.orderNumber} — ${formatCurrency(cancelled.totalCents)} refunded via Stripe`
+      : `${actorTag} cancelled order ${cancelled.orderNumber} (no payment intent — manual refund may be required)`;
     await logActivity({
       restaurantId: cancelled.restaurantId,
-      parentUserId,
+      parentUserId: parentUserId ?? null,
       entityType: "ORDER",
       entityId: cancelled.id,
       action: "CANCELLED",
@@ -976,6 +1012,7 @@ export async function cancelOrderWithRefund(orderId: string, parentUserId: strin
         orderNumber: cancelled.orderNumber,
         totalCents: cancelled.totalCents,
         refundIssued: Boolean(paymentIntentId && stripe),
+        viaGuestToken: !parentUserId && Boolean(guestToken),
       },
     });
     return cancelled;

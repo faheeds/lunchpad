@@ -1,28 +1,48 @@
 import { NextResponse } from "next/server";
-import { requireParent } from "@/lib/parent-auth";
+import { assertParentApiRequest } from "@/lib/parent-auth";
 import { cancelOrderWithRefund } from "@/lib/orders";
 import { sendCancellationEmail } from "@/lib/email/service";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
-  let session;
-  try {
-    session = await requireParent();
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const parentUserId = session.user?.parentUserId;
-  if (!parentUserId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { orderId } = await params;
 
+  // Try parent auth — but don't reject up front. Guests can also cancel
+  // by passing a signed token in the body (issued on the success page).
+  // We use assertParentApiRequest (throws) instead of requireParent
+  // (redirects) so this codepath doesn't accidentally swallow a
+  // NEXT_REDIRECT and lose the error context.
+  let parentUserId: string | undefined;
   try {
-    const order = await cancelOrderWithRefund(orderId, parentUserId);
+    const session = await assertParentApiRequest();
+    parentUserId = session.user?.parentUserId;
+  } catch {
+    // not signed in or wrong tenant — fall through to token check
+  }
+
+  // Pull optional token from JSON body. Body may be empty for legacy
+  // callers (authenticated parents who don't need a token).
+  let guestToken: string | undefined;
+  try {
+    const body = (await request.json().catch(() => null)) as { token?: unknown } | null;
+    if (body && typeof body.token === "string" && body.token.length > 0) {
+      guestToken = body.token;
+    }
+  } catch {
+    // empty body or invalid JSON — fine, guestToken stays undefined
+  }
+
+  if (!parentUserId && !guestToken) {
+    return NextResponse.json(
+      { error: "Sign in or use the cancel link from your confirmation to cancel this order." },
+      { status: 401 },
+    );
+  }
+
+  try {
+    const order = await cancelOrderWithRefund({ orderId, parentUserId, guestToken });
 
     // Best-effort cancellation email — don't let email failure block the response.
     sendCancellationEmail(order.id, order.restaurantId).catch(() => {});

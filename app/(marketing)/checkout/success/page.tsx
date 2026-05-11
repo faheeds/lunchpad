@@ -10,6 +10,7 @@ import { OrderStatus } from "@prisma/client";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { OrderSelfService } from "@/components/order/order-self-service";
+import { signOrderCancelToken } from "@/lib/order-tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -320,9 +321,15 @@ export default async function CheckoutSuccessPage({
           )}
 
           {/* ── Self-service: cancel + contact restaurant ──────────── */}
+          {/* Mint a signed cancel token so guests (not signed in) can
+              cancel the order they just placed without hitting an
+              Unauthorized 401. Signed-in parents get the same token —
+              it's redundant for them (their session works either way)
+              but it keeps the client component branch-free. */}
           {order && (
             <OrderSelfService
               orderId={order.id}
+              cancelToken={signOrderCancelToken(order.id)}
               cutoffAt={order.deliveryDate.cutoffAt.toISOString()}
               restaurantName={order.restaurant.name}
               contactEmail={order.restaurant.contactEmail}

@@ -20,12 +20,20 @@ import { useRouter } from "next/navigation";
 
 export function OrderSelfService({
   orderId,
+  /** Signed HMAC token minted server-side on the success page. Lets
+   *  guests (no parent account) cancel an order they just placed. The
+   *  server treats this as the authorization proof when there's no
+   *  parent session; for authenticated parents the token is redundant
+   *  but harmless. Token expires after 30 days; cutoffAt is still the
+   *  hard ceiling on actual cancellability. */
+  cancelToken,
   cutoffAt,
   restaurantName,
   contactEmail,
   contactPhone,
 }: {
   orderId: string;
+  cancelToken: string;
   cutoffAt: string; // ISO string from server
   restaurantName: string;
   contactEmail: string | null;
@@ -44,7 +52,11 @@ export function OrderSelfService({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/orders/${orderId}/cancel`, { method: "POST" });
+      const res = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: cancelToken }),
+      });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? `Cancel failed (${res.status})`);
       setDone(true);
