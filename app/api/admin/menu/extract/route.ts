@@ -78,11 +78,16 @@ async function consumeQuota(
     return { allowed: true, remaining: PER_TENANT_QUOTA - 1, resetAt: nextReset };
   }
 
+  // Past this point `aiMenuExtractionsResetAt` is guaranteed non-null:
+  // `periodExpired` would have been true above if it were null and we'd
+  // have already returned. The `!` is a TS-only narrowing hint.
+  const currentResetAt = restaurant.aiMenuExtractionsResetAt!;
+
   if (restaurant.aiMenuExtractionsThisPeriod >= PER_TENANT_QUOTA) {
     return {
       allowed: false,
       remaining: 0,
-      resetAt: restaurant.aiMenuExtractionsResetAt,
+      resetAt: currentResetAt,
     };
   }
 
@@ -93,7 +98,7 @@ async function consumeQuota(
   return {
     allowed: true,
     remaining: PER_TENANT_QUOTA - restaurant.aiMenuExtractionsThisPeriod - 1,
-    resetAt: restaurant.aiMenuExtractionsResetAt,
+    resetAt: currentResetAt,
   };
 }
 
@@ -388,7 +393,6 @@ ${pageText}`;
       { status: 500 },
     );
   }
-
   return NextResponse.json({
     items: extractedItems,
     // Surface quota info so the UI can render "X extractions left this
