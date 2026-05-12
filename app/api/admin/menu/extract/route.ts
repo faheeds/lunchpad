@@ -115,6 +115,39 @@ async function consumeQuota(
   };
 }
 
+/**
+ * Read-only quota check — same return shape as consumeQuota, but
+ * never increments the DB counter. Used upfront to short-circuit
+ * over-quota operators before we do any expensive work.
+ *
+ * The actual slot is burned via consumeQuota at the END of the
+ * request, only after we have a parsed result to return. That way,
+ * a fetch timeout, a Claude error, or a JSON parse failure does
+ * not cost the operator a quota slot.
+ */
+async function peekQuota(
+  restaurantId: string,
+): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: { aiMenuExtractionsThisPeriod: true, aiMenuExtractionsResetAt: true },
+  });
+  if (!restaurant) {
+    return { allowed: false, remaining: 0, resetAt: new Date() };
+  }
+  const now = new Date();
+  const periodExpired = !restaurant.aiMenuExtractionsResetAt || restaurant.aiMenuExtractionsResetAt < now;
+  if (periodExpired) {
+    // Fresh period — full quota available, reset date will be set when consumeQuota runs.
+    const nextReset = new Date(now);
+    nextReset.setDate(nextReset.getDate() + 30);
+    return { allowed: true, remaining: PER_TENANT_QUOTA, resetAt: nextReset };
+  }
+  const resetAt = restaurant.aiMenuExtractionsResetAt!;
+  const remaining = Math.max(0, PER_TENANT_QUOTA - restaurant.aiMenuExtractionsThisPeriod);
+  return { allowed: remaining > 0, remaining, resetAt };
+}
+
 // ─── HTML processing ────────────────────────────────────────────────────────
 
 /**
@@ -359,7 +392,10 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Quota check (only burn a slot now that we have content) ────────────
-  const quota = await consumeQuota(restaurantId);
+  // Read-only check first — short-circuits over-quota operators without
+  // touching the counter. Slot is actually burned via consumeQuota at the
+  // very end of the request (only on success).
+  const quota = await peekQuota(restaurantId);
   if (!quota.allowed) {
     const resetIso = quota.resetAt.toISOString();
     return NextResponse.json(
@@ -426,7 +462,10 @@ ${pageText}`;
         max_tokens: 8000,
         messages: [{ role: "user", content: prompt }],
       }),
-      signal: AbortSignal.timeout(30000),
+      // 50s — leaves ~10s of buffer under Vercel's maxDuration of 60s.
+      // Claude needs more time when max_tokens is high and the menu is
+      // large (lots of items × multiple fields each).
+      signal: AbortSignal.timeout(50000),
     });
 
     if (!anthropicRes.ok) {
@@ -529,14 +568,21 @@ ${pageText}`;
       { status: 500 },
     );
   }
+
+  // ── Now burn the quota slot — we have items to return. ────────────────
+  // Failures earlier (fetch, Claude, parse) never reach this line, so
+  // they don't cost the operator a slot. This is also the point where
+  // a brand-new period gets its reset-at timestamp written.
+  const consumed = await consumeQuota(restaurantId);
+
   return NextResponse.json({
     items: extractedItems,
     // Surface quota info so the UI can render "X extractions left this
     // month" and dim the button when it hits zero.
     quota: {
       limit: PER_TENANT_QUOTA,
-      remaining: quota.remaining,
-      resetAt: quota.resetAt.toISOString(),
+      remaining: consumed.remaining,
+      resetAt: consumed.resetAt.toISOString(),
     },
   });
 }
