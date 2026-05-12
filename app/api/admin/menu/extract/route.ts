@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertAdminApiRequest } from "@/lib/admin-auth";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
+import {
+  fetchWithHeadlessBrowser,
+  isPlaywrightFallbackEnabled,
+  looksJsRendered,
+} from "@/lib/menu-extract-browser";
 
 export interface MenuItemExtracted {
   name: string;
@@ -23,6 +28,14 @@ export interface MenuItemExtracted {
     isDefault: boolean;
   }[];
 }
+
+// Vercel runtime: nodejs is required because the headless-browser
+// fallback uses @sparticuz/chromium-min. maxDuration is raised to
+// 60s to give Chromium time to download (cold-start) + render.
+// Plain-fetch path stays well under this cap; only the fallback
+// path uses the extra headroom.
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 // ─── Tunables ────────────────────────────────────────────────────────────────
 
@@ -227,6 +240,23 @@ export async function POST(req: NextRequest) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
     pageText = stripHtmlPreservingImages(html, url);
+    // ── JS-rendered fallback ──────────────────────────────────────
+    // If the plain fetch came back too thin (likely a JS shell),
+    // and the operator has flipped PLAYWRIGHT_FALLBACK_ENABLED=1,
+    // re-fetch through headless Chromium and use whichever stripped
+    // result is longer (closer to a real menu).
+    if (isPlaywrightFallbackEnabled() && looksJsRendered(pageText)) {
+      try {
+        const headlessHtml = await fetchWithHeadlessBrowser(url);
+        const headlessText = stripHtmlPreservingImages(headlessHtml, url);
+        if (headlessText.length > pageText.length) {
+          pageText = headlessText;
+        }
+      } catch {
+        // Browser fetch failed — fall through with the plain text.
+        // Better a thin result than no result; Claude can still try.
+      }
+    }
   } catch (err) {
     return NextResponse.json(
       {

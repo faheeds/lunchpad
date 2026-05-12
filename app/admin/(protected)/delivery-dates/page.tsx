@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { ConfirmButton } from "@/components/admin/confirm-button";
+import { ScheduleTabs } from "@/components/admin/schedule-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -315,15 +316,7 @@ export default async function DeliveryDatesPage() {
   return (
     <div className="space-y-5 pb-10">
 
-      {/* ── Header ─────────────────────���───────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[17px] font-semibold text-ink">Schedule</h1>
-          <p className="text-[11px] text-slate-400 mt-0.5">
-            {upcoming.length} upcoming · {past.length} past
-          </p>
-        </div>
-      </div>
+      <ScheduleTabs active="dates" />
 
       {/* ── Add delivery date ───────────────────────────────────────── */}
       <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">

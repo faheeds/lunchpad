@@ -1,4 +1,6 @@
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
+import { ScheduleTabs } from "@/components/admin/schedule-tabs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -195,21 +197,7 @@ export default async function AdminSchoolsPage({
   return (
     <div className="space-y-5 pb-10">
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="flex items-end justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-[17px] font-semibold text-ink">Locations</h1>
-          <p className="text-[11px] text-slate-400 mt-0.5">
-            {schools.filter((s) => s.isActive).length} active · {schools.length} total
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Plan limit</p>
-          <p className="text-[12px] font-semibold text-ink">
-            {schools.filter((s) => s.isActive).length} of {planLimits.maxLocations ?? "∞"}
-          </p>
-        </div>
-      </div>
+      <ScheduleTabs active="locations" />
 
       {/* ── Plan-limit error / upgrade banner ─────────────────────── */}
       {params.error && (
