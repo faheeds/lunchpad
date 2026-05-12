@@ -208,7 +208,83 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Please provide a valid URL." }, { status: 400 });
   }
 
-  // ── Quota check (must happen before paying for the Claude call) ────────
+  // ── Helper: explain why a fetch failed in plain English ────────────────
+  // Node's `fetch` throws with `err.message = "fetch failed"` and stashes
+  // the real reason on `err.cause`. We surface the cause so operators can
+  // tell apart "your domain doesn't resolve" from "the site blocked us".
+  const formatFetchError = (err: unknown): string => {
+    if (!(err instanceof Error)) return "unknown error";
+    const cause = (err as { cause?: { code?: string; message?: string } }).cause;
+    if (cause?.code === "ENOTFOUND") return "domain not found (DNS lookup failed) — check the URL spelling";
+    if (cause?.code === "ECONNREFUSED") return "connection refused — the server isn't accepting requests";
+    if (cause?.code === "ECONNRESET") return "connection reset — the server closed the connection mid-request";
+    if (cause?.code === "ETIMEDOUT") return "connection timed out";
+    if (cause?.code === "CERT_HAS_EXPIRED" || cause?.code === "DEPTH_ZERO_SELF_SIGNED_CERT") return "TLS certificate problem on the target site";
+    if (err.name === "TimeoutError" || err.name === "AbortError") return "request timed out (site too slow to respond within 15s)";
+    return cause?.message ?? err.message;
+  };
+
+  // ── Fetch the page (no quota burn until this succeeds) ─────────────────
+  // Order: plain HTTP first, fall back to headless browser EITHER when the
+  // plain response is too thin (JS-rendered shell) OR when the plain fetch
+  // throws entirely (some sites block our UA, return 403, etc.). Quota is
+  // consumed AFTER a successful fetch so operators don't burn slots on
+  // unreachable URLs.
+  let pageText: string = "";
+  let plainFetchError: unknown = null;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; LunchPadBot/1.0; +https://lunchpad.us)",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+    pageText = stripHtmlPreservingImages(html, url);
+    // Thin-response fallback: plain fetch worked but came back JS-shell
+    // shaped. Try the browser, keep whichever result is longer.
+    if (isPlaywrightFallbackEnabled() && looksJsRendered(pageText)) {
+      try {
+        const headlessHtml = await fetchWithHeadlessBrowser(url);
+        const headlessText = stripHtmlPreservingImages(headlessHtml, url);
+        if (headlessText.length > pageText.length) pageText = headlessText;
+      } catch {
+        // Browser fallback failed too; carry on with the thin plain text.
+      }
+    }
+  } catch (err) {
+    plainFetchError = err;
+  }
+
+  // Full-failure fallback: plain fetch threw entirely. Try Playwright if
+  // the operator enabled it; otherwise return the diagnostic error.
+  if (plainFetchError && !pageText) {
+    if (isPlaywrightFallbackEnabled()) {
+      try {
+        const headlessHtml = await fetchWithHeadlessBrowser(url);
+        pageText = stripHtmlPreservingImages(headlessHtml, url);
+      } catch (browserErr) {
+        return NextResponse.json(
+          {
+            error: `Could not fetch that URL: ${formatFetchError(plainFetchError)}. Headless browser fallback also failed (${formatFetchError(browserErr)}). The site may block bots or require a login.`,
+          },
+          { status: 400 },
+        );
+      }
+    } else {
+      return NextResponse.json(
+        {
+          error: `Could not fetch that URL: ${formatFetchError(plainFetchError)}. The site may be down, blocking our requests, or JavaScript-rendered. Try pasting the menu into a public Google Doc and using that URL instead.`,
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  // ── Quota check (only burn a slot now that we have content) ────────────
   const quota = await consumeQuota(restaurantId);
   if (!quota.allowed) {
     const resetIso = quota.resetAt.toISOString();
@@ -222,52 +298,6 @@ export async function POST(req: NextRequest) {
         },
       },
       { status: 429 },
-    );
-  }
-
-  // ── Fetch the page ─────────────────────────────────────────────────────
-  let pageText: string;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        // Plain UA — most sites accept this. JS-rendered sites still
-        // won't work; the Playwright fallback is a separate follow-up.
-        "User-Agent": "Mozilla/5.0 (compatible; LunchPadBot/1.0; +https://lunchpad.us)",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
-    pageText = stripHtmlPreservingImages(html, url);
-    // ── JS-rendered fallback ──────────────────────────────────────
-    // If the plain fetch came back too thin (likely a JS shell),
-    // and the operator has flipped PLAYWRIGHT_FALLBACK_ENABLED=1,
-    // re-fetch through headless Chromium and use whichever stripped
-    // result is longer (closer to a real menu).
-    if (isPlaywrightFallbackEnabled() && looksJsRendered(pageText)) {
-      try {
-        const headlessHtml = await fetchWithHeadlessBrowser(url);
-        const headlessText = stripHtmlPreservingImages(headlessHtml, url);
-        if (headlessText.length > pageText.length) {
-          pageText = headlessText;
-        }
-      } catch {
-        // Browser fetch failed — fall through with the plain text.
-        // Better a thin result than no result; Claude can still try.
-      }
-    }
-  } catch (err) {
-    return NextResponse.json(
-      {
-        error: `Could not fetch that URL. Make sure it's publicly accessible. (${err instanceof Error ? err.message : "Unknown error"})`,
-        quota: {
-          limit: PER_TENANT_QUOTA,
-          remaining: quota.remaining,
-          resetAt: quota.resetAt.toISOString(),
-        },
-      },
-      { status: 400 },
     );
   }
 
