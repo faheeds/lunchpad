@@ -354,7 +354,7 @@ export default async function OnboardingPage({
 
         <main>
           {/* ── STEP 1: Operator type ───────────────────────────── */}
-          {activeStep === 1 && (
+          {(activeStep === 1 || activeStep === 2) && (
             <form action={saveOperatorType} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 1 of 5 · About you · Choose type</p>
@@ -362,7 +362,7 @@ export default async function OnboardingPage({
                 <p className="text-[12px] text-slate-500 mt-1">We&apos;ll seed sensible defaults for you. You can change this later.</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                   { value: "school",  label: "School caterer",    blurb: "Lunches for K-12 schools. Students, classrooms, allergy notes." },
                   { value: "office",  label: "Corporate cafeteria", blurb: "Meals for office buildings. Employees, teams, recurring orders." },
@@ -422,7 +422,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 2: Branding ─────────────────────────────────── */}
-          {activeStep === 2 && (
+          {(activeStep === 1 || activeStep === 2) && (
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
               <form id="onboarding-branding-form" action={saveBranding} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
                 <div>
@@ -526,7 +526,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 4: First location ───────────────────────────── */}
-          {activeStep === 4 && (
+          {(activeStep === 4 || activeStep === 5) && (
             <form action={createFirstLocation} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 5 · Menu & locations · Add a location</p>
@@ -599,7 +599,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 5: Menu items ───────────────────────────────── */}
-          {activeStep === 5 && (
+          {(activeStep === 4 || activeStep === 5) && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 5 · Menu & locations · Build menu</p>
@@ -621,6 +621,11 @@ export default async function OnboardingPage({
                 <Link href="/admin/menu" className="block rounded-xl border border-slate-200 p-4 no-underline hover:border-brand-700 hover:bg-brand-50 transition">
                   <p className="text-[13px] font-bold text-ink">AI categorize</p>
                   <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">Paste a list, we&apos;ll suggest categories, prices, and tags.</p>
+                </Link>
+                <Link href="/admin/menu" className="block rounded-xl border border-brand-200 p-4 no-underline hover:border-brand-700 hover:bg-brand-50 transition" style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: "#dcfce7", color: "#15803d", border: "1px solid #bbf7d0" }}>Fastest</span>
+                  <p className="text-[13px] font-bold text-ink">Import from URL</p>
+                  <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">Paste your existing menu page URL. We&apos;ll extract items, prices, photos, and add-ons automatically.</p>
                 </Link>
               </div>
 
@@ -737,7 +742,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 7: Invite team ──────────────────────────────── */}
-          {activeStep === 7 && (
+          {(activeStep >= 7 && activeStep <= 10) && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Invite team (optional)</p>
@@ -762,7 +767,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 8: Test order ───────────────────────────────── */}
-          {activeStep === 8 && (
+          {(activeStep >= 7 && activeStep <= 10) && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Place a test order</p>
@@ -802,7 +807,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 9: Notifications ────────────────────────────── */}
-          {activeStep === 9 && (
+          {(activeStep >= 7 && activeStep <= 10) && (
             <form action={saveNotifications} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Notifications (optional)</p>
@@ -840,7 +845,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 10 (FINAL): Share & launch ────────────────── */}
-          {activeStep === 10 && (
+          {(activeStep >= 7 && activeStep <= 10) && (
             <div className="rounded-[14px] border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6 space-y-5">
               <div>
                 <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-3">
