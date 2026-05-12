@@ -18,6 +18,9 @@ function ClocheMark({ size = 22 }: { size?: number }) {
   );
 }
 
+// Top-level nav. Team and Subscription used to be their own entries,
+// but they're now sub-tabs of Settings — see components/admin/settings-tabs.tsx.
+// One Settings tab in the top nav, sub-tabs inside the Settings area.
 const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/dashboard",      label: "Dashboard",    minRole: "STAFF"   },
   { href: "/admin/orders",         label: "Orders",       minRole: "STAFF"   },
@@ -28,13 +31,11 @@ const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   // Discounts — slots between Menu (what you sell) and Locations (where).
   // MANAGER+ so finance/promo decisions stay scoped above frontline staff.
   { href: "/admin/discounts",      label: "Discounts",    minRole: "MANAGER" },
-  { href: "/admin/locations",     label: "Locations",    minRole: "OWNER"   },
-  { href: "/admin/team",           label: "Team",         minRole: "MANAGER" },
-  // Activity log — STAFF+ for transparency. Kept near Team since it's the
-  // "who did what" surface that pairs with team management.
+  { href: "/admin/locations",      label: "Locations",    minRole: "OWNER"   },
+  // Activity log — STAFF+ for transparency. Was kept near Team; now it's
+  // adjacent to Settings since Team moved inside Settings.
   { href: "/admin/activity",       label: "Activity",     minRole: "STAFF"   },
   { href: "/admin/settings",       label: "Settings",     minRole: "OWNER"   },
-  { href: "/admin/subscription",   label: "Subscription", minRole: "OWNER"   },
 ];
 
 const ROLE_BADGE: Record<string, { label: string; color: string }> = {

@@ -10,6 +10,7 @@ import { sendAdminInviteEmail } from "@/lib/email/service";
 import { roleLevel, type AdminRole } from "@/lib/roles";
 import { logActivity } from "@/lib/activity";
 import { ConfirmButton } from "@/components/admin/confirm-button";
+import { SettingsTabs } from "@/components/admin/settings-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -397,6 +398,9 @@ export default async function AdminTeamPage() {
 
   return (
     <div className="space-y-5 pb-10">
+
+      {/* Settings tab bar — Team is now a sub-tab of Settings. */}
+      <SettingsTabs />
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div>

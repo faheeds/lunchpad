@@ -3,6 +3,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
 import { SubscriptionActions } from "./subscription-actions";
 import { planSummary } from "@/lib/plans";
+import { SettingsTabs } from "@/components/admin/settings-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,12 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold text-slate-800 mb-1">Subscription</h1>
+      {/* Settings tab bar — Subscription is now a sub-tab of Settings called "Plan". */}
+      <div className="mb-6 -mx-4 px-4">
+        <SettingsTabs />
+      </div>
+
+      <h1 className="text-xl font-bold text-slate-800 mb-1">Plan</h1>
       <p className="text-sm text-slate-500 mb-8">Manage your LunchPad plan and billing.</p>
 
       {justActivated && (

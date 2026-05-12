@@ -123,39 +123,62 @@ export default function SignupPage() {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      padding: "40px 16px 80px",
+      // Smaller horizontal padding on phones — every pixel matters when
+      // the card is 420px wide and the viewport is ~360px.
+      padding: "32px 12px 64px",
     }}>
-      {/* Logo / brand */}
-      <div style={{ marginBottom: 32, textAlign: "center" }}>
+      {/* Inline media query to scale type + spacing on phones. The page
+          is largely responsive already (maxWidth on each card + viewport
+          padding), but the heading and step indicator benefited from a
+          touch more tightening at ≤480px. */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 480px) {
+          .su-card { padding: 24px 18px !important; }
+          .su-heading { font-size: 18px !important; }
+          .su-plans { gap: 8px !important; }
+          .su-plan-card { padding: 16px 14px !important; }
+        }
+      ` }} />
+
+      {/* Logo / brand — uses the platform green to match the landing
+          page (the previous crimson here was leftover from the original
+          single-tenant brand and made signup feel disconnected from
+          the marketing site the user just came from). */}
+      <div style={{ marginBottom: 28, textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-          <svg width="44" height="44" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="7" fill="#c41230"/>
-            <path d="M 4 19 A 12 10 0 0 1 28 19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="16" y1="5.5" x2="16" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <rect x="3" y="20.5" width="26" height="5.5" rx="2.75" fill="white"/>
-          </svg>
+          <span style={{
+            width: 44, height: 44, borderRadius: 10, background: "#1D9E75",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {/* Bowl icon — same shape as the landing-page nav mark for visual continuity. */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12h20"/>
+              <path d="M3 12a9 9 0 0 0 18 0"/>
+              <path d="M12 7v-2"/>
+              <path d="M9 5h6"/>
+            </svg>
+          </span>
         </div>
-        <p style={{ fontSize: 20, fontWeight: 800, color: "#1c0505", letterSpacing: "-0.5px" }}>
+        <p style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" }}>
           LunchPad
         </p>
         <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 2 }}>
-          School lunch ordering for restaurants
+          Run your lunch program with one platform
         </p>
       </div>
 
       {/* Step 3: Success */}
       {step === 3 && (
-        <div style={{
+        <div className="su-card" style={{
           background: "white", borderRadius: 20, padding: "40px 32px",
           maxWidth: 420, width: "100%", textAlign: "center",
           boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1c0505", marginBottom: 8 }}>
+          <h1 className="su-heading" style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>
             You&apos;re all set!
           </h1>
-          <p style={{ fontSize: 14, color: "#78716c", lineHeight: 1.6, marginBottom: 12 }}>
+          <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.6, marginBottom: 12 }}>
             Your 14-day free trial has started. Let&apos;s walk through setup — branding, your first location, menu, and a test order — then you&apos;re live.
           </p>
           <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: 28, fontFamily: "monospace" }}>
@@ -165,7 +188,7 @@ export default function SignupPage() {
             href={createdSlug ? `https://${createdSlug}.lunchpad.us/admin/onboarding` : "/admin/onboarding"}
             style={{
               display: "block", width: "100%", padding: "14px",
-              background: "#c41230", color: "white",
+              background: "#1D9E75", color: "white",
               borderRadius: 12, fontWeight: 700, fontSize: 15,
               textDecoration: "none", textAlign: "center",
             }}
@@ -181,13 +204,13 @@ export default function SignupPage() {
 
       {/* Step 1: Business info */}
       {step === 1 && (
-        <div style={{
+        <div className="su-card" style={{
           background: "white", borderRadius: 20, padding: "32px 28px",
           maxWidth: 420, width: "100%",
           boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
         }}>
           <StepIndicator current={1} total={2} />
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1c0505", marginBottom: 4 }}>
+          <h1 className="su-heading" style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>
             Create your account
           </h1>
           <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 24 }}>
@@ -257,7 +280,7 @@ export default function SignupPage() {
 
           <p style={{ textAlign: "center", fontSize: 12, color: "#94a3b8", marginTop: 16 }}>
             Already have an account?{" "}
-            <Link href="/admin/login" style={{ color: "#c41230", fontWeight: 600, textDecoration: "none" }}>
+            <Link href="/admin/login" style={{ color: "#1D9E75", fontWeight: 600, textDecoration: "none" }}>
               Sign in
             </Link>
           </p>
@@ -268,26 +291,27 @@ export default function SignupPage() {
       {step === 2 && (
         <div style={{ maxWidth: 680, width: "100%" }}>
           <StepIndicator current={2} total={2} />
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1c0505", marginBottom: 4, textAlign: "center" }}>
+          <h1 className="su-heading" style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 4, textAlign: "center" }}>
             Choose your plan
           </h1>
           <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 24, textAlign: "center" }}>
             All plans include a 14-day free trial. Cancel anytime.
           </p>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
+          <div className="su-plans" style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
             {PLANS.map((p) => (
               <div
                 key={p.id}
                 onClick={() => setPlan(p.id)}
+                className="su-plan-card"
                 style={{
                   flex: "1 1 180px", maxWidth: 200,
                   background: "white",
                   borderRadius: 16,
                   padding: "20px 16px",
-                  border: `2px solid ${plan === p.id ? "#c41230" : "#e5e7eb"}`,
+                  border: `2px solid ${plan === p.id ? "#1D9E75" : "#e5e7eb"}`,
                   cursor: "pointer",
-                  boxShadow: plan === p.id ? "0 0 0 3px rgba(196,18,48,0.12)" : "0 1px 4px rgba(0,0,0,0.06)",
+                  boxShadow: plan === p.id ? "0 0 0 3px rgba(29,158,117,0.15)" : "0 1px 4px rgba(0,0,0,0.06)",
                   position: "relative",
                   transition: "border-color 0.15s",
                 }}
@@ -295,15 +319,15 @@ export default function SignupPage() {
                 {p.highlight && (
                   <span style={{
                     position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
-                    background: "#c41230", color: "white",
+                    background: "#1D9E75", color: "white",
                     fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
                     whiteSpace: "nowrap",
                   }}>
                     Most popular
                   </span>
                 )}
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#1c0505", marginBottom: 4 }}>{p.name}</p>
-                <p style={{ fontSize: 22, fontWeight: 800, color: "#1c0505" }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{p.name}</p>
+                <p style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
                   {p.price}<span style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8" }}>{p.period}</span>
                 </p>
                 <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>
@@ -353,7 +377,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           key={i}
           style={{
             height: 4, flex: 1, borderRadius: 4,
-            background: i < current ? "#c41230" : "#e5e7eb",
+            background: i < current ? "#1D9E75" : "#e5e7eb",
           }}
         />
       ))}
@@ -392,7 +416,7 @@ const inputStyle: React.CSSProperties = {
 
 const primaryButtonStyle: React.CSSProperties = {
   width: "100%", padding: "14px", borderRadius: 12,
-  background: "#c41230", color: "white",
+  background: "#1D9E75", color: "white",
   fontSize: 15, fontWeight: 700, border: "none", cursor: "pointer",
 };
 

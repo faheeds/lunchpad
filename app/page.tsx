@@ -257,20 +257,71 @@ export default async function HomePage() {
     <div style={{ minHeight: "100vh", background: "#ffffff", fontFamily: "system-ui, -apple-system, sans-serif", color: "#0f172a" }}>
 
       {/* Breathing-dot animation lives inline so it ships with the
-          page on first paint — no CSS-module-vs-server-component dance. */}
+          page on first paint — no CSS-module-vs-server-component dance.
+          The mobile rules live here too so we can scope them to .lp-*
+          classes without polluting globals.css. */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes lp-breathe { 0%, 100% { transform: scale(1); opacity: 1 } 50% { transform: scale(1.5); opacity: 0.45 } }
         .lp-hero-dot { animation: lp-breathe 3.5s ease-in-out infinite }
         .lp-pcard-pop { box-shadow: 0 0 0 1.5px #1D9E75 inset }
+
+        /* Tablet — hero collapses to a single column so the dashboard
+           mockup sits below the copy rather than getting squished beside it. */
         @media (max-width: 880px) {
           .lp-hero { grid-template-columns: 1fr !important }
           .lp-hero-right { border-top: 0.5px solid #e2e8f0 }
           .lp-hero-left { border-right: none !important }
         }
+
+        /* Phone — the real responsive work. Before this rule set, the
+           three-section nav (logo / center links / right CTAs) would
+           cram onto one row and force "Start free trial" to wrap to two
+           lines on iPhone widths. Stat bar and section paddings also
+           weren't scaled down. */
+        @media (max-width: 640px) {
+          /* Nav: stack into two rows — logo + CTAs first, center links
+             hidden (the same anchors live in the footer and in-page
+             headers, so we're not losing access). */
+          .lp-nav { padding: 12px 16px !important; gap: 8px !important; }
+          .lp-nav-center { display: none !important; }
+          .lp-nav-cta { gap: 6px !important; }
+          .lp-nav-cta a { padding: 7px 11px !important; font-size: 12px !important; }
+
+          /* Hero copy column — tighter padding, shrink hero headline
+             so it doesn't span half the screen height on small phones. */
+          .lp-hero-left { padding: 32px 20px 28px !important; }
+          .lp-hero-h1 { font-size: 30px !important; letter-spacing: -0.5px !important; }
+          .lp-hero-sub { font-size: 14px !important; margin-bottom: 22px !important; }
+          .lp-hero-cta-row { gap: 8px !important; }
+          .lp-hero-cta-row > a { width: 100% !important; justify-content: center !important; }
+
+          /* Hero right (dashboard mockup) — give it consistent padding
+             too, otherwise the browser-chrome address bar can overflow. */
+          .lp-hero-right-inner { padding: 12px !important; }
+
+          /* Stat bar — three columns get cramped on narrow phones; drop
+             to one column with horizontal dividers. */
+          .lp-stats { grid-template-columns: 1fr !important; }
+          .lp-stats-cell { border-right: none !important; border-bottom: 0.5px solid #e2e8f0; padding: 18px 20px !important; }
+          .lp-stats-cell-last { border-bottom: none !important; }
+
+          /* Section paddings: 28px sides → 20px on phone, smaller titles. */
+          .lp-section { padding-left: 20px !important; padding-right: 20px !important; }
+          .lp-section-h2 { font-size: 22px !important; line-height: 1.2 !important; }
+
+          /* Bottom CTA strip — stack copy + buttons, full-width primary
+             button so "Start free trial today" reads on one line. */
+          .lp-bottom-cta { flex-direction: column !important; align-items: stretch !important; gap: 20px !important; padding: 32px 20px !important; }
+          .lp-bottom-cta-buttons { width: 100%; }
+          .lp-bottom-cta-buttons > a { flex: 1; justify-content: center; }
+
+          /* Footer — keep it readable, smaller font, stack on very narrow. */
+          .lp-footer { padding: 16px 20px !important; }
+        }
       ` }} />
 
       {/* ── Nav ─────────────────────────────────────────────────────── */}
-      <nav style={{
+      <nav className="lp-nav" style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "14px 28px", background: "#ffffff",
         borderBottom: "0.5px solid #e2e8f0",
@@ -295,17 +346,18 @@ export default async function HomePage() {
           LunchPad
         </Link>
 
-        <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#475569" }}>
+        <div className="lp-nav-center" style={{ display: "flex", gap: 20, fontSize: 13, color: "#475569" }}>
           <a href="#features" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Features</a>
           <a href="#pricing" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Pricing</a>
           <a href="#testimonials" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Testimonials</a>
         </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="lp-nav-cta" style={{ display: "flex", gap: 8 }}>
           <Link href="/admin/login" style={{
             fontSize: 13, padding: "7px 15px", borderRadius: 8,
             border: "0.5px solid #cbd5e1", background: "transparent",
             color: "#475569", textDecoration: "none", display: "inline-flex", alignItems: "center",
+            whiteSpace: "nowrap",
           }}>
             Sign in
           </Link>
@@ -313,6 +365,7 @@ export default async function HomePage() {
             fontSize: 13, fontWeight: 600, padding: "7px 15px", borderRadius: 8,
             background: "#1D9E75", color: "#ffffff",
             textDecoration: "none", display: "inline-flex", alignItems: "center",
+            whiteSpace: "nowrap",
           }}>
             Start free trial
           </Link>
@@ -347,20 +400,20 @@ export default async function HomePage() {
             }} />
             Built for lunch operators, by a lunch operator
           </div>
-          <h1 style={{
+          <h1 className="lp-hero-h1" style={{
             fontSize: 44, fontWeight: 700, lineHeight: 1.1,
             color: "#0f172a", marginBottom: 14, letterSpacing: "-0.8px",
           }}>
             The platform that <em style={{ fontStyle: "normal", color: "#1D9E75" }}>runs your lunch program</em> for you.
           </h1>
-          <p style={{
+          <p className="lp-hero-sub" style={{
             fontSize: 15, color: "#475569", lineHeight: 1.7,
             marginBottom: 28, maxWidth: 380,
           }}>
             LunchPad handles ordering, payments, and delivery scheduling so you can focus on the food. Set up in a day, not a season.
           </p>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 24 }}>
+          <div className="lp-hero-cta-row" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 24 }}>
             <Link href="/signup" style={{
               background: "#1D9E75", color: "#ffffff",
               fontSize: 14, fontWeight: 600, padding: "11px 22px",
@@ -459,7 +512,7 @@ export default async function HomePage() {
           </div>
 
           {/* Dashboard body */}
-          <div style={{ padding: "12px 14px", flex: 1 }}>
+          <div className="lp-hero-right-inner" style={{ padding: "12px 14px", flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>
               Today's Orders
             </div>
@@ -562,7 +615,7 @@ export default async function HomePage() {
       </div>
 
       {/* ── Stat bar ──────────────────────────────────────────────────── */}
-      <div style={{
+      <div className="lp-stats" style={{
         display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
         borderBottom: "0.5px solid #e2e8f0",
       }}>
@@ -570,8 +623,8 @@ export default async function HomePage() {
           { n: "10,000+", l: "Orders processed" },
           { n: "200+", l: "Locations served" },
           { n: "50+", l: "Restaurants" },
-        ].map((cell, i) => (
-          <div key={cell.l} style={{
+        ].map((cell, i, arr) => (
+          <div key={cell.l} className={`lp-stats-cell ${i === arr.length - 1 ? "lp-stats-cell-last" : ""}`} style={{
             padding: "22px 20px", textAlign: "center",
             borderRight: i === 2 ? "none" : "0.5px solid #e2e8f0",
           }}>
@@ -587,11 +640,11 @@ export default async function HomePage() {
       {/* Wider container than the other sections (testimonials, pricing
           stay at 680) — the 8-card 2×4 grid below needs ~880px to fit
           four reasonably-sized cards per row without truncating titles. */}
-      <div id="features" style={{ padding: "44px 28px", maxWidth: 920, margin: "0 auto" }}>
+      <div id="features" className="lp-section" style={{ padding: "44px 28px", maxWidth: 920, margin: "0 auto" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 8 }}>
           Features
         </div>
-        <h2 style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", lineHeight: 1.15, marginBottom: 8, letterSpacing: "-0.4px" }}>
+        <h2 className="lp-section-h2" style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", lineHeight: 1.15, marginBottom: 8, letterSpacing: "-0.4px" }}>
           Built for operators, loved by their customers
         </h2>
         <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 26 }}>
@@ -632,7 +685,7 @@ export default async function HomePage() {
       </div>
 
       {/* ── Testimonials ─────────────────────────────────────────────── */}
-      <div id="testimonials" style={{
+      <div id="testimonials" className="lp-section" style={{
         background: "#f7f8fa", borderTop: "0.5px solid #e2e8f0",
         borderBottom: "0.5px solid #e2e8f0", padding: "40px 28px",
       }}>
@@ -640,7 +693,7 @@ export default async function HomePage() {
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 6 }}>
             Testimonials
           </div>
-          <h2 style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", marginBottom: 18, letterSpacing: "-0.4px" }}>
+          <h2 className="lp-section-h2" style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", marginBottom: 18, letterSpacing: "-0.4px" }}>
             Operators love it
           </h2>
           <div style={{
@@ -686,11 +739,11 @@ export default async function HomePage() {
       </div>
 
       {/* ── Pricing ──────────────────────────────────────────────────── */}
-      <div id="pricing" style={{ padding: "44px 28px 52px", maxWidth: 680, margin: "0 auto" }}>
+      <div id="pricing" className="lp-section" style={{ padding: "44px 28px 52px", maxWidth: 680, margin: "0 auto" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 8 }}>
           Pricing
         </div>
-        <h2 style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", lineHeight: 1.15, marginBottom: 8, letterSpacing: "-0.4px" }}>
+        <h2 className="lp-section-h2" style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", lineHeight: 1.15, marginBottom: 8, letterSpacing: "-0.4px" }}>
           Start free for 14 days
         </h2>
         <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 26 }}>
@@ -763,7 +816,7 @@ export default async function HomePage() {
       </div>
 
       {/* ── Bottom CTA strip ─────────────────────────────────────────── */}
-      <div style={{
+      <div className="lp-bottom-cta" style={{
         borderTop: "0.5px solid #e2e8f0", padding: "44px 28px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         gap: 20, flexWrap: "wrap",
@@ -776,12 +829,13 @@ export default async function HomePage() {
             Join operators already using LunchPad to save time, eliminate payment headaches, and serve their customers better.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+        <div className="lp-bottom-cta-buttons" style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
           <a href="#features" style={{
             background: "transparent", color: "#475569",
             fontSize: 13, padding: "11px 16px",
             borderRadius: 8, border: "0.5px solid #cbd5e1",
             textDecoration: "none", display: "inline-flex", alignItems: "center",
+            whiteSpace: "nowrap",
           }}>
             See how it works
           </a>
@@ -790,6 +844,7 @@ export default async function HomePage() {
             fontSize: 13, fontWeight: 600, padding: "11px 22px",
             borderRadius: 8, textDecoration: "none",
             display: "inline-flex", alignItems: "center",
+            whiteSpace: "nowrap",
           }}>
             Start free trial today
           </Link>
@@ -797,7 +852,7 @@ export default async function HomePage() {
       </div>
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
-      <footer style={{
+      <footer className="lp-footer" style={{
         padding: "18px 28px", display: "flex",
         justifyContent: "space-between", alignItems: "center",
         borderTop: "0.5px solid #e2e8f0", flexWrap: "wrap", gap: 10,
