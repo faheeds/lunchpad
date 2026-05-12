@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { stripe } from "@/lib/payments/stripe";
 import { markOrderPaidByCheckoutSession } from "@/lib/orders";
-import { sendOrderConfirmationEmail, scheduleCutoffReminderEmail, sendSubscriptionChangedEmail } from "@/lib/email/service";
+import { sendOrderConfirmationEmail, sendSubscriptionChangedEmail } from "@/lib/email/service";
 import { isDuplicateWebhookEvent } from "@/lib/payments/webhook";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 
@@ -152,8 +152,12 @@ export async function POST(request: Request) {
           } catch {
             // Email failures are logged and can be retried in admin.
           }
-          // Schedule a reminder 24h before cutoff - best-effort, never throws.
-          scheduleCutoffReminderEmail(order.id, order.restaurantId).catch(() => {});
+          // Previously: scheduleCutoffReminderEmail(order.id, ...). Removed
+          // because that sent a "Ordering closes soon — Place Order Now"
+          // reminder to the parent who had JUST placed and paid for an
+          // order. The cutoff reminder's audience is parents who have NOT
+          // yet ordered for the delivery date; firing it on the payment
+          // webhook targets the wrong cohort.
         }
       }
     }
