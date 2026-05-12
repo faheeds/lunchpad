@@ -300,7 +300,10 @@ export default async function OnboardingPage({
   //   Menu & locations    → 4 (location) + 5 (menu)
   //   Delivery schedule   → 6
   //   Go live             → 7 (team) + 8 (test) + 9 (notify) + 10 (share)
-  const isDone = (n: number) => status[n] === "done";
+  // `status` has numeric-literal keys (1..10) so indexing with arbitrary number
+  // is too wide for TS. Cast to Record once and reuse — runtime unchanged.
+  const statusByNum = status as Record<number, "done" | "todo">;
+  const isDone = (n: number) => statusByNum[n] === "done";
   const allDone = (nums: number[]) => nums.every(isDone);
   const isCurrent = (nums: number[]) => nums.includes(activeStep);
   const groupStatus = (nums: number[]) =>
