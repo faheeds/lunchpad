@@ -22,6 +22,11 @@ interface MenuItemInput {
   basePriceCents: number;
   category: string;
   isActive: boolean;
+  /** Optional image URL — when set, it'll be saved to MenuItem.imageUrl
+   *  and the customer-facing menu card will render it. The URL-import
+   *  flow populates this from images found near the item on the source
+   *  page; manual bulk uploads typically leave it empty. */
+  imageUrl?: string;
   /** Pick-one choices the customer must select before adding to cart. */
   requiredChoices?: string[];
   /** Size variants — when non-empty, the customer-side flow forces
@@ -67,7 +72,7 @@ export async function POST(req: NextRequest) {
     const name = String(item.name ?? "").trim();
     if (!name) { skipped++; continue; }
 
-    let slug = slugify(name);
+    const slug = slugify(name);
     // If slug already exists, make it unique by appending a counter
     if (existingSlugs.has(slug)) {
       skipped++;
@@ -116,6 +121,13 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      // Image URL — only accept absolute http(s) URLs. We rely on the
+      // extract endpoint to already have sanitized these, but the bulk-
+      // create route also accepts hand-edited payloads via the bulk
+      // Excel uploader, so we validate again here.
+      const rawImage = String(item.imageUrl ?? "").trim();
+      const imageUrl = /^https?:\/\/[^\s]+$/i.test(rawImage) ? rawImage : null;
+
       await prisma.menuItem.create({
         data: {
           restaurantId: restaurant.id,
@@ -123,6 +135,7 @@ export async function POST(req: NextRequest) {
           slug,
           description: String(item.description ?? "").trim() || null,
           category: String(item.category ?? "").trim() || null,
+          imageUrl,
           basePriceCents,
           isActive: item.isActive !== false,
           requiredChoices,

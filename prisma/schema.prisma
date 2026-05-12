@@ -109,6 +109,14 @@ model Restaurant {
   testOrderPlacedAt        DateTime?     // step 8 of wizard — operator placed a test order
   onboardingShareAcked     Boolean       @default(false) // step 10 — operator confirmed they shared the URL
 
+  // AI menu extraction quota — caps Claude usage per tenant so a runaway
+  // operator can't burn the platform's API budget. Counter increments on
+  // every successful extract call; resets on the first call after
+  // aiMenuExtractionsResetAt has passed. Reset window = 1 month.
+  // Default cap is enforced in the extract endpoint, not the schema.
+  aiMenuExtractionsThisPeriod Int           @default(0)
+  aiMenuExtractionsResetAt    DateTime?
+
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 

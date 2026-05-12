@@ -14,12 +14,13 @@
  *   1. Operator enters URL → POST /api/admin/menu/extract
  *   2. Server fetches the HTML, strips it, sends to Claude
  *   3. Claude returns items[] with name/description/price/sizes/
- *      requiredChoices/options/category
- *   4. We render an editable preview list. Operator can rename items,
- *      tweak prices, toggle Active, edit sizes/options inline.
+ *      requiredChoices/options/category/imageUrl
+ *   4. We render an editable preview list with thumbnails. Operator can
+ *      rename items, tweak prices, toggle Active, edit sizes/options
+ *      inline, swap image URLs.
  *   5. On Import → POST /api/admin/menu/bulk-create with the curated
  *      list. Server creates MenuItems (and MenuItemSize / MenuOption
- *      rows) in one transaction per item.
+ *      rows) in one transaction per item, plus imageUrl on the parent.
  *
  * What this is NOT: an "auto-import" button. The operator always reviews
  * before save. AI extraction is fuzzy by nature; we keep the human in
@@ -50,11 +51,24 @@ interface ExtractedItem {
   basePriceCents: number;
   category: string;
   isActive: boolean;
+  /** Absolute image URL extracted from the source page. Empty string
+   *  when no nearby image was found. Rendered as a thumbnail in the
+   *  preview row so the operator can sanity-check the AI's pairing. */
+  imageUrl: string;
   sizes: ExtractedSize[];
   requiredChoices: string[];
   options: ExtractedOption[];
   // Local-only UI state
   _expanded: boolean;
+}
+
+/** Quota info returned by the extract endpoint — surfaces "N extractions
+ *  left this month" to operators so they know when to fall back to the
+ *  Excel uploader. The reset is rolling so we render the absolute date. */
+interface QuotaInfo {
+  limit: number;
+  remaining: number;
+  resetAt: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -78,6 +92,9 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
   const [items, setItems] = useState<ExtractedItem[]>([]);
   const [importing, setImporting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  // Quota — populated on the first successful (or quota-exhausted) call.
+  // null means "haven't asked yet"; we hide the badge until we know.
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
 
   async function handleExtract() {
     setError(null);
@@ -92,6 +109,12 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
         body: JSON.stringify({ url: trimmed }),
       });
       const data = await res.json();
+      // Update quota whenever the server tells us about it — including
+      // the 429 case where the server returns the same quota shape so
+      // we can show "comes back on <date>" without forcing another call.
+      if (data?.quota) {
+        setQuota(data.quota as QuotaInfo);
+      }
       if (!res.ok) throw new Error(data.error ?? "Extraction failed");
       const incoming = Array.isArray(data.items) ? data.items : [];
       if (incoming.length === 0) {
@@ -100,7 +123,20 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
         return;
       }
       // Add local UI state (_expanded). Default collapsed for a manageable scan.
-      setItems(incoming.map((i: ExtractedItem) => ({ ...i, _expanded: false })));
+      // Defensive: extract endpoint always returns imageUrl now, but
+      // older cached client bundles or hand-crafted payloads may not.
+      setItems(incoming.map((i: Partial<ExtractedItem>) => ({
+        name: i.name ?? "",
+        description: i.description ?? "",
+        basePriceCents: i.basePriceCents ?? 0,
+        category: i.category ?? "",
+        isActive: i.isActive ?? true,
+        imageUrl: i.imageUrl ?? "",
+        sizes: i.sizes ?? [],
+        requiredChoices: i.requiredChoices ?? [],
+        options: i.options ?? [],
+        _expanded: false,
+      })));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Extraction failed.");
     } finally {
@@ -158,9 +194,36 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* URL input row */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
-          Menu URL
-        </label>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
+            Menu URL
+          </label>
+          {/* Quota badge — shows after the first successful call.
+              Amber when ≤3 left, red when 0 so operators notice before
+              they hit the wall on a busy onboarding day. */}
+          {quota && (
+            <span
+              title={`Resets on ${new Date(quota.resetAt).toLocaleDateString()}`}
+              style={{
+                fontSize: 10, fontWeight: 700, padding: "3px 8px",
+                background: quota.remaining === 0
+                  ? "#fef2f2"
+                  : quota.remaining <= 3 ? "#fef3c7" : "#f1f5f9",
+                color: quota.remaining === 0
+                  ? "#991b1b"
+                  : quota.remaining <= 3 ? "#92400e" : "#475569",
+                border: `1px solid ${
+                  quota.remaining === 0
+                    ? "#fecaca"
+                    : quota.remaining <= 3 ? "#fde68a" : "#cbd5e1"
+                }`,
+                borderRadius: 100, whiteSpace: "nowrap",
+              }}
+            >
+              {quota.remaining} of {quota.limit} extractions left
+            </span>
+          )}
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           <input
             type="url"
@@ -178,12 +241,12 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
           <button
             type="button"
             onClick={handleExtract}
-            disabled={extracting || !url.trim()}
+            disabled={extracting || !url.trim() || quota?.remaining === 0}
             style={{
               padding: "8px 16px", fontSize: 12, fontWeight: 600,
               background: "#0f172a", color: "#fff",
               border: "none", borderRadius: 8, cursor: "pointer",
-              opacity: extracting || !url.trim() ? 0.5 : 1,
+              opacity: extracting || !url.trim() || quota?.remaining === 0 ? 0.5 : 1,
               whiteSpace: "nowrap",
             }}
           >
@@ -304,6 +367,26 @@ function ItemRow({
           </svg>
         </button>
 
+        {/* Thumbnail — only shown when an image URL was extracted.
+            Tiny 32px square so the row stays compact; the full URL is
+            editable in the expanded body. onError swaps to a neutral
+            placeholder so a broken or hot-linked image doesn't show a
+            jarring broken-image icon during review. */}
+        {item.imageUrl && (
+          <img
+            src={item.imageUrl}
+            alt=""
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+            style={{
+              width: 32, height: 32, flexShrink: 0,
+              objectFit: "cover", borderRadius: 5,
+              border: "1px solid #e2e8f0",
+            }}
+          />
+        )}
+
         <input
           value={item.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
@@ -383,7 +466,7 @@ function ItemRow({
         </button>
       </div>
 
-      {/* Expanded body — description, category, sizes, choices, options */}
+      {/* Expanded body — description, category, image, sizes, choices, options */}
       {item._expanded && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4, borderTop: "1px solid #f1f5f9" }}>
           {/* Description + category row */}
@@ -400,6 +483,34 @@ function ItemRow({
               placeholder="Category"
               style={{ ...inputCss, width: 110, flexShrink: 0 }}
             />
+          </div>
+
+          {/* Image URL — editable so the operator can paste their own
+              photo if the AI's pick was wrong, or clear it entirely.
+              We show it for every item (not just ones that came with
+              an image) so people can attach photos during this same pass. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <label style={{ fontSize: 11, color: "#64748b", flexShrink: 0, minWidth: 50 }}>Image:</label>
+            <input
+              value={item.imageUrl}
+              onChange={(e) => onUpdate({ imageUrl: e.target.value.trim() })}
+              placeholder="https://… (optional)"
+              style={{ ...inputCss, flex: 1, minWidth: 0 }}
+            />
+            {item.imageUrl && (
+              <button
+                type="button"
+                onClick={() => onUpdate({ imageUrl: "" })}
+                aria-label="Clear image"
+                style={{
+                  width: 22, height: 22, padding: 0, flexShrink: 0,
+                  background: "#fef2f2", border: "1px solid #fecaca",
+                  borderRadius: 5, cursor: "pointer",
+                }}
+              >
+                ×
+              </button>
+            )}
           </div>
 
           {/* Base price (only meaningful when no sizes) */}
