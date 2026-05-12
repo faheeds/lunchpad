@@ -5,6 +5,7 @@ import { slugify } from "@/lib/utils";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { BulkMenuUpload } from "@/components/admin/bulk-menu-upload";
+import { MenuUrlImport } from "@/components/admin/menu-url-import";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { ImageUpload } from "@/components/admin/image-upload";
 import { DietaryTagsPicker } from "@/components/admin/dietary-tags-picker";
@@ -428,6 +429,20 @@ export default async function AdminMenuPage() {
             Create item
           </button>
         </form>
+      </details>
+
+      {/* Import from URL — AI-driven menu extraction. Slotted before
+          the Excel upload because operators with an existing online menu
+          will reach for this first; Excel is the fallback for those
+          starting from scratch. */}
+      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
+          <span className="text-[13px] font-semibold text-ink">🪄 Import menu from a URL</span>
+          <span className="text-[11px] text-slate-400">AI-powered · review before saving</span>
+        </summary>
+        <div className="px-4 pb-4 border-t border-slate-50 pt-3">
+          <MenuUrlImport />
+        </div>
       </details>
 
       {/* Bulk upload */}

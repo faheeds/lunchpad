@@ -11,6 +11,11 @@ interface MenuOptionInput {
   isDefault: boolean;
 }
 
+interface MenuSizeInput {
+  name: string;
+  priceCents: number;
+}
+
 interface MenuItemInput {
   name: string;
   description: string;
@@ -19,6 +24,9 @@ interface MenuItemInput {
   isActive: boolean;
   /** Pick-one choices the customer must select before adding to cart. */
   requiredChoices?: string[];
+  /** Size variants — when non-empty, the customer-side flow forces
+   *  size selection and the size's priceCents drives the line price. */
+  sizes?: MenuSizeInput[];
   options: MenuOptionInput[];
 }
 
@@ -86,6 +94,28 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Sizes — dedupe by lowercase name; drop blank/zero-priced entries.
+      // Operator-set order is preserved so the customer picker shows
+      // Small → Large in the expected progression.
+      const seenSize = new Set<string>();
+      const sizes: { name: string; priceCents: number; sortOrder: number; isDefault: boolean }[] = [];
+      if (Array.isArray(item.sizes)) {
+        item.sizes.forEach((s, idx) => {
+          const sname = String(s?.name ?? "").trim();
+          const price = Math.max(0, Math.round(Number(s?.priceCents) || 0));
+          if (!sname || price <= 0) return;
+          const key = sname.toLowerCase();
+          if (seenSize.has(key)) return;
+          seenSize.add(key);
+          sizes.push({
+            name: sname,
+            priceCents: price,
+            sortOrder: idx,
+            isDefault: idx === 0, // first size = default-selected in the picker
+          });
+        });
+      }
+
       await prisma.menuItem.create({
         data: {
           restaurantId: restaurant.id,
@@ -109,6 +139,7 @@ export async function POST(req: NextRequest) {
                   }))
               : [],
           },
+          sizes: sizes.length > 0 ? { create: sizes } : undefined,
         },
       });
       created++;

@@ -8,6 +8,17 @@ export interface MenuItemExtracted {
   basePriceCents: number;
   category: string;
   isActive: boolean;
+  /** Size variants extracted from the menu — e.g. Small/Medium/Large at
+   *  different prices. Empty array when the item is single-priced.
+   *  When non-empty, basePriceCents falls through and only `sizes` is
+   *  consulted at order time (matches the runtime semantics in lib/orders.ts). */
+  sizes: {
+    name: string;
+    priceCents: number;
+  }[];
+  /** Required pick-one choices extracted from the menu, e.g. "Beef vs
+   *  Chicken vs Vegan" on a build-your-own item. Empty when none. */
+  requiredChoices: string[];
   options: {
     name: string;
     optionType: "ADD_ON" | "REMOVAL";
@@ -80,14 +91,30 @@ export async function POST(req: NextRequest) {
 For each item include:
 - name: the item name (string)
 - description: a short description if available, otherwise empty string
-- basePriceCents: price in cents as an integer (e.g. $12.99 → 1299). If no price found, use 0.
+- basePriceCents: price in cents as an integer (e.g. $12.99 → 1299). If no single price is found, use 0. For sized items (see below), set this to the smallest size's price.
 - category: a category label like "Mains", "Sides", "Drinks", "Desserts", "Combos", etc. Infer from context.
 - isActive: always true
-- options: array of add-ons or removals if mentioned. Each option has:
+- sizes: array of size variants WHEN THE ITEM IS LISTED WITH MULTIPLE PRICES.
+  Examples that should produce sizes:
+    "Latte — Small $4 / Medium $5 / Large $6" → sizes: [{name:"Small",priceCents:400},{name:"Medium",priceCents:500},{name:"Large",priceCents:600}]
+    "Pizza 12-inch $14, 16-inch $18" → sizes: [{name:"12-inch",priceCents:1400},{name:"16-inch",priceCents:1800}]
+    "Half Sandwich $7 | Whole $11" → sizes: [{name:"Half",priceCents:700},{name:"Whole",priceCents:1100}]
+  Each size has:
+    - name: the size label as it appears (e.g. "Small", "12-inch", "Half"). Keep operator-friendly.
+    - priceCents: absolute price in cents for that size.
+  When the item has a single price, leave this as an empty array [].
+- requiredChoices: array of pick-one choices the customer MUST pick BEFORE adding to cart.
+  Examples:
+    "Build Your Own Burger (Beef / Crispy Chicken / Grilled Chicken / Vegan)" → ["Beef","Crispy Chicken","Grilled Chicken","Vegan"]
+    "Chicken Wings — choose: BBQ, Buffalo, Lemon Pepper" → ["BBQ","Buffalo","Lemon Pepper"]
+  Different from add-ons (which are optional). Empty array when there's no pick-one choice.
+- options: array of OPTIONAL add-ons or removals. Each option has:
   - name: option name
   - optionType: "ADD_ON" or "REMOVAL"
   - priceDeltaCents: price difference in cents (0 for free options)
   - isDefault: false unless described as default/included
+
+Be conservative: if a "price range" really represents distinct sizes, use sizes; if it's just decorative ("$10-$15") with one item, set basePriceCents to the lower number and leave sizes empty.
 
 Return ONLY a valid JSON array. No markdown, no explanation. If no menu items are found, return [].
 
@@ -124,22 +151,65 @@ ${pageText}`;
 
     if (!Array.isArray(extractedItems)) throw new Error("Unexpected response shape");
 
-    // Sanitize each item
-    extractedItems = extractedItems.map((item) => ({
-      name: String(item.name ?? "").trim(),
-      description: String(item.description ?? "").trim(),
-      basePriceCents: Math.max(0, Math.round(Number(item.basePriceCents) || 0)),
-      category: String(item.category ?? "").trim(),
-      isActive: item.isActive !== false,
-      options: Array.isArray(item.options)
-        ? item.options.map((opt: Record<string, unknown>) => ({
-            name: String(opt.name ?? "").trim(),
-            optionType: (opt.optionType === "REMOVAL" ? "REMOVAL" : "ADD_ON") as "ADD_ON" | "REMOVAL",
-            priceDeltaCents: Math.max(0, Math.round(Number(opt.priceDeltaCents) || 0)),
-            isDefault: opt.isDefault === true,
-          }))
-        : [],
-    })).filter((item) => item.name.length > 0);
+    // Sanitize each item — defensive against any oddities in the model's
+    // output (missing fields, wrong types, hallucinated arrays). Anything
+    // we can't make sense of gets dropped or coerced to a safe default.
+    extractedItems = extractedItems.map((item) => {
+      // Sizes: keep operator-set order from the model (Small→Large feels
+      // natural). Dedupe by name (case-insensitive) so a sloppy extraction
+      // doesn't produce duplicate rows the UI then has to reconcile.
+      const seenSize = new Set<string>();
+      const sizes = Array.isArray((item as Record<string, unknown>).sizes)
+        ? ((item as { sizes: Record<string, unknown>[] }).sizes
+            .map((s) => ({
+              name: String(s?.name ?? "").trim(),
+              priceCents: Math.max(0, Math.round(Number(s?.priceCents) || 0)),
+            }))
+            .filter((s) => {
+              if (!s.name || s.priceCents <= 0) return false;
+              const k = s.name.toLowerCase();
+              if (seenSize.has(k)) return false;
+              seenSize.add(k);
+              return true;
+            }))
+        : [];
+
+      const seenChoice = new Set<string>();
+      const requiredChoices = Array.isArray((item as Record<string, unknown>).requiredChoices)
+        ? ((item as { requiredChoices: unknown[] }).requiredChoices
+            .map((c) => String(c ?? "").trim())
+            .filter((c) => {
+              if (!c) return false;
+              const k = c.toLowerCase();
+              if (seenChoice.has(k)) return false;
+              seenChoice.add(k);
+              return true;
+            }))
+        : [];
+
+      return {
+        name: String(item.name ?? "").trim(),
+        description: String(item.description ?? "").trim(),
+        // For sized items: prefer the cheapest size as a fallback
+        // basePriceCents (kept on the row so a future "sizes empty" edit
+        // by the operator still has a sensible base price).
+        basePriceCents: sizes.length > 0
+          ? Math.min(...sizes.map((s) => s.priceCents))
+          : Math.max(0, Math.round(Number(item.basePriceCents) || 0)),
+        category: String(item.category ?? "").trim(),
+        isActive: item.isActive !== false,
+        sizes,
+        requiredChoices,
+        options: Array.isArray(item.options)
+          ? item.options.map((opt: Record<string, unknown>) => ({
+              name: String(opt.name ?? "").trim(),
+              optionType: (opt.optionType === "REMOVAL" ? "REMOVAL" : "ADD_ON") as "ADD_ON" | "REMOVAL",
+              priceDeltaCents: Math.max(0, Math.round(Number(opt.priceDeltaCents) || 0)),
+              isDefault: opt.isDefault === true,
+            }))
+          : [],
+      };
+    }).filter((item) => item.name.length > 0);
   } catch (err) {
     return NextResponse.json(
       { error: `AI extraction failed: ${err instanceof Error ? err.message : "Unknown error"}` },
