@@ -54,6 +54,22 @@ body {
     box-shadow: 0 20px 80px rgba(0, 0, 0, 0.20);
     overflow: hidden;
   }
+
+  /* Admin pages drop the phone-card constraint as soon as we leave
+   * mobile width. Previously this override only kicked in at ≥1024px
+   * so iPads, small laptops, and narrow desktop windows still got the
+   * 480px-wide mobile layout — wrong for tables, charts, multi-column
+   * forms. Admin is desktop-first the moment there's room for it.
+   */
+  .is-admin .app-shell {
+    max-width: none;
+    margin: 0;
+    min-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    background: transparent;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -61,13 +77,10 @@ body {
     max-width: 560px;
   }
 
-  /* Platform landing AND admin pages drop the phone constraint and fill
-   * the viewport like a normal desktop site. The phone-card aesthetic is
-   * specifically for the customer ordering experience on a tenant
-   * subdomain — operators managing the restaurant need full screen real
-   * estate for tables, charts, and forms. */
-  .is-platform .app-shell,
-  .is-admin .app-shell {
+  /* Platform landing drops the phone constraint at desktop and fills
+   * the viewport like a normal marketing site. (Admin already dropped
+   * at 640px above.) */
+  .is-platform .app-shell {
     max-width: none;
     margin: 0;
     min-height: 100dvh;

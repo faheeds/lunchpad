@@ -584,7 +584,10 @@ export default async function HomePage() {
       </div>
 
       {/* ── Features ──────────────────────────────────────────────────── */}
-      <div id="features" style={{ padding: "44px 28px", maxWidth: 680, margin: "0 auto" }}>
+      {/* Wider container than the other sections (testimonials, pricing
+          stay at 680) — the 8-card 2×4 grid below needs ~880px to fit
+          four reasonably-sized cards per row without truncating titles. */}
+      <div id="features" style={{ padding: "44px 28px", maxWidth: 920, margin: "0 auto" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 8 }}>
           Features
         </div>
@@ -594,21 +597,28 @@ export default async function HomePage() {
         <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 26 }}>
           From your first location to your fiftieth, LunchPad scales with your business.
         </p>
+        {/* 2 × 4 grid on wide viewports; auto-fit lets it collapse to 2 cols
+            on tablet and 1 col on phone. Minmax 200px keeps each card legible
+            even at 4-up. */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: 10,
         }}>
           {[
             { n: "01", title: "Smart menu builder", desc: "Build your full menu with photos, prices, add-ons, and removals. Go live in minutes." },
-            { n: "02", title: "Cutoff scheduling", desc: "Set ordering deadlines per delivery date. Customers get reminder emails 24h before close." },
+            // Merged from the previous "Cutoff scheduling" and "Auto
+            // confirmations" cards — both told a half story (one is
+            // scheduling, the other is automated comms), and cutoff
+            // reminders showed up in both. One card now covers the
+            // whole "deadlines + automated emails" pattern.
+            { n: "02", title: "Cutoffs & automated emails", desc: "Set ordering deadlines per delivery date. Order confirmations, cutoff reminders, and cancellation receipts go out to customers automatically." },
             { n: "03", title: "Stripe payments", desc: "Every order paid up front via Stripe. Funds go straight to your connected account." },
-            { n: "04", title: "Auto confirmations", desc: "Order confirmations, cancellation receipts, and cutoff reminders sent automatically." },
-            { n: "05", title: "Multi-location support", desc: "Serve any number of locations from a single dashboard, each with its own delivery schedule." },
-            { n: "06", title: "Live order dashboard", desc: "See every order in real time. Export kitchen sheets, track payments, manage refunds." },
-            { n: "07", title: "Auto label printing", desc: "Print individual kitchen labels for every order — name, allergens, add-ons. No manual sorting." },
-            { n: "08", title: "Discount module", desc: "Create promo codes, percentage or flat discounts, and set usage limits — applied automatically at checkout." },
-            { n: "09", title: "Multi-day checkout", desc: "Customers can order across multiple delivery dates in a single checkout — fewer drop-offs, more committed orders." },
+            { n: "04", title: "Multi-location support", desc: "Serve any number of locations from a single dashboard, each with its own delivery schedule." },
+            { n: "05", title: "Live order dashboard", desc: "See every order in real time. Export kitchen sheets, track payments, manage refunds." },
+            { n: "06", title: "Auto label printing", desc: "Print individual kitchen labels for every order — name, allergens, add-ons. No manual sorting." },
+            { n: "07", title: "Discount module", desc: "Create promo codes, percentage or flat discounts, and set usage limits — applied automatically at checkout." },
+            { n: "08", title: "Multi-day checkout", desc: "Customers can order across multiple delivery dates in a single checkout — fewer drop-offs, more committed orders." },
           ].map((f) => (
             <div key={f.n} style={{
               border: "0.5px solid #e2e8f0", borderRadius: 12, padding: 18, background: "#ffffff",
