@@ -208,6 +208,21 @@ export default async function OrderPage({
                     description: item.description,
                     imageUrl: item.imageUrl ?? null,
                     basePriceCents: item.basePriceCents,
+                    // Required-choices and sizes were being stripped here when
+                    // mapping the prisma row → wire shape, so the OrderForm
+                    // received items without them. The server still validates
+                    // against the live DB and would reject submission with a
+                    // confusing "Choose a size for X before adding it to the
+                    // cart" error — even though the customer never saw the
+                    // size picker. Pass them through so the picker renders.
+                    requiredChoices: item.requiredChoices,
+                    sizes: item.sizes.map((s) => ({
+                      id: s.id,
+                      name: s.name,
+                      priceCents: s.priceCents,
+                      sortOrder: s.sortOrder,
+                      isDefault: s.isDefault,
+                    })),
                     options: item.options.map((o) => ({
                       id: o.id,
                       name: o.name,
