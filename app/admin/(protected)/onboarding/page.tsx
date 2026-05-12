@@ -291,18 +291,36 @@ export default async function OnboardingPage({
       ? requestedStep
       : parseInt(firstTodoStep, 10);
 
+  // Stepper display is condensed from 10 sub-steps into 5 logical
+  // groups so the operator sees 5 dots instead of 10. The URL routing
+  // and server actions still use the original sub-step numbers 1-10.
+  // Group → sub-step mapping:
+  //   About you           → 1 (type) + 2 (branding)
+  //   Connect Stripe      → 3
+  //   Menu & locations    → 4 (location) + 5 (menu)
+  //   Delivery schedule   → 6
+  //   Go live             → 7 (team) + 8 (test) + 9 (notify) + 10 (share)
+  const isDone = (n: number) => status[n] === "done";
+  const allDone = (nums: number[]) => nums.every(isDone);
+  const isCurrent = (nums: number[]) => nums.includes(activeStep);
+  const groupStatus = (nums: number[]) =>
+    allDone(nums) ? "done" as const :
+    isCurrent(nums) ? "current" as const :
+    "todo" as const;
+
   const steps: WizardStep[] = [
-    { id: 1,  title: "Operator type",      blurb: "School, office, or both",        status: status[1] === "done" ? "done" : (activeStep === 1 ? "current" : "todo") },
-    { id: 2,  title: "Branding",           blurb: "Logo, photo, colors, fonts",     status: status[2] === "done" ? "done" : (activeStep === 2 ? "current" : "todo") },
-    { id: 3,  title: "Connect Stripe",     blurb: "Get paid by customers",          status: status[3] === "done" ? "done" : (activeStep === 3 ? "current" : "todo") },
-    { id: 4,  title: "First location",     blurb: "Where you serve",                status: status[4] === "done" ? "done" : (activeStep === 4 ? "current" : "todo") },
-    { id: 5,  title: "Menu items",         blurb: "What's on offer",                status: status[5] === "done" ? "done" : (activeStep === 5 ? "current" : "todo") },
-    { id: 6,  title: "Recurring schedule", blurb: "When you deliver",               status: status[6] === "done" ? "done" : (activeStep === 6 ? "current" : "todo") },
-    { id: 7,  title: "Invite team",        blurb: "Co-owners & staff",              status: status[7] === "done" ? "done" : (activeStep === 7 ? "current" : "todo"), optional: true },
-    { id: 8,  title: "Test order",         blurb: "Try it as a customer",           status: status[8] === "done" ? "done" : (activeStep === 8 ? "current" : "todo") },
-    { id: 9,  title: "Notifications",      blurb: "Kitchen sheet, reminders",       status: status[9] === "done" ? "done" : (activeStep === 9 ? "current" : "todo"), optional: true },
-    { id: 10, title: "Share & launch",     blurb: "Tell customers, go live",        status: status[10] === "done" ? "done" : (activeStep === 10 ? "current" : "todo") },
+    { id: 1,  title: "About you",          blurb: "Operator type + branding",      status: groupStatus([1, 2]) },
+    { id: 3,  title: "Connect Stripe",     blurb: "Get paid by customers",          status: groupStatus([3]) },
+    { id: 4,  title: "Menu & locations",   blurb: "What you sell, where",           status: groupStatus([4, 5]) },
+    { id: 6,  title: "Delivery schedule",  blurb: "When you deliver",               status: groupStatus([6]) },
+    { id: 7,  title: "Go live",            blurb: "Team, test order, share — finish at your pace", status: groupStatus([7, 8, 9, 10]) },
   ];
+
+  // Map the actual activeStep (1-10) to its group head so the stepper
+  // highlights the right row when the user is on a sub-step.
+  const groupHeadFor = (n: number) =>
+    n <= 2 ? 1 : n === 3 ? 3 : n <= 5 ? 4 : n === 6 ? 6 : 7;
+  const displayActiveStep = groupHeadFor(activeStep);
 
   return (
     <div className="space-y-5 pb-10">
@@ -328,7 +346,7 @@ export default async function OnboardingPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-5 items-start">
         <aside className="lg:sticky lg:top-4">
-          <WizardStepper steps={steps} activeStepId={activeStep} />
+          <WizardStepper steps={steps} activeStepId={displayActiveStep} />
         </aside>
 
         <main>
@@ -336,7 +354,7 @@ export default async function OnboardingPage({
           {activeStep === 1 && (
             <form action={saveOperatorType} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 1 of 10</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 1 of 5 · About you · Choose type</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">What kind of operation are you?</h2>
                 <p className="text-[12px] text-slate-500 mt-1">We&apos;ll seed sensible defaults for you. You can change this later.</p>
               </div>
@@ -405,7 +423,7 @@ export default async function OnboardingPage({
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
               <form id="onboarding-branding-form" action={saveBranding} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 2 of 10</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 1 of 5 · About you · Set branding</p>
                   <h2 className="text-[18px] font-bold text-ink mt-1">Make it yours</h2>
                   <p className="text-[12px] text-slate-500 mt-1">Watch the preview update as you change things.</p>
                 </div>
@@ -469,7 +487,7 @@ export default async function OnboardingPage({
           {activeStep === 3 && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 10</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 2 of 5 · Connect Stripe</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Connect Stripe so customers can pay you</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   Customer payments go directly to your Stripe account. LunchPad takes a small platform fee automatically.
@@ -508,7 +526,7 @@ export default async function OnboardingPage({
           {activeStep === 4 && (
             <form action={createFirstLocation} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 4 of 10</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 5 · Menu & locations · Add a location</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Add your first location</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   {locationCount > 0
@@ -581,7 +599,7 @@ export default async function OnboardingPage({
           {activeStep === 5 && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 10</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 5 · Menu & locations · Build menu</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Build your menu</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   You currently have <strong>{menuItemCount}</strong> active item{menuItemCount === 1 ? "" : "s"}. We recommend at least 3 to launch.
@@ -619,7 +637,7 @@ export default async function OnboardingPage({
           {activeStep === 6 && (
             <form action={generateRecurringForWizard} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 6 of 10</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 4 of 5 · Delivery schedule</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Generate a recurring schedule</h2>
                 <p className="text-[12px] text-slate-500 mt-1">Pick a date range and weekday pattern. We&apos;ll create the dates and auto-attach your menu items.</p>
               </div>
@@ -719,7 +737,7 @@ export default async function OnboardingPage({
           {activeStep === 7 && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 7 of 10 (optional)</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Invite team (optional)</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Invite your team</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   You currently have <strong>{teamCount}</strong> team member{teamCount === 1 ? "" : "s"}.
@@ -744,7 +762,7 @@ export default async function OnboardingPage({
           {activeStep === 8 && (
             <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 8 of 10</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Place a test order</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Place a test order</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   Open your customer ordering page in a new tab. Place a real order — use a $0.50 menu item or your real card; you&apos;ll refund yourself in a click. This is the moment you&apos;ll feel confident sharing the URL with customers.
@@ -784,7 +802,7 @@ export default async function OnboardingPage({
           {activeStep === 9 && (
             <form action={saveNotifications} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 9 of 10 (optional)</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Notifications (optional)</p>
                 <h2 className="text-[18px] font-bold text-ink mt-1">Notification preferences</h2>
                 <p className="text-[12px] text-slate-500 mt-1">
                   Auto-email the kitchen prep sheet on each delivery day. You can change this any time in Settings → Notifications.
@@ -825,7 +843,7 @@ export default async function OnboardingPage({
                 <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-3">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Step 10 of 10 — last one!</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Step 5 of 5 · Go live · Share & launch — last one!</p>
                 <h2 className="text-[22px] font-bold text-ink mt-1">You&apos;re ready to launch.</h2>
                 <p className="text-[13px] text-slate-600 mt-1">
                   Share the URL below with your customers, then click <strong>Launch</strong> when you&apos;re done.

@@ -4,6 +4,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
+import { HomeNudges, type Nudge } from "@/components/admin/home-nudges";
 
 export const dynamic = "force-dynamic";
 
@@ -208,6 +209,44 @@ export default async function AdminDashboardPage() {
   }
 
 
+  // ── Home nudges (replacement for blocking onboarding steps) ─────
+  // Each banner shows only when its underlying condition is still
+  // pending; HomeNudges lets the user dismiss them via localStorage.
+  const adminUserCount = await prisma.adminUser.count({
+    where: { restaurantId: restaurant.id },
+  });
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const recentSignup = restaurant.createdAt >= thirtyDaysAgo;
+  const nudges: Nudge[] = [];
+  if (adminUserCount === 1) nudges.push({
+    kind: "invite_team",
+    title: "Working with others?",
+    body: "Invite teammates so you do not have to manage every order alone.",
+    ctaText: "Invite team",
+    ctaHref: "/admin/team",
+  });
+  if (!restaurant.kitchenSheetSendHour) nudges.push({
+    kind: "notifications",
+    title: "Want a daily kitchen sheet?",
+    body: "Get the days orders emailed to you automatically at a time of your choosing.",
+    ctaText: "Configure notifications",
+    ctaHref: "/admin/settings?tab=notifications",
+  });
+  if (!restaurant.testOrderPlacedAt && recentSignup) nudges.push({
+    kind: "test_order",
+    title: "Try ordering as a customer",
+    body: "Place a test order to see what your customers experience. Refundable in one click afterwards.",
+    ctaText: "Place a test order",
+    ctaHref: orderingUrl,
+  });
+  if (allTimePaid === 0) nudges.push({
+    kind: "share_url",
+    title: "Share your ordering URL",
+    body: "You are set up but no orders yet. Send the URL to your customers and start taking orders.",
+    ctaText: "Copy URL",
+    ctaHref: "/admin/settings?tab=domain",
+  });
+
   return (
     <div className="space-y-5 pb-10">
 
@@ -240,6 +279,9 @@ export default async function AdminDashboardPage() {
           </a>
         </div>
       </div>
+
+      {/* ── Nudge banners ─────────────────────────────────────────── */}
+      <HomeNudges nudges={nudges} slug={restaurant.slug} />
 
       {/* ── Stat tiles ───────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -277,6 +319,30 @@ export default async function AdminDashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Sales analytics drill-down ──────────────────────────── */}
+      {/* Reports used to be its own top-level tab. We folded the
+          nav entry into Home so operators have one daily landing
+          page; the deep analytics view (charts, date breakdowns,
+          CSV export) is still accessible one click away. */}
+      <Link href="/admin/reports" className="block rounded-[14px] border border-slate-100 bg-white px-4 py-3.5 no-underline hover:border-red-100 hover:bg-red-50 transition">
+        <div className="flex items-center gap-3">
+          <div style={{
+            width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+            background: "#fff1f3", display: "flex",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-ink">Sales analytics</p>
+            <p className="text-[11px] text-slate-400">Revenue trends, top items, date and location breakdowns, CSV export</p>
+          </div>
+          <span className="text-slate-300 text-[18px]">›</span>
+        </div>
+      </Link>
 
       {/* ── Next delivery spotlight ───────────────────────────────── */}
       {nextDelivery && (
