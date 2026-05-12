@@ -180,6 +180,80 @@ function stripHtmlPreservingImages(html: string, sourceUrl: string): string {
   return text.slice(0, MAX_PAGE_TEXT_CHARS);
 }
 
+// ─── JSON repair ─────────────────────────────────────────────────────────
+
+/**
+ * Resilient JSON-array parser for LLM output.
+ *
+ * Claude generally produces clean JSON, but with long inputs (large
+ * menus → ~50+ items × multiple fields) the response can be cut off
+ * mid-stream or carry a stray trailing comma. Strict JSON.parse
+ * blows up on either. This helper attempts two repairs before
+ * giving up:
+ *
+ *   1. Strip code fences (we already do this elsewhere, kept here
+ *      for callers that pass raw).
+ *   2. Remove trailing commas inside arrays/objects.
+ *   3. If the array never closed, walk back to the last balanced
+ *      `}` and close the array there — losing the partial trailing
+ *      item but salvaging everything that came before.
+ *
+ * Returns null when no repair works; caller throws.
+ */
+function tryParseJsonArray(raw: string): unknown[] | null {
+  const cleaned = raw
+    .replace(/^\s*\x60\x60\x60(?:json)?\n?/i, "")
+    .replace(/\n?\x60\x60\x60\s*$/i, "")
+    .trim();
+
+  // Attempt 1: as-is.
+  try {
+    const v = JSON.parse(cleaned);
+    return Array.isArray(v) ? v : null;
+  } catch { /* fall through */ }
+
+  // Attempt 2: strip trailing commas before ] or }.
+  const noTrailingCommas = cleaned.replace(/,(\s*[\]\}])/g, "$1");
+  if (noTrailingCommas !== cleaned) {
+    try {
+      const v = JSON.parse(noTrailingCommas);
+      return Array.isArray(v) ? v : null;
+    } catch { /* fall through */ }
+  }
+
+  // Attempt 3: truncation recovery. Find the last `}` that ends
+  // a top-level item (depth back to 1, since the array bracket
+  // is depth 0). Slice there and append `]`.
+  let depth = 0;
+  let lastTopLevelClose = -1;
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < noTrailingCommas.length; i++) {
+    const ch = noTrailingCommas[i];
+    if (escape) { escape = false; continue; }
+    if (ch === "\\\\") { escape = true; continue; }
+    if (ch === "\"") { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") {
+      depth--;
+      if (depth === 1 && ch === "}") lastTopLevelClose = i;
+    }
+  }
+  if (lastTopLevelClose > 0) {
+    const repaired = noTrailingCommas.slice(0, lastTopLevelClose + 1) + "]";
+    // Strip any partial leading `[` we might double up on (defensive).
+    const startBracket = repaired.indexOf("[");
+    if (startBracket === -1) return null;
+    try {
+      const v = JSON.parse(repaired.slice(startBracket));
+      return Array.isArray(v) ? v : null;
+    } catch { /* fall through */ }
+  }
+
+  return null;
+}
+
 // ─── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -349,7 +423,7 @@ ${pageText}`;
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
+        max_tokens: 8000,
         messages: [{ role: "user", content: prompt }],
       }),
       signal: AbortSignal.timeout(30000),
@@ -361,11 +435,13 @@ ${pageText}`;
     }
 
     const data = await anthropicRes.json();
-    const raw = data?.content?.[0]?.text ?? "[]";
-    const cleaned = raw.replace(/^\`\`\`(?:json)?\n?/i, "").replace(/\n?\`\`\`$/i, "").trim();
-    const parsed: unknown = JSON.parse(cleaned);
-
-    if (!Array.isArray(parsed)) throw new Error("Unexpected response shape");
+    const raw: string = data?.content?.[0]?.text ?? "[]";
+    // Resilient parse — tolerates trailing commas and mid-stream
+    // truncation (Claude occasionally cuts off on very large menus).
+    const parsed = tryParseJsonArray(raw);
+    if (!parsed) {
+      throw new Error("AI response was not valid JSON. The menu may be too large for one call; try a smaller URL or use Excel upload.");
+    }
 
     // Sanitize each item — defensive against any oddities in the model's
     // output (missing fields, wrong types, hallucinated arrays). We treat
