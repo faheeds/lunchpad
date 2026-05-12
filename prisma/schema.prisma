@@ -296,6 +296,7 @@ model MenuItem {
   updatedAt           DateTime           @updatedAt
   restaurant          Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   options             MenuOption[]
+  sizes               MenuItemSize[]
   orderItems          OrderItem[]
   availability        DeliveryMenuItem[]
   weeklyPlans         WeeklyLunchPlan[]
@@ -522,7 +523,15 @@ model OrderItem {
   orderId             String
   menuItemId          String
   itemNameSnapshot    String
+  /// Resolved per-unit price for this line. When the menu item has sizes
+  /// and a size was selected, this is that size's priceCents. Otherwise
+  /// it's the MenuItem.basePriceCents at order time. `lineTotalCents`
+  /// adds add-on deltas on top of this.
   basePriceCents      Int
+  /// Snapshot of the chosen size's display name, e.g. "Medium" or
+  /// "12-inch". Null when the item has no sizes. Used by the kitchen
+  /// sheet + customer receipt to render "Smash Burger (Medium)".
+  sizeName            String?
   additions           String[]
   removals            String[]
   allergyNotes        String?
@@ -765,4 +774,49 @@ enum DiscountKind {
 enum DiscountScope {
   ORDER
   ITEMS
+}
+
+// ─── MENU ITEM SIZES ─────────────────────────────────────────────────────────
+//
+// Per-size absolute pricing for menu items that come in multiple sizes
+// (a 12oz vs. 16oz latte, a 6-inch vs. 12-inch sub, half vs. whole salad).
+// Backward-compatible: items WITHOUT any rows here keep using
+// MenuItem.basePriceCents exactly as today — the menu and order flows
+// treat them as single-price items.
+//
+// Semantics: when a menu item has any sizes, the customer MUST pick one
+// before adding to cart (server validates this in createPendingOrder).
+// The picked size's `priceCents` becomes the OrderItem's per-unit price;
+// add-on deltas and removals still stack on top normally.
+//
+// We chose absolute prices instead of deltas-off-a-base because real
+// menus usually price sizes as discrete items ($4 / $5 / $6) rather
+// than as offsets, and operators tend to set them that way.
+
+model MenuItemSize {
+  id          String   @id @default(cuid())
+  menuItemId  String
+  /// Display name shown in the size picker and on receipts/kitchen sheets.
+  /// Free-form so any sizing convention works (S/M/L, ounces, inches,
+  /// "half"/"whole"). Stored as-typed; uniqueness is per-item, not global.
+  name        String
+  /// Absolute per-unit price in cents. Replaces MenuItem.basePriceCents
+  /// for this line when this size is selected.
+  priceCents  Int
+  /// Operator-controlled ordering. Picker renders in ascending sortOrder
+  /// so operators can set a sensible default progression (Small first,
+  /// Large last). Ties broken by name.
+  sortOrder   Int      @default(0)
+  /// When true, the order modal pre-selects this size on open. Exactly
+  /// zero or one row per menu item should be flagged true — the admin UI
+  /// enforces this but we don't add a partial unique index because it'd
+  /// complicate the bulk update flow.
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, name])
+  @@index([menuItemId])
 }

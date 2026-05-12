@@ -80,7 +80,19 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
   const parsed = orderFormSchema.parse(input);
   const deliveryDate = await prisma.deliveryDate.findUnique({
     where: { id: parsed.deliveryDateId },
-    include: { school: true, menuAvailability: { include: { menuItem: { include: { options: true } } } } }
+    include: {
+      school: true,
+      menuAvailability: {
+        include: {
+          menuItem: {
+            include: {
+              options: true,
+              sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!deliveryDate || deliveryDate.schoolId !== parsed.schoolId) {
@@ -159,14 +171,39 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       throw new Error(`Choose a required option for ${menuItem.name} before adding it to the cart.`);
     }
 
+    // Resolve per-unit base price. Items with sizes use the picked
+    // size's absolute price; items without sizes use the legacy single
+    // basePriceCents on MenuItem. Validation rejects a missing size on
+    // a sized item so kitchen never sees ambiguous orders.
+    let lineBasePriceCents: number;
+    let sizeNameSnapshot: string | null = null;
+    if (menuItem.sizes.length > 0) {
+      if (!cartItem.size) {
+        throw new Error(`Choose a size for ${menuItem.name} before adding it to the cart.`);
+      }
+      const size = menuItem.sizes.find((s) => s.name === cartItem.size);
+      if (!size) {
+        throw new Error(`"${cartItem.size}" is not a valid size for ${menuItem.name}.`);
+      }
+      lineBasePriceCents = size.priceCents;
+      sizeNameSnapshot = size.name;
+    } else {
+      // No sizes defined → legacy single-price item. We still tolerate
+      // a stray `size` from the client (e.g. cached UI state) by ignoring
+      // it; otherwise we'd break customers who hit the form mid-deploy.
+      lineBasePriceCents = menuItem.basePriceCents;
+    }
+
     const additionCost = menuItem.options
       .filter((option) => cartItem.additions.includes(option.name))
       .reduce((sum, option) => sum + option.priceDeltaCents, 0);
-    const lineTotalCents = menuItem.basePriceCents + additionCost;
+    const lineTotalCents = lineBasePriceCents + additionCost;
 
     return {
       menuItem,
       choice: cartItem.choice,
+      sizeName: sizeNameSnapshot,
+      basePriceCents: lineBasePriceCents,
       additions: cartItem.additions,
       removals: cartItem.removals,
       lineTotalCents
@@ -245,7 +282,9 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
           create: normalizedItems.map((item) => ({
             menuItemId: item.menuItem.id,
             itemNameSnapshot: item.menuItem.name,
-            basePriceCents: item.menuItem.basePriceCents,
+            // Resolved per-unit price — already accounts for size selection.
+            basePriceCents: item.basePriceCents,
+            sizeName: item.sizeName,
             additions: item.choice ? [item.choice, ...item.additions] : item.additions,
             removals: item.removals,
             allergyNotes: parsed.allergyNotes || null,
@@ -367,7 +406,19 @@ export async function createAdminOrder(args: {
 
   const deliveryDate = await prisma.deliveryDate.findUnique({
     where: { id: parsed.deliveryDateId },
-    include: { school: true, menuAvailability: { include: { menuItem: { include: { options: true } } } } },
+    include: {
+      school: true,
+      menuAvailability: {
+        include: {
+          menuItem: {
+            include: {
+              options: true,
+              sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+            },
+          },
+        },
+      },
+    },
   });
   if (!deliveryDate || deliveryDate.schoolId !== parsed.schoolId) {
     throw new Error("Invalid delivery date for selected location.");
@@ -422,14 +473,35 @@ export async function createAdminOrder(args: {
       throw new Error(`Choose a required option for ${menuItem.name} before adding it.`);
     }
 
+    // Mirror the customer-side size resolution from createPendingOrder so
+    // an admin creating a manual order can't bypass the size requirement
+    // and end up with a $0 / NaN price on a sized item.
+    let lineBasePriceCents: number;
+    let sizeNameSnapshot: string | null = null;
+    if (menuItem.sizes.length > 0) {
+      if (!cartItem.size) {
+        throw new Error(`Choose a size for ${menuItem.name} before adding it.`);
+      }
+      const size = menuItem.sizes.find((s) => s.name === cartItem.size);
+      if (!size) {
+        throw new Error(`"${cartItem.size}" is not a valid size for ${menuItem.name}.`);
+      }
+      lineBasePriceCents = size.priceCents;
+      sizeNameSnapshot = size.name;
+    } else {
+      lineBasePriceCents = menuItem.basePriceCents;
+    }
+
     const additionCost = menuItem.options
       .filter((option) => cartItem.additions.includes(option.name))
       .reduce((sum, option) => sum + option.priceDeltaCents, 0);
-    const lineTotalCents = menuItem.basePriceCents + additionCost;
+    const lineTotalCents = lineBasePriceCents + additionCost;
 
     return {
       menuItem,
       choice: cartItem.choice,
+      sizeName: sizeNameSnapshot,
+      basePriceCents: lineBasePriceCents,
       additions: cartItem.additions,
       removals: cartItem.removals,
       lineTotalCents,
@@ -515,7 +587,8 @@ export async function createAdminOrder(args: {
           create: normalizedItems.map((item) => ({
             menuItemId: item.menuItem.id,
             itemNameSnapshot: item.menuItem.name,
-            basePriceCents: item.menuItem.basePriceCents,
+            basePriceCents: item.basePriceCents,
+            sizeName: item.sizeName,
             additions: item.choice ? [item.choice, ...item.additions] : item.additions,
             removals: item.removals,
             allergyNotes: parsed.allergyNotes || null,

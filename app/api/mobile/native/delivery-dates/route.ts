@@ -35,6 +35,7 @@ export async function GET() {
             menuItem: {
               include: {
                 options: { orderBy: { sortOrder: "asc" } },
+                sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
               },
             },
           },
@@ -86,6 +87,13 @@ export async function GET() {
           // required choice — the iOS order modal renders a picker
           // section only when this is non-empty.
           requiredChoices: e.menuItem.requiredChoices,
+          // Size variants. Same picker pattern as requiredChoices but
+          // the chosen size's priceCents drives the line total.
+          sizes: e.menuItem.sizes.map((s) => ({
+            id: s.id,
+            name: s.name,
+            priceCents: s.priceCents,
+          })),
           options: e.menuItem.options.map((o) => ({
             id: o.id,
             name: o.name,

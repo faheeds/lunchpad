@@ -149,6 +149,74 @@ async function updateItemImageUrl(formData: FormData) {
   revalidatePath("/menu");
 }
 
+// Sizes editor — parses a textarea where each line is one size in the
+// form "Name | Price". Whitespace tolerant; lines without a valid name
+// or price are skipped. Whole-dollar amounts and decimals both work.
+// Replaces all existing sizes for the item (admin sees a textarea of
+// current sizes, edits inline, saves — easier than per-row add/remove).
+async function updateItemSizes(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+  const id = String(formData.get("id"));
+  const raw = String(formData.get("sizes") || "");
+
+  // Parse each line as "Name | Price". Tolerant: also accept "Name: $4.50",
+  // "Name - 4.50", or "Name 4.50" (last whitespace-separated token = price).
+  const seenNames = new Set<string>();
+  const sizes: { name: string; priceCents: number }[] = [];
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // Find the LAST numeric token in the line — that's the price.
+    const match = trimmed.match(/^(.+?)[|:\-,\s]+\$?(\d+(?:\.\d{1,2})?)\s*$/);
+    if (!match) continue;
+    const name = match[1].trim();
+    const priceCents = Math.round(parseFloat(match[2]) * 100);
+    if (!name || !Number.isFinite(priceCents) || priceCents < 0) continue;
+    const key = name.toLowerCase();
+    if (seenNames.has(key)) continue;
+    seenNames.add(key);
+    sizes.push({ name, priceCents });
+  }
+
+  // Tenant-scoped
+  const item = await prisma.menuItem.findFirst({
+    where: { id, restaurantId: restaurant.id },
+    select: { id: true },
+  });
+  if (!item) throw new Error("Item not found");
+
+  // Replace strategy: nuke existing sizes, recreate from parsed list. We
+  // chose this over diff-and-update because (a) the admin UI is a single
+  // textarea so the operator's intent is the WHOLE new list, and
+  // (b) OrderItem.sizeName is a snapshot, so historic orders keep their
+  // size names even after we delete the MenuItemSize row.
+  await prisma.$transaction([
+    prisma.menuItemSize.deleteMany({ where: { menuItemId: id } }),
+    ...(sizes.length > 0
+      ? [
+          prisma.menuItemSize.createMany({
+            data: sizes.map((s, idx) => ({
+              menuItemId: id,
+              name: s.name,
+              priceCents: s.priceCents,
+              sortOrder: idx,
+              // First size is the default-selected one in the customer
+              // picker. Operators can re-order by editing the textarea
+              // since input order is preserved.
+              isDefault: idx === 0,
+            })),
+          }),
+        ]
+      : []),
+  ]);
+
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+  revalidatePath("/order");
+}
+
 async function updateItemTagsAndCategory(formData: FormData) {
   "use server";
   const restaurant = await requireRestaurant();
@@ -275,6 +343,7 @@ export default async function AdminMenuPage() {
       include: {
         options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] },
         schoolRestrictions: { select: { schoolId: true } },
+        sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
       },
       orderBy: { name: "asc" },
     }),
@@ -523,6 +592,39 @@ export default async function AdminMenuPage() {
                         <button type="submit"
                           className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-900 transition">
                           Save required choices
+                        </button>
+                      </form>
+
+                      {/* Sizes — multi-price variants. Each line: "Name | Price"
+                          (separators "|", ":", "-", "," or whitespace all work,
+                          so an operator can paste real-world menu listings).
+                          When set, the per-item basePriceCents becomes a
+                          fallback the customer never sees — they always pick
+                          a size first. */}
+                      <form action={updateItemSizes} className="space-y-2 border-t border-slate-50 pt-3">
+                        <input type="hidden" name="id" value={item.id} />
+                        <div>
+                          <label className="text-[11px] text-slate-500 block mb-1">
+                            Sizes
+                            <span className="text-slate-400 font-normal ml-1">
+                              (one per line, e.g. <span className="font-mono">Small | 4.50</span> — leave blank for single-price)
+                            </span>
+                          </label>
+                          <textarea
+                            name="sizes"
+                            defaultValue={(item.sizes ?? []).map((s) => `${s.name} | ${(s.priceCents / 100).toFixed(s.priceCents % 100 === 0 ? 0 : 2)}`).join("\n")}
+                            placeholder={"e.g.\nSmall | 4.00\nMedium | 5.00\nLarge | 6.00"}
+                            rows={Math.max(3, (item.sizes?.length ?? 0) + 1)}
+                            className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-2 leading-snug resize-y font-mono"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            Customers pick exactly one to add this item to their cart. The size's price replaces
+                            the item's base price; add-ons still stack on top.
+                          </p>
+                        </div>
+                        <button type="submit"
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-900 transition">
+                          Save sizes
                         </button>
                       </form>
 

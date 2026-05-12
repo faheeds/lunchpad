@@ -28,6 +28,7 @@ export async function GET() {
       where: { restaurantId: restaurant.id, isActive: true },
       include: {
         options: { orderBy: { sortOrder: "asc" } },
+        sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
       },
       orderBy: [
         { category: "asc" },
@@ -59,6 +60,15 @@ export async function GET() {
         // the item to their cart (e.g. Beef / Chicken / Vegan for a
         // Build-Your-Own Burger). Empty array = no required choice.
         requiredChoices: item.requiredChoices,
+        // Size variants with absolute per-size prices. When non-empty
+        // the iOS order modal renders a size picker and uses the
+        // selected size's priceCents as the line's base price. Empty
+        // = single-price item; basePriceCents is canonical.
+        sizes: item.sizes.map((s) => ({
+          id: s.id,
+          name: s.name,
+          priceCents: s.priceCents,
+        })),
         options: item.options.map((o) => ({
           id: o.id,
           name: o.name,

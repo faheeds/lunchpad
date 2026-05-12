@@ -1,6 +1,10 @@
 export type OrderCartItemInput = {
   menuItemId: string;
   choice?: string;
+  /** Size name when the menu item has size variants. Optional for
+   *  items without sizes; required (validated server-side) when the
+   *  item declared sizes. */
+  size?: string;
   additions: string[];
   removals: string[];
 };

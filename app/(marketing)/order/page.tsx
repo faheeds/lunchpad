@@ -39,7 +39,14 @@ export default async function OrderPage({
       school: true,
       menuAvailability: {
         where: { isAvailable: true, menuItem: { is: { isActive: true } } },
-        include: { menuItem: { include: { options: { orderBy: { sortOrder: "asc" } } } } }
+        include: {
+          menuItem: {
+            include: {
+              options: { orderBy: { sortOrder: "asc" } },
+              sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+            },
+          },
+        },
       },
       // Count PAID orders per item to determine sold-out status
       orders: {

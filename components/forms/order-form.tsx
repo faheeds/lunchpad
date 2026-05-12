@@ -18,6 +18,12 @@ type DeliveryDate = {
 // wrap awkwardly on phones and a single dropdown scrolls cleaner.
 const LOCATION_DROPDOWN_THRESHOLD = 4;
 type MenuOption = { id: string; name: string; optionType: "ADD_ON" | "REMOVAL"; priceDeltaCents: number };
+type MenuItemSize = {
+  id: string;
+  name: string;
+  priceCents: number;
+};
+
 type MenuItem = {
   id: string;
   slug: string;
@@ -33,6 +39,10 @@ type MenuItem = {
    *  a "Build Your Own Burger"). Optional for back-compat — when empty
    *  the helper falls back to a hardcoded legacy slug map. */
   requiredChoices?: string[];
+  /** Operator-set size variants (e.g. Small / Medium / Large). When
+   *  non-empty, the customer MUST pick a size and the size's priceCents
+   *  becomes the line's base price. Items without sizes use basePriceCents. */
+  sizes?: MenuItemSize[];
   options: MenuOption[];
 };
 type CartItem = {
@@ -40,21 +50,33 @@ type CartItem = {
   menuItemId: string;
   itemName: string;
   choice?: string;
+  /** Selected size's display name (e.g. "Medium"). Only set when the
+   *  menu item declared sizes. Different sizes of the same item are
+   *  always separate cart lines (see buildLineKey). */
+  size?: string;
   additions: string[];
   removals: string[];
-  /** Per-unit total (base + additions). Multiply by `quantity` for the line total. */
+  /** Per-unit total (base + additions). For sized items the base is
+   *  the size's priceCents, not the menu item's basePriceCents.
+   *  Multiply by `quantity` for the line total. */
   lineTotalCents: number;
   /** Number of identical units of this configuration. Always ≥ 1. */
   quantity: number;
 };
 
 /** Two cart lines share an identity when they refer to the same menu
- *  item with the same choice/additions/removals — adding an item with
- *  matching customizations bumps the quantity instead of duplicating. */
-function buildLineKey(menuItemId: string, choice: string | undefined, additions: string[], removals: string[]): string {
+ *  item with the same size/choice/additions/removals — adding an item
+ *  with matching customizations bumps the quantity instead of duplicating. */
+function buildLineKey(
+  menuItemId: string,
+  size: string | undefined,
+  choice: string | undefined,
+  additions: string[],
+  removals: string[],
+): string {
   const a = [...additions].sort().join("|");
   const r = [...removals].sort().join("|");
-  return `${menuItemId}::${choice ?? ""}::${a}::${r}`;
+  return `${menuItemId}::${size ?? ""}::${choice ?? ""}::${a}::${r}`;
 }
 
 type OrderFormProps = {
@@ -123,6 +145,10 @@ export function OrderForm({
   const [selectedDeliveryDateId, setSelectedDeliveryDateId] = useState(defaultDeliveryDateId);
   const [selectedMenuItemId, setSelectedMenuItemId] = useState("");
   const [selectedChoice, setSelectedChoice] = useState("");
+  /** Currently-picked size for the selected menu item. Empty string =
+   *  no selection yet (auto-set to the first available size when an item
+   *  with sizes is opened in the customize panel). */
+  const [selectedSize, setSelectedSize] = useState("");
   const [selectedAdditions, setSelectedAdditions] = useState<string[]>([]);
   const [selectedRemovals, setSelectedRemovals] = useState<string[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>(initialCartItems);
@@ -223,17 +249,35 @@ export function OrderForm({
     itemSlugAutoSelected.current = true;
     setSelectedMenuItemId(match.id);
     setSelectedChoice("");
+    setSelectedSize("");
     setSelectedAdditions([]);
     setSelectedRemovals([]);
   }, [step, initialItemSlug, menuItems]);
 
+  // Auto-pick the first size when a sized item is opened in the customize
+  // panel so the Add-to-cart button isn't disabled by default. The
+  // operator-set sortOrder is preserved, so the first size is whatever
+  // they wanted as the default.
+  useEffect(() => {
+    if (!selectedMenuItem) return;
+    const sizes = selectedMenuItem.sizes ?? [];
+    if (sizes.length > 0 && !selectedSize) {
+      setSelectedSize(sizes[0].name);
+    }
+  }, [selectedMenuItem, selectedSize]);
+
   const selectedItemTotalCents = useMemo(() => {
     if (!selectedMenuItem) return 0;
+    // Sized items: line base = picked size's price (falls back to first
+    // size if state hasn't caught up). Non-sized: legacy basePriceCents.
+    const sizes = selectedMenuItem.sizes ?? [];
+    const sizeMatch = sizes.length > 0 ? (sizes.find((s) => s.name === selectedSize) ?? sizes[0]) : null;
+    const baseCents = sizeMatch ? sizeMatch.priceCents : selectedMenuItem.basePriceCents;
     const extra = selectedMenuItem.options
       .filter((o) => o.optionType === "ADD_ON" && selectedAdditions.includes(o.name))
       .reduce((sum, o) => sum + o.priceDeltaCents, 0);
-    return selectedMenuItem.basePriceCents + extra;
-  }, [selectedAdditions, selectedMenuItem]);
+    return baseCents + extra;
+  }, [selectedAdditions, selectedMenuItem, selectedSize]);
 
   const totalCents = useMemo(() => cartItems.reduce((s, i) => s + i.lineTotalCents * i.quantity, 0), [cartItems]);
   const totalUnits = useMemo(() => cartItems.reduce((s, i) => s + i.quantity, 0), [cartItems]);
@@ -272,11 +316,14 @@ export function OrderForm({
   function addToCart() {
     if (!selectedMenuItem) { setError("Select an item first."); return; }
     if (requiredChoices.length && !selectedChoice) { setError(`Choose a required option for ${selectedMenuItem.name}.`); return; }
+    const hasSizes = (selectedMenuItem.sizes ?? []).length > 0;
+    if (hasSizes && !selectedSize) { setError(`Choose a size for ${selectedMenuItem.name}.`); return; }
     const choice = selectedChoice || undefined;
-    const newKey = buildLineKey(selectedMenuItem.id, choice, selectedAdditions, selectedRemovals);
+    const size = hasSizes ? selectedSize : undefined;
+    const newKey = buildLineKey(selectedMenuItem.id, size, choice, selectedAdditions, selectedRemovals);
     setCartItems((cur) => {
-      // Same item + same customizations → bump qty instead of adding a duplicate row.
-      const existing = cur.findIndex((i) => buildLineKey(i.menuItemId, i.choice, i.additions, i.removals) === newKey);
+      // Same item + same size + same customizations → bump qty instead of adding a duplicate row.
+      const existing = cur.findIndex((i) => buildLineKey(i.menuItemId, i.size, i.choice, i.additions, i.removals) === newKey);
       if (existing >= 0) {
         const next = [...cur];
         next[existing] = { ...next[existing], quantity: next[existing].quantity + 1 };
@@ -284,11 +331,11 @@ export function OrderForm({
       }
       return [...cur, {
         id: crypto.randomUUID(), menuItemId: selectedMenuItem.id, itemName: selectedMenuItem.name,
-        choice, additions: selectedAdditions, removals: selectedRemovals,
+        choice, size, additions: selectedAdditions, removals: selectedRemovals,
         lineTotalCents: selectedItemTotalCents, quantity: 1,
       }];
     });
-    setSelectedChoice(""); setSelectedAdditions([]); setSelectedRemovals([]); setSelectedMenuItemId(""); setError("");
+    setSelectedChoice(""); setSelectedSize(""); setSelectedAdditions([]); setSelectedRemovals([]); setSelectedMenuItemId(""); setError("");
   }
 
   function incrementCartItem(id: string) {
@@ -405,7 +452,7 @@ export function OrderForm({
       // unchanged while letting the UI collapse identical configurations.
       cartItems: cartItems.flatMap((i) =>
         Array.from({ length: i.quantity }, () => ({
-          menuItemId: i.menuItemId, choice: i.choice, additions: i.additions, removals: i.removals,
+          menuItemId: i.menuItemId, choice: i.choice, size: i.size, additions: i.additions, removals: i.removals,
         })),
       ),
       allergyNotes, dietaryNotes: null, specialInstructions: null,
@@ -784,7 +831,18 @@ export function OrderForm({
                             )}
                           </p>
                           <span className={cn("text-[13px] font-semibold flex-shrink-0", isSoldOut ? "text-slate-400 line-through" : isSelected ? "text-brand-700" : "text-ink")}>
-                            {fmt(item.basePriceCents)}
+                            {(() => {
+                              // Sized items: show a range "$4–$6". When only one
+                              // size exists it reads as a single price (no dash).
+                              const sizes = item.sizes ?? [];
+                              if (sizes.length > 0) {
+                                const prices = sizes.map((s) => s.priceCents);
+                                const min = Math.min(...prices);
+                                const max = Math.max(...prices);
+                                return min === max ? fmt(min) : `${fmt(min)}–${fmt(max)}`;
+                              }
+                              return fmt(item.basePriceCents);
+                            })()}
                           </span>
                         </div>
                         {getDesc(item) && <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{getDesc(item)}</p>}
@@ -805,6 +863,38 @@ export function OrderForm({
           {selectedMenuItem && (
             <div ref={customizePanelRef} className="rounded-[18px] border-2 border-brand-200 bg-brand-50 p-4 mb-4 space-y-3">
               <p className="text-[13px] font-semibold text-brand-900">Customize: {selectedMenuItem.name}</p>
+
+              {/* Size picker — radio chips with absolute prices. Renders
+                  ABOVE required-choices so the customer commits to size
+                  first (since size drives the total price). */}
+              {(selectedMenuItem.sizes ?? []).length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-ink mb-2">Size — choose one</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(selectedMenuItem.sizes ?? []).map((size) => {
+                      const active = selectedSize === size.name;
+                      return (
+                        <button
+                          key={size.id}
+                          type="button"
+                          onClick={() => setSelectedSize(size.name)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full border text-[12px] font-semibold transition",
+                            active
+                              ? "border-brand-600 bg-brand-50 text-brand-900"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+                          )}
+                        >
+                          {size.name}
+                          <span className={cn("ml-1.5 text-[11px] font-normal", active ? "text-brand-700" : "text-slate-500")}>
+                            {fmt(size.priceCents)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {requiredChoices.length > 0 && (
                 <div>
@@ -887,7 +977,10 @@ export function OrderForm({
                   return (
                     <div key={item.id} className="py-2.5 flex gap-3 items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-ink">{item.itemName}</p>
+                        <p className="text-[13px] font-semibold text-ink">
+                          {item.itemName}
+                          {item.size && <span className="text-slate-500 font-normal"> · {item.size}</span>}
+                        </p>
                         <p className="text-[11px] text-slate-500 leading-snug">
                           {[item.choice ? `${item.choice}` : "", item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ") || "No customizations"}
                         </p>
@@ -966,6 +1059,7 @@ export function OrderForm({
                     <p className="text-[13px] font-semibold text-ink">
                       {item.quantity > 1 && <span className="text-slate-500">{item.quantity}× </span>}
                       {item.itemName}
+                      {item.size && <span className="text-slate-500 font-normal"> · {item.size}</span>}
                     </p>
                     <p className="text-[11px] text-slate-500">{[item.choice, item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ")}</p>
                   </div>

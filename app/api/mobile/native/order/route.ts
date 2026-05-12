@@ -77,10 +77,13 @@ export async function POST(request: NextRequest) {
     // selected in the iOS app's item modal (mirrors the web order form's
     // CartItem.choice). For items without required choices it's just
     // omitted; createPendingOrder validates it against menuItem.requiredChoices.
+    // `size` is the optional size-variant name — required server-side
+    // when the menu item declared sizes, otherwise ignored.
     const cartItems = (body.items ?? []).map(
-      (i: { menuItemId: string; choice?: string; additions?: string[]; removals?: string[] }) => ({
+      (i: { menuItemId: string; choice?: string; size?: string; additions?: string[]; removals?: string[] }) => ({
         menuItemId: i.menuItemId,
         choice: i.choice,
+        size: i.size,
         additions: i.additions ?? [],
         removals: i.removals ?? [],
       })

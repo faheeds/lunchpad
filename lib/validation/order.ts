@@ -7,7 +7,12 @@ const optionalTextField = z.preprocess((value) => {
 
 export const orderCartItemSchema = z.object({
   menuItemId: z.string().min(1),
+  /** Required pick-one from MenuItem.requiredChoices, when present. */
   choice: z.string().optional(),
+  /** Size name from MenuItem.sizes[], when the item has sizes. The
+   *  engine resolves this to the corresponding priceCents at order time
+   *  and rejects the cart if the item has sizes but no size is sent. */
+  size: z.string().optional(),
   additions: z.array(z.string()).default([]),
   removals: z.array(z.string()).default([])
 });
