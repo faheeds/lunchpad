@@ -4,6 +4,7 @@ import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { prisma } from "@/lib/db";
 import { getCurrentRestaurant } from "@/lib/restaurant";
+import { getLabelsForOperator } from "@/lib/location-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +30,14 @@ export default async function HomePage() {
   if (restaurant) {
     const restaurantName = restaurant.name;
     const schoolCount = await prisma.school.count({ where: { restaurantId: restaurant.id, isActive: true } });
+    // Restaurant-wide label set — drives "school" vs "office" vs
+    // neutral (hybrid) copy across the tenant landing page.
+    const labels = getLabelsForOperator(restaurant.operatorType);
 
     const features = [
-      { text: schoolCount === 1 ? "1 school" : `${schoolCount} schools`, sub: "Fresh lunch delivered on-site", icon: "location", href: null },
+      { text: schoolCount === 1 ? `1 ${labels.type.toLowerCase()}` : `${schoolCount} ${labels.typePlural.toLowerCase()}`, sub: `Fresh lunch delivered on-site`, icon: "location", href: null },
       { text: "Full menu",      sub: "Burgers, salads, chicken & more",  icon: "menu",     href: "/menu"    },
-      { text: "Add Your Kids",  sub: "Faster checkout every time",       icon: "child",    href: "/account" },
+      { text: labels.unit === "Student" ? "Add Your Kids" : `Save ${labels.unitPlural}`,  sub: "Faster checkout every time",       icon: "child",    href: "/account" },
       { text: "Weekly planner", sub: "One checkout for the week",        icon: "calendar", href: "/weekly"  },
     ];
 
@@ -96,7 +100,7 @@ export default async function HomePage() {
                 <span style={{ color: "var(--accent)" }}>{restaurantName}</span>
               </h1>
               <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.72)", marginBottom: 20, lineHeight: 1.5 }}>
-                Fresh food delivered to your school &mdash; order for tomorrow or plan the whole week.
+                Fresh food delivered to your {labels.type.toLowerCase()} &mdash; order for tomorrow or plan the whole week.
               </p>
               <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                 <Link href="/order" style={{

@@ -104,6 +104,24 @@ export function getLabels(type: LocationType | null | undefined): LocationLabels
 }
 
 /**
+ * Operator-level (restaurant-wide) version: returns labels based on
+ * Restaurant.operatorType ("school" | "office" | "hybrid" | null). Used
+ * by customer-facing pages that need to decide global copy before any
+ * particular location is in scope (homepage, signup, navigation).
+ *
+ * - "school"  → school labels
+ * - "office"  → office labels
+ * - "hybrid"  → neutral / mixed labels
+ * - null/""   → school labels (legacy default)
+ */
+export function getLabelsForOperator(operatorType: string | null | undefined): LocationLabels {
+  const t = (operatorType ?? "").toLowerCase();
+  if (t === "office") return OFFICE_LABELS;
+  if (t === "hybrid") return getMergedLabels(["SCHOOL", "OFFICE"]);
+  return SCHOOL_LABELS;
+}
+
+/**
  * For UIs that span multiple location types (e.g. all-locations dashboard),
  * returns a "merged" label set that uses the most general terms.
  * If all locations are the same type, returns that type's labels exactly.
