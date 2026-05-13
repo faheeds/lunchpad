@@ -384,10 +384,10 @@ export function buildWelcomeRestaurantEmail(args: WelcomeRestaurantTemplateArgs)
     "",
     "Next steps:",
     "1. Add your menu items (photos, prices, add-ons)",
-    "2. Add your first school",
+    "2. Add your first location",
     "3. Create your first delivery dates",
     "4. Connect your Stripe account to accept payments",
-    "5. Share your ordering page with parents",
+    "5. Share your ordering page with your customers",
     "",
     "Your 14-day free trial has started. No credit card needed until the trial ends.",
     "",
@@ -396,9 +396,9 @@ export function buildWelcomeRestaurantEmail(args: WelcomeRestaurantTemplateArgs)
 
   const steps = [
     { n: "1", title: "Build your menu", body: "Add items with photos, prices, and customization options" },
-    { n: "2", title: "Add your school", body: "Set up your first school with delivery schedule" },
-    { n: "3", title: "Connect Stripe", body: "Link your Stripe account so parents can pay you directly" },
-    { n: "4", title: "Share your link", body: `Send ${args.orderingUrl} to your parent community` },
+    { n: "2", title: "Add your first location", body: "Set up your first school or office with delivery schedule" },
+    { n: "3", title: "Connect Stripe", body: "Link your Stripe account so customers can pay you directly" },
+    { n: "4", title: "Share your link", body: `Send ${args.orderingUrl} to your customers` },
   ];
 
   const html = `
@@ -449,11 +449,11 @@ export function buildWelcomeRestaurantEmail(args: WelcomeRestaurantTemplateArgs)
       <div style="${card};background:#f8fafc">
         <p style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px">Your ordering page</p>
         <p style="font-size:13px;font-family:monospace;color:#c41230;margin:0 0 4px">${args.orderingUrl}</p>
-        <p style="font-size:11px;color:#9ca3af;margin:0">Share this with parents once you&apos;ve completed setup</p>
+        <p style="font-size:11px;color:#9ca3af;margin:0">Share this with your customers once you&apos;ve completed setup</p>
       </div>
 
       <p style="font-size:11px;color:#9ca3af;text-align:center;margin-top:16px">
-        LunchPad &middot; School lunch ordering made simple
+        LunchPad &middot; Lunch ordering made simple
       </p>
     </div>
   `;
