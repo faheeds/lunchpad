@@ -185,6 +185,7 @@ export default async function OrderPage({
 
           {deliveryDates.length ? (
             <OrderForm
+              operatorType={restaurant.operatorType}
               deliveryDates={deliveryDates.map((date) => ({
                 id: date.id,
                 schoolId: date.schoolId,

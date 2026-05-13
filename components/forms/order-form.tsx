@@ -7,6 +7,7 @@ import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { getGradesForSchoolName } from "@/lib/grades";
 import { getLabels } from "@/lib/location-labels";
 import { cn } from "@/lib/utils";
+import { getLabelsForOperator } from "@/lib/location-labels";
 
 type DeliveryDate = {
   id: string; schoolId: string; deliveryDate: string; cutoffAt: string; orderingOpen: boolean;
@@ -92,6 +93,11 @@ type OrderFormProps = {
   unavailableReorderItems?: string[];
   /** Per delivery date ID: list of menuItemIds that have sold out */
   soldOutByDeliveryDate?: Record<string, string[]>;
+  /** Restaurant.operatorType — "school" | "office" | "hybrid" | null.
+   *  Drives whether user-facing copy says "Student" / "Grade" / "Parent" or
+   *  the office-appropriate equivalents. Defaults to school for legacy
+   *  restaurants whose operatorType isn't set yet. */
+  operatorType?: string | null;
 };
 
 function fmt(cents: number) {
@@ -133,7 +139,7 @@ function getCategoryIcon(category: string): string {
 type Step = 1 | 2 | 3 | 4;
 
 export function OrderForm({
-  deliveryDates, menuItemsByDeliveryDate, savedChildren = [],
+  deliveryDates, menuItemsByDeliveryDate, savedChildren = [], operatorType,
   initialParentProfile, initialSchoolId, initialDeliveryDateId, initialCartItems = [],
   initialItemSlug, unavailableReorderItems = [], soldOutByDeliveryDate = {},
 }: OrderFormProps) {
@@ -201,7 +207,14 @@ export function OrderForm({
   // Labels track the *currently selected* location's type. Before any
   // selection we default to school labels (the more common case) but the
   // form re-renders the moment the user picks a location.
-  const labels = getLabels(selectedSchool?.locationType);
+  // Labels resolution: once the customer picks a location, switch to that
+  // location's specific labels (per-location school-vs-office). Before any
+  // selection — including the very first stepper render — fall back to the
+  // restaurant-wide operator labels so an office-only tenant doesn't briefly
+  // see "Student" copy in the stepper title.
+  const labels = selectedSchool
+    ? getLabels(selectedSchool.locationType)
+    : getLabelsForOperator(operatorType);
   const isOffice = selectedSchool?.locationType === "OFFICE";
   const gradeOptions = getGradesForSchoolName(selectedSchoolName);
 
@@ -468,7 +481,8 @@ export function OrderForm({
 
   // Step 2 label tracks the location: "Student" for schools, "Diner" for offices,
   // and "Recipient" before a location is picked (we don't yet know which one).
-  const step2Label = selectedSchool ? labels.unit : "Recipient";
+  // Stepper label for step 2 — uses operator-aware labels even before a location is picked.
+  const step2Label = labels.unit;
   const progressSteps = ["Date", step2Label, "Menu", "Review"];
 
   return (
