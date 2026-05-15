@@ -73,7 +73,7 @@ export async function GET(request: Request) {
     item: order.items.map((item) => item.itemNameSnapshot).join(", "),
     additions: formatList(order.items.flatMap((item) => item.additions)),
     removals: formatList(order.items.flatMap((item) => item.removals)),
-    allergyNotes: formatList(order.items.map((item) => item.allergyNotes).filter(Boolean)),
+    allergyNotes: formatList(order.items.map((item) => item.allergyNotes).filter((n): n is string => n !== null)),
     specialInstructions: order.specialInstructions ?? "",
     parentName: order.parentName,
     totalPaid: (order.totalCents / 100).toFixed(2),
