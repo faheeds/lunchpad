@@ -7,6 +7,7 @@ import { stripe } from "@/lib/payments/stripe";
 import { formatCurrency } from "@/lib/utils";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 import { OrderStatus } from "@prisma/client";
+import { getLabels, getLabelsForOperator } from "@/lib/location-labels";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { OrderSelfService } from "@/components/order/order-self-service";
@@ -104,6 +105,19 @@ export default async function CheckoutSuccessPage({
 
   const isWeekly = !!batch && !order;
 
+  // Get location-aware labels
+  let labels = getLabelsForOperator(null); // default fallback
+  if (order) {
+    labels = getLabels(order.school.locationType);
+  } else if (batch && batch.items.length > 0) {
+    // All items in a batch belong to the same restaurant; fetch from first item's school
+    const firstSchool = await prisma.school.findUnique({
+      where: { id: batch.items[0].deliveryDate.schoolId },
+      select: { restaurant: { select: { operatorType: true } } },
+    });
+    labels = getLabelsForOperator(firstSchool?.restaurant.operatorType ?? null);
+  }
+
   return (
     <>
       <SiteHeaderServer />
@@ -187,14 +201,14 @@ export default async function CheckoutSuccessPage({
 
               {/* Student row */}
               <div style={{ padding: "12px 18px", borderBottom: "1px solid #f8fafc" }}>
-                <p style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Student</p>
+                <p style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>{labels.unit}</p>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--dark-bg)" }}>
                   {order.student.studentName}
-                  {order.student.grade && (
-                    <span style={{ fontSize: 11, fontWeight: 400, color: "#94a3b8" }}> · Grade {order.student.grade}</span>
+                  {order.student.grade && labels.showGrade && (
+                    <span style={{ fontSize: 11, fontWeight: 400, color: "#94a3b8" }}> · {labels.grade} {order.student.grade}</span>
                   )}
                 </p>
-                {(order.student.teacherName || order.student.classroom) && (
+                {labels.showSupervisor && (order.student.teacherName || order.student.classroom) && (
                   <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>
                     {[order.student.teacherName, order.student.classroom].filter(Boolean).join(" · ")}
                   </p>

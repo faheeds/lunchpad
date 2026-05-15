@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { signOut } from "@/lib/auth";
 import { requireParent, requireParentTenant } from "@/lib/parent-auth";
 import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
+import { getLabelsForOperator } from "@/lib/location-labels";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { SubmitButton } from "@/components/forms/submit-button";
@@ -22,6 +23,9 @@ export default async function ParentAccountPage() {
   // this redirects the parent to their restaurant's subdomain so the rest
   // of the page can rely on a real Restaurant.
   const restaurant = await requireParentTenant(parentUserId, "/account");
+
+  // Get location-aware labels based on the restaurant's operator type
+  const labels = getLabelsForOperator(restaurant.operatorType);
 
   // ── Server actions ──────────────────────────────────────────────────────
 
@@ -169,7 +173,7 @@ export default async function ParentAccountPage() {
                   {initials(parent.name)}
                 </div>
                 <div>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: "white" }}>{parent.name ?? "Parent"}</p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: "white" }}>{parent.name ?? labels.orderer}</p>
                   <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>{parent.email}</p>
                 </div>
               </div>
@@ -186,7 +190,7 @@ export default async function ParentAccountPage() {
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
                 <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{parent.children.length}</p>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Kids</p>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{labels.unitPlural}</p>
               </div>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
                 <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{orders.filter((o) => o.status === "PAID").length}</p>
@@ -201,7 +205,7 @@ export default async function ParentAccountPage() {
 
           {/* ── Saved kids ─────────────────────────────────────────── */}
           <section>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Your kids</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Your {labels.unitPlural.toLowerCase()}</p>
 
             {parent.children.map((child) => (
               <div key={child.id} className="rounded-[18px] border border-slate-100 bg-white mb-2 overflow-hidden">
@@ -216,7 +220,7 @@ export default async function ParentAccountPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-ink">{child.studentName}</p>
-                    <p className="text-[11px] text-slate-500">{child.school.name} · Grade {child.grade}</p>
+                    <p className="text-[11px] text-slate-500">{child.school.name} · {labels.grade} {child.grade}</p>
                     {child.allergyNotes && (
                       <span style={{
                         display: "inline-block", marginTop: 4,
@@ -275,15 +279,15 @@ export default async function ParentAccountPage() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
                 </svg>
-                Add a child
+                Add {labels.unit.toLowerCase()}
               </summary>
               <form action={addChild} className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
-                <input name="studentName" placeholder="Student name" required
+                <input name="studentName" placeholder={labels.unitName} required
                   className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" />
                 <GradeSelect schools={schools} />
                 <input name="allergyNotes" placeholder="Allergy / dietary notes"
                   className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" />
-                <SubmitButton label="Save child" pendingLabel="Saving…" />
+                <SubmitButton label={`Save ${labels.unit.toLowerCase()}`} pendingLabel="Saving…" />
               </form>
             </details>
           </section>
