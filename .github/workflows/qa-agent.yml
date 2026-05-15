@@ -7,12 +7,25 @@ name: QA Agent
 
 on:
   pull_request:
-    types: [opened, synchronize, labeled]
+    # `labeled` removed deliberately: the engineering agent creates each
+    # PR with the agent-pr label already applied via `gh pr create --label`.
+    # GitHub fires `opened` (with label in payload) AND a separate `labeled`
+    # event, which used to double-trigger QA. `opened` already sees the
+    # label, so dropping `labeled` kills the duplicate at the source.
+    # `synchronize` still fires if the eng agent pushes a follow-up commit.
+    types: [opened, synchronize]
 
 permissions:
   contents: read
   pull-requests: write
   issues: write
+
+# Per-PR concurrency: if a new QA run starts for the same PR (e.g.,
+# the eng agent pushes a fix commit), cancel any in-flight QA run for
+# that PR. We always want the verdict on the latest SHA, not a stale one.
+concurrency:
+  group: qa-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   qa:
@@ -51,6 +64,20 @@ jobs:
 
       - name: Run unit tests
         id: tests
+        # Unit tests don't touch a real DB, but they transitively import
+        # lib/env.ts which Zod-validates env vars at module load. Without
+        # these dummy values the tests crash with ZodError before they
+        # even reach the first assertion. The values are deliberately
+        # bogus — any code path that actually talks to a DB / Stripe /
+        # Resend in tests is a bug to fix, not to enable.
+        env:
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+          NEXTAUTH_SECRET: "test-secret-not-real"
+          NEXTAUTH_URL: "http://localhost:3000"
+          STRIPE_SECRET_KEY: "sk_test_dummy"
+          STRIPE_WEBHOOK_SECRET: "whsec_dummy"
+          RESEND_API_KEY: "re_dummy"
+          ROOT_DOMAIN: "lunchpad.us"
         run: |
           if grep -q '"test":' package.json; then
             npm test --if-present 2>&1 | tee test.log
