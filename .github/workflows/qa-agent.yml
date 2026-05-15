@@ -7,13 +7,18 @@ name: QA Agent
 
 on:
   pull_request:
-    # `labeled` removed deliberately: the engineering agent creates each
-    # PR with the agent-pr label already applied via `gh pr create --label`.
-    # GitHub fires `opened` (with label in payload) AND a separate `labeled`
-    # event, which used to double-trigger QA. `opened` already sees the
-    # label, so dropping `labeled` kills the duplicate at the source.
-    # `synchronize` still fires if the eng agent pushes a follow-up commit.
-    types: [opened, synchronize]
+    # We need `labeled` here because `gh pr create --label` actually
+    # makes two API calls: create the PR first, then attach labels.
+    # That means the `opened` event fires with an EMPTY labels array,
+    # so a workflow that only listens to `opened` skips every agent PR.
+    # The `labeled` event fires a moment later with the label present
+    # and is what actually starts QA.
+    #
+    # Duplicate-trigger protection: the per-PR `concurrency` block
+    # below has `cancel-in-progress: true`, so if both `opened` and
+    # `labeled` end up matching the if-condition for the same PR,
+    # the older run is cancelled and only the latest one completes.
+    types: [opened, synchronize, labeled]
 
 permissions:
   contents: read
