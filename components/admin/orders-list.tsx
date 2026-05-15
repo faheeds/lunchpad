@@ -39,6 +39,8 @@ type AdminRoleClient = "STAFF" | "MANAGER" | "OWNER";
 const ACTION_REQUIRED_ROLE: Record<string, AdminRoleClient> = {
   archive:             "STAFF",
   unarchive:           "STAFF",
+  export_csv:          "STAFF",
+  print_labels:        "STAFF",
   cancel:              "MANAGER",
   resend_confirmation: "STAFF",
 };
@@ -74,6 +76,8 @@ type BulkAction = {
 const BULK_ACTIONS: BulkAction[] = [
   { key: "archive",             label: "Archive",     variant: "neutral" },
   { key: "unarchive",           label: "Unarchive",   variant: "neutral" },
+  { key: "export_csv",          label: "Export CSV",  variant: "neutral" },
+  { key: "print_labels",        label: "Print labels", variant: "neutral" },
   { key: "resend_confirmation", label: "Resend email", variant: "neutral" },
   {
     key: "cancel",
@@ -134,6 +138,27 @@ export function OrdersList({
       setMessage({ text: "Select at least one order first.", ok: false });
       return;
     }
+
+    const orderIdList = Array.from(selectedIds);
+
+    // Client-side actions that don't need server confirmation
+    if (action.key === "export_csv") {
+      const url = `/api/admin/orders/export?orderIds=${orderIdList.join(",")}`;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "orders-export.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    if (action.key === "print_labels") {
+      const url = `/admin/orders/labels-print?orderIds=${orderIdList.join(",")}`;
+      window.open(url, "_blank");
+      return;
+    }
+
     // Destructive actions get a confirm gate. window.confirm is fine here —
     // operator-facing UI, not customer-facing, and a custom modal is overkill.
     if (action.confirmTemplate) {
@@ -144,7 +169,7 @@ export function OrdersList({
       const res = await fetch("/api/admin/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: action.key, orderIds: Array.from(selectedIds) }),
+        body: JSON.stringify({ action: action.key, orderIds: orderIdList }),
       });
       const data = await res.json();
 
