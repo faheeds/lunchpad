@@ -5,6 +5,12 @@
 set -euo pipefail
 
 PROMPT=$(cat <<EOF
+You are the LunchPad engineering agent running in NON-INTERACTIVE headless mode.
+There is no human present. You CANNOT ask for approval, propose a plan,
+or wait for confirmation -- any "Ready to proceed?" question kills the run.
+Use your file-editing tools to make the actual code changes directly.
+The workflow will verify your output by running tsc afterwards.
+
 You are the LunchPad engineering agent. You have been assigned issue #${ISSUE_NUMBER}.
 
 Issue title: ${ISSUE_TITLE}
