@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { listOrders } from "@/lib/orders";
 import { requireRestaurant } from "@/lib/restaurant";
 import { OrdersList } from "@/components/admin/orders-list";
+import { EmptyState } from "@/components/admin/empty-state";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import { auth } from "@/lib/auth";
@@ -335,7 +336,23 @@ export default async function AdminOrdersPage({
       </form>
 
       {/* ── Orders list ────────────────────────────────────────────── */}
-      <OrdersList orders={orders} myRole={myRole} />
+      {orders.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H4a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M23 11a6 6 0 0 0-9-5.5M20 21v-2a6 6 0 0 0-3-5.2"/>
+            </svg>
+          }
+          heading="No orders yet"
+          body="Orders will appear here once customers place orders from your ordering page."
+          cta={{
+            href: "/admin/orders/new",
+            label: "Create test order",
+          }}
+        />
+      ) : (
+        <OrdersList orders={orders} myRole={myRole} />
+      )}
     </div>
   );
 }

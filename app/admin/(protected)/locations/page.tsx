@@ -7,6 +7,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { slugify } from "@/lib/utils";
 import { checkLimit, PlanLimitError, PLAN_LIMITS } from "@/lib/plans";
+import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -215,8 +216,19 @@ export default async function AdminSchoolsPage({
       )}
 
       {/* ── School list ────────────────────────────────────────────── */}
-      <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
-        {schools.map((school) => {
+      {schools.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          }
+          heading="No locations yet"
+          body="Create a location to set up delivery dates and accept orders from customers."
+        />
+      ) : (
+        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
+          {schools.map((school) => {
           const isEditing = editingId === school.id;
           return (
             <div key={school.id}>
@@ -346,19 +358,9 @@ export default async function AdminSchoolsPage({
               </div>
             </div>
           );
-        })}
-
-        {schools.length === 0 && (
-          <div className="px-4 py-10 text-center">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            <p className="text-[13px] font-medium text-slate-400">No locations yet.</p>
-            <p className="text-[11px] text-slate-300 mt-1">Add your first location below.</p>
-          </div>
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
       {/* ── Add school ─────────────────────────────────────────────── */}
       <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">

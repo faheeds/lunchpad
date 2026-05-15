@@ -11,6 +11,7 @@ import { roleLevel, type AdminRole } from "@/lib/roles";
 import { logActivity } from "@/lib/activity";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
+import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -424,8 +425,23 @@ export default async function AdminTeamPage() {
       </div>
 
       {/* ── Team list ──────────────────────────────────────────────── */}
-      <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
-        {team.map((member) => {
+      {team.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          }
+          heading="Just you for now"
+          body="Invite managers and staff members to collaborate on menu, scheduling, and orders."
+          cta={{
+            href: "/admin/team/invite",
+            label: "Invite a teammate",
+          }}
+        />
+      ) : (
+        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
+          {team.map((member) => {
           const cfg = ROLE_CONFIG[member.role] ?? ROLE_CONFIG.STAFF;
           const isSelf = member.id === currentAdminId;
           const color = avatarColor(member.name);
@@ -503,8 +519,9 @@ export default async function AdminTeamPage() {
               )}
             </div>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
 
       {/* ── Pending invitations ────────────────────────────────────── */}
       {pendingInvites.length > 0 && (

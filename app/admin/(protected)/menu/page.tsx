@@ -9,6 +9,7 @@ import { MenuUrlImport } from "@/components/admin/menu-url-import";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { ImageUpload } from "@/components/admin/image-upload";
 import { DietaryTagsPicker } from "@/components/admin/dietary-tags-picker";
+import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -503,10 +504,26 @@ export default async function AdminMenuPage() {
       </details>
 
       {/* Menu items by category */}
-      {CATEGORIES.map((cat) => {
-        const catItems = grouped[cat];
-        if (!catItems?.length) return null;
-        return (
+      {items.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v8M8 12h8"/>
+            </svg>
+          }
+          heading="No menu items yet"
+          body="Add your first item manually, import from a URL, or bulk upload from an Excel file."
+          cta={{
+            href: "#",
+            label: "Learn about menus",
+          }}
+        />
+      ) : (
+        <>
+          {CATEGORIES.map((cat) => {
+            const catItems = grouped[cat];
+            if (!catItems?.length) return null;
+            return (
           <div key={cat}>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-base">{CAT_ICONS[cat]}</span>
@@ -881,6 +898,8 @@ export default async function AdminMenuPage() {
           </div>
         );
       })}
+        </>
+      )}
     </div>
   );
 }

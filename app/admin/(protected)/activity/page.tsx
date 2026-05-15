@@ -13,6 +13,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -156,10 +157,15 @@ export default async function AdminActivityPage({
 
       {/* ── Feed ──────────────────────────────────────────────────── */}
       {logs.length === 0 ? (
-        <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-10 text-center">
-          <p className="text-[13px] font-medium text-slate-400">No activity in this window.</p>
-          <p className="text-[11px] text-slate-300 mt-1">Try widening the date range or removing filters.</p>
-        </div>
+        <EmptyState
+          icon={
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+            </svg>
+          }
+          heading="No activity in this window"
+          body="Try widening the date range or removing filters to see past changes."
+        />
       ) : (
         <div className="rounded-[14px] border border-slate-100 bg-white divide-y divide-slate-50">
           {logs.map((entry) => {

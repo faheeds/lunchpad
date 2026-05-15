@@ -6,6 +6,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { ScheduleTabs } from "@/components/admin/schedule-tabs";
+import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -489,7 +490,17 @@ export default async function DeliveryDatesPage() {
       </details>
 
       {/* ── Upcoming dates ──────────────────────────────────────────── */}
-      {upcoming.length > 0 && (
+      {deliveryDates.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/>
+            </svg>
+          }
+          heading="No delivery dates yet"
+          body="Create your first delivery date manually or generate a recurring schedule to get started."
+        />
+      ) : upcoming.length > 0 && (
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-2">
             Upcoming ({upcoming.length})
