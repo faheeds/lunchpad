@@ -43,7 +43,7 @@ echo "----- END PROMPT -----"
 claude \
   --print \
   --dangerously-skip-permissions \
-  --model claude-sonnet-4-5-20250929 \
+  --model claude-haiku-4-5 \
   "$PROMPT"
 
 # Sanity: make sure SOMETHING changed.
