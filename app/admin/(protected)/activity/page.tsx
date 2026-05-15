@@ -13,6 +13,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { EmptyState } from "@/components/admin/empty-state";
+import { ActivityIcon } from "@/components/admin/empty-state-icons";
 
 export const dynamic = "force-dynamic";
 
@@ -156,10 +158,11 @@ export default async function AdminActivityPage({
 
       {/* ── Feed ──────────────────────────────────────────────────── */}
       {logs.length === 0 ? (
-        <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-10 text-center">
-          <p className="text-[13px] font-medium text-slate-400">No activity in this window.</p>
-          <p className="text-[11px] text-slate-300 mt-1">Try widening the date range or removing filters.</p>
-        </div>
+        <EmptyState
+          icon={<ActivityIcon size={40} />}
+          heading="No activity yet"
+          body="Try widening the date range or removing filters."
+        />
       ) : (
         <div className="rounded-[14px] border border-slate-100 bg-white divide-y divide-slate-50">
           {logs.map((entry) => {

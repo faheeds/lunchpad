@@ -10,6 +10,8 @@ import { ScheduleTabs } from "@/components/admin/schedule-tabs";
 export const dynamic = "force-dynamic";
 
 // ── Server actions ────────────────────────────────────────────────────────────
+import { EmptyState } from "@/components/admin/empty-state";
+import { CalendarIcon } from "@/components/admin/empty-state-icons";
 
 async function createDeliveryDate(formData: FormData) {
   "use server";
@@ -743,13 +745,11 @@ export default async function DeliveryDatesPage() {
       )}
 
       {upcoming.length === 0 && (
-        <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-8 text-center">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
-            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
-          </svg>
-          <p className="text-[13px] font-medium text-slate-400">No upcoming delivery dates.</p>
-          <p className="text-[11px] text-slate-300 mt-1">Expand &ldquo;Add delivery date&rdquo; above to create one.</p>
-        </div>
+        <EmptyState
+          icon={<CalendarIcon size={40} />}
+          heading="No upcoming delivery dates"
+          body="Add a delivery date above to get started."
+        />
       )}
 
       {/* ── Past dates ──────────────────────────────────────────────── */}

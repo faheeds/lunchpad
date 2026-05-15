@@ -8,6 +8,8 @@ import { requireAdminRole } from "@/lib/admin-auth";
 import { slugify } from "@/lib/utils";
 import { checkLimit, PlanLimitError, PLAN_LIMITS } from "@/lib/plans";
 
+import { EmptyState } from "@/components/admin/empty-state";
+import { FolderIcon } from "@/components/admin/empty-state-icons";
 export const dynamic = "force-dynamic";
 
 const TIMEZONES = [
@@ -215,6 +217,14 @@ export default async function AdminSchoolsPage({
       )}
 
       {/* ── School list ────────────────────────────────────────────── */}
+      {schools.length === 0 ? (
+        <EmptyState
+          icon={<FolderIcon size={40} />}
+          heading="No locations yet"
+          body="Add your first location to get started."
+          cta={{ href: "#add-school", label: "Add location" }}
+        />
+      ) : (
       <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
         {schools.map((school) => {
           const isEditing = editingId === school.id;
@@ -347,18 +357,8 @@ export default async function AdminSchoolsPage({
             </div>
           );
         })}
-
-        {schools.length === 0 && (
-          <div className="px-4 py-10 text-center">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            <p className="text-[13px] font-medium text-slate-400">No locations yet.</p>
-            <p className="text-[11px] text-slate-300 mt-1">Add your first location below.</p>
-          </div>
-        )}
       </div>
+      )}
 
       {/* ── Add school ─────────────────────────────────────────────── */}
       <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">

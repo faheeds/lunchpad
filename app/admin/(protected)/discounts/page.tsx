@@ -24,6 +24,8 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { describeDiscount } from "@/lib/discount-describe";
 import { DiscountTemplateBadge, type DiscountIconName } from "@/components/admin/discount-icons";
+import { EmptyState } from "@/components/admin/empty-state";
+import { TagIcon } from "@/components/admin/empty-state-icons";
 
 export const dynamic = "force-dynamic";
 

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 /**
  * Legacy URL — schools were renamed to locations to support both school
  * and office customers. Forward any old bookmarks to the new path,
+import { EmptyState } from "@/components/admin/empty-state";
+import { FolderIcon } from "@/components/admin/empty-state-icons";
  * preserving query string (e.g. ?edit=<id>).
  */
 export default async function SchoolsRedirect({
