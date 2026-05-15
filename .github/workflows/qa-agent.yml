@@ -117,3 +117,19 @@ jobs:
         run: |
           BODY="$(cat qa-verdict.md 2>/dev/null || echo 'QA agent crashed — see workflow logs.')"
           gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+
+      # Auto-merge if QA verdict is PASS. GitHub waits for required
+      # status checks to go green and then squashes. If any check
+      # fails between now and then, the auto-merge silently cancels
+      # and the PR sits there for human review.
+      - name: Enable auto-merge on PASS verdict
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -q "## QA Verdict: PASS" qa-verdict.md 2>/dev/null; then
+            echo "QA verdict: PASS — enabling auto-merge."
+            gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+          else
+            echo "QA verdict: not PASS — leaving PR open for human review."
+          fi
