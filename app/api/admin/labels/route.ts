@@ -13,16 +13,26 @@ export async function GET(request: Request) {
   }
   const { searchParams } = new URL(request.url);
   const deliveryDateId = searchParams.get("deliveryDateId");
+  const orderIds = searchParams.getAll("orderIds");
   const format = searchParams.get("format") ?? "pdf";
 
   // Tenant-scoped: only return orders for this admin's restaurant.
+  let whereClause: any = {
+    restaurantId,
+    status: OrderStatus.PAID,
+    archivedAt: null,
+  };
+
+  // If specific order IDs are provided, use those (bulk action from toolbar)
+  if (orderIds.length > 0) {
+    whereClause.id = { in: orderIds.filter((id) => typeof id === "string") };
+  } else if (deliveryDateId) {
+    // Otherwise use deliveryDateId if provided (full-page label print)
+    whereClause.deliveryDateId = deliveryDateId;
+  }
+
   const orders = await prisma.order.findMany({
-    where: {
-      restaurantId,
-      deliveryDateId: deliveryDateId ?? undefined,
-      status: OrderStatus.PAID,
-      archivedAt: null
-    },
+    where: whereClause,
     include: {
       school: true,
       deliveryDate: true,

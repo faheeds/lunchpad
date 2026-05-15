@@ -9,19 +9,30 @@ export const dynamic = "force-dynamic";
 export default async function LabelsPrintPage({
   searchParams
 }: {
-  searchParams: Promise<{ deliveryDateId?: string }>;
+  searchParams: Promise<{ deliveryDateId?: string; orderIds?: string | string[] }>;
 }) {
   await requireAdminRole("STAFF");
   const restaurant = await requireRestaurant();
   const params = await searchParams;
+
   // Tenant-scoped: only show orders for the current restaurant.
+  let whereClause: any = {
+    restaurantId: restaurant.id,
+    status: OrderStatus.PAID,
+    archivedAt: null
+  };
+
+  // If specific order IDs are provided, use those (bulk action from toolbar)
+  if (params.orderIds) {
+    const ids = Array.isArray(params.orderIds) ? params.orderIds : [params.orderIds];
+    whereClause.id = { in: ids };
+  } else if (params.deliveryDateId) {
+    // Otherwise use deliveryDateId if provided (full-page label print)
+    whereClause.deliveryDateId = params.deliveryDateId;
+  }
+
   const orders = await prisma.order.findMany({
-    where: {
-      restaurantId: restaurant.id,
-      deliveryDateId: params.deliveryDateId ?? undefined,
-      status: OrderStatus.PAID,
-      archivedAt: null
-    },
+    where: whereClause,
     include: {
       school: true,
       deliveryDate: true,

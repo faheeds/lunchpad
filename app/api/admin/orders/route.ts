@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { OrderStatus } from "@prisma/client";
 import { assertAdminApiRequest } from "@/lib/admin-auth";
 import { listOrders } from "@/lib/orders";
 import { sendOrderConfirmationEmail } from "@/lib/email/service";
-import { setOrderArchived, adminCancelOrderWithRefund } from "@/lib/admin";
+import { setOrderArchived, adminCancelOrderWithRefund, setOrderStatus } from "@/lib/admin";
 
 // Bulk action → minimum admin role required to perform it. `cancel` moves
 // real money (refunds via Stripe) and is reserved for MANAGER+; archive /
@@ -12,6 +13,7 @@ const BULK_ACTION_ROLE: Record<string, "STAFF" | "MANAGER" | "OWNER"> = {
   unarchive:            "STAFF",
   cancel:               "MANAGER",
   resend_confirmation:  "STAFF",
+  mark_fulfilled:       "STAFF",
 };
 
 export async function GET(request: Request) {
@@ -77,6 +79,9 @@ export async function POST(request: Request) {
         return;
       case "resend_confirmation":
         await sendOrderConfirmationEmail(orderId, restaurantId);
+        return;
+      case "mark_fulfilled":
+        await setOrderStatus(restaurantId, orderId, OrderStatus.PAID);
         return;
     }
   }

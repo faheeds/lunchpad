@@ -1,5 +1,6 @@
 import { Parser } from "json2csv";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { listOrders } from "@/lib/orders";
 import { formatList } from "@/lib/utils";
 import { formatInTimeZone } from "date-fns-tz";
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
 
   const restaurant = await requireRestaurant();
   const { searchParams } = new URL(request.url);
+  const orderIds = searchParams.getAll("orderIds");
   const deliveryDateId = searchParams.get("deliveryDateId") ?? undefined;
   const schoolId = searchParams.get("schoolId") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
@@ -26,16 +28,36 @@ export async function GET(request: Request) {
   const toDate = searchParams.get("toDate") ?? undefined;
   const search = searchParams.get("q") ?? undefined;
 
-  const orders = await listOrders({
-    restaurantId: restaurant.id,
-    deliveryDateId,
-    schoolIds: schoolId ? [schoolId] : [],
-    status,
-    archived,
-    fromDate,
-    toDate,
-    search,
-  });
+  let orders;
+  // If specific order IDs are provided, export only those (bulk action from toolbar)
+  if (orderIds.length > 0) {
+    orders = await prisma.order.findMany({
+      where: {
+        id: { in: orderIds.filter((id) => typeof id === "string") },
+        restaurantId: restaurant.id,
+      },
+      include: {
+        school: true,
+        deliveryDate: true,
+        student: true,
+        items: true,
+        payment: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  } else {
+    // Otherwise use the filter params (full-page CSV export)
+    orders = await listOrders({
+      restaurantId: restaurant.id,
+      deliveryDateId,
+      schoolIds: schoolId ? [schoolId] : [],
+      status,
+      archived,
+      fromDate,
+      toDate,
+      search,
+    });
+  }
 
   const rows = orders.map((order) => ({
     orderNumber: order.orderNumber,

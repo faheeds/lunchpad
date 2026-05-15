@@ -69,16 +69,23 @@ type BulkAction = {
   /** When true, prompt the operator before firing. Used for cancel since
    *  it issues a Stripe refund and isn't reversible. */
   confirmTemplate?: (count: number) => string;
+  /** Type of action: "api" POSTs to /api/admin/orders, "nav" navigates to a URL,
+   *  "download" downloads from a URL. Defaults to "api". */
+  actionType?: "api" | "nav" | "download";
 };
 
 const BULK_ACTIONS: BulkAction[] = [
-  { key: "archive",             label: "Archive",     variant: "neutral" },
-  { key: "unarchive",           label: "Unarchive",   variant: "neutral" },
-  { key: "resend_confirmation", label: "Resend email", variant: "neutral" },
+  { key: "mark_fulfilled",      label: "Mark fulfilled", variant: "neutral", actionType: "api" },
+  { key: "print_labels",        label: "Print labels",   variant: "neutral", actionType: "nav" },
+  { key: "export_csv",          label: "Export CSV",     variant: "neutral", actionType: "download" },
+  { key: "archive",             label: "Archive",        variant: "neutral", actionType: "api" },
+  { key: "unarchive",           label: "Unarchive",      variant: "neutral", actionType: "api" },
+  { key: "resend_confirmation", label: "Resend email",   variant: "neutral", actionType: "api" },
   {
     key: "cancel",
     label: "Cancel & refund",
     variant: "danger",
+    actionType: "api",
     confirmTemplate: (n) =>
       `Cancel ${n} order${n === 1 ? "" : "s"} and refund the customer${n === 1 ? "" : "s"}? This is permanent and triggers a real Stripe refund.`,
   },
@@ -140,6 +147,29 @@ export function OrdersList({
       const proceed = window.confirm(action.confirmTemplate(selectedIds.size));
       if (!proceed) return;
     }
+
+    const actionType = action.actionType ?? "api";
+
+    // Handle navigation and download actions
+    if (actionType === "nav" || actionType === "download") {
+      const ids = Array.from(selectedIds);
+      const params = new URLSearchParams(ids.map((id) => ["orderIds", id]));
+      const url = action.key === "print_labels"
+        ? `/admin/orders/labels-print?${params.toString()}`
+        : `/api/admin/export?${params.toString()}`;
+
+      if (actionType === "nav") {
+        window.open(url, "_blank");
+      } else {
+        // For downloads, create a temporary link and click it
+        const link = document.createElement("a");
+        link.href = url;
+        link.click();
+      }
+      return;
+    }
+
+    // Handle API actions (archive, cancel, etc.)
     startTransition(async () => {
       const res = await fetch("/api/admin/orders", {
         method: "POST",
@@ -208,6 +238,9 @@ export function OrdersList({
         <div className="flex gap-1.5 flex-wrap">
           {visibleActions.map((action) => {
             const isDanger = action.variant === "danger";
+            // For the three new bulk actions, show the count of selected items
+            const showCount = ["mark_fulfilled", "print_labels", "export_csv"].includes(action.key) && selectedIds.size > 0;
+            const buttonLabel = showCount ? `${action.label} (${selectedIds.size})` : action.label;
             return (
               <button
                 key={action.key}
@@ -220,7 +253,7 @@ export function OrdersList({
                     : "px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-35 disabled:cursor-default"
                 }
               >
-                {action.label}
+                {buttonLabel}
               </button>
             );
           })}
