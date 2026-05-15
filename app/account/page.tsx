@@ -149,7 +149,7 @@ export default async function ParentAccountPage() {
   return (
     <>
       <SiteHeaderServer />
-      <main className="app-content pb-36">
+      <main id="main-content" className="app-content pb-36">
         <div className="px-4 py-4 space-y-5">
 
           {/* ── Profile header ─────────────────────────────────────── */}
@@ -239,17 +239,17 @@ export default async function ParentAccountPage() {
                 </div>
                 <details className="border-t border-slate-50">
                   <summary className="px-4 py-2.5 text-[12px] text-slate-500 font-medium cursor-pointer list-none flex items-center gap-1">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                     Edit details
                   </summary>
                   <form action={updateChild} className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
                     <input type="hidden" name="childId" value={child.id} />
-                    <input name="studentName" defaultValue={child.studentName} placeholder="Name"
+                    <input name="studentName" defaultValue={child.studentName} placeholder="Name" aria-label="Student name"
                       className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" required />
                     <GradeSelect schools={schools} defaultSchoolId={child.schoolId} defaultGrade={child.grade} />
-                    <input name="allergyNotes" defaultValue={child.allergyNotes ?? ""} placeholder="Allergy / dietary notes"
+                    <input name="allergyNotes" defaultValue={child.allergyNotes ?? ""} placeholder="Allergy / dietary notes" aria-label="Allergy or dietary notes"
                       className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" />
                     <div className="flex gap-2 pt-1">
                       <SubmitButton label="Save changes" pendingLabel="Saving…" />
@@ -272,16 +272,16 @@ export default async function ParentAccountPage() {
             {/* Add child */}
             <details className="rounded-[18px] border border-dashed border-slate-200 bg-white overflow-hidden">
               <summary className="px-4 py-3 text-[12px] text-slate-500 cursor-pointer list-none flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
                 </svg>
                 Add a child
               </summary>
               <form action={addChild} className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
-                <input name="studentName" placeholder="Student name" required
+                <input name="studentName" placeholder="Student name" aria-label="Student name" required
                   className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" />
                 <GradeSelect schools={schools} />
-                <input name="allergyNotes" placeholder="Allergy / dietary notes"
+                <input name="allergyNotes" placeholder="Allergy / dietary notes" aria-label="Allergy or dietary notes"
                   className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" />
                 <SubmitButton label="Save child" pendingLabel="Saving…" />
               </form>

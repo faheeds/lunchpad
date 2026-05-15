@@ -54,7 +54,7 @@ export default async function HistoryPage() {
   return (
     <>
       <SiteHeaderServer />
-      <main className="app-content pb-4">
+      <main id="main-content" className="app-content pb-4">
         <div className="px-4 py-4">
           <p style={{
             fontSize: 9, fontWeight: 700, letterSpacing: "0.16em",

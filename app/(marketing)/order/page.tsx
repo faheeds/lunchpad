@@ -162,7 +162,7 @@ export default async function OrderPage({
   return (
     <>
       <SiteHeaderServer />
-      <main className="app-content">
+      <main id="main-content" className="app-content">
         <div className="px-4 py-4">
           {/* Reorder: original school has no open dates — show a clear notice above the form */}
           {reorderOrder && reorderSchoolId && !sameSchool && deliveryDates.length > 0 && (
@@ -172,7 +172,7 @@ export default async function OrderPage({
               display: "flex", gap: 10, alignItems: "flex-start",
               marginBottom: 12,
             }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="12"/>
                 <line x1="12" y1="16" x2="12.01" y2="16"/>

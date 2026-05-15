@@ -64,7 +64,7 @@ export default async function HomePage() {
     return (
       <>
         <SiteHeaderServer />
-        <main className="app-content">
+        <main id="main-content" className="app-content">
 
           {/* Hero */}
           <div className="relative overflow-hidden" style={{ height: 290 }}>
@@ -258,7 +258,7 @@ export default async function HomePage() {
   // pull in an icon-font CDN or change the bundle.
 
   return (
-    <div style={{ minHeight: "100vh", background: "#ffffff", fontFamily: "system-ui, -apple-system, sans-serif", color: "#0f172a" }}>
+    <div style={{ minHeight: "100vh", background: "#ffffff", fontFamily: "system-ui, -apple-system, sans-serif", color: "#0f172a" }} id="main-content">
 
       {/* Breathing-dot animation lives inline so it ships with the
           page on first paint — no CSS-module-vs-server-component dance.
@@ -340,7 +340,7 @@ export default async function HomePage() {
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             {/* Bowl icon */}
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M2 12h20"/>
               <path d="M3 12a9 9 0 0 0 18 0"/>
               <path d="M12 7v-2"/>
@@ -433,7 +433,7 @@ export default async function HomePage() {
               textDecoration: "none",
               display: "inline-flex", alignItems: "center", gap: 5,
             }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z"/>
               </svg>
               See how it works
@@ -529,7 +529,7 @@ export default async function HomePage() {
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>47</div>
                 <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <polyline points="17 7 7 17"/><polyline points="17 17 17 7 7 7" style={{ transform: "scaleY(-1)", transformOrigin: "center" }}/>
                   </svg>
                   +12 vs last week
@@ -541,7 +541,7 @@ export default async function HomePage() {
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>$681</div>
                 <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>
                   </svg>
                   3 locations active
@@ -553,7 +553,7 @@ export default async function HomePage() {
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>9h 22m</div>
                 <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#BA7517" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#BA7517" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
                   Closes tonight
@@ -879,13 +879,13 @@ export default async function HomePage() {
 function FeatureIcon({ name }: { name: string }) {
   const icons: Record<string, React.ReactNode> = {
     location: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
         <circle cx="12" cy="9" r="2.5"/>
       </svg>
     ),
     menu: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="3" width="7" height="7" rx="1.5"/>
         <rect x="14" y="3" width="7" height="7" rx="1.5"/>
         <rect x="3" y="14" width="7" height="7" rx="1.5"/>
@@ -893,13 +893,13 @@ function FeatureIcon({ name }: { name: string }) {
       </svg>
     ),
     child: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="7" r="4"/>
         <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
       </svg>
     ),
     calendar: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="4" width="18" height="18" rx="2"/>
         <path d="M16 2v4M8 2v4M3 10h18"/>
         <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>

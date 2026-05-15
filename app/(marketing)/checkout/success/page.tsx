@@ -107,7 +107,7 @@ export default async function CheckoutSuccessPage({
   return (
     <>
       <SiteHeaderServer />
-      <main className="app-content pb-24">
+      <main id="main-content" className="app-content pb-24">
         <div className="px-4 pt-8 pb-4">
 
           {/* ── Success header ─────────────────────────────────────── */}
@@ -119,7 +119,7 @@ export default async function CheckoutSuccessPage({
               margin: "0 auto 12px",
               boxShadow: "0 4px 16px rgba(22,163,74,0.3)",
             }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </div>
