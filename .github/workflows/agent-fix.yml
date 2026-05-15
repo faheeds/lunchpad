@@ -1,0 +1,223 @@
+# Engineering Agent — Fix Loop
+#
+# When the main eng-agent posts a self-review with verdict NEEDS_FIXES,
+# you can trigger this workflow by labeling the PR with `agent-fix`.
+# It:
+#   1. Reads the latest self-review comment on the PR
+#   2. Checks out the PR branch
+#   3. Runs Claude with a "address these findings" prompt
+#   4. Commits + pushes to the same PR branch (no new PR)
+#   5. Re-runs typecheck + tests + self-review on the updated state
+#   6. Posts the new verdict and enables auto-merge if all green
+#
+# Re-trigger by re-labeling. Stops when verdict is PASS (auto-merge)
+# or when you stop labeling (manual takeover).
+
+name: Engineering Agent — Fix Loop
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to apply fixes to"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+# Share the agent-pipeline concurrency group with eng-agent so we never
+# have two agent runs racing — they queue.
+concurrency:
+  group: agent-pipeline
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    if: |
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && github.event.label.name == 'agent-fix')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Determine PR + read review
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PR_NUM="${{ github.event.inputs.pr_number }}"
+          else
+            PR_NUM="${{ github.event.pull_request.number }}"
+          fi
+
+          # Remove the agent-fix label immediately (lock against duplicate triggers).
+          gh pr edit "$PR_NUM" --repo "${{ github.repository }}" --remove-label "agent-fix" || true
+
+          # Fetch PR metadata.
+          PR_JSON=$(gh pr view "$PR_NUM" --repo "${{ github.repository }}" --json headRefName,title)
+          BRANCH=$(echo "$PR_JSON" | jq -r '.headRefName')
+          TITLE=$(echo "$PR_JSON" | jq -r '.title')
+
+          # Pull the latest Self-Review comment body.
+          gh pr view "$PR_NUM" --repo "${{ github.repository }}" --json comments \
+            --jq '[.comments[] | select(.body | startswith("## Self-Review:"))] | last | .body' \
+            > /tmp/review.md
+
+          if [ ! -s /tmp/review.md ] || [ "$(cat /tmp/review.md)" = "null" ]; then
+            echo "No self-review comment found on PR #$PR_NUM — nothing to fix."
+            gh pr comment "$PR_NUM" --repo "${{ github.repository }}" \
+              --body "Agent fix run aborted: no self-review comment found to act on."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "pr=$PR_NUM"       >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH"   >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE"     >> "$GITHUB_OUTPUT"
+          echo "skip=false"       >> "$GITHUB_OUTPUT"
+          echo "Targeting PR #$PR_NUM on branch $BRANCH"
+
+      - name: Checkout PR branch
+        if: steps.pr.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.branch }}
+          fetch-depth: 0
+          token: ${{ secrets.AGENT_PAT }}
+
+      - name: Setup Node
+        if: steps.pr.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        if: steps.pr.outputs.skip != 'true'
+        run: npm install --legacy-peer-deps
+
+      - name: Install Claude Code
+        if: steps.pr.outputs.skip != 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        if: steps.pr.outputs.skip != 'true'
+        run: |
+          git config user.name  "lunchpad-eng-agent"
+          git config user.email "eng-agent@lunchpad.us"
+
+      - name: Apply fixes
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr }}
+          PR_TITLE:  ${{ steps.pr.outputs.title }}
+        run: bash scripts/agent/run-fix.sh
+
+      - name: Typecheck
+        if: steps.pr.outputs.skip != 'true'
+        id: tsc
+        run: |
+          npx tsc --noEmit 2>&1 | tee tsc.log
+          if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Run unit tests
+        if: steps.pr.outputs.skip != 'true'
+        id: tests
+        env:
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+          NEXTAUTH_SECRET: "test-secret-not-real"
+          NEXTAUTH_URL: "http://localhost:3000"
+          STRIPE_SECRET_KEY: "sk_test_dummy"
+          STRIPE_WEBHOOK_SECRET: "whsec_dummy"
+          RESEND_API_KEY: "re_dummy"
+          ROOT_DOMAIN: "lunchpad.us"
+        run: |
+          if grep -q '"test":' package.json; then
+            npm test --if-present 2>&1 | tee test.log
+            if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+              echo "result=fail" >> "$GITHUB_OUTPUT"
+            else
+              echo "result=pass" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "result=skip" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Check diff
+        if: steps.pr.outputs.skip != 'true'
+        id: diff
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Fix run produced no changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit + push
+        if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        run: |
+          git add -A
+          git commit -m "Agent fix: address self-review findings on PR #${{ steps.pr.outputs.pr }}"
+          git push
+
+      - name: Re-run self-review
+        if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr }}
+          PR_TITLE:  ${{ steps.pr.outputs.title }}
+          TSC_RESULT:   ${{ steps.tsc.outputs.result }}
+          TESTS_RESULT: ${{ steps.tests.outputs.result }}
+        run: bash scripts/agent/run-self-review.sh
+
+      - name: Post new verdict
+        if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          BODY="$(cat review-verdict.md 2>/dev/null || echo 'Re-review crashed — see workflow logs.')"
+          gh pr comment ${{ steps.pr.outputs.pr }} --body "$BODY"
+
+      - name: Enable auto-merge if all green
+        if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          TSC="${{ steps.tsc.outputs.result }}"
+          TESTS="${{ steps.tests.outputs.result }}"
+          REVIEW_PASS="no"
+          if grep -q "^## Self-Review: PASS" review-verdict.md 2>/dev/null; then
+            REVIEW_PASS="yes"
+          fi
+          TESTS_OK="no"
+          if [ "$TESTS" = "pass" ] || [ "$TESTS" = "skip" ]; then
+            TESTS_OK="yes"
+          fi
+          echo "tsc=$TSC, tests=$TESTS, review=$REVIEW_PASS"
+          if [ "$TSC" = "pass" ] && [ "$TESTS_OK" = "yes" ] && [ "$REVIEW_PASS" = "yes" ]; then
+            echo "All green after fix — enabling auto-merge."
+            gh pr merge ${{ steps.pr.outputs.pr }} --auto --squash
+          else
+            echo "Still not green — leaving PR for next fix loop or human review."
+          fi
+
+      - name: Note if no changes
+        if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          gh pr comment ${{ steps.pr.outputs.pr }} \
+            --body "Fix agent ran but produced no file changes. The previous self-review may need manual interpretation — re-label \`agent-fix\` to try again, or fix manually."
