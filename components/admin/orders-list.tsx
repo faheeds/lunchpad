@@ -37,10 +37,9 @@ type AdminRoleClient = "STAFF" | "MANAGER" | "OWNER";
 // Mirror of the API's role gating so the UI hides actions the operator
 // doesn't have permission for (saves a confusing 403 round-trip).
 const ACTION_REQUIRED_ROLE: Record<string, AdminRoleClient> = {
-  archive:             "STAFF",
-  unarchive:           "STAFF",
-  cancel:              "MANAGER",
-  resend_confirmation: "STAFF",
+  archive:       "STAFF",
+  export_csv:    "STAFF",
+  print_labels:  "STAFF",
 };
 
 function roleAllows(myRole: AdminRoleClient, required: AdminRoleClient): boolean {
@@ -73,15 +72,8 @@ type BulkAction = {
 
 const BULK_ACTIONS: BulkAction[] = [
   { key: "archive",             label: "Archive",     variant: "neutral" },
-  { key: "unarchive",           label: "Unarchive",   variant: "neutral" },
-  { key: "resend_confirmation", label: "Resend email", variant: "neutral" },
-  {
-    key: "cancel",
-    label: "Cancel & refund",
-    variant: "danger",
-    confirmTemplate: (n) =>
-      `Cancel ${n} order${n === 1 ? "" : "s"} and refund the customer${n === 1 ? "" : "s"}? This is permanent and triggers a real Stripe refund.`,
-  },
+  { key: "export_csv",          label: "Export CSV",  variant: "neutral" },
+  { key: "print_labels",        label: "Print labels", variant: "neutral" },
 ];
 
 export function OrdersList({
@@ -134,6 +126,29 @@ export function OrdersList({
       setMessage({ text: "Select at least one order first.", ok: false });
       return;
     }
+
+    // Handle special non-DB actions
+    if (action.key === "export_csv") {
+      const orderIds = Array.from(selectedIds);
+      const url = new URL("/api/admin/export/bulk", window.location.origin);
+      orderIds.forEach(id => url.searchParams.append("orderIds", id));
+      // Trigger download by navigating to the CSV endpoint
+      window.location.href = url.toString();
+      setSelectedIds(new Set());
+      return;
+    }
+
+    if (action.key === "print_labels") {
+      const orderIds = Array.from(selectedIds);
+      const url = new URL("/admin/orders/labels-print", window.location.origin);
+      orderIds.forEach(id => url.searchParams.append("orderIds", id));
+      // Open print page in new tab
+      window.open(url.toString(), "_blank");
+      setSelectedIds(new Set());
+      setMessage({ text: "Opened print labels in a new tab.", ok: true });
+      return;
+    }
+
     // Destructive actions get a confirm gate. window.confirm is fine here —
     // operator-facing UI, not customer-facing, and a custom modal is overkill.
     if (action.confirmTemplate) {

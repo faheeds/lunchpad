@@ -13,15 +13,17 @@ export async function GET(request: Request) {
   }
   const { searchParams } = new URL(request.url);
   const deliveryDateId = searchParams.get("deliveryDateId");
+  const orderIds = searchParams.getAll("orderIds");
   const format = searchParams.get("format") ?? "pdf";
 
   // Tenant-scoped: only return orders for this admin's restaurant.
+  // Support both deliveryDateId (backward compat) and orderIds (bulk action).
   const orders = await prisma.order.findMany({
     where: {
       restaurantId,
-      deliveryDateId: deliveryDateId ?? undefined,
       status: OrderStatus.PAID,
-      archivedAt: null
+      archivedAt: null,
+      ...(orderIds.length ? { id: { in: orderIds } } : { deliveryDateId: deliveryDateId ?? undefined }),
     },
     include: {
       school: true,

@@ -9,18 +9,22 @@ export const dynamic = "force-dynamic";
 export default async function LabelsPrintPage({
   searchParams
 }: {
-  searchParams: Promise<{ deliveryDateId?: string }>;
+  searchParams: Promise<{ deliveryDateId?: string; orderIds?: string[] }>;
 }) {
   await requireAdminRole("STAFF");
   const restaurant = await requireRestaurant();
   const params = await searchParams;
+  
   // Tenant-scoped: only show orders for the current restaurant.
+  // Support both deliveryDateId (backward compat) and orderIds (bulk action).
+  const orderIds = Array.isArray(params.orderIds) ? params.orderIds : (params.orderIds ? [params.orderIds] : undefined);
+  
   const orders = await prisma.order.findMany({
     where: {
       restaurantId: restaurant.id,
-      deliveryDateId: params.deliveryDateId ?? undefined,
       status: OrderStatus.PAID,
-      archivedAt: null
+      archivedAt: null,
+      ...(orderIds?.length ? { id: { in: orderIds } } : { deliveryDateId: params.deliveryDateId ?? undefined }),
     },
     include: {
       school: true,
