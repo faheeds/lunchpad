@@ -64,6 +64,20 @@ jobs:
 
       - name: Run unit tests
         id: tests
+        # Unit tests don't touch a real DB, but they transitively import
+        # lib/env.ts which Zod-validates env vars at module load. Without
+        # these dummy values the tests crash with ZodError before they
+        # even reach the first assertion. The values are deliberately
+        # bogus — any code path that actually talks to a DB / Stripe /
+        # Resend in tests is a bug to fix, not to enable.
+        env:
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+          NEXTAUTH_SECRET: "test-secret-not-real"
+          NEXTAUTH_URL: "http://localhost:3000"
+          STRIPE_SECRET_KEY: "sk_test_dummy"
+          STRIPE_WEBHOOK_SECRET: "whsec_dummy"
+          RESEND_API_KEY: "re_dummy"
+          ROOT_DOMAIN: "lunchpad.us"
         run: |
           if grep -q '"test":' package.json; then
             npm test --if-present 2>&1 | tee test.log
