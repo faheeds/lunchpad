@@ -111,6 +111,16 @@ jobs:
           git config user.name  "lunchpad-eng-agent"
           git config user.email "eng-agent@lunchpad.us"
 
+      # The PR branch may have been created before some agent scripts
+      # existed on main. Pull the latest agent scripts from main without
+      # merging anything else from main — keeps the PR's code intact but
+      # makes sure we run the current versions of the agent runners.
+      - name: Sync agent scripts from main
+        if: steps.pr.outputs.skip != 'true'
+        run: |
+          git fetch origin main
+          git checkout origin/main -- scripts/agent/
+
       - name: Apply fixes
         if: steps.pr.outputs.skip != 'true'
         env:
