@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 export async function GET(request: Request) {
   let restaurantId: string;
   try {
-    ({ restaurantId } = await assertAdminApiRequest());
+    ({ restaurantId } = await assertAdminApiRequest("STAFF"));
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -73,8 +73,7 @@ export async function GET(request: Request) {
     item: order.items.map((item) => item.itemNameSnapshot).join(", "),
     additions: formatList(order.items.flatMap((item) => item.additions)),
     removals: formatList(order.items.flatMap((item) => item.removals)),
-    allergyNotes:
-      order.items.map((item) => item.allergyNotes).find(Boolean) ?? "",
+    allergyNotes: formatList(order.items.map((item) => item.allergyNotes).filter(Boolean)),
     specialInstructions: order.specialInstructions ?? "",
     parentName: order.parentName,
     totalPaid: (order.totalCents / 100).toFixed(2),
