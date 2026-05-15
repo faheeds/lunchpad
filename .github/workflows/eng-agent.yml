@@ -1,104 +1,282 @@
-# Engineering Agent — picks up issues labeled `agent-ready`, makes the
-# changes via Claude Code in headless mode, opens a PR. Never pushes to
-# main; the merge is always a human decision.
+# Engineering Agent — single workflow that handles everything:
+# pick issue → make changes → typecheck + tests → self-review →
+# open PR → enable auto-merge if all green → remove agent-ready label.
 #
-# Cost expectation per run: roughly $0.20 - $2.00 in API tokens depending
-# on task size (Claude Sonnet 4.x at ~$3/1M input, $15/1M output).
+# Triggers:
+#   - issues: labeled with `agent-ready` → process that issue immediately
+#   - workflow_dispatch                  → manual kick, optional issue input
+#   - schedule (every 10 min)            → pick oldest open agent-ready issue
+#
+# The QA workflow is gone — verification happens inline. There is no
+# cross-workflow event handoff (which is what caused all the label-timing
+# and PAT-propagation headaches before).
+#
+# Stop the loop: remove `agent-ready` from any pending issues, or
+# disable this workflow in the Actions UI.
 
 name: Engineering Agent
 
 on:
   issues:
     types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number (optional — leave blank to pick oldest agent-ready)"
+        required: false
+        type: string
+  schedule:
+    - cron: '*/10 * * * *'  # every 10 min, pick oldest open agent-ready
 
 permissions:
-  contents: write       # push the agent's branch
-  pull-requests: write  # open the PR
-  issues: write         # comment back on the issue
+  contents: write
+  pull-requests: write
+  issues: write
+
+# Only one agent run at a time. Cron + label events queue rather than race.
+concurrency:
+  group: agent-pipeline
+  cancel-in-progress: false
 
 jobs:
-  run:
-    if: github.event.label.name == 'agent-ready'
+  agent:
+    # Skip label events that aren't `agent-ready`. Dispatch + cron always run.
+    if: |
+      github.event_name != 'issues'
+      || github.event.label.name == 'agent-ready'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
+      - name: Pick issue + lock it
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          # Decide which issue to work on:
+          #   1. issues:labeled event → use the labeled issue
+          #   2. workflow_dispatch w/ input → use that
+          #   3. cron or dispatch w/o input → oldest open agent-ready
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            ISSUE="${{ github.event.issue.number }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.issue_number }}" ]; then
+            ISSUE="${{ github.event.inputs.issue_number }}"
+          else
+            ISSUE=$(gh issue list \
+              --repo "${{ github.repository }}" \
+              --label "agent-ready" \
+              --state open \
+              --json number,createdAt \
+              --jq 'sort_by(.createdAt) | .[0].number // empty')
+          fi
+
+          if [ -z "$ISSUE" ]; then
+            echo "No agent-ready issue to process — exiting cleanly."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # IMMEDIATELY remove agent-ready as a lock. If two runs race
+          # (cron + label event), only one of them gets to keep the issue;
+          # the second `--remove-label` will be a no-op against a clean
+          # state and that second run will find no issue + exit.
+          gh issue edit "$ISSUE" \
+            --repo "${{ github.repository }}" \
+            --remove-label "agent-ready" || true
+
+          TITLE=$(gh issue view "$ISSUE" --repo "${{ github.repository }}" --json title --jq .title)
+          gh issue view "$ISSUE" --repo "${{ github.repository }}" --json body --jq .body > /tmp/issue-body.txt
+
+          echo "issue=$ISSUE"   >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE"   >> "$GITHUB_OUTPUT"
+          echo "skip=false"     >> "$GITHUB_OUTPUT"
+          echo "Picked issue #$ISSUE: $TITLE"
+
       - name: Checkout
+        if: steps.pick.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # PAT instead of GITHUB_TOKEN so that the agent's push + PR
-          # creation come from a real user identity. Events from
-          # GITHUB_TOKEN do NOT trigger downstream workflows
-          # (security feature to prevent infinite loops), which means
-          # the QA agent's `pull_request: labeled` listener would
-          # silently skip every agent PR. Authenticating as the PAT
-          # owner fixes that.
           token: ${{ secrets.AGENT_PAT }}
 
       - name: Setup Node
+        if: steps.pick.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install deps
+        if: steps.pick.outputs.skip != 'true'
         run: npm install --legacy-peer-deps
 
       - name: Install Claude Code
+        if: steps.pick.outputs.skip != 'true'
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Configure git
+        if: steps.pick.outputs.skip != 'true'
         run: |
           git config user.name  "lunchpad-eng-agent"
           git config user.email "eng-agent@lunchpad.us"
 
       - name: Create branch
+        if: steps.pick.outputs.skip != 'true'
         id: branch
         run: |
-          BRANCH="agent/issue-${{ github.event.issue.number }}"
+          BASE="agent/issue-${{ steps.pick.outputs.issue }}"
+          BRANCH="$BASE"
+          # If a stale branch from a previous attempt exists, suffix
+          # with a timestamp so we don't collide.
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            BRANCH="$BASE-$(date +%s)"
+          fi
           git checkout -b "$BRANCH"
           echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Run engineering agent
+        if: steps.pick.outputs.skip != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY:  ${{ github.event.issue.body }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: bash scripts/agent/run-eng.sh
+          ISSUE_TITLE: ${{ steps.pick.outputs.title }}
+          ISSUE_NUMBER: ${{ steps.pick.outputs.issue }}
+        run: |
+          export ISSUE_BODY="$(cat /tmp/issue-body.txt)"
+          bash scripts/agent/run-eng.sh
 
-      - name: Typecheck before pushing
-        run: npx tsc --noEmit
-        continue-on-error: false
+      - name: Typecheck
+        if: steps.pick.outputs.skip != 'true'
+        id: tsc
+        run: |
+          npx tsc --noEmit 2>&1 | tee tsc.log
+          if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Run unit tests
+        if: steps.pick.outputs.skip != 'true'
+        id: tests
+        env:
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+          NEXTAUTH_SECRET: "test-secret-not-real"
+          NEXTAUTH_URL: "http://localhost:3000"
+          STRIPE_SECRET_KEY: "sk_test_dummy"
+          STRIPE_WEBHOOK_SECRET: "whsec_dummy"
+          RESEND_API_KEY: "re_dummy"
+          ROOT_DOMAIN: "lunchpad.us"
+        run: |
+          if grep -q '"test":' package.json; then
+            npm test --if-present 2>&1 | tee test.log
+            if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+              echo "result=fail" >> "$GITHUB_OUTPUT"
+            else
+              echo "result=pass" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "result=skip" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Check diff
+        if: steps.pick.outputs.skip != 'true'
+        id: diff
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Agent produced no file changes — nothing to PR."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Commit + push
+        if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
         run: |
-          if git diff --cached --quiet && git diff --quiet; then
-            echo "Agent produced no changes — failing run."
-            exit 1
-          fi
           git add -A
-          git commit -m "Agent: ${{ github.event.issue.title }} (closes #${{ github.event.issue.number }})"
+          git commit -m "Agent: ${{ steps.pick.outputs.title }} (closes #${{ steps.pick.outputs.issue }})"
           git push -u origin "${{ steps.branch.outputs.name }}"
 
       - name: Open PR
+        if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        id: pr
         env:
           GH_TOKEN: ${{ secrets.AGENT_PAT }}
         run: |
-          gh pr create \
+          PR_URL=$(gh pr create \
             --base main \
             --head "${{ steps.branch.outputs.name }}" \
-            --title "[agent] ${{ github.event.issue.title }}" \
-            --body "Closes #${{ github.event.issue.number }}. Auto-generated by the engineering agent. Vercel preview will deploy automatically; QA agent will comment shortly with review notes." \
-            --label "agent-pr"
+            --title "[agent] ${{ steps.pick.outputs.title }}" \
+            --body "Closes #${{ steps.pick.outputs.issue }}.
 
-      - name: Comment back on issue
-        if: always()
+          Auto-generated by the engineering agent.
+
+          **Self-verification:**
+          - TypeScript: ${{ steps.tsc.outputs.result }}
+          - Tests: ${{ steps.tests.outputs.result }}
+
+          Self-review verdict will be posted as a comment shortly.")
+          echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
+
+      - name: Self-review the diff
+        if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_TITLE:  ${{ steps.pick.outputs.title }}
+          TSC_RESULT:   ${{ steps.tsc.outputs.result }}
+          TESTS_RESULT: ${{ steps.tests.outputs.result }}
+        run: bash scripts/agent/run-self-review.sh
+
+      - name: Post review verdict
+        if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.AGENT_PAT }}
         run: |
-          if [ "${{ job.status }}" = "success" ]; then
-            gh issue comment ${{ github.event.issue.number }} --body "Agent run complete. PR opened from \`${{ steps.branch.outputs.name }}\`. Vercel preview is building; QA agent will review shortly."
+          BODY="$(cat review-verdict.md 2>/dev/null || echo 'Self-review crashed — see workflow logs.')"
+          gh pr comment ${{ steps.pr.outputs.number }} --body "$BODY"
+
+      - name: Enable auto-merge if all green
+        if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          TSC="${{ steps.tsc.outputs.result }}"
+          TESTS="${{ steps.tests.outputs.result }}"
+          REVIEW_PASS="no"
+          if grep -q "^## Self-Review: PASS" review-verdict.md 2>/dev/null; then
+            REVIEW_PASS="yes"
+          fi
+
+          echo "tsc=$TSC, tests=$TESTS, review=$REVIEW_PASS"
+
+          # Tests can legitimately be `skip` if no test script exists — treat as ok.
+          TESTS_OK="no"
+          if [ "$TESTS" = "pass" ] || [ "$TESTS" = "skip" ]; then
+            TESTS_OK="yes"
+          fi
+
+          if [ "$TSC" = "pass" ] && [ "$TESTS_OK" = "yes" ] && [ "$REVIEW_PASS" = "yes" ]; then
+            echo "All green — enabling auto-merge."
+            gh pr merge ${{ steps.pr.outputs.number }} --auto --squash
           else
-            gh issue comment ${{ github.event.issue.number }} --body "Agent run failed. Check the workflow logs above. The \`agent-ready\` label has not been removed — re-trigger by clicking 'Re-run jobs' once the cause is fixed."
+            echo "Not all green — leaving PR for human review."
+          fi
+
+      - name: Comment on issue
+        if: always() && steps.pick.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          if [ "${{ job.status }}" != "success" ]; then
+            gh issue comment ${{ steps.pick.outputs.issue }} \
+              --body "Agent run failed (see workflow logs). \`agent-ready\` already removed — re-apply to retry."
+          elif [ "${{ steps.diff.outputs.changed }}" = "true" ]; then
+            gh issue comment ${{ steps.pick.outputs.issue }} \
+              --body "Agent run complete — PR opened: ${{ steps.pr.outputs.url }}"
+          else
+            gh issue comment ${{ steps.pick.outputs.issue }} \
+              --body "Agent ran but produced no file changes. \`agent-ready\` already removed — re-apply to retry, or close the issue."
           fi
