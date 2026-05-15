@@ -27,6 +27,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # PAT instead of GITHUB_TOKEN so that the agent's push + PR
+          # creation come from a real user identity. Events from
+          # GITHUB_TOKEN do NOT trigger downstream workflows
+          # (security feature to prevent infinite loops), which means
+          # the QA agent's `pull_request: labeled` listener would
+          # silently skip every agent PR. Authenticating as the PAT
+          # owner fixes that.
+          token: ${{ secrets.AGENT_PAT }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -75,7 +83,7 @@ jobs:
 
       - name: Open PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
         run: |
           gh pr create \
             --base main \
@@ -87,7 +95,7 @@ jobs:
       - name: Comment back on issue
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
         run: |
           if [ "${{ job.status }}" = "success" ]; then
             gh issue comment ${{ github.event.issue.number }} --body "Agent run complete. PR opened from \`${{ steps.branch.outputs.name }}\`. Vercel preview is building; QA agent will review shortly."
