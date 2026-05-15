@@ -67,7 +67,7 @@ EOF
 claude \
   --print \
   --dangerously-skip-permissions \
-  --model claude-sonnet-4-5-20250929 \
+  --model claude-haiku-4-5 \
   "$PROMPT" > qa-verdict.md 2>&1
 
 # Defensive: if the agent didn't produce the marker, fall back to a stub.
