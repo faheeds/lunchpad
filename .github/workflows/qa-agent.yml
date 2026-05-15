@@ -1,0 +1,119 @@
+# QA Agent — runs on every PR labeled `agent-pr`. Reviews the diff,
+# runs typecheck + tests, hits the Vercel preview with the smoke-test
+# script, and posts a verdict comment back on the PR. Never merges
+# the PR — that's always a human decision.
+
+name: QA Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  qa:
+    if: contains(github.event.pull_request.labels.*.name, 'agent-pr')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm install --legacy-peer-deps
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Typecheck
+        id: tsc
+        run: |
+          npx tsc --noEmit 2>&1 | tee tsc.log
+          if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Run unit tests
+        id: tests
+        run: |
+          if grep -q '"test":' package.json; then
+            npm test --if-present 2>&1 | tee test.log
+            if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+              echo "result=fail" >> "$GITHUB_OUTPUT"
+            else
+              echo "result=pass" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "result=skip" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      # Wait for Vercel preview, then run smoke test against it.
+      # (Vercel typically posts the URL within 60-90s of PR creation.)
+      - name: Wait for Vercel preview
+        id: preview
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Poll PR comments for the Vercel preview URL, up to 5 min.
+          for i in $(seq 1 30); do
+            URL=$(gh pr view ${{ github.event.pull_request.number }} \
+              --json comments \
+              --jq '.comments[] | select(.author.login == "vercel" or .author.login == "vercel[bot]") | .body' \
+              | grep -oE 'https://[a-z0-9-]+\.vercel\.app' | head -1)
+            if [ -n "$URL" ]; then
+              echo "url=$URL" >> "$GITHUB_OUTPUT"
+              echo "Vercel preview ready: $URL"
+              break
+            fi
+            echo "Waiting for Vercel preview... ($i/30)"
+            sleep 10
+          done
+
+      - name: Smoke test the preview
+        id: smoke
+        if: steps.preview.outputs.url != ''
+        run: |
+          npx tsx scripts/smoke-test.ts "${{ steps.preview.outputs.url }}" 2>&1 | tee smoke.log
+          if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Run QA review via Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE:  ${{ github.event.pull_request.title }}
+          PR_BODY:   ${{ github.event.pull_request.body }}
+          TSC_RESULT:   ${{ steps.tsc.outputs.result }}
+          TESTS_RESULT: ${{ steps.tests.outputs.result }}
+          SMOKE_RESULT: ${{ steps.smoke.outputs.result }}
+          PREVIEW_URL:  ${{ steps.preview.outputs.url }}
+        run: bash scripts/agent/run-qa.sh
+
+      - name: Post QA verdict to PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BODY="$(cat qa-verdict.md 2>/dev/null || echo 'QA agent crashed — see workflow logs.')"
+          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
