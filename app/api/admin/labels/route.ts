@@ -1,4 +1,4 @@
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateLabelsPdfBuffer, mapOrderToLabelRows } from "@/lib/pdf/labels";
@@ -13,16 +13,31 @@ export async function GET(request: Request) {
   }
   const { searchParams } = new URL(request.url);
   const deliveryDateId = searchParams.get("deliveryDateId");
+  const orderIdsParam = searchParams.get("orderIds");
   const format = searchParams.get("format") ?? "pdf";
+
+  let whereCondition: Prisma.OrderWhereInput = {
+    restaurantId,
+    status: OrderStatus.PAID,
+    archivedAt: null,
+  };
+
+  // If orderIds is provided, use those; otherwise filter by deliveryDateId
+  if (orderIdsParam) {
+    const orderIds = orderIdsParam
+      .split(",")
+      .filter((id) => id.trim())
+      .slice(0, 1000);
+    if (orderIds.length > 0) {
+      whereCondition.id = { in: orderIds };
+    }
+  } else if (deliveryDateId) {
+    whereCondition.deliveryDateId = deliveryDateId;
+  }
 
   // Tenant-scoped: only return orders for this admin's restaurant.
   const orders = await prisma.order.findMany({
-    where: {
-      restaurantId,
-      deliveryDateId: deliveryDateId ?? undefined,
-      status: OrderStatus.PAID,
-      archivedAt: null
-    },
+    where: whereCondition,
     include: {
       school: true,
       deliveryDate: true,
