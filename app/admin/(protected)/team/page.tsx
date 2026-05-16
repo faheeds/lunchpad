@@ -11,6 +11,7 @@ import { roleLevel, type AdminRole } from "@/lib/roles";
 import { logActivity } from "@/lib/activity";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
+import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -424,7 +425,10 @@ export default async function AdminTeamPage() {
       </div>
 
       {/* ── Team list ──────────────────────────────────────────────── */}
-      <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
+
+      {team.length > 0 && (
+
+        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
         {team.map((member) => {
           const cfg = ROLE_CONFIG[member.role] ?? ROLE_CONFIG.STAFF;
           const isSelf = member.id === currentAdminId;
@@ -504,7 +508,16 @@ export default async function AdminTeamPage() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
+
+      {team.length === 0 && (
+        <EmptyState
+          icon="users"
+          title="No team members yet."
+          description="Invite your team members to start collaborating."
+        />
+      )}
 
       {/* ── Pending invitations ────────────────────────────────────── */}
       {pendingInvites.length > 0 && (
