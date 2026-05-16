@@ -433,7 +433,7 @@ export default async function HomePage() {
               textDecoration: "none",
               display: "inline-flex", alignItems: "center", gap: 5,
             }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M8 5v14l11-7z"/>
               </svg>
               See how it works
