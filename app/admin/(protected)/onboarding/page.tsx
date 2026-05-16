@@ -208,6 +208,89 @@ async function launchAndComplete() {
   redirect("/admin/dashboard");
 }
 
+async function seedSampleData() {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("OWNER");
+
+  const { SAMPLE_SCHOOL_NAME, SAMPLE_MENU_ITEMS } = await import("@/lib/sample-data");
+
+  // Create sample school
+  const school = await prisma.school.create({
+    data: {
+      restaurantId: restaurant.id,
+      name: SAMPLE_SCHOOL_NAME,
+      slug: slugify(SAMPLE_SCHOOL_NAME),
+      locationType: "SCHOOL",
+      timezone: restaurant.timezone || "America/Los_Angeles",
+      defaultCutoffHour: 17,
+      defaultCutoffMinute: 0,
+      collectTeacher: true,
+      collectClassroom: true,
+      isActive: true,
+    },
+  });
+
+  // Create sample menu items
+  const menuItems = await Promise.all(
+    SAMPLE_MENU_ITEMS.map((item) =>
+      prisma.menuItem.create({
+        data: {
+          restaurantId: restaurant.id,
+          name: item.name,
+          slug: slugify(item.name),
+          basePriceCents: item.price,
+          isActive: true,
+        },
+      })
+    )
+  );
+
+  // Create a delivery date for next Friday at 11am
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7;
+  const nextFriday = new Date(today);
+  nextFriday.setDate(nextFriday.getDate() + daysUntilFriday);
+
+  const deliveryDate = await prisma.deliveryDate.create({
+    data: {
+      schoolId: school.id,
+      deliveryDate: fromZonedTime(
+        `${nextFriday.toISOString().slice(0, 10)} 11:00:00`,
+        school.timezone
+      ),
+      cutoffAt: fromZonedTime(
+        `${nextFriday.toISOString().slice(0, 10)} 10:00:00`,
+        school.timezone
+      ),
+      orderingOpen: true,
+    },
+  });
+
+  // Link menu items to the delivery date
+  await prisma.deliveryMenuItem.createMany({
+    data: menuItems.map((m) => ({
+      deliveryDateId: deliveryDate.id,
+      menuItemId: m.id,
+      schoolId: school.id,
+      isAvailable: true,
+    })),
+  });
+
+  // Mark onboarding complete and reset test order nudge
+  await prisma.restaurant.update({
+    where: { id: restaurant.id },
+    data: {
+      onboardingComplete: true,
+      testOrderPlacedAt: null,
+    },
+  });
+
+  revalidatePath("/admin/dashboard");
+  redirect("/admin/dashboard");
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 const TIMEZONES = [
@@ -413,7 +496,12 @@ export default async function OnboardingPage({
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2">
+              <div className="flex items-center justify-between pt-2 gap-3">
+                <form action={seedSampleData}>
+                  <button type="submit" className="px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-[13px] font-semibold hover:bg-slate-50 transition">
+                    Skip for now
+                  </button>
+                </form>
                 <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
                   Continue →
                 </button>

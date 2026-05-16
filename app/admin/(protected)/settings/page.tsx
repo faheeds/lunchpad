@@ -93,6 +93,53 @@ async function updateKitchenSheetSettings(formData: FormData) {
   redirect("/admin/settings?tab=notifications&saved=1");
 }
 
+async function resetSampleData() {
+  "use server";
+  let errorMsg: string | null = null;
+  try {
+    const restaurant = await requireRestaurant();
+    await requireAdminRole("OWNER");
+    const { isSampleData } = await import("@/lib/sample-data");
+
+    // Delete sample menu items
+    await prisma.menuItem.deleteMany({
+      where: {
+        restaurantId: restaurant.id,
+        name: { startsWith: "[Sample]" },
+      },
+    });
+
+    // Delete sample delivery dates (via their schools)
+    const sampleSchools = await prisma.school.findMany({
+      where: {
+        restaurantId: restaurant.id,
+        name: { startsWith: "[Sample]" },
+      },
+      select: { id: true },
+    });
+
+    for (const school of sampleSchools) {
+      await prisma.deliveryDate.deleteMany({
+        where: { schoolId: school.id },
+      });
+    }
+
+    // Delete sample schools
+    await prisma.school.deleteMany({
+      where: {
+        restaurantId: restaurant.id,
+        name: { startsWith: "[Sample]" },
+      },
+    });
+
+    revalidatePath("/admin/dashboard");
+  } catch (e: unknown) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong";
+  }
+  if (errorMsg) redirect(`/admin/settings?tab=danger&error=${encodeURIComponent(errorMsg)}`);
+  redirect("/admin/settings?tab=danger&reset_success=1");
+}
+
 async function updateCustomDomain(formData: FormData) {
   "use server";
   let errorMsg: string | null = null;
@@ -161,6 +208,7 @@ export default async function AdminSettingsPage({
     error?: string;
     connect_success?: string;
     connect_error?: string;
+    reset_success?: string;
   }>;
 }) {
   const [params, restaurant] = await Promise.all([
@@ -180,6 +228,17 @@ export default async function AdminSettingsPage({
   const connectSuccess = params.connect_success === "1";
   const connectError = params.connect_error ?? null;
   const error = params.error ?? null;
+  const resetSuccess = params.reset_success === "1";
+
+  // Check if sample data exists
+  const hasSampleData = await Promise.all([
+    prisma.school.count({
+      where: { restaurantId: restaurant.id, name: { startsWith: "[Sample]" } },
+    }),
+    prisma.menuItem.count({
+      where: { restaurantId: restaurant.id, name: { startsWith: "[Sample]" } },
+    }),
+  ]).then(([schools, items]) => schools > 0 || items > 0);
 
   return (
     <div className="space-y-5 pb-10">
@@ -196,6 +255,15 @@ export default async function AdminSettingsPage({
             <path d="M20 6L9 17l-5-5"/>
           </svg>
           <p className="text-[13px] font-medium text-green-800">Saved.</p>
+        </div>
+      )}
+
+      {resetSuccess && (
+        <div className="rounded-[12px] bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          <p className="text-[13px] font-medium text-green-800">Sample data reset.</p>
         </div>
       )}
       {error && (
@@ -566,6 +634,19 @@ export default async function AdminSettingsPage({
                 Manage plan →
               </Link>
             </div>
+            {hasSampleData && (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[12px] font-medium text-ink">Reset sample data</p>
+                  <p className="text-[11px] text-slate-400">Delete all sample restaurants, menus, and delivery dates</p>
+                </div>
+                <form action={resetSampleData}>
+                  <button type="submit" className="px-3 py-1.5 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 no-underline hover:bg-red-50 transition">
+                    Reset →
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       )}
