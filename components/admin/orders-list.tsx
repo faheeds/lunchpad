@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { OrderStatusActions } from "@/components/admin/order-status-actions";
+import { EmptyState } from "@/components/admin/empty-state";
 import { formatCurrency, formatList } from "@/lib/utils";
 
 type OrderListItem = {
@@ -205,14 +206,11 @@ export function OrdersList({
 
   if (!orders.length) {
     return (
-      <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-10 text-center">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        <p className="text-[13px] font-medium text-slate-400">No orders match the current filters.</p>
-        <p className="text-[11px] text-slate-300 mt-1">Try clearing filters or adjusting the date range.</p>
-      </div>
+      <EmptyState
+        icon="document"
+        title="No orders match the current filters."
+        description="Try clearing filters or adjusting the date range."
+      />
     );
   }
 

@@ -9,6 +9,7 @@ import { MenuUrlImport } from "@/components/admin/menu-url-import";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { ImageUpload } from "@/components/admin/image-upload";
 import { DietaryTagsPicker } from "@/components/admin/dietary-tags-picker";
+import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -501,6 +502,14 @@ export default async function AdminMenuPage() {
           </button>
         </form>
       </details>
+
+      {items.length === 0 && (
+        <EmptyState
+          icon="shopping"
+          title="No menu items yet."
+          description="Add your first menu item above to get started."
+        />
+      )}
 
       {/* Menu items by category */}
       {CATEGORIES.map((cat) => {
