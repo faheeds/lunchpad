@@ -349,15 +349,15 @@ export default async function AdminSchoolsPage({
             </div>
           );
         })}
-
-        {schools.length === 0 && (
-          <EmptyState
-            icon="home"
-            title="No locations yet."
-            description="Add your first location below."
-          />
-        )}
       </div>
+      )}
+
+      {schools.length === 0 && (
+        <EmptyState
+          icon="home"
+          title="No locations yet."
+          description="Add your first location below."
+        />
       )}
 
       {/* ── Add school ─────────────────────────────────────────────── */}
