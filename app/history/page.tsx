@@ -7,7 +7,6 @@ import { AppNav } from "@/components/app-nav";
 import { CancelOrderButton } from "@/components/cancel-order-button";
 import { EditOrderSheet } from "@/components/edit-order-sheet";
 import Link from "next/link";
-import { getLabels } from "@/lib/location-labels";
 
 export const dynamic = "force-dynamic";
 

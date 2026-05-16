@@ -6,7 +6,6 @@ import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { WeeklyPlanPlanner } from "@/components/account/weekly-plan-planner";
 import { WeeklyCheckoutButton } from "@/components/account/weekly-checkout-button";
-import { getLabels } from "@/lib/location-labels";
 
 export const dynamic = "force-dynamic";
 
