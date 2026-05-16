@@ -513,10 +513,6 @@ export default async function AdminMenuPage() {
           }
           heading="No menu items yet"
           body="Add your first item manually, import from a URL, or bulk upload from an Excel file."
-          cta={{
-            href: "#",
-            label: "Learn about menus",
-          }}
         />
       ) : (
         <>
