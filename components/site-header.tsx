@@ -24,6 +24,23 @@ export function SiteHeader({
 
   return (
     <header className="app-header" style={{ flexDirection: "column", padding: 0, background: "var(--dark-bg)" }}>
+      <a href="#main-content" style={{
+        position: "absolute",
+        left: "-9999px",
+        zIndex: 999,
+        padding: "8px 12px",
+        background: "var(--brand-on-dark)",
+        color: "white",
+        textDecoration: "none",
+        borderRadius: 4,
+      }} onFocus={(e) => {
+        e.currentTarget.style.left = "16px";
+        e.currentTarget.style.top = "16px";
+      }} onBlur={(e) => {
+        e.currentTarget.style.left = "-9999px";
+      }}>
+        Skip to main content
+      </a>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px" }}>
         <Link href="/" className="no-underline flex items-center gap-2" onClick={() => setMenuOpen(false)}>
           {showUploadedLogo ? (
@@ -37,7 +54,7 @@ export function SiteHeader({
               style={{ width: 28, height: 28, borderRadius: 7, objectFit: "cover", flexShrink: 0 }}
             />
           ) : (
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <rect width="32" height="32" rx="7" fill="#c41230"/>
               <path d="M 4 19 A 12 10 0 0 1 28 19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
               <line x1="10" y1="5.5" x2="22" y2="5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
@@ -56,7 +73,7 @@ export function SiteHeader({
             </span>
           ) : (
             <>
-              <Link href="/account" style={{
+              <Link href="/account" aria-label="Go to account" style={{
                 width: 32, height: 32, borderRadius: "50%",
                 background: "rgba(var(--brand-rgb),0.85)", display: "flex",
                 alignItems: "center", justifyContent: "center",
@@ -115,7 +132,7 @@ export function SiteHeader({
               padding: "10px 14px", borderRadius: 10, fontSize: 13,
               fontWeight: 500, color: "rgba(255,255,255,0.4)", textDecoration: "none"
             }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
               Admin login

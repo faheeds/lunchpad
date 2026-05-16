@@ -71,7 +71,7 @@ export default async function WeeklyPage() {
   return (
     <>
       <SiteHeaderServer />
-      <main className="app-content pb-32">
+      <main className="app-content pb-32" id="main-content">
         <div className="px-4 py-4">
           <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700 mb-0.5">Meal planning</p>
           <h1 className="text-[20px] font-semibold text-ink mb-1">Weekly lunch plan</h1>

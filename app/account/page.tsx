@@ -150,7 +150,7 @@ export default async function ParentAccountPage() {
   return (
     <>
       <SiteHeaderServer />
-      <main className="app-content pb-36">
+      <main className="app-content pb-36" id="main-content">
         <div className="px-4 py-4 space-y-5">
 
           {/* ── Profile header ─────────────────────────────────────── */}

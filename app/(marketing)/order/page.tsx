@@ -162,7 +162,7 @@ export default async function OrderPage({
   return (
     <>
       <SiteHeaderServer />
-      <main className="app-content">
+      <main className="app-content" id="main-content">
         <div className="px-4 py-4">
           {/* Reorder: original school has no open dates — show a clear notice above the form */}
           {reorderOrder && reorderSchoolId && !sameSchool && deliveryDates.length > 0 && (

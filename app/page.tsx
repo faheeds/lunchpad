@@ -64,7 +64,7 @@ export default async function HomePage() {
     return (
       <>
         <SiteHeaderServer />
-        <main className="app-content">
+        <main className="app-content" id="main-content">
 
           {/* Hero */}
           <div className="relative overflow-hidden" style={{ height: 290 }}>
@@ -340,7 +340,7 @@ export default async function HomePage() {
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             {/* Bowl icon */}
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M2 12h20"/>
               <path d="M3 12a9 9 0 0 0 18 0"/>
               <path d="M12 7v-2"/>
@@ -501,7 +501,7 @@ export default async function HomePage() {
             background: "#ffffff", borderBottom: "0.5px solid #e2e8f0",
             padding: "8px 12px", display: "flex", alignItems: "center", gap: 8,
           }}>
-            <div style={{ display: "flex", gap: 4 }}>
+            <div style={{ display: "flex", gap: 4 }} aria-hidden="true">
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#E24B4A" }} />
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF9F27" }} />
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#1D9E75" }} />
@@ -529,7 +529,7 @@ export default async function HomePage() {
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>47</div>
                 <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <polyline points="17 7 7 17"/><polyline points="17 17 17 7 7 7" style={{ transform: "scaleY(-1)", transformOrigin: "center" }}/>
                   </svg>
                   +12 vs last week
@@ -541,7 +541,7 @@ export default async function HomePage() {
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>$681</div>
                 <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>
                   </svg>
                   3 locations active
@@ -553,7 +553,7 @@ export default async function HomePage() {
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>9h 22m</div>
                 <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#BA7517" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#BA7517" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
                   Closes tonight
@@ -713,9 +713,9 @@ export default async function HomePage() {
                 background: "#ffffff", border: "0.5px solid #e2e8f0", borderRadius: 12, padding: 18,
                 display: "flex", flexDirection: "column", gap: 12,
               }}>
-                <div style={{ display: "flex", gap: 2 }}>
+                <div style={{ display: "flex", gap: 2 }} aria-hidden="true">
                   {[0, 1, 2, 3, 4].map((i) => (
-                    <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill="#EF9F27" aria-hidden="true">
+                    <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill="#EF9F27">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
                     </svg>
                   ))}
@@ -796,7 +796,7 @@ export default async function HomePage() {
                     display: "flex", alignItems: "flex-start", gap: 6,
                     fontSize: 12, color: "#475569", marginBottom: 6,
                   }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                     {feat}

@@ -1128,6 +1128,7 @@ export function OrderForm({
                       onChange={(e) => { setCodeInput(e.target.value.toUpperCase()); setCodeError(null); }}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleApplyCode(); } }}
                       placeholder="Promo code"
+                      aria-label="Promo code"
                       autoFocus
                       className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-mono tracking-wider uppercase focus:outline-none focus:border-brand-400"
                     />
