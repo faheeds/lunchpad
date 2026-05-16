@@ -11,6 +11,7 @@ import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { OrderSelfService } from "@/components/order/order-self-service";
 import { signOrderCancelToken } from "@/lib/order-tokens";
+import { getLabels } from "@/lib/location-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -187,14 +188,14 @@ export default async function CheckoutSuccessPage({
 
               {/* Student row */}
               <div style={{ padding: "12px 18px", borderBottom: "1px solid #f8fafc" }}>
-                <p style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Student</p>
+                <p style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>{getLabels(order.school.locationType).unit}</p>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--dark-bg)" }}>
                   {order.student.studentName}
-                  {order.student.grade && (
-                    <span style={{ fontSize: 11, fontWeight: 400, color: "#94a3b8" }}> · Grade {order.student.grade}</span>
+                  {order.student.grade && getLabels(order.school.locationType).showGrade && (
+                    <span style={{ fontSize: 11, fontWeight: 400, color: "#94a3b8" }}> · {getLabels(order.school.locationType).grade} {order.student.grade}</span>
                   )}
                 </p>
-                {(order.student.teacherName || order.student.classroom) && (
+                {getLabels(order.school.locationType).showSupervisor && (order.student.teacherName || order.student.classroom) && (
                   <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>
                     {[order.student.teacherName, order.student.classroom].filter(Boolean).join(" · ")}
                   </p>

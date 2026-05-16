@@ -12,6 +12,7 @@ import { SubmitButton } from "@/components/forms/submit-button";
 import { GradeSelect } from "@/components/forms/grade-select";
 import { WeeklyCheckoutButton } from "@/components/account/weekly-checkout-button";
 import { WeeklyPlanPlanner } from "@/components/account/weekly-plan-planner";
+import { getLabels } from "@/lib/location-labels";
 
 export default async function ParentAccountPage() {
   const session = await requireParent();
@@ -169,7 +170,7 @@ export default async function ParentAccountPage() {
                   {initials(parent.name)}
                 </div>
                 <div>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: "white" }}>{parent.name ?? "Parent"}</p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: "white" }}>{parent.name ?? getLabels(parent.children[0]?.school.locationType).orderer}</p>
                   <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>{parent.email}</p>
                 </div>
               </div>
@@ -186,7 +187,7 @@ export default async function ParentAccountPage() {
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
                 <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{parent.children.length}</p>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Kids</p>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{getLabels(parent.children[0]?.school.locationType).unitPlural}</p>
               </div>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
                 <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{orders.filter((o) => o.status === "PAID").length}</p>
@@ -201,7 +202,7 @@ export default async function ParentAccountPage() {
 
           {/* ── Saved kids ─────────────────────────────────────────── */}
           <section>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Your kids</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Your {getLabels(parent.children[0]?.school.locationType).unitPlural.toLowerCase()}</p>
 
             {parent.children.map((child) => (
               <div key={child.id} className="rounded-[18px] border border-slate-100 bg-white mb-2 overflow-hidden">
@@ -216,7 +217,7 @@ export default async function ParentAccountPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-ink">{child.studentName}</p>
-                    <p className="text-[11px] text-slate-500">{child.school.name} · Grade {child.grade}</p>
+                    <p className="text-[11px] text-slate-500">{child.school.name}{child.grade && getLabels(child.school.locationType).showGrade ? ` · ${getLabels(child.school.locationType).grade} ${child.grade}` : ""}</p>
                     {child.allergyNotes && (
                       <span style={{
                         display: "inline-block", marginTop: 4,
@@ -246,7 +247,7 @@ export default async function ParentAccountPage() {
                   </summary>
                   <form action={updateChild} className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
                     <input type="hidden" name="childId" value={child.id} />
-                    <input name="studentName" defaultValue={child.studentName} placeholder="Name"
+                    <input name="studentName" defaultValue={child.studentName} placeholder={getLabels(child.school.locationType).unitName}
                       className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" required />
                     <GradeSelect schools={schools} defaultSchoolId={child.schoolId} defaultGrade={child.grade} />
                     <input name="allergyNotes" defaultValue={child.allergyNotes ?? ""} placeholder="Allergy / dietary notes"
@@ -275,15 +276,15 @@ export default async function ParentAccountPage() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
                 </svg>
-                Add a child
+                Add {getLabels(schools[0]?.locationType).ordererRefersToUnit}
               </summary>
               <form action={addChild} className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
-                <input name="studentName" placeholder="Student name" required
+                <input name="studentName" placeholder={getLabels(schools[0]?.locationType).unitName} required
                   className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" />
                 <GradeSelect schools={schools} />
                 <input name="allergyNotes" placeholder="Allergy / dietary notes"
                   className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" />
-                <SubmitButton label="Save child" pendingLabel="Saving…" />
+                <SubmitButton label={`Save ${getLabels(schools[0]?.locationType).unit.toLowerCase()}`} pendingLabel="Saving…" />
               </form>
             </details>
           </section>
