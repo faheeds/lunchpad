@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { env } from "@/lib/env";
+import { logInfo, logError } from "@/lib/logging";
 import { ThemePicker } from "@/components/admin/theme-picker";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { ImageUpload } from "@/components/admin/image-upload";
@@ -95,6 +96,11 @@ async function updateKitchenSheetSettings(formData: FormData) {
 
 async function resetSampleData() {
   "use server";
+  const startTime = Date.now();
+  logInfo("resetSampleData started", {
+    action: "resetSampleData",
+  });
+
   let errorMsg: string | null = null;
   try {
     const restaurant = await requireRestaurant();
@@ -131,8 +137,20 @@ async function resetSampleData() {
       },
     });
 
+    const durationMs = Date.now() - startTime;
+    logInfo("resetSampleData completed", {
+      action: "resetSampleData",
+      restaurantId: restaurant.id,
+      durationMs,
+    });
+
     revalidatePath("/admin/dashboard");
   } catch (e: unknown) {
+    const durationMs = Date.now() - startTime;
+    logError(e, {
+      action: "resetSampleData",
+      durationMs,
+    });
     errorMsg = e instanceof Error ? e.message : "Something went wrong";
   }
   if (errorMsg) redirect(`/admin/settings?tab=danger&error=${encodeURIComponent(errorMsg)}`);

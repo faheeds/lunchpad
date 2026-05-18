@@ -9,6 +9,7 @@ import { stripe } from "@/lib/payments/stripe";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
 import { pickApplicableDiscounts, type CartLine } from "@/lib/discounts";
+import { logInfo, logError } from "@/lib/logging";
 
 export function buildPaidState(now = new Date()) {
   return {
@@ -77,7 +78,14 @@ export async function getAvailableMenuItems(deliveryDateId: string) {
 }
 
 export async function createPendingOrder(input: OrderDraftInput, checkoutSessionId?: string, parentUserId?: string) {
-  const parsed = orderFormSchema.parse(input);
+  const startTime = Date.now();
+  logInfo("createPendingOrder started", {
+    action: "createPendingOrder",
+    parentUserId,
+  });
+
+  try {
+    const parsed = orderFormSchema.parse(input);
   const deliveryDate = await prisma.deliveryDate.findUnique({
     where: { id: parsed.deliveryDateId },
     include: {
@@ -360,7 +368,26 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       });
     }
     return order;
+  }).then((order) => {
+    const durationMs = Date.now() - startTime;
+    logInfo("createPendingOrder completed", {
+      action: "createPendingOrder",
+      restaurantId: order.restaurantId,
+      parentUserId: order.parentUserId,
+      orderId: order.id,
+      durationMs,
+    });
+    return order;
   });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logError(error, {
+      action: "createPendingOrder",
+      parentUserId,
+      durationMs,
+    });
+    throw error;
+  }
 }
 
 // ─── Admin manual order creation ─────────────────────────────────────────────
@@ -402,7 +429,15 @@ export async function createAdminOrder(args: {
    *  audit. */
   adminUserId: string;
 }) {
-  const parsed = orderFormSchema.parse(args.input);
+  const startTime = Date.now();
+  logInfo("createAdminOrder started", {
+    action: "createAdminOrder",
+    restaurantId: args.restaurantId,
+    userId: args.adminUserId,
+  });
+
+  try {
+    const parsed = orderFormSchema.parse(args.input);
 
   const deliveryDate = await prisma.deliveryDate.findUnique({
     where: { id: parsed.deliveryDateId },
@@ -654,7 +689,27 @@ export async function createAdminOrder(args: {
       },
     });
     return order;
+  }).then((order) => {
+    const durationMs = Date.now() - startTime;
+    logInfo("createAdminOrder completed", {
+      action: "createAdminOrder",
+      restaurantId: args.restaurantId,
+      userId: args.adminUserId,
+      orderId: order.id,
+      durationMs,
+    });
+    return order;
   });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logError(error, {
+      action: "createAdminOrder",
+      restaurantId: args.restaurantId,
+      userId: args.adminUserId,
+      durationMs,
+    });
+    throw error;
+  }
 }
 
 export async function markOrderPaidByCheckoutSession(
@@ -1071,8 +1126,16 @@ export async function cancelOrderWithRefund(args: {
   guestToken?: string;
 }) {
   const { orderId, parentUserId, guestToken } = args;
+  const startTime = Date.now();
 
-  const order = await prisma.order.findUnique({
+  logInfo("cancelOrderWithRefund started", {
+    action: "cancelOrderWithRefund",
+    orderId,
+    parentUserId,
+  });
+
+  try {
+    const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
       school: true,
@@ -1164,5 +1227,25 @@ export async function cancelOrderWithRefund(args: {
       },
     });
     return cancelled;
+  }).then((cancelled) => {
+    const durationMs = Date.now() - startTime;
+    logInfo("cancelOrderWithRefund completed", {
+      action: "cancelOrderWithRefund",
+      restaurantId: cancelled.restaurantId,
+      parentUserId: parentUserId,
+      orderId: cancelled.id,
+      durationMs,
+    });
+    return cancelled;
   });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logError(error, {
+      action: "cancelOrderWithRefund",
+      orderId,
+      parentUserId,
+      durationMs,
+    });
+    throw error;
+  }
 }

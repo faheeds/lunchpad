@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { logInfo, logError } from "@/lib/logging";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { ScheduleTabs } from "@/components/admin/schedule-tabs";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -14,58 +15,80 @@ export const dynamic = "force-dynamic";
 
 async function createDeliveryDate(formData: FormData) {
   "use server";
-  const restaurant = await requireRestaurant();
-  await requireAdminRole("MANAGER");
-  const schoolId       = String(formData.get("schoolId") || "");
-  const deliveryDateStr = String(formData.get("deliveryDate") || "");
-  const cutoffAtStr    = String(formData.get("cutoffAt") || "");
-  const notes          = String(formData.get("notes") || "").trim() || null;
-  const orderingOpen   = formData.get("orderingOpen") === "on";
-
-  if (!schoolId || !deliveryDateStr || !cutoffAtStr) return;
-
-  // Tenant-scoped: school must belong to this restaurant
-  const school = await prisma.school.findFirst({
-    where: { id: schoolId, restaurantId: restaurant.id },
-    select: { timezone: true },
-  });
-  if (!school) return;
-
-  const newDeliveryDate = await prisma.deliveryDate.create({
-    data: {
-      schoolId,
-      deliveryDate: fromZonedTime(`${deliveryDateStr} 11:00:00`, school.timezone),
-      cutoffAt:     fromZonedTime(cutoffAtStr.replace("T", " ") + ":00", school.timezone),
-      orderingOpen,
-      notes,
-    },
+  const startTime = Date.now();
+  logInfo("createDeliveryDate started", {
+    action: "createDeliveryDate",
   });
 
-  // Auto-attach all active menu items to this delivery date so the customer
-  // ordering page has options out of the box. Admins can un-check items they
-  // don't want available on this date via the existing attach-menu-items UI.
-  const activeMenuItems = await prisma.menuItem.findMany({
-    where: { restaurantId: restaurant.id, isActive: true },
-    select: { id: true, schoolRestrictions: { select: { schoolId: true } } },
-  });
-  const eligibleForThisSchool = activeMenuItems.filter(
-    (item) =>
-      item.schoolRestrictions.length === 0 ||
-      item.schoolRestrictions.some((r) => r.schoolId === schoolId)
-  );
-  if (eligibleForThisSchool.length > 0) {
-    await prisma.deliveryMenuItem.createMany({
-      data: eligibleForThisSchool.map((m) => ({
-        deliveryDateId: newDeliveryDate.id,
-        menuItemId: m.id,
-        schoolId,
-        isAvailable: true,
-      })),
-      skipDuplicates: true,
+  try {
+    const restaurant = await requireRestaurant();
+    await requireAdminRole("MANAGER");
+    const schoolId       = String(formData.get("schoolId") || "");
+    const deliveryDateStr = String(formData.get("deliveryDate") || "");
+    const cutoffAtStr    = String(formData.get("cutoffAt") || "");
+    const notes          = String(formData.get("notes") || "").trim() || null;
+    const orderingOpen   = formData.get("orderingOpen") === "on";
+
+    if (!schoolId || !deliveryDateStr || !cutoffAtStr) return;
+
+    // Tenant-scoped: school must belong to this restaurant
+    const school = await prisma.school.findFirst({
+      where: { id: schoolId, restaurantId: restaurant.id },
+      select: { timezone: true },
     });
-  }
+    if (!school) return;
 
-  revalidatePath("/admin/delivery-dates");
+    const newDeliveryDate = await prisma.deliveryDate.create({
+      data: {
+        schoolId,
+        deliveryDate: fromZonedTime(`${deliveryDateStr} 11:00:00`, school.timezone),
+        cutoffAt:     fromZonedTime(cutoffAtStr.replace("T", " ") + ":00", school.timezone),
+        orderingOpen,
+        notes,
+      },
+    });
+
+    // Auto-attach all active menu items to this delivery date so the customer
+    // ordering page has options out of the box. Admins can un-check items they
+    // don't want available on this date via the existing attach-menu-items UI.
+    const activeMenuItems = await prisma.menuItem.findMany({
+      where: { restaurantId: restaurant.id, isActive: true },
+      select: { id: true, schoolRestrictions: { select: { schoolId: true } } },
+    });
+    const eligibleForThisSchool = activeMenuItems.filter(
+      (item) =>
+        item.schoolRestrictions.length === 0 ||
+        item.schoolRestrictions.some((r) => r.schoolId === schoolId)
+    );
+    if (eligibleForThisSchool.length > 0) {
+      await prisma.deliveryMenuItem.createMany({
+        data: eligibleForThisSchool.map((m) => ({
+          deliveryDateId: newDeliveryDate.id,
+          menuItemId: m.id,
+          schoolId,
+          isAvailable: true,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    const durationMs = Date.now() - startTime;
+    logInfo("createDeliveryDate completed", {
+      action: "createDeliveryDate",
+      restaurantId: restaurant.id,
+      deliveryDateId: newDeliveryDate.id,
+      durationMs,
+    });
+
+    revalidatePath("/admin/delivery-dates");
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logError(error, {
+      action: "createDeliveryDate",
+      durationMs,
+    });
+    throw error;
+  }
 }
 
 async function generateRecurringSchedule(formData: FormData) {

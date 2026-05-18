@@ -3,6 +3,7 @@ import { assertAdminApiRequest } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/utils";
+import { logInfo, logError } from "@/lib/logging";
 
 interface MenuOptionInput {
   name: string;
@@ -36,9 +37,18 @@ interface MenuItemInput {
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  logInfo("bulkCreateMenuItems started", {
+    action: "bulkCreateMenuItems",
+  });
+
   try {
     await assertAdminApiRequest();
   } catch {
+    logError(new Error("Unauthorized"), {
+      action: "bulkCreateMenuItems",
+      durationMs: Date.now() - startTime,
+    });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -48,11 +58,19 @@ export async function POST(req: NextRequest) {
     items = body.items;
     if (!Array.isArray(items) || items.length === 0) throw new Error("No items");
   } catch {
+    logError(new Error("Invalid request body"), {
+      action: "bulkCreateMenuItems",
+      durationMs: Date.now() - startTime,
+    });
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   const restaurant = await requireRestaurant();
   if (!restaurant) {
+    logError(new Error("Restaurant not found"), {
+      action: "bulkCreateMenuItems",
+      durationMs: Date.now() - startTime,
+    });
     return NextResponse.json({ error: "Restaurant not found." }, { status: 404 });
   }
 
@@ -160,6 +178,16 @@ export async function POST(req: NextRequest) {
       errors.push(`"${name}": ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   }
+
+  const durationMs = Date.now() - startTime;
+  logInfo("bulkCreateMenuItems completed", {
+    action: "bulkCreateMenuItems",
+    restaurantId: restaurant.id,
+    created,
+    skipped,
+    errorCount: errors.length,
+    durationMs,
+  });
 
   return NextResponse.json({ created, skipped, errors });
 }
