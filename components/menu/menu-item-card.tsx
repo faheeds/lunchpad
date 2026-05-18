@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type MenuOption = {
   id: string;
@@ -57,11 +58,14 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
       {/* Photo or gradient placeholder */}
       <div style={{ position: "relative", height: 160, overflow: "hidden", flexShrink: 0 }}>
         {imageUrl && !imgFailed ? (
-          <img
+          <Image
             src={imageUrl}
             alt={item.name}
+            fill
+            loading="lazy"
+            sizes="(max-width: 480px) 90vw, (max-width: 768px) 50vw, 33vw"
+            style={{ objectFit: "cover", display: "block" }}
             onError={() => setImgFailed(true)}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : (
           <div style={{

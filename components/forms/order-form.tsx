@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { formatInTimeZone } from "date-fns-tz";
 import type { LocationType } from "@prisma/client";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
@@ -822,9 +823,12 @@ export function OrderForm({
                       )}
                     >
                       {item.imageUrl ? (
-                        <img
+                        <Image
                           src={item.imageUrl}
                           alt={item.name}
+                          width={36}
+                          height={36}
+                          loading="lazy"
                           className="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-slate-100"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                         />

@@ -106,6 +106,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://public.blob.vercel-storage.com" />
         <link href={displayFont.googleUrl} rel="stylesheet" />
         {bodyFont.id !== displayFont.id && (
           <link href={bodyFont.googleUrl} rel="stylesheet" />

@@ -1,13 +1,15 @@
 import Link from "next/link";
+import dynamicImport from "next/dynamic";
 import { prisma } from "@/lib/db";
 import { getAdminReports } from "@/lib/admin";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { formatCurrency } from "@/lib/utils";
 import { formatInTimeZone } from "date-fns-tz";
-import { ReportsCharts } from "@/components/admin/reports-charts";
+
 
 export const dynamic = "force-dynamic";
+const ReportsCharts = dynamicImport(() => import("@/components/admin/reports-charts").then(mod => ({ default: mod.ReportsCharts })), { ssr: false });
 
 function normalizeMultiValue(value: string | string[] | undefined) {
   if (!value) return [];
