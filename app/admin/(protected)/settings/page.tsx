@@ -99,7 +99,6 @@ async function resetSampleData() {
   try {
     const restaurant = await requireRestaurant();
     await requireAdminRole("OWNER");
-    const { isSampleData } = await import("@/lib/sample-data");
 
     // Delete sample menu items
     await prisma.menuItem.deleteMany({
