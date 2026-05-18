@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { prisma } from "@/lib/db";
@@ -15,16 +16,18 @@ export const dynamic = "force-dynamic";
 // version if you ever want to compare or revert. The restaurant-subdomain
 // branch below is untouched.
 
-const orderSteps = [
-  { n: "1", title: "Pick location & date", body: "Select a location and an available delivery date. Ordering closes at 9 PM the night before." },
-  { n: "2", title: "Build your order",   body: "Choose from our full menu — burgers, chicken, salads, sides & more. Full customization available." },
-  { n: "3", title: "Pay & confirm",      body: "Secure Stripe checkout. Confirmation email sent right away." },
-];
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
+  const t = await getTranslations();
   const restaurant = await getCurrentRestaurant();
+
+  // ─── Restaurant ordering page steps ──────────────────────────────────────────
+  const orderSteps = [
+    { n: "1", title: t("home.pick.location"), body: t("home.pick.detail") },
+    { n: "2", title: t("home.build.order"),   body: t("home.build.detail") },
+    { n: "3", title: t("home.pay.confirm"),   body: t("home.pay.detail") },
+  ];
 
   // ── Restaurant mode (subdomain) ──────────────────────────────────────────
   if (restaurant) {
@@ -84,7 +87,7 @@ export default async function HomePage() {
                 textTransform: "uppercase", color: "var(--hero-accent)",
                 marginBottom: 6, fontFamily: "var(--font-display)"
               }}>
-                ★ Fresh · Daily · Delivered ★
+                {t("home.freshdailydelivered")}
               </p>
               {/* Hero headline is the restaurant's own name in their
                   accent color. Previously this was hardcoded to "Hot Lunch"
@@ -111,7 +114,7 @@ export default async function HomePage() {
                   textTransform: "uppercase", letterSpacing: "0.08em",
                   boxShadow: "0 4px 16px rgba(var(--brand-rgb),0.45)"
                 }}>
-                  Order Single Day
+                  {t("home.orderSingleDay")}
                 </Link>
                 <Link href="/weekly" style={{
                   padding: "12px 20px", borderRadius: 100,
@@ -121,7 +124,7 @@ export default async function HomePage() {
                   textTransform: "uppercase", letterSpacing: "0.08em",
                   boxShadow: "0 4px 16px rgba(var(--accent-rgb),0.40)"
                 }}>
-                  Plan The Week
+                  {t("home.planTheWeek")}
                 </Link>
               </div>
               <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.60)", letterSpacing: "0.06em", textTransform: "uppercase", paddingBottom: 14 }}>
@@ -138,7 +141,7 @@ export default async function HomePage() {
                 textTransform: "uppercase", color: "var(--brand-on-white)", marginBottom: 13,
                 fontFamily: "var(--font-display)"
               }}>
-                On the Menu
+                {t("home.onTheMenu")}
               </p>
               <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollSnapType: "x mandatory" }}>
                 {stripItems.map((item, i) => (
@@ -201,7 +204,7 @@ export default async function HomePage() {
               textTransform: "uppercase", color: "var(--brand-on-white)", marginBottom: 13,
               fontFamily: "var(--font-display)"
             }}>
-              How it works
+              {t("home.howItWorks")}
             </p>
             <div style={{
               background: "white", borderRadius: 18, overflow: "hidden",
@@ -351,9 +354,9 @@ export default async function HomePage() {
         </Link>
 
         <div className="lp-nav-center" style={{ display: "flex", gap: 20, fontSize: 13, color: "#475569" }}>
-          <a href="#features" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Features</a>
-          <a href="#pricing" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Pricing</a>
-          <a href="#testimonials" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>Testimonials</a>
+          <a href="#features" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>{t("home.platform.nav.features")}</a>
+          <a href="#pricing" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>{t("home.platform.nav.pricing")}</a>
+          <a href="#testimonials" style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>{t("home.platform.nav.testimonials")}</a>
         </div>
 
         <div className="lp-nav-cta" style={{ display: "flex", gap: 8 }}>
@@ -363,7 +366,7 @@ export default async function HomePage() {
             color: "#475569", textDecoration: "none", display: "inline-flex", alignItems: "center",
             whiteSpace: "nowrap",
           }}>
-            Sign in
+            {t("home.platform.nav.signIn")}
           </Link>
           <Link href="/signup" style={{
             fontSize: 13, fontWeight: 600, padding: "7px 15px", borderRadius: 8,
@@ -371,7 +374,7 @@ export default async function HomePage() {
             textDecoration: "none", display: "inline-flex", alignItems: "center",
             whiteSpace: "nowrap",
           }}>
-            Start free trial
+            {t("home.platform.nav.startFreeTrial")}
           </Link>
         </div>
       </nav>
@@ -402,19 +405,18 @@ export default async function HomePage() {
               width: 7, height: 7, borderRadius: "50%",
               background: "#1D9E75", flexShrink: 0,
             }} />
-            Built for lunch operators, by a lunch operator
+            {t("home.platform.hero.tag")}
           </div>
           <h1 className="lp-hero-h1" style={{
             fontSize: 44, fontWeight: 700, lineHeight: 1.1,
             color: "#0f172a", marginBottom: 14, letterSpacing: "-0.8px",
-          }}>
-            The platform that <em style={{ fontStyle: "normal", color: "#1D9E75" }}>runs your lunch program</em> for you.
-          </h1>
+          }} dangerouslySetInnerHTML={{ __html: t("home.platform.hero.headline") }} />
+
           <p className="lp-hero-sub" style={{
             fontSize: 15, color: "#475569", lineHeight: 1.7,
             marginBottom: 28, maxWidth: 380,
           }}>
-            LunchPad handles ordering, payments, and delivery scheduling so you can focus on the food. Set up in a day, not a season.
+            {t("home.platform.hero.subtitle")}
           </p>
 
           <div className="lp-hero-cta-row" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 24 }}>
@@ -424,7 +426,7 @@ export default async function HomePage() {
               borderRadius: 8, textDecoration: "none",
               display: "inline-flex", alignItems: "center",
             }}>
-              Start free trial
+              {t("home.platform.nav.startFreeTrial")}
             </Link>
             <a href="#features" style={{
               background: "transparent", color: "#475569",
@@ -436,12 +438,12 @@ export default async function HomePage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M8 5v14l11-7z"/>
               </svg>
-              See how it works
+              {t("home.cta.seeHow")}
             </a>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 22 }}>
-            {["No credit card required", "Set up in a day, not a season", "No per-order fees, ever"].map((label) => (
+            {[t("home.platform.hero.noCardRequired"), t("home.platform.hero.setupQuick"), t("home.platform.hero.noFees")].map((label) => (
               <div key={label} style={{
                 display: "flex", alignItems: "center", gap: 7,
                 fontSize: 12, color: "#94a3b8",
@@ -484,9 +486,7 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
-            <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
-              <strong style={{ color: "#0f172a", fontWeight: 700 }}>200+ operators</strong> trust LunchPad to run their lunch program.
-            </div>
+            <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: t("home.platform.hero.customers") }} />
           </div>
           </div>
         </div>
@@ -518,14 +518,14 @@ export default async function HomePage() {
           {/* Dashboard body */}
           <div className="lp-hero-right-inner" style={{ padding: "12px 14px", flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>
-              Today's Orders
+              {t("dashboard.page.todayOrders")}
             </div>
 
             {/* Stat tiles */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6, marginBottom: 12 }}>
               <div style={{ background: "#ffffff", border: "0.5px solid #e2e8f0", borderRadius: 6, padding: "9px 10px" }}>
                 <div style={{ fontSize: 9, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 3 }}>
-                  Orders
+                  {t("dashboard.page.orders")}
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>47</div>
                 <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
@@ -537,7 +537,7 @@ export default async function HomePage() {
               </div>
               <div style={{ background: "#ffffff", border: "0.5px solid #e2e8f0", borderRadius: 6, padding: "9px 10px" }}>
                 <div style={{ fontSize: 9, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 3 }}>
-                  Revenue
+                  {t("dashboard.page.revenue")}
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>$681</div>
                 <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
@@ -646,13 +646,13 @@ export default async function HomePage() {
           four reasonably-sized cards per row without truncating titles. */}
       <div id="features" className="lp-section" style={{ padding: "44px 28px", maxWidth: 920, margin: "0 auto" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 8 }}>
-          Features
+          {t("home.features.label")}
         </div>
         <h2 className="lp-section-h2" style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", lineHeight: 1.15, marginBottom: 8, letterSpacing: "-0.4px" }}>
-          Built for operators, loved by their customers
+          {t("home.features.title")}
         </h2>
         <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 26 }}>
-          From your first location to your fiftieth, LunchPad scales with your business.
+          {t("home.features.subtitle")}
         </p>
         {/* 2 × 4 grid on wide viewports; auto-fit lets it collapse to 2 cols
             on tablet and 1 col on phone. Minmax 200px keeps each card legible
@@ -695,10 +695,10 @@ export default async function HomePage() {
       }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 6 }}>
-            Testimonials
+            {t("home.testimonials.label")}
           </div>
           <h2 className="lp-section-h2" style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", marginBottom: 18, letterSpacing: "-0.4px" }}>
-            Operators love it
+            {t("home.testimonials.title")}
           </h2>
           <div style={{
             display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))",
@@ -745,13 +745,13 @@ export default async function HomePage() {
       {/* ── Pricing ──────────────────────────────────────────────────── */}
       <div id="pricing" className="lp-section" style={{ padding: "44px 28px 52px", maxWidth: 680, margin: "0 auto" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 8 }}>
-          Pricing
+          {t("home.pricing.label")}
         </div>
         <h2 className="lp-section-h2" style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", lineHeight: 1.15, marginBottom: 8, letterSpacing: "-0.4px" }}>
-          Start free for 14 days
+          {t("home.pricing.title")}
         </h2>
         <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 26 }}>
-          No credit card required to start. Cancel anytime.
+          {t("home.pricing.subtitle")}
         </p>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(175px, 1fr))",
@@ -827,10 +827,10 @@ export default async function HomePage() {
       }}>
         <div>
           <h3 style={{ fontSize: 24, fontWeight: 700, color: "#0f172a", marginBottom: 6, letterSpacing: "-0.3px" }}>
-            Ready to modernize your lunch program?
+            {t("home.cta.ready")}
           </h3>
           <p style={{ fontSize: 13, color: "#475569" }}>
-            Join operators already using LunchPad to save time, eliminate payment headaches, and serve their customers better.
+            {t("home.cta.description")}
           </p>
         </div>
         <div className="lp-bottom-cta-buttons" style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
@@ -841,7 +841,7 @@ export default async function HomePage() {
             textDecoration: "none", display: "inline-flex", alignItems: "center",
             whiteSpace: "nowrap",
           }}>
-            See how it works
+            {t("home.cta.seeHow")}
           </a>
           <Link href="/signup" style={{
             background: "#1D9E75", color: "#ffffff",
@@ -850,7 +850,7 @@ export default async function HomePage() {
             display: "inline-flex", alignItems: "center",
             whiteSpace: "nowrap",
           }}>
-            Start free trial today
+            {t("home.cta.startTrial")}
           </Link>
         </div>
       </div>
@@ -862,12 +862,12 @@ export default async function HomePage() {
         borderTop: "0.5px solid #e2e8f0", flexWrap: "wrap", gap: 10,
       }}>
         <div style={{ fontSize: 12, color: "#94a3b8" }}>
-          © {new Date().getFullYear()} LunchPad. All rights reserved.
+          {t.rich("home.footer.copy", { year: new Date().getFullYear() })}
         </div>
         <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#475569" }}>
-          <Link href="/privacy" style={{ color: "inherit", textDecoration: "none" }}>Privacy</Link>
-          <Link href="/terms" style={{ color: "inherit", textDecoration: "none" }}>Terms</Link>
-          <Link href="/contact" style={{ color: "inherit", textDecoration: "none" }}>Contact</Link>
+          <Link href="/privacy" style={{ color: "inherit", textDecoration: "none" }}>{t("home.footer.privacy")}</Link>
+          <Link href="/terms" style={{ color: "inherit", textDecoration: "none" }}>{t("home.footer.terms")}</Link>
+          <Link href="/contact" style={{ color: "inherit", textDecoration: "none" }}>{t("common.contactUs")}</Link>
         </div>
       </footer>
     </div>

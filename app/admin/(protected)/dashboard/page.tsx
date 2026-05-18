@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { formatInTimeZone } from "date-fns-tz";
@@ -10,6 +11,7 @@ import { SampleDataBanner } from "@/components/admin/sample-data-banner";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
+  const t = await getTranslations();
   const restaurant = await requireRestaurant();
 
   const todayStart = new Date();

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export function SiteHeader({
   restaurantName = "LunchPad",
@@ -13,6 +14,7 @@ export function SiteHeader({
    *  the default LunchPad cloche SVG so the header always renders something. */
   logoUrl?: string | null;
 }) {
+  const t = useTranslations();
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -39,7 +41,7 @@ export function SiteHeader({
       }} onBlur={(e) => {
         e.currentTarget.style.left = "-9999px";
       }}>
-        Skip to main content
+        {t("common.skipToMain")}
       </a>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px" }}>
         <Link href="/" className="no-underline flex items-center gap-2" onClick={() => setMenuOpen(false)}>
@@ -69,7 +71,7 @@ export function SiteHeader({
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isAdmin ? (
             <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "var(--brand-on-dark)", color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Staff
+              {t("common.staff")}
             </span>
           ) : (
             <>
@@ -107,13 +109,13 @@ export function SiteHeader({
       {menuOpen && !isAdmin && (
         <nav style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.08)", background: "var(--dark-bg)", padding: "8px 12px 14px" }}>
           {[
-            { href: "/",        label: "Home"          },
-            { href: "/menu",    label: "Menu"          },
+            { href: "/",        label: t("common.home")          },
+            { href: "/menu",    label: t("common.menu")          },
             { href: "/order",   label: "Order lunch"   },
             { href: "/weekly",  label: "Weekly plan"   },
             { href: "/history", label: "Order history" },
-            { href: "/account", label: "My account"    },
-            { href: "/contact", label: "Contact us"    },
+            { href: "/account", label: t("common.account")    },
+            { href: "/contact", label: t("common.contactUs")    },
           ].map((item) => (
             <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{
               display: "block", padding: "11px 14px", borderRadius: 10,
@@ -135,7 +137,7 @@ export function SiteHeader({
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
-              Admin login
+              {t("common.adminLogin")}
             </Link>
           </div>
         </nav>

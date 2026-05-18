@@ -1,0 +1,223 @@
+{
+  "common": {
+    "home": "Home",
+    "menu": "Menu",
+    "account": "My account",
+    "contactUs": "Contact us",
+    "adminLogin": "Admin login",
+    "signOut": "Sign out",
+    "skipToMain": "Skip to main content",
+    "staff": "Staff"
+  },
+  "home": {
+    "freshdailydelivered": "★ Fresh · Daily · Delivered ★",
+    "orderSingleDay": "Order Single Day",
+    "planTheWeek": "Plan The Week",
+    "onTheMenu": "On the Menu",
+    "howItWorks": "How it works",
+    "pick": {
+      "location": "Pick location & date",
+      "detail": "Select a location and an available delivery date. Ordering closes at 9 PM the night before."
+    },
+    "build": {
+      "order": "Build your order",
+      "detail": "Choose from our full menu — burgers, chicken, salads, sides & more. Full customization available."
+    },
+    "pay": {
+      "confirm": "Pay & confirm",
+      "detail": "Secure Stripe checkout. Confirmation email sent right away."
+    },
+    "features": {
+      "label": "Features",
+      "title": "Built for operators, loved by their customers",
+      "subtitle": "From your first location to your fiftieth, LunchPad scales with your business."
+    },
+    "testimonials": {
+      "label": "Testimonials",
+      "title": "Operators love it"
+    },
+    "pricing": {
+      "label": "Pricing",
+      "title": "Start free for 14 days",
+      "subtitle": "No credit card required to start. Cancel anytime."
+    },
+    "cta": {
+      "ready": "Ready to modernize your lunch program?",
+      "description": "Join operators already using LunchPad to save time, eliminate payment headaches, and serve their customers better.",
+      "seeHow": "See how it works",
+      "startTrial": "Start free trial today"
+    },
+    "footer": {
+      "copy": "© {year} LunchPad. All rights reserved.",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    },
+    "platform": {
+      "nav": {
+        "features": "Features",
+        "pricing": "Pricing",
+        "testimonials": "Testimonials",
+        "signIn": "Sign in",
+        "startFreeTrial": "Start free trial"
+      },
+      "hero": {
+        "tag": "Built for lunch operators, by a lunch operator",
+        "headline": "The platform that <em>runs your lunch program</em> for you.",
+        "subtitle": "LunchPad handles ordering, payments, and delivery scheduling so you can focus on the food. Set up in a day, not a season.",
+        "noCardRequired": "No credit card required",
+        "setupQuick": "Set up in a day, not a season",
+        "noFees": "No per-order fees, ever",
+        "customers": "{count} operators trust LunchPad to run their lunch program."
+      },
+      "stats": {
+        "ordersProcessed": "Orders processed",
+        "locationsServed": "Locations served",
+        "restaurants": "Restaurants"
+      },
+      "features": [
+        {
+          "number": "01",
+          "title": "Smart menu builder",
+          "description": "Build your full menu with photos, prices, add-ons, and removals. Go live in minutes."
+        },
+        {
+          "number": "02",
+          "title": "Cutoffs & automated emails",
+          "description": "Set ordering deadlines per delivery date. Order confirmations, cutoff reminders, and cancellation receipts go out to customers automatically."
+        },
+        {
+          "number": "03",
+          "title": "Stripe payments",
+          "description": "Every order paid up front via Stripe. Funds go straight to your connected account."
+        },
+        {
+          "number": "04",
+          "title": "Multi-location support",
+          "description": "Serve any number of locations from a single dashboard, each with its own delivery schedule."
+        },
+        {
+          "number": "05",
+          "title": "Live order dashboard",
+          "description": "See every order in real time. Export kitchen sheets, track payments, manage refunds."
+        },
+        {
+          "number": "06",
+          "title": "Auto label printing",
+          "description": "Print individual kitchen labels for every order — name, allergens, add-ons. No manual sorting."
+        },
+        {
+          "number": "07",
+          "title": "Discount module",
+          "description": "Create promo codes, percentage or flat discounts, and set usage limits — applied automatically at checkout."
+        },
+        {
+          "number": "08",
+          "title": "Multi-day checkout",
+          "description": "Customers can order across multiple delivery dates in a single checkout — fewer drop-offs, more committed orders."
+        }
+      ],
+      "testimonials": [
+        {
+          "quote": "I used to spend 2 hours every Friday collecting orders in a Google Form. Now I spend 10 minutes on LunchPad.",
+          "name": "Sarah R.",
+          "role": "School lunch coordinator"
+        },
+        {
+          "quote": "The cutoff feature saved us from hundreds of last-minute headaches. Setup took under an hour.",
+          "name": "Marcus K.",
+          "role": "Corporate catering operator"
+        },
+        {
+          "quote": "Software that actually understands a lunch program. Not some generic food ordering app.",
+          "name": "Tanya L.",
+          "role": "District food services"
+        }
+      ],
+      "pricing": [
+        {
+          "name": "Starter",
+          "price": 49,
+          "description": "Perfect for single-location operations just getting started.",
+          "features": [
+            "Up to 2 locations",
+            "Unlimited menu items",
+            "Stripe payouts",
+            "Email confirmations",
+            "Order dashboard"
+          ]
+        },
+        {
+          "name": "Growth",
+          "price": 149,
+          "description": "For growing operators serving multiple locations.",
+          "features": [
+            "Up to 10 locations",
+            "Weekly batch checkout",
+            "Cutoff reminders",
+            "Priority support",
+            "Everything in Starter"
+          ]
+        },
+        {
+          "name": "Scale",
+          "price": 349,
+          "description": "Enterprise-grade for large districts and multi-brand operators.",
+          "features": [
+            "Unlimited locations",
+            "Custom branding",
+            "Dedicated onboarding",
+            "SLA support",
+            "Everything in Growth"
+          ]
+        }
+      ]
+    }
+  },
+  "order": {
+    "page": {
+      "title": "Order"
+    }
+  },
+  "account": {
+    "page": {
+      "title": "Account",
+      "signOut": "Sign out",
+      "myChildren": "Your {unitPlural}",
+      "edit": "Edit details",
+      "allergyNotes": "Allergy / dietary notes",
+      "saveChanges": "Save changes",
+      "saving": "Saving…",
+      "remove": "Remove",
+      "addChild": "Add {ordererRefersToUnit}",
+      "studentName": "{unitName}",
+      "weeklyPlan": "Weekly lunch plan",
+      "weeklyPlanDescription": "Set a default meal per weekday. One checkout covers the whole week.",
+      "upcomingWeek": "Upcoming week",
+      "plannedItems": "{count} planned item{plural} ready for checkout",
+      "checkoutWeek": "Checkout week",
+      "orderHistory": "Order history",
+      "viewAll": "View all →",
+      "noOrders": "No orders yet.",
+      "orderNow": "Order now",
+      "reorder": "Reorder →",
+      "stats": {
+        "children": "{count}",
+        "orders": "Orders",
+        "weekly": "Weekly"
+      }
+    }
+  },
+  "dashboard": {
+    "page": {
+      "title": "Dashboard",
+      "todayOrders": "Today's Orders",
+      "orders": "Orders",
+      "revenue": "Revenue",
+      "locations": "locations active",
+      "pendingCutoff": "Pending cutoff",
+      "closesTonight": "Closes tonight",
+      "recentOrders": "Recent orders",
+      "lastWeek": "+{count} vs last week"
+    }
+  }
+}

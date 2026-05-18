@@ -1,4 +1,7 @@
 import { withSentryConfig } from "@sentry/nextjs";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./lib/i18n.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -26,7 +29,7 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withNextIntl(nextConfig), {
   // Sentry organization and project (set these once your Sentry project is created)
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,

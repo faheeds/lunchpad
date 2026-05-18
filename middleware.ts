@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import createMiddleware from "next-intl/middleware";
 
 // Paths that bypass restaurant resolution (public platform routes)
 const PUBLIC_PATHS = [
@@ -8,7 +9,17 @@ const PUBLIC_PATHS = [
   "/robots.txt",
 ];
 
+const intlMiddleware = createMiddleware({
+  locales: ["en"],
+  defaultLocale: "en",
+  localePrefix: "never",
+});
+
 export async function middleware(req: NextRequest) {
+  const intlRes = intlMiddleware(req);
+  if (intlRes) {
+    return intlRes;
+  }
   const { pathname } = req.nextUrl;
 
   // Skip public paths

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
@@ -14,6 +15,7 @@ export default async function OrderPage({
 }: {
   searchParams: Promise<{ reorder?: string; item?: string; childId?: string }>;
 }) {
+  const t = await getTranslations();
   const session = await auth();
   // If a parent is on the apex (no slug header), bounce them to their
   // tenant subdomain instead of throwing.

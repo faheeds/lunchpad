@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { signOut } from "@/lib/auth";
 import { requireParent, requireParentTenant } from "@/lib/parent-auth";
@@ -15,6 +16,7 @@ import { WeeklyPlanPlanner } from "@/components/account/weekly-plan-planner";
 import { getLabels } from "@/lib/location-labels";
 
 export default async function ParentAccountPage() {
+  const t = await getTranslations();
   const session = await requireParent();
   const parentUserId = session.user?.parentUserId;
   if (!parentUserId) redirect("/account/sign-in");
@@ -180,7 +182,7 @@ export default async function ParentAccountPage() {
                   border: "1px solid rgba(255,255,255,0.15)", borderRadius: 100,
                   padding: "6px 14px", background: "transparent", cursor: "pointer",
                 }}>
-                  Sign out
+                  {t("common.signOut")}
                 </button>
               </form>
             </div>
@@ -202,7 +204,7 @@ export default async function ParentAccountPage() {
 
           {/* ── Saved kids ─────────────────────────────────────────── */}
           <section>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Your {getLabels(parent.children[0]?.school.locationType).unitPlural.toLowerCase()}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">{t.rich("account.page.myChildren", { unitPlural: getLabels(parent.children[0]?.school.locationType).unitPlural.toLowerCase() })}</p>
 
             {parent.children.map((child) => (
               <div key={child.id} className="rounded-[18px] border border-slate-100 bg-white mb-2 overflow-hidden">
@@ -243,7 +245,7 @@ export default async function ParentAccountPage() {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                    Edit details
+                    {t("account.page.edit")}
                   </summary>
                   <form action={updateChild} className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
                     <input type="hidden" name="childId" value={child.id} />
@@ -292,10 +294,10 @@ export default async function ParentAccountPage() {
           {/* ── Weekly plan ────────────────────────────────────────── */}
           {parent.children.length > 0 && (
             <section>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Weekly lunch plan</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">{t("account.page.weeklyPlan")}</p>
               <div className="rounded-[18px] border border-slate-100 bg-white p-4">
                 <p className="text-[12px] text-slate-500 leading-relaxed mb-3">
-                  Set a default meal per weekday. One checkout covers the whole week.
+                  {t("account.page.weeklyPlanDescription")}
                 </p>
                 <WeeklyPlanPlanner
                   children={parent.children.map((c) => ({
@@ -346,7 +348,7 @@ export default async function ParentAccountPage() {
           {/* ── Order history ──────────────────────────────────────── */}
           <section>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Order history</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("account.page.orderHistory")}</p>
               {orders.length > 0 && (
                 <Link href="/history" style={{ fontSize: 11, fontWeight: 600, color: "var(--brand-on-white, #c41230)", textDecoration: "none" }}>
                   View all →
@@ -354,7 +356,7 @@ export default async function ParentAccountPage() {
               )}
             </div>
 
-            {orders.length ? orders.map((order) => {
+            {orders.length > 0 ? orders.map((order) => {
               const s = STATUS_STYLE[order.status] ?? STATUS_STYLE.PENDING;
               return (
                 <div key={order.id} className="rounded-[18px] border border-slate-100 bg-white p-4 mb-2">
@@ -389,14 +391,14 @@ export default async function ParentAccountPage() {
               );
             }) : (
               <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-8 text-center">
-                <p className="text-[13px] font-medium text-slate-400">No orders yet.</p>
+                <p className="text-[13px] font-medium text-slate-400">{t("account.page.noOrders")}</p>
                 <Link href="/order" style={{
                   display: "inline-block", marginTop: 10,
                   fontSize: 13, fontWeight: 700, color: "white",
                   background: "var(--brand-on-white, #c41230)",
                   borderRadius: 100, padding: "9px 20px", textDecoration: "none",
                 }}>
-                  Order now
+                  {t("account.page.orderNow")}
                 </Link>
               </div>
             )}
