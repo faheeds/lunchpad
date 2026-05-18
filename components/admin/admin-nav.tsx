@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { hasRole, type AdminRole } from "@/lib/roles";
+import { AdminSearch } from "@/components/admin/admin-search";
 
 function ClocheMark({ size = 22 }: { size?: number }) {
   return (
@@ -79,7 +80,7 @@ export function AdminNav({
   return (
     <header className="bg-white border-b border-slate-100 sticky top-0 z-20">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between py-2.5 border-b border-slate-50">
+        <div className="flex items-center justify-between py-2.5 border-b border-slate-50 gap-4">
           <div className="flex items-center gap-2">
             <Link href="/admin/dashboard" className="no-underline flex items-center gap-2">
               <ClocheMark size={22} />
@@ -92,6 +93,7 @@ export function AdminNav({
               {badge.label}
             </span>
           </div>
+          <AdminSearch />
           <div className="flex items-center gap-2">
             {onboardingPill && (
               <Link
