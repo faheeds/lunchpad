@@ -14,9 +14,11 @@ DIFF=$(git diff origin/main...HEAD --stat=200,1000 || true)
 FULL_DIFF=$(git diff origin/main...HEAD || true)
 
 # Cap to ~30K chars to keep tokens reasonable.
-if [ "$(echo "$FULL_DIFF" | wc -c)" -gt 30000 ]; then
-  FULL_DIFF=$(echo "$FULL_DIFF" | head -c 30000)
-  FULL_DIFF="$FULL_DIFF
+# Uses pure-bash parameter expansion to avoid the `echo | head -c` pipe,
+# which crashed under `set -euo pipefail` when `head` closed the pipe
+# before `echo` finished (SIGPIPE → exit 1).
+if [ "${#FULL_DIFF}" -gt 30000 ]; then
+  FULL_DIFF="${FULL_DIFF:0:30000}
 
 [truncated — diff is larger than 30k chars; reviewer saw top portion only]"
 fi
