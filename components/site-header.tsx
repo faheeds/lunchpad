@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { HelpDrawer } from "@/components/help-drawer";
 
 export function SiteHeader({
   restaurantName = "LunchPad",
@@ -16,6 +17,7 @@ export function SiteHeader({
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   // If the uploaded image fails to load (404, expired blob, etc.) we
   // swap to the SVG fallback. Tracked locally so a single bad URL doesn't
   // permanently break the brand.
@@ -85,6 +87,21 @@ export function SiteHeader({
               </Link>
               <button
                 type="button"
+                onClick={() => setHelpOpen(true)}
+                aria-label="Get help"
+                style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  background: "rgba(255,255,255,0.08)", display: "flex",
+                  alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", fontSize: 16, color: "white",
+                  fontWeight: 600
+                }}
+              >
+                ?
+              </button>
+              <button
+                type="button"
                 onClick={() => setMenuOpen((o) => !o)}
                 style={{
                   width: 32, height: 32, borderRadius: 8,
@@ -140,6 +157,7 @@ export function SiteHeader({
           </div>
         </nav>
       )}
+      <HelpDrawer isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
     </header>
   );
 }
