@@ -8,6 +8,7 @@ import { ThemePicker } from "@/components/admin/theme-picker";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { ImageUpload } from "@/components/admin/image-upload";
 import { SettingsTabs, type SettingsTabId } from "@/components/admin/settings-tabs";
+import { resetSampleData } from "@/lib/sample-data";
 import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
 import Link from "next/link";
 
@@ -141,6 +142,20 @@ async function updateCustomDomain(formData: FormData) {
   redirect("/admin/settings?tab=domain&saved=1");
 }
 
+async function resetSampleDataAction() {
+  "use server";
+  let errorMsg: string | null = null;
+  try {
+    const restaurant = await requireRestaurant();
+    await requireAdminRole("OWNER");
+    await resetSampleData(restaurant.id);
+  } catch (e: unknown) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong";
+  }
+  if (errorMsg) redirect(`/admin/settings?tab=danger&error=${encodeURIComponent(errorMsg)}`);
+  redirect("/admin/settings?tab=danger&reset=1");
+}
+
 const TIMEZONES = [
   { value: "America/New_York",    label: "Eastern (ET)" },
   { value: "America/Chicago",     label: "Central (CT)" },
@@ -158,6 +173,7 @@ export default async function AdminSettingsPage({
   searchParams: Promise<{
     tab?: string;
     saved?: string;
+    reset?: string;
     error?: string;
     connect_success?: string;
     connect_error?: string;
@@ -196,6 +212,14 @@ export default async function AdminSettingsPage({
             <path d="M20 6L9 17l-5-5"/>
           </svg>
           <p className="text-[13px] font-medium text-green-800">Saved.</p>
+        </div>
+      )}
+      {params.reset === "1" && (
+        <div className="rounded-[12px] bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          <p className="text-[13px] font-medium text-green-800">Sample data deleted.</p>
         </div>
       )}
       {error && (
@@ -565,6 +589,18 @@ export default async function AdminSettingsPage({
                 className="px-3 py-1.5 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 no-underline hover:bg-red-50 transition">
                 Manage plan →
               </Link>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[12px] font-medium text-ink">Reset sample data</p>
+                <p className="text-[11px] text-slate-400">Delete all records created during onboarding demo</p>
+              </div>
+              <form action={resetSampleDataAction}>
+                <button type="submit"
+                  className="px-3 py-1.5 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 no-underline hover:bg-red-50 transition">
+                  Reset →
+                </button>
+              </form>
             </div>
           </div>
         </div>

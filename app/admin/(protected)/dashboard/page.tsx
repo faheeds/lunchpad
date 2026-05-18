@@ -5,11 +5,18 @@ import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { HomeNudges, type Nudge } from "@/components/admin/home-nudges";
+import { SampleDataBanner } from "@/components/admin/sample-data-banner";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sample_data_seeded?: string }>;
+}) {
   const restaurant = await requireRestaurant();
+  const params = await searchParams;
+  (void params);  // unused but kept for future use
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -249,6 +256,8 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-5 pb-10">
+      {/* Sample data banner */}
+      <SampleDataBanner />
 
       {/* ── Ordering URL hero card ────────────────────────────────── */}
       <div style={{

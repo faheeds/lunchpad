@@ -12,10 +12,25 @@ import { ThemePicker } from "@/components/admin/theme-picker";
 import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { WizardStepper, type WizardStep } from "@/components/admin/wizard-stepper";
+import { seedSampleData } from "@/lib/sample-data";
 
 export const dynamic = "force-dynamic";
 
 // ─── Server actions ─────────────────────────────────────────────────────────
+async function skipAndSeedSampleData() {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("OWNER");
+
+  await seedSampleData(restaurant.id);
+
+  await prisma.restaurant.update({
+    where: { id: restaurant.id },
+    data: { onboardingComplete: true, testOrderPlacedAt: null },
+  });
+
+  redirect("/admin/dashboard?sample_data_seeded=1");
+}
 
 async function saveOperatorType(formData: FormData) {
   "use server";
@@ -413,7 +428,12 @@ export default async function OnboardingPage({
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2">
+              <div className="flex items-center justify-between pt-2">
+                <form action={skipAndSeedSampleData}>
+                  <button type="submit" className="px-4 py-2 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-600 hover:bg-slate-50 transition">
+                    Skip for now — populate sample data →
+                  </button>
+                </form>
                 <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
                   Continue →
                 </button>
