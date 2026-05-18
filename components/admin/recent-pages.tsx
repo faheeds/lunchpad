@@ -29,9 +29,9 @@ interface RecentPage {
 
 function getLabelFromPath(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments.length < 3) return pathname;
+  if (segments.length < 2) return pathname;
 
-  const mainSegment = segments[2];
+  const mainSegment = segments[1];
   return BREADCRUMB_LABELS[mainSegment] || mainSegment;
 }
 

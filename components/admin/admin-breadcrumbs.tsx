@@ -39,7 +39,7 @@ function getBreadcrumbs(pathname: string): Crumb[] {
 
   // Process path segments
   let currentPath = "";
-  for (let i = 2; i < segments.length; i++) {
+  for (let i = 1; i < segments.length; i++) {
     currentPath += `/${segments[i]}`;
     const segment = segments[i];
 
