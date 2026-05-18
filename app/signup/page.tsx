@@ -48,7 +48,6 @@ export default function SignupPage() {
 
   // Step 2 field
   const [plan, setPlan] = useState("GROWTH");
-  const [isAnnual, setIsAnnual] = useState(false);
 
   // Captured after a successful signup — used by step 3 to route to the
   // correct tenant subdomain.
@@ -299,58 +298,11 @@ export default function SignupPage() {
             All plans include a 14-day free trial. Cancel anytime.
           </p>
 
-          {/* Annual/Monthly Toggle */}
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-            <div style={{
-              display: "inline-flex", gap: 12, background: "#f8fafc",
-              padding: "8px 12px", borderRadius: 12, alignItems: "center",
-            }}>
-              <button
-                onClick={() => setIsAnnual(false)}
-                style={{
-                  padding: "8px 16px", borderRadius: 8,
-                  background: !isAnnual ? "white" : "transparent",
-                  color: !isAnnual ? "#1D9E75" : "#94a3b8",
-                  fontSize: 13, fontWeight: 700, border: "none",
-                  cursor: "pointer", transition: "all 0.15s",
-                  boxShadow: !isAnnual ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
-                }}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setIsAnnual(true)}
-                style={{
-                  padding: "8px 16px", borderRadius: 8,
-                  background: isAnnual ? "white" : "transparent",
-                  color: isAnnual ? "#1D9E75" : "#94a3b8",
-                  fontSize: 13, fontWeight: 700, border: "none",
-                  cursor: "pointer", transition: "all 0.15s",
-                  boxShadow: isAnnual ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
-                  position: "relative",
-                }}
-              >
-                Annual
-                {isAnnual && (
-                  <span style={{
-                    position: "absolute", right: -28, top: -8,
-                    background: "#22c55e", color: "white",
-                    fontSize: 10, fontWeight: 700, padding: "2px 6px",
-                    borderRadius: 10, whiteSpace: "nowrap",
-                  }}>
-                    Save 20%
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
 
           <div className="su-plans" style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
             {PLANS.map((p) => {
-              const monthlyPrice = parseInt(p.price.replace("$", ""));
-              const annualPrice = Math.floor(monthlyPrice * 12 * 0.8);
-              const displayPrice = isAnnual ? `$${annualPrice}` : p.price;
-              const displayPeriod = isAnnual ? "/year" : p.period;
+              const displayPrice = p.price;
+              const displayPeriod = p.period;
               return (
                 <div
                   key={p.id}

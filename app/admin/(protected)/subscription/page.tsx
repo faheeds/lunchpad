@@ -41,7 +41,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
 
   const trialExpired = full.subscriptionStatus === "TRIAL" && trialDaysLeft === 0;
 
-  const renewalDate = full.trialEndsAt
+  const renewalDate = full.subscriptionStatus === "TRIAL" && full.trialEndsAt
     ? new Date(full.trialEndsAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
     : "your renewal date";
 
@@ -142,7 +142,9 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
                         {pct}%
                       </p>
                     )}
-                    <p className="text-[12px] font-semibold tabular-nums" style={{ color: atLimit ? "#dc2626" : "#1c0505" }}>
+                    <p className="text-[12px] font-semibold tabular-nums" style={{
+                      color: isRed ? "#dc2626" : isAmber ? "#d97706" : "#1c0505"
+                    }}>
                       {row.used}{isUnlimited ? "" : ` / ${row.limit}`}
                     </p>
                   </div>

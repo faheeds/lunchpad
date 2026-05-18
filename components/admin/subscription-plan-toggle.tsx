@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 interface Props {
   planName: string;
   monthlyPrice: number;
@@ -19,11 +17,8 @@ export function SubscriptionPlanToggle({
   statusColor,
   statusBg,
 }: Props) {
-  const [isAnnual, setIsAnnual] = useState(false);
-
-  const annualPrice = Math.floor(monthlyPrice * 12 * 0.8);
-  const displayPrice = isAnnual ? `$${annualPrice}` : `$${monthlyPrice}`;
-  const displayPeriod = isAnnual ? "/year" : "/mo";
+  const displayPrice = `$${monthlyPrice}`;
+  const displayPeriod = "/mo";
 
   return (
     <div style={{
@@ -47,49 +42,6 @@ export function SubscriptionPlanToggle({
         </span>
       </div>
 
-      {/* Annual/Monthly Toggle */}
-      <div style={{
-        display: "flex", gap: 8, background: "#f8fafc",
-        padding: "6px 8px", borderRadius: 8, width: "fit-content",
-      }}>
-        <button
-          onClick={() => setIsAnnual(false)}
-          style={{
-            padding: "6px 14px", borderRadius: 6,
-            background: !isAnnual ? "white" : "transparent",
-            color: !isAnnual ? "#1D9E75" : "#94a3b8",
-            fontSize: 12, fontWeight: 600, border: "none",
-            cursor: "pointer", transition: "all 0.15s",
-            boxShadow: !isAnnual ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
-          }}
-        >
-          Monthly
-        </button>
-        <button
-          onClick={() => setIsAnnual(true)}
-          style={{
-            padding: "6px 14px", borderRadius: 6,
-            background: isAnnual ? "white" : "transparent",
-            color: isAnnual ? "#1D9E75" : "#94a3b8",
-            fontSize: 12, fontWeight: 600, border: "none",
-            cursor: "pointer", transition: "all 0.15s",
-            boxShadow: isAnnual ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
-            position: "relative",
-          }}
-        >
-          Annual
-          {isAnnual && (
-            <span style={{
-              position: "absolute", right: -26, top: -6,
-              background: "#22c55e", color: "white",
-              fontSize: 9, fontWeight: 700, padding: "2px 6px",
-              borderRadius: 10, whiteSpace: "nowrap",
-            }}>
-              Save 20%
-            </span>
-          )}
-        </button>
-      </div>
     </div>
   );
 }

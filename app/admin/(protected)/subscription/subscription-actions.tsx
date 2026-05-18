@@ -60,7 +60,6 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
       if (!res.ok) throw new Error(data.error ?? "Failed to cancel subscription.");
       router.push("/admin/subscription");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
       throw err;
     } finally {
       setLoading(false);
