@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { HomeNudges, type Nudge } from "@/components/admin/home-nudges";
+import { SampleDataBanner } from "@/components/admin/sample-data-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,8 @@ export default async function AdminDashboardPage() {
     failedPayments,
     failedEmails,
     cuttingOffSoon,
+    hasSampleSchool,
+    hasSampleMenuItem,
   ] = await Promise.all([
     prisma.order.count({
       where: {
@@ -136,6 +139,12 @@ export default async function AdminDashboardPage() {
         _count: { select: { orders: { where: { status: "PAID" } } } },
       },
       orderBy: { cutoffAt: "asc" },
+    }),
+    prisma.school.count({
+      where: { restaurantId: restaurant.id, name: { startsWith: "[Sample]" } },
+    }),
+    prisma.menuItem.count({
+      where: { restaurantId: restaurant.id, name: { startsWith: "[Sample]" } },
     }),
   ]);
 
@@ -279,6 +288,11 @@ export default async function AdminDashboardPage() {
           </a>
         </div>
       </div>
+
+      {/* ── Sample data banner ───────────────────────────────────── */}
+      {(hasSampleSchool > 0 || hasSampleMenuItem > 0) && (
+        <SampleDataBanner slug={restaurant.slug} />
+      )}
 
       {/* ── Nudge banners ─────────────────────────────────────────── */}
       <HomeNudges nudges={nudges} slug={restaurant.slug} />
