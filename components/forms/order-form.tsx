@@ -830,7 +830,6 @@ export function OrderForm({
                           height={36}
                           loading="lazy"
                           className="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-slate-100"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                         />
                       ) : (
                         <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-lg flex-shrink-0">

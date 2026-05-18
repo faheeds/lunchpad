@@ -65,7 +65,6 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
             loading="lazy"
             sizes="(max-width: 480px) 90vw, (max-width: 768px) 50vw, 33vw"
             style={{ objectFit: "cover", display: "block" }}
-            onError={() => setImgFailed(true)}
           />
         ) : (
           <div style={{

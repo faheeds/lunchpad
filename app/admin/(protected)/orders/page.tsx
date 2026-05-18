@@ -1,5 +1,4 @@
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { prisma } from "@/lib/db";
 import { listOrders } from "@/lib/orders";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -7,10 +6,10 @@ import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 import type { AdminRole } from "@/lib/roles";
+import { OrdersList } from "@/components/admin/orders-list";
 
 
 export const dynamic = "force-dynamic";
-const OrdersList = dynamic(() => import("@/components/admin/orders-list").then(mod => ({ default: mod.OrdersList })), { ssr: false });
 
 /**
  * Returns a query-string with one parameter removed — used by the active
