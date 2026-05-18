@@ -300,40 +300,37 @@ export default function SignupPage() {
 
 
           <div className="su-plans" style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
-            {PLANS.map((p) => {
-              const displayPrice = p.price;
-              const displayPeriod = p.period;
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => setPlan(p.id)}
-                  className="su-plan-card"
-                  style={{
-                    flex: "1 1 180px", maxWidth: 200,
-                    background: "white",
-                    borderRadius: 16,
-                    padding: "20px 16px",
-                    border: `2px solid ${plan === p.id ? "#1D9E75" : "#e5e7eb"}`,
-                    cursor: "pointer",
-                    boxShadow: plan === p.id ? "0 0 0 3px rgba(29,158,117,0.15)" : "0 1px 4px rgba(0,0,0,0.06)",
-                    position: "relative",
-                    transition: "border-color 0.15s",
-                  }}
-                >
-                  {p.highlight && (
-                    <span style={{
-                      position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
-                      background: "#1D9E75", color: "white",
-                      fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-                      whiteSpace: "nowrap",
-                    }}>
-                      Most popular
-                    </span>
-                  )}
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{p.name}</p>
-                  <p style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
-                    {displayPrice}<span style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8" }}>{displayPeriod}</span>
-                  </p>
+            {PLANS.map((p) => (
+              <div
+                key={p.id}
+                onClick={() => setPlan(p.id)}
+                className="su-plan-card"
+                style={{
+                  flex: "1 1 180px", maxWidth: 200,
+                  background: "white",
+                  borderRadius: 16,
+                  padding: "20px 16px",
+                  border: `2px solid ${plan === p.id ? "#1D9E75" : "#e5e7eb"}`,
+                  cursor: "pointer",
+                  boxShadow: plan === p.id ? "0 0 0 3px rgba(29,158,117,0.15)" : "0 1px 4px rgba(0,0,0,0.06)",
+                  position: "relative",
+                  transition: "border-color 0.15s",
+                }}
+              >
+                {p.highlight && (
+                  <span style={{
+                    position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
+                    background: "#1D9E75", color: "white",
+                    fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                    whiteSpace: "nowrap",
+                  }}>
+                    Most popular
+                  </span>
+                )}
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{p.name}</p>
+                <p style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
+                  {p.price}<span style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8" }}>{p.period}</span>
+                </p>
                   <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>
                     {p.description}
                   </p>
@@ -345,8 +342,7 @@ export default function SignupPage() {
                     ))}
                   </ul>
                 </div>
-              );
-            })}
+            ))}
           </div>
 
           {error && <ErrorBox message={error} />}

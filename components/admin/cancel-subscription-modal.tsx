@@ -28,22 +28,43 @@ export function CancelSubscriptionModal({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape" && !isLoading) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex: 50,
-    }}>
-      <div style={{
-        background: "white", borderRadius: 16, maxWidth: 420,
-        width: "90%", padding: "24px", boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-      }}>
-        <p style={{
-          fontSize: 16, fontWeight: 800, color: "#1c0505",
-          marginBottom: 8,
-        }}>
+    <div
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isLoading) onClose();
+      }}
+      onKeyDown={handleKeyDown}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 50,
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cancel-dialog-title"
+        style={{
+          background: "white", borderRadius: 16, maxWidth: 420,
+          width: "90%", padding: "24px", boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+        }}
+      >
+        <p
+          id="cancel-dialog-title"
+          style={{
+            fontSize: 16, fontWeight: 800, color: "#1c0505",
+            marginBottom: 8,
+          }}
+        >
           Cancel subscription?
         </p>
 
@@ -80,6 +101,7 @@ export function CancelSubscriptionModal({
           <button
             onClick={handleConfirm}
             disabled={isLoading}
+            autoFocus
             style={{
               flex: 1, padding: "10px 16px", borderRadius: 10,
               background: "#dc2626", color: "white",
