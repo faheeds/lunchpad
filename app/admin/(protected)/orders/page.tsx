@@ -1,5 +1,5 @@
 import Link from "next/link";
-import dynamicImport from "next/dynamic";
+import dynamic from "next/dynamic";
 import { prisma } from "@/lib/db";
 import { listOrders } from "@/lib/orders";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -10,7 +10,7 @@ import type { AdminRole } from "@/lib/roles";
 
 
 export const dynamic = "force-dynamic";
-const OrdersList = dynamicImport(() => import("@/components/admin/orders-list").then(mod => ({ default: mod.OrdersList })), { ssr: false });
+const OrdersList = dynamic(() => import("@/components/admin/orders-list").then(mod => ({ default: mod.OrdersList })), { ssr: false });
 
 /**
  * Returns a query-string with one parameter removed — used by the active
