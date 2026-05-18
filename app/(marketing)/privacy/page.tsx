@@ -1,12 +1,7 @@
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
-import { getCurrentRestaurant } from "@/lib/restaurant";
-
-export const dynamic = "force-dynamic";
 
 export default async function PrivacyPage() {
-  const restaurant = await getCurrentRestaurant();
-  const restaurantName = restaurant?.name ?? "LunchPad";
 
   return (
     <>

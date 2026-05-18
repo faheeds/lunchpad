@@ -5,7 +5,6 @@ import { getCurrentRestaurant } from "@/lib/restaurant";
 import { themeCssBlock } from "@/lib/color";
 import { getDisplayFont, getBodyFont } from "@/lib/fonts";
 import { Footer } from "@/components/footer";
-import { CookieBanner } from "@/components/cookie-banner";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -119,7 +118,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
           <Footer />
         </div>
-        <CookieBanner />
       </body>
     </html>
   );
