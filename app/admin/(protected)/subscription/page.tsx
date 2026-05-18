@@ -2,8 +2,9 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
 import { SubscriptionActions } from "./subscription-actions";
-import { planSummary } from "@/lib/plans";
+import { planSummary, PLAN_LIMITS } from "@/lib/plans";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
+import { SubscriptionPlanToggle } from "@/components/admin/subscription-plan-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,10 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
     : 0;
 
   const trialExpired = full.subscriptionStatus === "TRIAL" && trialDaysLeft === 0;
+
+  const renewalDate = full.subscriptionStatus === "TRIAL" && full.trialEndsAt
+    ? new Date(full.trialEndsAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : "your renewal date";
 
   // Usage meter: count active locations, team seats, paid orders this month.
   const monthStart = new Date();
@@ -77,49 +82,38 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
         </div>
       )}
 
-      {/* Current plan card */}
-      <div style={{
-        background: "white", borderRadius: 16, padding: "24px",
-        border: "1px solid #e5e7eb", marginBottom: 24,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94a3b8", marginBottom: 4 }}>
-              Current plan
-            </p>
-            <p style={{ fontSize: 22, fontWeight: 800, color: "#1c0505" }}>{planInfo.name}</p>
-            <p style={{ fontSize: 13, color: "#78716c" }}>{planInfo.price} &middot; {planInfo.description}</p>
-          </div>
-          <span style={{
-            fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
-            background: statusInfo.bg, color: statusInfo.color,
-          }}>
-            {statusInfo.label}
-          </span>
+      {/* Current plan card with annual/monthly toggle */}
+      <SubscriptionPlanToggle
+        planName={planInfo.name}
+        monthlyPrice={PLAN_LIMITS[full.plan].priceMonthly}
+        description={planInfo.description}
+        status={statusInfo.label}
+        statusColor={statusInfo.color}
+        statusBg={statusInfo.bg}
+      />
+
+      {full.subscriptionStatus === "TRIAL" && (
+        <div style={{
+          background: trialExpired ? "#fff5f5" : "#fefce8",
+          borderRadius: 10, padding: "12px 14px", fontSize: 13,
+          color: trialExpired ? "#991b1b" : "#854d0e",
+          marginBottom: 24,
+        }}>
+          {trialExpired
+            ? "Your free trial has expired. Add a payment method to continue using LunchPad."
+            : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} remaining in your free trial.`}
         </div>
+      )}
 
-        {full.subscriptionStatus === "TRIAL" && (
-          <div style={{
-            background: trialExpired ? "#fff5f5" : "#fefce8",
-            borderRadius: 10, padding: "12px 14px", fontSize: 13,
-            color: trialExpired ? "#991b1b" : "#854d0e",
-          }}>
-            {trialExpired
-              ? "Your free trial has expired. Add a payment method to continue using LunchPad."
-              : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} remaining in your free trial.`}
-          </div>
-        )}
-
-        {full.subscriptionStatus === "PAST_DUE" && (
-          <div style={{
-            background: "#fff5f5", borderRadius: 10, padding: "12px 14px",
-            fontSize: 13, color: "#991b1b",
-          }}>
-            Your last payment failed. Please update your billing information to avoid losing access.
-          </div>
-        )}
-      </div>
+      {full.subscriptionStatus === "PAST_DUE" && (
+        <div style={{
+          background: "#fff5f5", borderRadius: 10, padding: "12px 14px",
+          fontSize: 13, color: "#991b1b",
+          marginBottom: 24,
+        }}>
+          Your last payment failed. Please update your billing information to avoid losing access.
+        </div>
+      )}
 
       {/* Usage meter */}
       <div style={{
@@ -134,13 +128,26 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
             const pct = row.limit === null ? 0 : Math.min(100, Math.round((row.used / row.limit) * 100));
             const isUnlimited = row.limit === null;
             const atLimit = !isUnlimited && row.used >= (row.limit ?? 0);
+            const isAmber = !isUnlimited && pct >= 80 && pct < 100;
+            const isRed = !isUnlimited && pct >= 100;
             return (
               <div key={row.resource}>
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-[12px] font-medium text-ink">{row.label}</p>
-                  <p className="text-[12px] font-semibold tabular-nums" style={{ color: atLimit ? "#dc2626" : "#1c0505" }}>
-                    {row.used}{isUnlimited ? "" : ` / ${row.limit}`}
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {!isUnlimited && (
+                      <p className="text-[12px] font-semibold tabular-nums" style={{
+                        color: isRed ? "#dc2626" : isAmber ? "#d97706" : "#1c0505"
+                      }}>
+                        {pct}%
+                      </p>
+                    )}
+                    <p className="text-[12px] font-semibold tabular-nums" style={{
+                      color: isRed ? "#dc2626" : isAmber ? "#d97706" : "#1c0505"
+                    }}>
+                      {row.used}{isUnlimited ? "" : ` / ${row.limit}`}
+                    </p>
+                  </div>
                 </div>
                 <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#f1f5f9" }}>
                   <div
@@ -149,7 +156,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
                       width: isUnlimited ? "100%" : `${pct}%`,
                       background: isUnlimited
                         ? "linear-gradient(90deg, #10b981, #34d399)"
-                        : atLimit ? "#dc2626" : pct > 80 ? "#f59e0b" : "#10b981",
+                        : isRed ? "#dc2626" : isAmber ? "#f59e0b" : "#10b981",
                     }}
                   />
                 </div>
@@ -167,6 +174,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
         currentPlan={full.plan}
         subscriptionStatus={full.subscriptionStatus}
         hasActiveSubscription={!!full.stripeSubscriptionId}
+        renewalDate={renewalDate}
       />
     </div>
   );

@@ -298,6 +298,7 @@ export default function SignupPage() {
             All plans include a 14-day free trial. Cancel anytime.
           </p>
 
+
           <div className="su-plans" style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
             {PLANS.map((p) => (
               <div
@@ -330,17 +331,17 @@ export default function SignupPage() {
                 <p style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
                   {p.price}<span style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8" }}>{p.period}</span>
                 </p>
-                <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>
-                  {p.description}
-                </p>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {p.features.map((f) => (
-                    <li key={f} style={{ fontSize: 11, color: "#64748b", marginBottom: 4, display: "flex", gap: 6 }}>
-                      <span style={{ color: "#22c55e", fontWeight: 700 }}>✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                  <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>
+                    {p.description}
+                  </p>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {p.features.map((f) => (
+                      <li key={f} style={{ fontSize: 11, color: "#64748b", marginBottom: 4, display: "flex", gap: 6 }}>
+                        <span style={{ color: "#22c55e", fontWeight: 700 }}>✓</span> {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
             ))}
           </div>
 

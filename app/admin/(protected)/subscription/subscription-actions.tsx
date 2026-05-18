@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CancelSubscriptionModal } from "@/components/admin/cancel-subscription-modal";
 
 const UPGRADE_PLANS = [
   { id: "STARTER", name: "Starter", price: "$49/mo" },
@@ -13,12 +14,14 @@ interface Props {
   currentPlan: string;
   subscriptionStatus: string;
   hasActiveSubscription: boolean;
+  renewalDate?: string;
 }
 
-export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActiveSubscription }: Props) {
+export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActiveSubscription, renewalDate }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   // Always show plan options — active users can upgrade/downgrade themselves.
   // Excludes the plan they're currently on (no point selling them what they have).
@@ -45,67 +48,126 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
     }
   }
 
+  async function handleCancel() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/subscription/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to cancel subscription.");
+      router.push("/admin/subscription");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (!showUpgrade) {
     return (
-      <div style={{
-        background: "white", borderRadius: 16, padding: "20px 24px",
-        border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-      }}>
-        <p style={{ fontSize: 14, color: "#64748b" }}>
-          Your subscription is active. To make changes to your plan or billing, please contact{" "}
-          <a href="mailto:support@lunchpad.us" style={{ color: "#c41230", fontWeight: 600 }}>
-            support@lunchpad.us
-          </a>.
-        </p>
-      </div>
+      <>
+        <div style={{
+          background: "white", borderRadius: 16, padding: "20px 24px",
+          border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+        }}>
+          <p style={{ fontSize: 14, color: "#64748b", marginBottom: 16 }}>
+            Your subscription is active. To make changes to your plan or billing, please contact{" "}
+            <a href="mailto:support@lunchpad.us" style={{ color: "#c41230", fontWeight: 600 }}>
+              support@lunchpad.us
+            </a>.
+          </p>
+          <button
+            onClick={() => setShowCancelModal(true)}
+            style={{
+              padding: "10px 16px", borderRadius: 10,
+              background: "transparent", color: "#c0392b",
+              fontSize: 13, fontWeight: 600, border: "1px solid #fee2e2",
+              cursor: "pointer", transition: "all 0.15s",
+            }}
+          >
+            Cancel subscription
+          </button>
+        </div>
+        <CancelSubscriptionModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          onConfirm={handleCancel}
+          renewalDate={renewalDate ?? "your renewal date"}
+          isLoading={loading}
+        />
+      </>
     );
   }
 
   return (
-    <div style={{
-      background: "white", borderRadius: 16, padding: "24px",
-      border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-    }}>
-      <p style={{ fontSize: 15, fontWeight: 700, color: "#1c0505", marginBottom: 4 }}>
-        {isActiveSubscriber ? "Change your plan" : "Upgrade your plan"}
-      </p>
-      <p style={{ fontSize: 13, color: "#78716c", marginBottom: 20 }}>
-        {isActiveSubscriber
-          ? "Switch plans anytime. Stripe will prorate the difference automatically."
-          : "Choose a plan to unlock full access. You can change plans anytime."}
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-        {availablePlans.map((p) => (
-          <div key={p.id} style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            padding: "14px 16px", border: "1px solid #e5e7eb", borderRadius: 12,
-          }}>
-            <div>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#1c0505" }}>{p.name}</p>
-              <p style={{ fontSize: 12, color: "#94a3b8" }}>{p.price}</p>
-            </div>
-            <button
-              onClick={() => handleUpgrade(p.id)}
-              disabled={loading}
-              style={{
-                padding: "8px 18px", borderRadius: 10,
-                background: loading ? "#e5e7eb" : "#c41230",
-                color: "white", fontSize: 13, fontWeight: 700,
-                border: "none", cursor: loading ? "not-allowed" : "pointer",
-              }}
-            >
-              {loading ? "..." : (isActiveSubscriber ? "Switch to" : "Select")}
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {error && (
-        <p style={{ fontSize: 13, color: "#c0392b", background: "#fff5f5", padding: "10px 14px", borderRadius: 10 }}>
-          {error}
+    <>
+      <div style={{
+        background: "white", borderRadius: 16, padding: "24px",
+        border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+      }}>
+        <p style={{ fontSize: 15, fontWeight: 700, color: "#1c0505", marginBottom: 4 }}>
+          {isActiveSubscriber ? "Change your plan" : "Upgrade your plan"}
         </p>
-      )}
-    </div>
+        <p style={{ fontSize: 13, color: "#78716c", marginBottom: 20 }}>
+          {isActiveSubscriber
+            ? "Switch plans anytime. Stripe will prorate the difference automatically."
+            : "Choose a plan to unlock full access. You can change plans anytime."}
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+          {availablePlans.map((p) => (
+            <div key={p.id} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "14px 16px", border: "1px solid #e5e7eb", borderRadius: 12,
+            }}>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#1c0505" }}>{p.name}</p>
+                <p style={{ fontSize: 12, color: "#94a3b8" }}>{p.price}</p>
+              </div>
+              <button
+                onClick={() => handleUpgrade(p.id)}
+                disabled={loading}
+                style={{
+                  padding: "8px 18px", borderRadius: 10,
+                  background: loading ? "#e5e7eb" : "#c41230",
+                  color: "white", fontSize: 13, fontWeight: 700,
+                  border: "none", cursor: loading ? "not-allowed" : "pointer",
+                }}
+              >
+                {loading ? "..." : (isActiveSubscriber ? "Switch to" : "Select")}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {error && (
+          <p style={{ fontSize: 13, color: "#c0392b", background: "#fff5f5", padding: "10px 14px", borderRadius: 10, marginBottom: 16 }}>
+            {error}
+          </p>
+        )}
+
+        {isActiveSubscriber && (
+          <button
+            onClick={() => setShowCancelModal(true)}
+            style={{
+              width: "100%", padding: "10px 16px", borderRadius: 10,
+              background: "transparent", color: "#c0392b",
+              fontSize: 13, fontWeight: 600, border: "1px solid #fee2e2",
+              cursor: "pointer", transition: "all 0.15s", marginTop: 8,
+            }}
+          >
+            Cancel subscription
+          </button>
+        )}
+      </div>
+      <CancelSubscriptionModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleCancel}
+        renewalDate={renewalDate ?? "your renewal date"}
+        isLoading={loading}
+      />
+    </>
   );
 }
