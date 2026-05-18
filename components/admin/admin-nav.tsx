@@ -6,6 +6,7 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { hasRole, type AdminRole } from "@/lib/roles";
 import { AdminSearch } from "@/components/admin/admin-search";
+import { RecentPages } from "@/components/admin/recent-pages";
 
 function ClocheMark({ size = 22 }: { size?: number }) {
   return (
@@ -149,7 +150,7 @@ export function AdminNav({
             </button>
           </div>
         </div>
-        <div className="flex overflow-x-auto gap-0.5 py-1" style={{ scrollbarWidth: "none" }}>
+        <div className="flex overflow-x-auto gap-0.5 py-1 items-center" style={{ scrollbarWidth: "none" }}>
           {links.map((link) => {
             const active = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
@@ -164,6 +165,9 @@ export function AdminNav({
               </Link>
             );
           })}
+          <div className="flex-shrink-0 ml-auto">
+            <RecentPages />
+          </div>
         </div>
       </div>
     </header>

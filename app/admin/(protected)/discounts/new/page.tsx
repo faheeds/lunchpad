@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 /**
  * Template gallery — the front door for creating a discount.
  *
@@ -20,6 +21,10 @@ import { TEMPLATES } from "@/lib/discount-templates";
 import { DiscountTemplateBadge } from "@/components/admin/discount-icons";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "New Discount | LunchPad Admin",
+};
 
 export default async function DiscountTemplateGalleryPage() {
   await requireRestaurant();

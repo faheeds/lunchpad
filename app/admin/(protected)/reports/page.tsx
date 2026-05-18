@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getAdminReports } from "@/lib/admin";
@@ -8,6 +9,10 @@ import { formatInTimeZone } from "date-fns-tz";
 import { ReportsCharts } from "@/components/admin/reports-charts";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Reports | LunchPad Admin",
+};
 
 function normalizeMultiValue(value: string | string[] | undefined) {
   if (!value) return [];

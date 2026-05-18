@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -13,6 +14,10 @@ import { formatCurrency } from "@/lib/utils";
 import { getLabels } from "@/lib/location-labels";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Order Details | LunchPad Admin",
+};
 
 const statusStyle: Record<string, { bg: string; color: string }> = {
   PAID:      { bg: "#dcfce7", color: "#15803d" },

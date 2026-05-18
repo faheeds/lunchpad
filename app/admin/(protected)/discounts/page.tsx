@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 /**
  * Discount Center — landing page for the admin. Shows every discount
  * the operator has set up, grouped by status (Active / Scheduled /
@@ -26,6 +27,10 @@ import { describeDiscount } from "@/lib/discount-describe";
 import { DiscountTemplateBadge, type DiscountIconName } from "@/components/admin/discount-icons";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Discounts | LunchPad Admin",
+};
 
 export default async function AdminDiscountsPage() {
   const restaurant = await requireRestaurant();

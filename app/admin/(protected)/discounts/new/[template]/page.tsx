@@ -8,6 +8,7 @@
  * every planned template without strewing 404s through the experience.
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -18,6 +19,10 @@ import { DiscountBuilder, type BuilderState } from "@/components/admin/discount-
 import { DiscountTemplateBadge, type DiscountIconName } from "@/components/admin/discount-icons";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "New Discount | LunchPad Admin",
+};
 
 export default async function NewDiscountPage({
   params,

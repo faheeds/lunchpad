@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Locations | LunchPad Admin",
+};
 
 /**
  * Legacy URL — schools were renamed to locations to support both school

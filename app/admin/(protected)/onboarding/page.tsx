@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -14,6 +15,10 @@ import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { WizardStepper, type WizardStep } from "@/components/admin/wizard-stepper";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Onboarding | LunchPad Admin",
+};
 
 // ─── Server actions ─────────────────────────────────────────────────────────
 

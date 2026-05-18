@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 /**
  * Restaurant-wide change log. Shows every audited mutation across the
  * tenant in reverse-chronological order. Visible to STAFF+ for transparency:
@@ -16,6 +17,10 @@ import { requireAdminRole } from "@/lib/admin-auth";
 import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Activity | LunchPad Admin",
+};
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
   ORDER: "Order",

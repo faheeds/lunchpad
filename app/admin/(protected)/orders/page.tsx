@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { listOrders } from "@/lib/orders";
@@ -9,6 +10,10 @@ import { auth } from "@/lib/auth";
 import type { AdminRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Orders | LunchPad Admin",
+};
 
 /**
  * Returns a query-string with one parameter removed — used by the active

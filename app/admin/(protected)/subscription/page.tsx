@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
@@ -6,6 +7,10 @@ import { planSummary } from "@/lib/plans";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Subscription | LunchPad Admin",
+};
 
 const PLAN_LABELS: Record<string, { name: string; price: string; description: string }> = {
   FREE:    { name: "Free",    price: "$0/mo",    description: "Limited access" },

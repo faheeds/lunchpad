@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { ScheduleTabs } from "@/components/admin/schedule-tabs";
@@ -10,6 +11,10 @@ import { checkLimit, PlanLimitError, PLAN_LIMITS } from "@/lib/plans";
 
 import { EmptyState } from "@/components/admin/empty-state";
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Locations | LunchPad Admin",
+};
 
 const TIMEZONES = [
   { value: "America/New_York",    label: "Eastern (ET)" },

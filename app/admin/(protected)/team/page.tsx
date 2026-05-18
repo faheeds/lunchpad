@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import { randomBytes, createHash } from "crypto";
 import { prisma } from "@/lib/db";
@@ -14,6 +15,10 @@ import { SettingsTabs } from "@/components/admin/settings-tabs";
 import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Team | LunchPad Admin",
+};
 
 const INVITE_LIFETIME_DAYS = 14;
 

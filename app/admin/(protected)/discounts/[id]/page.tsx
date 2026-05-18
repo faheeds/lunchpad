@@ -9,6 +9,7 @@
  * deactivated so the audit trail on historic orders stays intact.
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -20,6 +21,10 @@ import { DiscountBuilder, type BuilderState } from "@/components/admin/discount-
 import { toggleDiscountActive, deleteDiscount } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Edit Discount | LunchPad Admin",
+};
 
 export default async function DiscountDetailPage({
   params,

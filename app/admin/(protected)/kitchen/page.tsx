@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -8,6 +9,10 @@ import { PrintButton } from "@/components/admin/print-button";
 import { KitchenEmailButton } from "@/components/admin/kitchen-email-button";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Kitchen | LunchPad Admin",
+};
 
 export default async function KitchenSheetPage({
   searchParams,

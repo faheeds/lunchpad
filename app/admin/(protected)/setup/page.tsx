@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Setup | LunchPad Admin",
+};
 
 /**
  * Legacy /admin/setup is replaced by the /admin/onboarding wizard.

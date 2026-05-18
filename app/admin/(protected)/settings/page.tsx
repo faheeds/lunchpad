@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
@@ -12,6 +13,10 @@ import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Settings | LunchPad Admin",
+};
 
 // ─── Server actions ─────────────────────────────────────────────────────────
 

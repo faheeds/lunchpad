@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import Link from "next/link";
@@ -9,6 +10,10 @@ import { ScheduleTabs } from "@/components/admin/schedule-tabs";
 import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Schedule | LunchPad Admin",
+};
 
 // ── Server actions ────────────────────────────────────────────────────────────
 

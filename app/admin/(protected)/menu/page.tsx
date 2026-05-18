@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { menuItemSchema, menuOptionSchema } from "@/lib/validation/order";
@@ -12,6 +13,10 @@ import { DietaryTagsPicker } from "@/components/admin/dietary-tags-picker";
 import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Menu | LunchPad Admin",
+};
 
 async function createMenuItem(formData: FormData) {
   "use server";
