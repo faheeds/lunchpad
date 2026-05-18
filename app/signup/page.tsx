@@ -48,6 +48,7 @@ export default function SignupPage() {
 
   // Step 2 field
   const [plan, setPlan] = useState("GROWTH");
+  const [isAnnual, setIsAnnual] = useState(false);
 
   // Captured after a successful signup — used by step 3 to route to the
   // correct tenant subdomain.
@@ -298,50 +299,102 @@ export default function SignupPage() {
             All plans include a 14-day free trial. Cancel anytime.
           </p>
 
-          <div className="su-plans" style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
-            {PLANS.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => setPlan(p.id)}
-                className="su-plan-card"
+          {/* Annual/Monthly Toggle */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+            <div style={{
+              display: "inline-flex", gap: 12, background: "#f8fafc",
+              padding: "8px 12px", borderRadius: 12, alignItems: "center",
+            }}>
+              <button
+                onClick={() => setIsAnnual(false)}
                 style={{
-                  flex: "1 1 180px", maxWidth: 200,
-                  background: "white",
-                  borderRadius: 16,
-                  padding: "20px 16px",
-                  border: `2px solid ${plan === p.id ? "#1D9E75" : "#e5e7eb"}`,
-                  cursor: "pointer",
-                  boxShadow: plan === p.id ? "0 0 0 3px rgba(29,158,117,0.15)" : "0 1px 4px rgba(0,0,0,0.06)",
-                  position: "relative",
-                  transition: "border-color 0.15s",
+                  padding: "8px 16px", borderRadius: 8,
+                  background: !isAnnual ? "white" : "transparent",
+                  color: !isAnnual ? "#1D9E75" : "#94a3b8",
+                  fontSize: 13, fontWeight: 700, border: "none",
+                  cursor: "pointer", transition: "all 0.15s",
+                  boxShadow: !isAnnual ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
                 }}
               >
-                {p.highlight && (
+                Monthly
+              </button>
+              <button
+                onClick={() => setIsAnnual(true)}
+                style={{
+                  padding: "8px 16px", borderRadius: 8,
+                  background: isAnnual ? "white" : "transparent",
+                  color: isAnnual ? "#1D9E75" : "#94a3b8",
+                  fontSize: 13, fontWeight: 700, border: "none",
+                  cursor: "pointer", transition: "all 0.15s",
+                  boxShadow: isAnnual ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                  position: "relative",
+                }}
+              >
+                Annual
+                {isAnnual && (
                   <span style={{
-                    position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
-                    background: "#1D9E75", color: "white",
-                    fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-                    whiteSpace: "nowrap",
+                    position: "absolute", right: -28, top: -8,
+                    background: "#22c55e", color: "white",
+                    fontSize: 10, fontWeight: 700, padding: "2px 6px",
+                    borderRadius: 10, whiteSpace: "nowrap",
                   }}>
-                    Most popular
+                    Save 20%
                   </span>
                 )}
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{p.name}</p>
-                <p style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
-                  {p.price}<span style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8" }}>{p.period}</span>
-                </p>
-                <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>
-                  {p.description}
-                </p>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {p.features.map((f) => (
-                    <li key={f} style={{ fontSize: 11, color: "#64748b", marginBottom: 4, display: "flex", gap: 6 }}>
-                      <span style={{ color: "#22c55e", fontWeight: 700 }}>✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              </button>
+            </div>
+          </div>
+
+          <div className="su-plans" style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
+            {PLANS.map((p) => {
+              const monthlyPrice = parseInt(p.price.replace("$", ""));
+              const annualPrice = Math.floor(monthlyPrice * 12 * 0.8);
+              const displayPrice = isAnnual ? `$${annualPrice}` : p.price;
+              const displayPeriod = isAnnual ? "/year" : p.period;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => setPlan(p.id)}
+                  className="su-plan-card"
+                  style={{
+                    flex: "1 1 180px", maxWidth: 200,
+                    background: "white",
+                    borderRadius: 16,
+                    padding: "20px 16px",
+                    border: `2px solid ${plan === p.id ? "#1D9E75" : "#e5e7eb"}`,
+                    cursor: "pointer",
+                    boxShadow: plan === p.id ? "0 0 0 3px rgba(29,158,117,0.15)" : "0 1px 4px rgba(0,0,0,0.06)",
+                    position: "relative",
+                    transition: "border-color 0.15s",
+                  }}
+                >
+                  {p.highlight && (
+                    <span style={{
+                      position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
+                      background: "#1D9E75", color: "white",
+                      fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                      whiteSpace: "nowrap",
+                    }}>
+                      Most popular
+                    </span>
+                  )}
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{p.name}</p>
+                  <p style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
+                    {displayPrice}<span style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8" }}>{displayPeriod}</span>
+                  </p>
+                  <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>
+                    {p.description}
+                  </p>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {p.features.map((f) => (
+                      <li key={f} style={{ fontSize: 11, color: "#64748b", marginBottom: 4, display: "flex", gap: 6 }}>
+                        <span style={{ color: "#22c55e", fontWeight: 700 }}>✓</span> {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
 
           {error && <ErrorBox message={error} />}
