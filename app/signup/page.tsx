@@ -8,7 +8,7 @@ const PLANS = [
   {
     id: "STARTER",
     name: "Starter",
-    price: "$49",
+    monthlyPrice: 49,
     period: "/mo",
     description: "Perfect for a single location getting started.",
     features: ["Up to 1 school or office", "Unlimited orders", "Email notifications", "14-day free trial"],
@@ -17,7 +17,7 @@ const PLANS = [
   {
     id: "GROWTH",
     name: "Growth",
-    price: "$149",
+    monthlyPrice: 149,
     period: "/mo",
     description: "For restaurants serving multiple locations.",
     features: ["Up to 5 schools or offices", "Everything in Starter", "Priority support", "14-day free trial"],
@@ -26,7 +26,7 @@ const PLANS = [
   {
     id: "SCALE",
     name: "Scale",
-    price: "$349",
+    monthlyPrice: 349,
     period: "/mo",
     description: "For high-volume operations across many sites.",
     features: ["Unlimited locations", "Everything in Growth", "Dedicated onboarding", "14-day free trial"],
@@ -46,8 +46,9 @@ export default function SignupPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Step 2 field
+  // Step 2 fields
   const [plan, setPlan] = useState("GROWTH");
+  const [isAnnual, setIsAnnual] = useState(false);
 
   // Captured after a successful signup — used by step 3 to route to the
   // correct tenant subdomain.
@@ -298,50 +299,99 @@ export default function SignupPage() {
             All plans include a 14-day free trial. Cancel anytime.
           </p>
 
-          <div className="su-plans" style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
-            {PLANS.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => setPlan(p.id)}
-                className="su-plan-card"
+          {/* Annual/Monthly toggle */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+            <div style={{
+              display: "flex", gap: 2, background: "#f1f5f9", borderRadius: 10, padding: 3,
+            }}>
+              <button
+                onClick={() => setIsAnnual(false)}
                 style={{
-                  flex: "1 1 180px", maxWidth: 200,
-                  background: "white",
-                  borderRadius: 16,
-                  padding: "20px 16px",
-                  border: `2px solid ${plan === p.id ? "#1D9E75" : "#e5e7eb"}`,
-                  cursor: "pointer",
-                  boxShadow: plan === p.id ? "0 0 0 3px rgba(29,158,117,0.15)" : "0 1px 4px rgba(0,0,0,0.06)",
-                  position: "relative",
-                  transition: "border-color 0.15s",
+                  flex: 1, padding: "8px 16px", borderRadius: 8, border: "none",
+                  background: !isAnnual ? "white" : "transparent",
+                  color: !isAnnual ? "#0f172a" : "#94a3b8",
+                  fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  boxShadow: !isAnnual ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                  transition: "all 0.15s",
                 }}
               >
-                {p.highlight && (
-                  <span style={{
-                    position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
-                    background: "#1D9E75", color: "white",
-                    fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-                    whiteSpace: "nowrap",
-                  }}>
-                    Most popular
-                  </span>
-                )}
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{p.name}</p>
-                <p style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
-                  {p.price}<span style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8" }}>{p.period}</span>
-                </p>
-                <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>
-                  {p.description}
-                </p>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {p.features.map((f) => (
-                    <li key={f} style={{ fontSize: 11, color: "#64748b", marginBottom: 4, display: "flex", gap: 6 }}>
-                      <span style={{ color: "#22c55e", fontWeight: 700 }}>✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+                Monthly
+              </button>
+              <button
+                onClick={() => setIsAnnual(true)}
+                style={{
+                  flex: 1, padding: "8px 16px", borderRadius: 8, border: "none",
+                  background: isAnnual ? "white" : "transparent",
+                  color: isAnnual ? "#0f172a" : "#94a3b8",
+                  fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  boxShadow: isAnnual ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                  transition: "all 0.15s",
+                }}
+              >
+                Annual
+              </button>
+            </div>
+          </div>
+
+          <div className="su-plans" style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 24 }}>
+            {PLANS.map((p) => {
+              const displayPrice = isAnnual ? Math.floor(p.monthlyPrice * 12 * 0.8) : p.monthlyPrice;
+              const displayPeriod = isAnnual ? "/yr" : "/mo";
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => setPlan(p.id)}
+                  className="su-plan-card"
+                  style={{
+                    flex: "1 1 180px", maxWidth: 200,
+                    background: "white",
+                    borderRadius: 16,
+                    padding: "20px 16px",
+                    border: `2px solid ${plan === p.id ? "#1D9E75" : "#e5e7eb"}`,
+                    cursor: "pointer",
+                    boxShadow: plan === p.id ? "0 0 0 3px rgba(29,158,117,0.15)" : "0 1px 4px rgba(0,0,0,0.06)",
+                    position: "relative",
+                    transition: "border-color 0.15s",
+                  }}
+                >
+                  {p.highlight && (
+                    <span style={{
+                      position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
+                      background: "#1D9E75", color: "white",
+                      fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                      whiteSpace: "nowrap",
+                    }}>
+                      Most popular
+                    </span>
+                  )}
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{p.name}</p>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
+                    <p style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
+                      ${displayPrice}<span style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8" }}>{displayPeriod}</span>
+                    </p>
+                    {isAnnual && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, color: "#166534",
+                        background: "#dcfce7", padding: "2px 8px", borderRadius: 6,
+                        whiteSpace: "nowrap",
+                      }}>
+                        Save 20%
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>
+                    {p.description}
+                  </p>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {p.features.map((f) => (
+                      <li key={f} style={{ fontSize: 11, color: "#64748b", marginBottom: 4, display: "flex", gap: 6 }}>
+                        <span style={{ color: "#22c55e", fontWeight: 700 }}>✓</span> {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
 
           {error && <ErrorBox message={error} />}
