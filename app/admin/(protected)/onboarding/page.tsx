@@ -496,12 +496,18 @@ export default async function OnboardingPage({
                 </div>
               </div>
 
+              {/* Nested <form>s aren't allowed in HTML. Browsers silently
+                  un-nest them, which makes React's hydration check fail
+                  against the server-rendered HTML (error #418 — wizard
+                  renders blank + auto-refreshes). Using `formAction` on
+                  the submit button is the HTML5 way to override the
+                  parent form's action for a single button — no nesting.
+                  seedSampleData ignores formData, so the outer form's
+                  fields tagging along is harmless. */}
               <div className="flex items-center justify-between pt-2 gap-3">
-                <form action={seedSampleData}>
-                  <button type="submit" className="px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-[13px] font-semibold hover:bg-slate-50 transition">
-                    Skip for now
-                  </button>
-                </form>
+                <button type="submit" formAction={seedSampleData} className="px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-[13px] font-semibold hover:bg-slate-50 transition">
+                  Skip for now
+                </button>
                 <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
                   Continue →
                 </button>
