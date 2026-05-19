@@ -11,6 +11,7 @@ import { ImageUpload } from "@/components/admin/image-upload";
 import { ThemePicker } from "@/components/admin/theme-picker";
 import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
+import { DoneBadge } from "@/components/admin/done-badge";
 import { WizardStepper, type WizardStep } from "@/components/admin/wizard-stepper";
 
 export const dynamic = "force-dynamic";
@@ -676,19 +677,23 @@ export default async function OnboardingPage({
                 <p className="text-[10px] text-slate-400 mt-1">The time the night before delivery when ordering closes.</p>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=3" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <div className="flex gap-2">
-                  {locationCount > 0 && (
-                    <Link href="/admin/onboarding?step=5" className="px-4 py-2 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-600 no-underline">
-                      Skip →
-                    </Link>
-                  )}
-                  <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
-                    Add location →
-                  </button>
+              {status[4] === "done" ? (
+                <DoneBadge />
+              ) : (
+                <div className="flex items-center justify-between pt-2">
+                  <Link href="/admin/onboarding?step=3" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                  <div className="flex gap-2">
+                    {locationCount > 0 && (
+                      <Link href="/admin/onboarding?step=5" className="px-4 py-2 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-600 no-underline">
+                        Skip →
+                      </Link>
+                    )}
+                    <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                      Add location →
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </form>
           )}
 
@@ -723,15 +728,19 @@ export default async function OnboardingPage({
                 </Link>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=4" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <Link href="/admin/onboarding?step=6"
-                  className={`px-5 py-2.5 rounded-lg text-[13px] font-semibold no-underline ${
-                    menuItemCount >= 3 ? "bg-brand-700 text-white" : "border border-slate-200 text-slate-600"
-                  }`}>
-                  {menuItemCount >= 3 ? "Continue →" : "Skip for now →"}
-                </Link>
-              </div>
+              {status[5] === "done" ? (
+                <DoneBadge />
+              ) : (
+                <div className="flex items-center justify-between pt-2">
+                  <Link href="/admin/onboarding?step=4" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                  <Link href="/admin/onboarding?step=6"
+                    className={`px-5 py-2.5 rounded-lg text-[13px] font-semibold no-underline ${
+                      menuItemCount >= 3 ? "bg-brand-700 text-white" : "border border-slate-200 text-slate-600"
+                    }`}>
+                    {menuItemCount >= 3 ? "Continue →" : "Skip for now →"}
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
@@ -851,12 +860,16 @@ export default async function OnboardingPage({
                 Open Team page →
               </Link>
 
-              <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=6" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <Link href="/admin/onboarding?step=8" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold no-underline">
-                  Continue →
-                </Link>
-              </div>
+              {status[7] === "done" ? (
+                <DoneBadge />
+              ) : (
+                <div className="flex items-center justify-between pt-2">
+                  <Link href="/admin/onboarding?step=6" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                  <Link href="/admin/onboarding?step=8" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold no-underline">
+                    Continue →
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
@@ -891,12 +904,16 @@ export default async function OnboardingPage({
                 </ul>
               </div>
 
-              <form action={markTestOrderPlaced} className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=7" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
-                  I placed a test order — continue →
-                </button>
-              </form>
+              {status[8] === "done" ? (
+                <DoneBadge />
+              ) : (
+                <form action={markTestOrderPlaced} className="flex items-center justify-between pt-2">
+                  <Link href="/admin/onboarding?step=7" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                  <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                    I placed a test order — continue →
+                  </button>
+                </form>
+              )}
             </div>
           )}
 
@@ -929,12 +946,16 @@ export default async function OnboardingPage({
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=8" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
-                  Save & continue →
-                </button>
-              </div>
+              {status[9] === "done" ? (
+                <DoneBadge />
+              ) : (
+                <div className="flex items-center justify-between pt-2">
+                  <Link href="/admin/onboarding?step=8" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                  <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                    Save & continue →
+                  </button>
+                </div>
+              )}
             </form>
           )}
 
@@ -1012,18 +1033,22 @@ Orders close the night before delivery. Questions? Reply to this email.
                 ))}
               </div>
 
-              <form action={launchAndComplete} className="flex flex-wrap items-center justify-between gap-2 pt-3">
-                <Link href="/admin/onboarding?step=9" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <div className="flex flex-wrap gap-2">
-                  <a href={orderingUrl} target="_blank" rel="noopener noreferrer"
-                    className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-ink no-underline">
-                    Preview ordering page ↗
-                  </a>
-                  <button type="submit" className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-[13px] font-semibold">
-                    Launch — go to dashboard →
-                  </button>
-                </div>
-              </form>
+              {status[10] === "done" ? (
+                <DoneBadge />
+              ) : (
+                <form action={launchAndComplete} className="flex flex-wrap items-center justify-between gap-2 pt-3">
+                  <Link href="/admin/onboarding?step=9" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                  <div className="flex flex-wrap gap-2">
+                    <a href={orderingUrl} target="_blank" rel="noopener noreferrer"
+                      className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-ink no-underline">
+                      Preview ordering page ↗
+                    </a>
+                    <button type="submit" className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-[13px] font-semibold">
+                      Launch — go to dashboard →
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
         </main>
