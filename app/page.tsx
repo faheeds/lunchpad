@@ -333,7 +333,7 @@ export default async function HomePage() {
             textDecoration: "none", display: "inline-flex", alignItems: "center",
             whiteSpace: "nowrap",
           }}>
-            Start free
+            Start free trial
           </Link>
         </div>
       </nav>
@@ -366,7 +366,7 @@ export default async function HomePage() {
           fontSize: 16, color: "#475569", lineHeight: 1.6,
           marginBottom: 28, maxWidth: 550,
         }}>
-          Built for small operators. Ordering, payments, kitchen prep — done. $49/month, no contracts. Free for 14 days.
+          {`Built for small operators. Ordering, payments, kitchen prep — done. $${starterPlan.priceMonthly}/month, no contracts. Free for 14 days.`}
         </p>
 
         {/* CTAs */}
@@ -377,7 +377,7 @@ export default async function HomePage() {
             borderRadius: 8, textDecoration: "none",
             display: "inline-flex", alignItems: "center",
           }}>
-            Start your free trial
+            Start free trial
           </Link>
           <a href="#features" style={{
             background: "transparent", color: "#1D9E75",
