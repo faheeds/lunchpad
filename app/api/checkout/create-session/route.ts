@@ -13,6 +13,29 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = orderFormSchema.parse(body);
 
+    // Check if the restaurant has completed Stripe onboarding before allowing orders
+    const deliveryDate = await prisma.deliveryDate.findUnique({
+      where: { id: parsed.deliveryDateId },
+      include: { school: { select: { restaurantId: true } } },
+    });
+    if (!deliveryDate) {
+      return NextResponse.json(
+        { error: "Delivery date not found." },
+        { status: 400 }
+      );
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: deliveryDate.school.restaurantId },
+      select: { stripeOnboardingComplete: true },
+    });
+    if (!restaurant?.stripeOnboardingComplete) {
+      return NextResponse.json(
+        { error: "This operator isn't accepting payments yet." },
+        { status: 503 }
+      );
+    }
+
     // Rate-limit: block if the same parent already has a PENDING order for this
     // delivery date created in the last 5 minutes (prevents accidental double-orders)
     const parentUserId =
