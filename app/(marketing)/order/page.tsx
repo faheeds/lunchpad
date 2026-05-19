@@ -28,6 +28,39 @@ export default async function OrderPage({
   }
   const params = await searchParams;
 
+  // Block ordering if restaurant hasn't completed Stripe onboarding
+  if (!restaurant.stripeOnboardingComplete) {
+    return (
+      <>
+        <SiteHeaderServer />
+        <main className="app-content" id="main-content">
+          <div className="px-4 py-4">
+            <div className="rounded-[18px] border border-blue-200 bg-blue-50 p-8 text-center">
+              <h2 className="text-lg font-semibold text-blue-900 mb-2">
+                We're getting set up
+              </h2>
+              <p className="text-sm text-blue-800 mb-6">
+                Ordering will be available once we've completed our payment setup. Check back soon!
+              </p>
+              {(restaurant.contactEmail || restaurant.contactPhone) && (
+                <div className="text-sm text-blue-700 border-t border-blue-200 pt-4 mt-4">
+                  <p className="font-medium mb-2">Questions?</p>
+                  {restaurant.contactEmail && (
+                    <p>Email: <a href={`mailto:${restaurant.contactEmail}`} className="text-blue-600 hover:underline">{restaurant.contactEmail}</a></p>
+                  )}
+                  {restaurant.contactPhone && (
+                    <p>Phone: <a href={`tel:${restaurant.contactPhone}`} className="text-blue-600 hover:underline">{restaurant.contactPhone}</a></p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+        <AppNav />
+      </>
+    );
+  }
+
   const allDeliveryDates = await prisma.deliveryDate.findMany({
     where: {
       orderingOpen: true,

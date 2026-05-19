@@ -52,6 +52,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if the restaurant has completed Stripe onboarding before allowing orders
+    if (!restaurant.stripeOnboardingComplete) {
+      return NextResponse.json(
+        { error: "This operator isn't accepting payments yet." },
+        { status: 503, headers: CORS_HEADERS }
+      );
+    }
+
     // Duplicate order guard (same parent, same date, PENDING in last 5 min)
     if (parentUserId) {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
