@@ -76,20 +76,20 @@ function seedState(t: TemplateMeta): BuilderState {
 
 function ComingSoon({ template }: { template: TemplateMeta }) {
   return (
-    <div className="max-w-xl mx-auto py-10 px-4">
-      <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center">
+    <div className="min-h-screen bg-editorial-paper flex items-center justify-center py-10 px-4">
+      <div className="rounded-[16px] border border-editorial-line bg-white p-6 text-center shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] max-w-xl">
         <div className="flex justify-center mb-3">
           <DiscountTemplateBadge kind={template.kind as DiscountIconName} size="lg" />
         </div>
-        <h1 className="text-[17px] font-bold text-ink">{template.title} — coming soon</h1>
-        <p className="text-[13px] text-slate-500 mt-2 leading-relaxed max-w-sm mx-auto">
+        <h1 className="text-[17px] font-editorial font-semibold text-editorial-ink">{template.title} — coming soon</h1>
+        <p className="text-[13px] text-editorial-ink-soft mt-2 leading-relaxed max-w-sm mx-auto">
           {template.description} The builder for this template isn't ready yet, but
           it's queued. For now, the three available templates (Welcome offer, Promo
           code, Sibling discount) cover most use cases.
         </p>
         <Link
           href="/admin/discounts/new"
-          className="inline-flex items-center mt-4 px-4 py-2 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-700 no-underline hover:bg-slate-50"
+          className="inline-flex items-center mt-4 px-4 py-2 rounded-full border border-editorial-line text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green"
         >
           ← Back to templates
         </Link>
