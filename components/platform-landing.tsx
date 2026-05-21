@@ -216,8 +216,9 @@ const CSS = `
 
 .lp .hero-title{font-family:var(--serif);font-weight:500;font-size:clamp(46px,5.6vw,80px);line-height:1.02;letter-spacing:-.022em;color:var(--ink);margin-bottom:26px;}
 .lp .hero-title em{font-style:italic;font-weight:500;color:var(--green);}
-.lp .hero-title .line{display:block;overflow:hidden;}
-.lp .hero-title .line span{display:block;transform:translateY(110%);transition:transform 1.05s var(--ease);transition-delay:var(--d,0s);}
+.lp .hero-title .line{display:block;overflow:hidden;padding-bottom:0.16em;}
+.lp .hero-title .line:not(:last-child){margin-bottom:-0.16em;}
+.lp .hero-title .line span{display:block;transform:translateY(130%);transition:transform 1.05s var(--ease);transition-delay:var(--d,0s);}
 .lp .hero-title.in .line span{transform:translateY(0);}
 .lp .hero-sub{font-size:18.5px;line-height:1.65;color:var(--ink-soft);max-width:482px;margin-bottom:34px;font-weight:400;}
 .lp .hero-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:30px;}
@@ -416,6 +417,7 @@ const CSS = `
   .lp .nav,.lp .nav.scrolled{padding:14px 22px;}
   .lp .nav-links{display:none;}
   .lp .hero{padding:120px 22px 70px;}
+  .lp .hero-actions{justify-content:center;}
   .lp .section,.lp .story-inner,.lp .how-inner,.lp .pricing-inner,.lp .stats-inner,.lp .final{padding-left:22px;padding-right:22px;}
   .lp .feat-grid{grid-template-columns:1fr;}
   .lp .feat:nth-child(even){padding-left:0;border-left:none;}
