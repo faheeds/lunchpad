@@ -29,24 +29,24 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
 };
 
 const ACTION_BADGE: Record<string, { bg: string; color: string; label: string }> = {
-  CREATED:           { bg: "#dbeafe", color: "#1d4ed8", label: "Created" },
-  UPDATED:           { bg: "#e0e7ff", color: "#4338ca", label: "Updated" },
-  MODIFIED:          { bg: "#e0e7ff", color: "#4338ca", label: "Modified" },
-  DELETED:           { bg: "#fee2e2", color: "#b91c1c", label: "Deleted" },
-  PAID:              { bg: "#dcfce7", color: "#15803d", label: "Paid" },
-  REFUNDED:          { bg: "#fee2e2", color: "#b91c1c", label: "Refunded" },
-  CANCELLED:         { bg: "#fee2e2", color: "#b91c1c", label: "Cancelled" },
-  ARCHIVED:          { bg: "#f3f4f6", color: "#6b7280", label: "Archived" },
-  UNARCHIVED:        { bg: "#dcfce7", color: "#15803d", label: "Unarchived" },
-  COMPED:            { bg: "#fef3c7", color: "#92400e", label: "Comped" },
-  INVITED:           { bg: "#dbeafe", color: "#1d4ed8", label: "Invited" },
-  INVITE_ACCEPTED:   { bg: "#dcfce7", color: "#15803d", label: "Joined" },
-  INVITE_REVOKED:    { bg: "#f3f4f6", color: "#6b7280", label: "Cancelled invite" },
-  ROLE_CHANGED:      { bg: "#e0e7ff", color: "#4338ca", label: "Role changed" },
-  REMOVED:           { bg: "#fee2e2", color: "#b91c1c", label: "Removed" },
-  PASSWORD_CHANGED:  { bg: "#f3f4f6", color: "#6b7280", label: "Password changed" },
-  PASSWORD_RESET:    { bg: "#f3f4f6", color: "#6b7280", label: "Password reset" },
-  LOGGED_IN:         { bg: "#f3f4f6", color: "#6b7280", label: "Logged in" },
+  CREATED:           { bg: "#DEE2CF", color: "#2C4031", label: "Created" },
+  UPDATED:           { bg: "#DEE2CF", color: "#2C4031", label: "Updated" },
+  MODIFIED:          { bg: "#DEE2CF", color: "#2C4031", label: "Modified" },
+  DELETED:           { bg: "#F6EED9", color: "#C0673E", label: "Deleted" },
+  PAID:              { bg: "#DEE2CF", color: "#2C4031", label: "Paid" },
+  REFUNDED:          { bg: "#F6EED9", color: "#C0673E", label: "Refunded" },
+  CANCELLED:         { bg: "#F6EED9", color: "#C0673E", label: "Cancelled" },
+  ARCHIVED:          { bg: "#EFE8D7", color: "#938B78", label: "Archived" },
+  UNARCHIVED:        { bg: "#DEE2CF", color: "#2C4031", label: "Unarchived" },
+  COMPED:            { bg: "#FEF3F0", color: "#C99A3F", label: "Comped" },
+  INVITED:           { bg: "#DEE2CF", color: "#2C4031", label: "Invited" },
+  INVITE_ACCEPTED:   { bg: "#DEE2CF", color: "#2C4031", label: "Joined" },
+  INVITE_REVOKED:    { bg: "#EFE8D7", color: "#938B78", label: "Cancelled invite" },
+  ROLE_CHANGED:      { bg: "#DEE2CF", color: "#2C4031", label: "Role changed" },
+  REMOVED:           { bg: "#F6EED9", color: "#C0673E", label: "Removed" },
+  PASSWORD_CHANGED:  { bg: "#EFE8D7", color: "#938B78", label: "Password changed" },
+  PASSWORD_RESET:    { bg: "#EFE8D7", color: "#938B78", label: "Password reset" },
+  LOGGED_IN:         { bg: "#EFE8D7", color: "#938B78", label: "Logged in" },
 };
 
 function fmtRelative(d: Date): string {
@@ -100,23 +100,23 @@ export default async function AdminActivityPage({
   const entityTypeOptions = ["ORDER", "MENU_ITEM", "DELIVERY_DATE", "SCHOOL", "RESTAURANT_SETTINGS", "TEAM_MEMBER", "ADMIN_INVITE"];
 
   return (
-    <div className="space-y-4 pb-10">
+    <div className="space-y-4 pb-10 bg-editorial-paper min-h-screen">
 
       {/* ── Header ────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-[17px] font-semibold text-ink">Activity</h1>
-        <p className="text-[11px] text-slate-400 mt-0.5">
+        <h1 className="text-[17px] font-semibold text-editorial-ink font-editorial">Activity</h1>
+        <p className="text-[11px] text-editorial-ink-soft mt-0.5">
           Change log for the last {days} day{days !== 1 ? "s" : ""}
           {logs.length === 200 ? " — showing latest 200" : ` — ${logs.length} event${logs.length === 1 ? "" : "s"}`}
         </p>
       </div>
 
       {/* ── Filters ───────────────────────────────────────────────── */}
-      <form className="rounded-[14px] border border-slate-100 bg-white p-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <form className="rounded-[16px] border border-editorial-line bg-white p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <div>
-          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Who</label>
+          <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Who</label>
           <select name="actor" defaultValue={params.actor ?? ""}
-            className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
+            className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
             <option value="">Anyone</option>
             {admins.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
@@ -124,9 +124,9 @@ export default async function AdminActivityPage({
           </select>
         </div>
         <div>
-          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">What</label>
+          <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">What</label>
           <select name="type" defaultValue={params.type ?? ""}
-            className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
+            className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
             <option value="">Everything</option>
             {entityTypeOptions.map((t) => (
               <option key={t} value={t}>{ENTITY_TYPE_LABELS[t] ?? t}</option>
@@ -134,9 +134,9 @@ export default async function AdminActivityPage({
           </select>
         </div>
         <div>
-          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Window</label>
+          <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Window</label>
           <select name="days" defaultValue={String(days)}
-            className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
+            className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
             <option value="1">Last 24 hours</option>
             <option value="7">Last 7 days</option>
             <option value="30">Last 30 days</option>
@@ -145,11 +145,11 @@ export default async function AdminActivityPage({
           </select>
         </div>
         <div className="sm:col-span-3 flex gap-2">
-          <button type="submit" className="flex-1 py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
+          <button type="submit" className="flex-1 py-2 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
             Apply
           </button>
           <Link href="/admin/activity"
-            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-500 text-[12px] font-medium no-underline hover:bg-slate-50 transition whitespace-nowrap">
+            className="px-4 py-2 rounded-full border border-editorial-line text-editorial-ink text-[12px] font-medium no-underline hover:border-editorial-green hover:text-editorial-green transition whitespace-nowrap">
             Clear
           </Link>
         </div>
@@ -163,9 +163,9 @@ export default async function AdminActivityPage({
           description="Try widening the date range or removing filters."
         />
       ) : (
-        <div className="rounded-[14px] border border-slate-100 bg-white divide-y divide-slate-50">
+        <div className="rounded-[16px] border border-editorial-line bg-white divide-y divide-editorial-line shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
           {logs.map((entry) => {
-            const badge = ACTION_BADGE[entry.action] ?? { bg: "#f3f4f6", color: "#6b7280", label: entry.action };
+            const badge = ACTION_BADGE[entry.action] ?? { bg: "#EFE8D7", color: "#938B78", label: entry.action };
             const actorName = entry.adminUser?.name ?? (entry.parentUserId ? "Customer" : "System");
             return (
               <div key={entry.id} className="px-4 py-3">
@@ -179,14 +179,14 @@ export default async function AdminActivityPage({
                       }}>
                         {badge.label}
                       </span>
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-editorial-ink-faint">
                         {ENTITY_TYPE_LABELS[entry.entityType] ?? entry.entityType}
                       </span>
                     </div>
-                    <p className="text-[13px] text-ink leading-snug">{entry.summary}</p>
-                    <p className="text-[11px] text-slate-400 mt-1">
+                    <p className="text-[13px] text-editorial-ink leading-snug">{entry.summary}</p>
+                    <p className="text-[11px] text-editorial-ink-faint mt-1">
                       {actorName}
-                      <span className="text-slate-300 mx-1">·</span>
+                      <span className="text-editorial-line mx-1">·</span>
                       {fmtRelative(entry.createdAt)}
                     </p>
                   </div>
