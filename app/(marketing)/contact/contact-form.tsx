@@ -46,13 +46,13 @@ export function ContactForm() {
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "11px 14px", borderRadius: 12,
-    border: "1.5px solid #e2e8f0", fontSize: 14, color: "#1c0505",
+    border: "1.5px solid #e2e8f0", fontSize: 14, color: "var(--body-text)",
     background: "white", outline: "none", fontFamily: "inherit",
     WebkitAppearance: "none",
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 600, color: "#64748b",
+    fontSize: 11, fontWeight: 600, color: "rgba(var(--body-text-rgb), 0.65)",
     textTransform: "uppercase", letterSpacing: "0.1em",
     display: "block", marginBottom: 6,
   };
@@ -62,17 +62,17 @@ export function ContactForm() {
       <div style={{ padding: "60px 24px", textAlign: "center" }}>
         <div style={{
           width: 64, height: 64, borderRadius: "50%",
-          background: "linear-gradient(135deg, #c41230, #9b0e26)",
+          background: "linear-gradient(135deg, var(--brand-hex), color-mix(in srgb, var(--brand-hex) 80%, #000))",
           display: "flex", alignItems: "center", justifyContent: "center",
           margin: "0 auto 20px", fontSize: 28,
-          boxShadow: "0 4px 16px rgba(196,18,48,0.35)",
+          boxShadow: "0 4px 16px rgba(var(--brand-rgb),0.35)",
         }}>
           ✓
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#1c0505", marginBottom: 10 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--body-text)", marginBottom: 10 }}>
           Message sent!
         </h2>
-        <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
+        <p style={{ fontSize: 14, color: "rgba(var(--body-text-rgb), 0.65)", lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
           Thanks for reaching out. We&apos;ll get back to you as soon as possible.
         </p>
       </div>
@@ -105,7 +105,7 @@ export function ContactForm() {
             required
             value={feedbackType}
             onChange={(e) => setFeedbackType(e.target.value as FeedbackType)}
-            style={{ ...inputStyle, color: feedbackType ? "#1c0505" : "#94a3b8" }}
+            style={{ ...inputStyle, color: feedbackType ? "var(--body-text)" : "rgba(var(--body-text-rgb), 0.5)" }}
           >
             <option value="" disabled>Select a category…</option>
             <option value="order_issue">Order issue</option>
@@ -152,9 +152,9 @@ export function ContactForm() {
 
         {status === "error" && (
           <div style={{
-            background: "rgba(196,18,48,0.08)", border: "1px solid rgba(196,18,48,0.2)",
+            background: "rgba(var(--brand-rgb),0.08)", border: "1px solid rgba(var(--brand-rgb),0.2)",
             borderRadius: 12, padding: "12px 16px",
-            fontSize: 13, color: "#9b0e26",
+            fontSize: 13, color: "var(--brand-hex)",
           }}>
             {errorMsg}
           </div>
@@ -167,10 +167,10 @@ export function ContactForm() {
             style={{
               width: "100%", padding: "15px 20px", borderRadius: 14, border: "none",
               background: status === "submitting"
-                ? "rgba(196,18,48,0.5)"
-                : "linear-gradient(135deg, #c41230 0%, #9b0e26 100%)",
+                ? "rgba(var(--brand-rgb),0.5)"
+                : "linear-gradient(135deg, var(--brand-hex) 0%, color-mix(in srgb, var(--brand-hex) 80%, #000) 100%)",
               color: "white", fontSize: 15, fontWeight: 700, cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(196,18,48,0.35)",
+              boxShadow: "0 4px 12px rgba(var(--brand-rgb),0.35)",
               letterSpacing: "0.02em",
             }}
           >

@@ -76,10 +76,10 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
         {/* Price badge */}
         <div style={{
           position: "absolute", bottom: 10, right: 10,
-          background: "rgba(28,5,5,0.82)",
+          background: "rgba(var(--body-text-rgb), 0.82)",
           backdropFilter: "blur(6px)",
           borderRadius: 10, padding: "4px 10px",
-          fontSize: 13, fontWeight: 700, color: "#fbbf24",
+          fontSize: 13, fontWeight: 700, color: "var(--hero-accent)",
           letterSpacing: "0.01em",
         }}>
           {fmt(item.basePriceCents)}
@@ -88,12 +88,12 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
 
       {/* Content */}
       <div style={{ padding: "14px 16px 16px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-        <p style={{ fontSize: 15, fontWeight: 700, color: "#1c0505", lineHeight: 1.2, margin: 0 }}>
+        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--body-text)", lineHeight: 1.2, margin: 0 }}>
           {item.name}
         </p>
 
         {description && (
-          <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.55, margin: 0 }}>
+          <p style={{ fontSize: 12, color: "rgba(var(--body-text-rgb), 0.65)", lineHeight: 1.55, margin: 0 }}>
             {description}
           </p>
         )}
@@ -109,12 +109,12 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
                 padding: 0, cursor: "pointer",
               }}
             >
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#92400e" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)" }}>
                 + {addons.length} add-on{addons.length > 1 ? "s" : ""} available
               </span>
               <svg
                 width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                stroke="rgba(var(--body-text-rgb), 0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                 style={{ transform: addonsOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
               >
                 <path d="M6 9l6 6 6-6"/>
@@ -126,8 +126,8 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
                 {addons.map((o) => (
                   <span key={o.id} style={{
                     fontSize: 11, padding: "3px 8px", borderRadius: 20,
-                    background: "#fef3c7", color: "#92400e",
-                    border: "1px solid #fde68a", fontWeight: 500,
+                    background: "rgba(var(--accent-rgb), 0.15)", color: "var(--accent)",
+                    border: "1px solid rgba(var(--accent-rgb), 0.3)", fontWeight: 500,
                   }}>
                     + {o.name}{o.priceDeltaCents ? ` (${fmt(o.priceDeltaCents)})` : " (free)"}
                   </span>
@@ -142,7 +142,7 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
       <div style={{ padding: "0 16px 16px" }}>
         <Link href={`/order?item=${item.slug}`} style={{
           display: "block", textAlign: "center",
-          background: "#c41230", color: "white",
+          background: "var(--brand-on-white)", color: "white",
           borderRadius: 10, padding: "10px 16px",
           fontSize: 13, fontWeight: 600, textDecoration: "none",
           letterSpacing: "0.01em",

@@ -64,16 +64,26 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const restaurant = await getCurrentRestaurant();
-  const displayFont = restaurant ? getDisplayFont(restaurant.displayFont) : getDisplayFont("Fraunces");
+
+  // Treat legacy default colors as "not customized" — fall through to editorial defaults
+  const isColorCustomized = (color: string | null | undefined, legacyDefault: string): boolean =>
+    Boolean(color && color !== legacyDefault);
+
+  const primaryColor = isColorCustomized(restaurant?.primaryColor, "#c41230") ? restaurant?.primaryColor : undefined;
+  const accentColor = isColorCustomized(restaurant?.accentColor, "#f59e0b") ? restaurant?.accentColor : undefined;
+  const darkColor = isColorCustomized(restaurant?.darkColor, "#1c0505") ? restaurant?.darkColor : undefined;
+  const displayFont = isColorCustomized(restaurant?.displayFont, "Oswald") ? restaurant?.displayFont : undefined;
+
+  const displayFontObj = displayFont ? getDisplayFont(displayFont) : getDisplayFont("Fraunces");
   const bodyFont    = getBodyFont(restaurant?.bodyFont);
   const cssBlock = themeCssBlock({
-    primaryColor:    restaurant?.primaryColor,
-    accentColor:     restaurant?.accentColor,
-    darkColor:       restaurant?.darkColor,
+    primaryColor,
+    accentColor,
+    darkColor,
     heroTitleColor:  restaurant?.heroTitleColor,
     heroAccentColor: restaurant?.heroAccentColor,
     bodyTextColor:   restaurant?.bodyTextColor,
-    displayFont:     restaurant?.displayFont,
+    displayFont,
     bodyFont:        restaurant?.bodyFont,
   });
   // Tag the document so CSS can branch between three layouts on desktop:
@@ -101,8 +111,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href={displayFont.googleUrl} rel="stylesheet" />
-        {bodyFont.id !== displayFont.id && (
+        <link href={displayFontObj.googleUrl} rel="stylesheet" />
+        {bodyFont.id !== displayFontObj.id && (
           <link href={bodyFont.googleUrl} rel="stylesheet" />
         )}
         <style dangerouslySetInnerHTML={{ __html: cssBlock }} />

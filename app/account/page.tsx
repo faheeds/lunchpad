@@ -141,7 +141,7 @@ export default async function ParentAccountPage() {
     PAID:      { color: "#15803d", bg: "#dcfce7" },
     PENDING:   { color: "#854d0e", bg: "#fef9c3" },
     CANCELLED: { color: "#b91c1c", bg: "#fee2e2" },
-    REFUNDED:  { color: "#6b7280", bg: "#f3f4f6" },
+    REFUNDED:  { color: "rgba(var(--body-text-rgb), 0.65)", bg: "#f3f4f6" },
   };
 
   const initials = (name: string | null | undefined) =>
@@ -155,7 +155,7 @@ export default async function ParentAccountPage() {
 
           {/* ── Profile header ─────────────────────────────────────── */}
           <div style={{
-            background: "linear-gradient(135deg, var(--dark-bg, #0f1923) 0%, #1a2d42 100%)",
+            background: `linear-gradient(135deg, var(--dark-bg) 0%, color-mix(in srgb, var(--dark-bg) 70%, #000) 100%)`,
             borderRadius: 18, padding: "20px",
           }}>
             <div className="flex items-center justify-between gap-3">
@@ -164,7 +164,7 @@ export default async function ParentAccountPage() {
                   width: 44, height: 44, borderRadius: "50%",
                   background: "rgba(var(--brand-rgb),0.25)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 16, fontWeight: 700, color: "var(--brand-on-dark, #f87171)",
+                  fontSize: 16, fontWeight: 700, color: "var(--brand-on-dark)",
                   flexShrink: 0,
                 }}>
                   {initials(parent.name)}
@@ -209,9 +209,9 @@ export default async function ParentAccountPage() {
                 <div className="flex items-center gap-3 p-4">
                   <div style={{
                     width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-                    background: "var(--brand-light, #fff1f3)",
+                    background: "rgba(var(--brand-rgb), 0.08)",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 14, fontWeight: 700, color: "var(--brand-on-white, #c41230)",
+                    fontSize: 14, fontWeight: 700, color: "var(--brand-on-white)",
                   }}>
                     {child.studentName[0].toUpperCase()}
                   </div>
@@ -231,7 +231,7 @@ export default async function ParentAccountPage() {
                   </div>
                   <Link href={`/order?childId=${child.id}`} style={{
                     fontSize: 12, fontWeight: 700, color: "white",
-                    background: "var(--brand-on-white, #c41230)",
+                    background: "var(--brand-on-white)",
                     borderRadius: 100, padding: "7px 14px",
                     textDecoration: "none", flexShrink: 0,
                   }}>
@@ -258,7 +258,7 @@ export default async function ParentAccountPage() {
                         <input type="hidden" name="childId" value={child.id} />
                         <button type="submit" style={{
                           padding: "8px 14px", borderRadius: 10,
-                          border: "1px solid #fecdd3", color: "#c41230",
+                          border: `1px solid rgba(var(--brand-rgb), 0.2)`, color: "var(--brand-on-white)",
                           fontSize: 12, fontWeight: 600, background: "transparent", cursor: "pointer",
                         }}>
                           Remove
@@ -377,7 +377,7 @@ export default async function ParentAccountPage() {
                       </p>
                       {order.status === "PAID" && (
                         <Link href={`/order?reorder=${order.id}`} style={{
-                          fontSize: 11, fontWeight: 600, color: "var(--brand-on-white, #c41230)",
+                          fontSize: 11, fontWeight: 600, color: "var(--brand-on-white)",
                           textDecoration: "none", display: "block", marginTop: 4,
                         }}>
                           Reorder →
@@ -393,7 +393,7 @@ export default async function ParentAccountPage() {
                 <Link href="/order" style={{
                   display: "inline-block", marginTop: 10,
                   fontSize: 13, fontWeight: 700, color: "white",
-                  background: "var(--brand-on-white, #c41230)",
+                  background: "var(--brand-on-white)",
                   borderRadius: 100, padding: "9px 20px", textDecoration: "none",
                 }}>
                   Order now
@@ -410,12 +410,12 @@ export default async function ParentAccountPage() {
         <div className="fixed inset-x-0 bottom-[52px] z-20 px-4 pb-2 pointer-events-none"
           style={{ maxWidth: 480, margin: "0 auto", left: 0, right: 0 }}>
           <div style={{
-            borderRadius: 18, border: "1px solid var(--brand-light, #fecdd3)",
+            borderRadius: 18, border: "1px solid rgba(var(--brand-rgb), 0.2)",
             background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)",
             padding: "12px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
           }} className="pointer-events-auto flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <p style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-on-white, #c41230)" }}>
+              <p style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-on-white)" }}>
                 Upcoming week
               </p>
               <p className="text-[12px] text-slate-600 mt-0.5">
