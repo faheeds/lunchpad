@@ -240,88 +240,88 @@ export default async function AdminSettingsPage({
   ]).then(([schools, items]) => schools > 0 || items > 0);
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-5 pb-10 bg-editorial-paper min-h-screen">
       <div className="flex items-center justify-between">
-        <h1 className="text-[17px] font-semibold text-ink">Settings</h1>
+        <h1 className="text-[17px] font-editorial font-semibold text-editorial-ink">Settings</h1>
       </div>
 
       <SettingsTabs />
 
       {/* Banners */}
       {saved && (
-        <div className="rounded-[12px] bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="rounded-[12px] bg-editorial-sage border border-editorial-green px-4 py-3 flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2C4031" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6L9 17l-5-5"/>
           </svg>
-          <p className="text-[13px] font-medium text-green-800">Saved.</p>
+          <p className="text-[13px] font-medium text-editorial-green">Saved.</p>
         </div>
       )}
 
       {resetSuccess && (
-        <div className="rounded-[12px] bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="rounded-[12px] bg-editorial-sage border border-editorial-green px-4 py-3 flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2C4031" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6L9 17l-5-5"/>
           </svg>
-          <p className="text-[13px] font-medium text-green-800">Sample data reset.</p>
+          <p className="text-[13px] font-medium text-editorial-green">Sample data reset.</p>
         </div>
       )}
       {error && (
-        <div className="rounded-[12px] bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-2">
-          <p className="text-[13px] font-medium text-red-800">{error}</p>
+        <div className="rounded-[12px] bg-[#F4E3DB] border border-[#E2C3B3] px-4 py-3 flex items-center gap-2">
+          <p className="text-[13px] font-medium text-[#7C3D24]">{error}</p>
         </div>
       )}
       {connectSuccess && (
-        <div className="rounded-[12px] bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-2">
-          <p className="text-[13px] font-medium text-green-800">Stripe account connected — parents can now check out.</p>
+        <div className="rounded-[12px] bg-editorial-sage border border-editorial-green px-4 py-3 flex items-center gap-2">
+          <p className="text-[13px] font-medium text-editorial-green">Stripe account connected — parents can now check out.</p>
         </div>
       )}
       {connectError && (
-        <div className="rounded-[12px] bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-2">
-          <p className="text-[13px] font-medium text-red-800">Stripe Connect failed: {connectError}</p>
+        <div className="rounded-[12px] bg-[#F4E3DB] border border-[#E2C3B3] px-4 py-3 flex items-center gap-2">
+          <p className="text-[13px] font-medium text-[#7C3D24]">Stripe Connect failed: {connectError}</p>
         </div>
       )}
 
       {/* ── GENERAL ─────────────────────────────────────────────────── */}
       {tab === "general" && (
-        <form action={updateGeneral} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden max-w-2xl">
-          <div className="px-4 py-3 border-b border-slate-50">
-            <p className="text-[13px] font-semibold text-ink">Restaurant profile</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Basics that show up on your ordering page and in customer emails.</p>
+        <form action={updateGeneral} className="rounded-[16px] border border-editorial-line bg-white overflow-hidden max-w-2xl shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <div className="px-4 py-3 border-b border-editorial-line bg-white">
+            <p className="text-[13px] font-semibold text-editorial-ink">Restaurant profile</p>
+            <p className="text-[11px] text-editorial-ink-faint mt-0.5">Basics that show up on your ordering page and in customer emails.</p>
           </div>
           <div className="px-4 py-4 space-y-4">
             <div>
-              <label className="text-[11px] text-slate-500 font-medium block mb-1">Restaurant name</label>
+              <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Restaurant name</label>
               <input type="text" name="name" required defaultValue={restaurant.name}
-                className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] text-slate-500 font-medium block mb-1">Contact email</label>
+                <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Contact email</label>
                 <input type="email" name="contactEmail" defaultValue={restaurant.contactEmail ?? ""}
                   placeholder="hello@..."
-                  className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                  className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
               </div>
               <div>
-                <label className="text-[11px] text-slate-500 font-medium block mb-1">Contact phone</label>
+                <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Contact phone</label>
                 <input type="tel" name="contactPhone" defaultValue={restaurant.contactPhone ?? ""}
                   placeholder="+1 (555)..."
-                  className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                  className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
               </div>
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 font-medium block mb-1">Timezone</label>
+              <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Timezone</label>
               <select name="timezone" defaultValue={restaurant.timezone}
-                className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                 {TIMEZONES.map((tz) => (
                   <option key={tz.value} value={tz.value}>{tz.label}</option>
                 ))}
               </select>
-              <p className="text-[10px] text-slate-400 mt-1">Used as the default for new locations and for cutoff time displays.</p>
+              <p className="text-[10px] text-editorial-ink-faint mt-1">Used as the default for new locations and for cutoff time displays.</p>
             </div>
           </div>
           <div className="px-4 pb-4">
             <button type="submit"
-              className="px-4 py-2 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+              className="px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
               Save
             </button>
           </div>
@@ -331,10 +331,10 @@ export default async function AdminSettingsPage({
       {/* ── BRANDING ────────────────────────────────────────────────── */}
       {tab === "branding" && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
-          <form id="branding-form" action={updateBranding} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-50">
-              <p className="text-[13px] font-semibold text-ink">Branding</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Logo, hero photo, colors, and fonts. Live preview on the right.</p>
+          <form id="branding-form" action={updateBranding} className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+            <div className="px-4 py-3 border-b border-editorial-line">
+              <p className="text-[13px] font-semibold text-editorial-ink">Branding</p>
+              <p className="text-[11px] text-editorial-ink-faint mt-0.5">Logo, hero photo, colors, and fonts. Live preview on the right.</p>
             </div>
             <div className="px-4 py-4 space-y-4">
               <input type="hidden" name="name" value={restaurant.name} />
@@ -359,9 +359,9 @@ export default async function AdminSettingsPage({
                 </div>
               </div>
 
-              <div className="border-t border-slate-50 pt-4">
-                <p className="text-[12px] font-semibold text-ink mb-1">Theme</p>
-                <p className="text-[11px] text-slate-400 mb-3">Click a preset or pick each color. Watch the preview update.</p>
+              <div className="border-t border-editorial-line pt-4">
+                <p className="text-[12px] font-semibold text-editorial-ink mb-1">Theme</p>
+                <p className="text-[11px] text-editorial-ink-faint mb-3">Click a preset or pick each color. Watch the preview update.</p>
                 <ThemePicker
                   currentPrimary={restaurant.primaryColor     ?? "#c41230"}
                   currentAccent={restaurant.accentColor       ?? "#f59e0b"}
@@ -376,14 +376,14 @@ export default async function AdminSettingsPage({
             </div>
             <div className="px-4 pb-4">
               <button type="submit"
-                className="px-4 py-2 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                className="px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                 Save branding
               </button>
             </div>
           </form>
 
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-2">Live preview</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint mb-2">Live preview</p>
             <LiveBrandingPreview
               formId="branding-form"
               initial={{
@@ -407,48 +407,48 @@ export default async function AdminSettingsPage({
       {/* ── DOMAIN ──────────────────────────────────────────────────── */}
       {tab === "domain" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-4xl">
-          <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-50">
-              <p className="text-[13px] font-semibold text-ink">Ordering page URL</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Share this with parents or staff so they can place orders.</p>
+          <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+            <div className="px-4 py-3 border-b border-editorial-line">
+              <p className="text-[13px] font-semibold text-editorial-ink">Ordering page URL</p>
+              <p className="text-[11px] text-editorial-ink-faint mt-0.5">Share this with parents or staff so they can place orders.</p>
             </div>
             <div className="px-4 py-4 space-y-3">
-              <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200 px-3 py-2">
-                <p className="text-[12px] font-mono text-slate-600 flex-1 truncate">
+              <div className="flex items-center gap-2 bg-editorial-paper-2 rounded-lg border border-editorial-line px-3 py-2">
+                <p className="text-[12px] font-mono text-editorial-ink-soft flex-1 truncate">
                   https://{restaurant.slug}.lunchpad.us
                 </p>
                 <CopyUrlButton url={`https://${restaurant.slug}.lunchpad.us`} />
               </div>
               <a href={`https://${restaurant.slug}.lunchpad.us`} target="_blank" rel="noopener noreferrer"
-                className="text-[12px] text-brand-700 font-medium no-underline hover:underline">
+                className="text-[12px] text-editorial-green font-medium no-underline hover:underline">
                 Preview ordering page →
               </a>
             </div>
           </div>
 
-          <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-50">
-              <p className="text-[13px] font-semibold text-ink">Custom domain</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+          <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+            <div className="px-4 py-3 border-b border-editorial-line">
+              <p className="text-[13px] font-semibold text-editorial-ink">Custom domain</p>
+              <p className="text-[11px] text-editorial-ink-faint mt-0.5">
                 Use your own domain instead of <span className="font-mono">{restaurant.slug}.lunchpad.us</span>
               </p>
             </div>
             <div className="px-4 py-4 space-y-4">
               {restaurant.customDomain ? (
-                <div className="flex items-center gap-2 bg-green-50 rounded-lg border border-green-200 px-3 py-2.5">
-                  <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                  <p className="text-[12px] font-mono text-green-800 flex-1">{restaurant.customDomain}</p>
-                  <span className="text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Active</span>
+                <div className="flex items-center gap-2 bg-editorial-sage rounded-lg border border-editorial-green px-3 py-2.5">
+                  <div className="w-2 h-2 rounded-full bg-editorial-green flex-shrink-0" />
+                  <p className="text-[12px] font-mono text-editorial-green flex-1">{restaurant.customDomain}</p>
+                  <span className="text-[10px] font-semibold text-editorial-green bg-editorial-paper-2 px-2 py-0.5 rounded-full">Active</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200 px-3 py-2.5">
-                  <div className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
-                  <p className="text-[12px] text-slate-400">No custom domain configured</p>
+                <div className="flex items-center gap-2 bg-editorial-paper-2 rounded-lg border border-editorial-line px-3 py-2.5">
+                  <div className="w-2 h-2 rounded-full bg-editorial-ink-faint flex-shrink-0" />
+                  <p className="text-[12px] text-editorial-ink-faint">No custom domain configured</p>
                 </div>
               )}
 
               <form action={updateCustomDomain} className="space-y-2">
-                <label className="text-[11px] text-slate-500 font-medium block">
+                <label className="text-[11px] text-editorial-ink-soft font-medium block">
                   {restaurant.customDomain ? "Change domain" : "Add custom domain"}
                 </label>
                 <div className="flex gap-2">
@@ -457,47 +457,47 @@ export default async function AdminSettingsPage({
                     name="customDomain"
                     defaultValue={restaurant.customDomain ?? ""}
                     placeholder="lunch.yourdomain.com"
-                    className="flex-1 rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
+                    className="flex-1 rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                   />
                   <button type="submit"
-                    className="px-3 py-2 rounded-lg bg-slate-800 text-white text-[12px] font-semibold whitespace-nowrap">
+                    className="px-3 py-2 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold whitespace-nowrap hover:bg-editorial-green-deep transition">
                     Save
                   </button>
                 </div>
                 {restaurant.customDomain && (
                   <button type="submit" name="customDomain" value=""
-                    className="text-[11px] text-slate-400 hover:text-red-500 transition">
+                    className="text-[11px] text-editorial-ink-faint hover:text-[#7C3D24] transition">
                     Remove custom domain
                   </button>
                 )}
               </form>
 
-              <details className="rounded-lg border border-slate-100 overflow-hidden">
-                <summary className="px-3 py-2.5 text-[12px] font-semibold text-slate-600 cursor-pointer list-none flex items-center justify-between">
+              <details className="rounded-lg border border-editorial-line overflow-hidden">
+                <summary className="px-3 py-2.5 text-[12px] font-semibold text-editorial-ink-soft cursor-pointer list-none flex items-center justify-between">
                   <span>How to set up DNS</span>
-                  <span className="text-[10px] text-slate-400">tap to expand</span>
+                  <span className="text-[10px] text-editorial-ink-faint">tap to expand</span>
                 </summary>
-                <div className="px-3 pb-3 border-t border-slate-50 pt-3 space-y-3">
-                  <p className="text-[12px] text-slate-600">
+                <div className="px-3 pb-3 border-t border-editorial-line pt-3 space-y-3">
+                  <p className="text-[12px] text-editorial-ink-soft">
                     Add a <strong>CNAME record</strong> at your domain registrar:
                   </p>
-                  <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
-                    <div className="grid grid-cols-3 border-b border-slate-200 px-3 py-1.5">
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Type</span>
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Name</span>
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Value</span>
+                  <div className="bg-editorial-paper-2 rounded-lg border border-editorial-line overflow-hidden">
+                    <div className="grid grid-cols-3 border-b border-editorial-line px-3 py-1.5">
+                      <span className="text-[10px] font-semibold text-editorial-ink-soft uppercase tracking-wide">Type</span>
+                      <span className="text-[10px] font-semibold text-editorial-ink-soft uppercase tracking-wide">Name</span>
+                      <span className="text-[10px] font-semibold text-editorial-ink-soft uppercase tracking-wide">Value</span>
                     </div>
                     <div className="grid grid-cols-3 px-3 py-2 gap-1">
-                      <span className="text-[12px] font-mono font-semibold text-slate-700">CNAME</span>
-                      <span className="text-[12px] font-mono text-slate-600">lunch</span>
-                      <span className="text-[11px] font-mono text-slate-600 break-all">cname.vercel-dns.com</span>
+                      <span className="text-[12px] font-mono font-semibold text-editorial-ink">CNAME</span>
+                      <span className="text-[12px] font-mono text-editorial-ink-soft">lunch</span>
+                      <span className="text-[11px] font-mono text-editorial-ink-soft break-all">cname.vercel-dns.com</span>
                     </div>
                   </div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-editorial-ink-soft">
                     The <strong>Name</strong> is the subdomain part (e.g. for <span className="font-mono">lunch.yourdomain.com</span>, name is <span className="font-mono">lunch</span>).
                   </p>
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    <p className="text-[11px] text-amber-800 font-medium">
+                  <div className="bg-[#F6EED9] border border-[#E5D6A8] rounded-lg px-3 py-2">
+                    <p className="text-[11px] text-[#6E5C2C] font-medium">
                       After adding DNS — also add your custom domain in the{" "}
                       <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline">Vercel dashboard</a>{" "}
                       under Settings → Domains. Changes can take up to 24 hours.
@@ -512,57 +512,57 @@ export default async function AdminSettingsPage({
 
       {/* ── PAYMENTS ────────────────────────────────────────────────── */}
       {tab === "payments" && (
-        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden max-w-2xl">
-          <div className="px-4 py-3 border-b border-slate-50">
-            <p className="text-[13px] font-semibold text-ink">Payouts — Stripe Connect</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+        <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden max-w-2xl shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <div className="px-4 py-3 border-b border-editorial-line">
+            <p className="text-[13px] font-semibold text-editorial-ink">Payouts — Stripe Connect</p>
+            <p className="text-[11px] text-editorial-ink-faint mt-0.5">
               Connect your Stripe account so customer payments go directly to you.
             </p>
           </div>
           <div className="px-4 py-4 space-y-4">
             {restaurant.stripeOnboardingComplete && restaurant.stripeAccountId ? (
-              <div className="flex items-center gap-3 bg-green-50 rounded-lg border border-green-200 px-3 py-2.5">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="flex items-center gap-3 bg-editorial-sage rounded-lg border border-editorial-green px-3 py-2.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2C4031" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 6L9 17l-5-5"/>
                 </svg>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-green-800">Stripe account connected</p>
-                  <p className="text-[11px] text-green-600 font-mono truncate">{restaurant.stripeAccountId}</p>
+                  <p className="text-[12px] font-semibold text-editorial-green">Stripe account connected</p>
+                  <p className="text-[11px] text-editorial-green font-mono truncate">{restaurant.stripeAccountId}</p>
                 </div>
-                <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full whitespace-nowrap">Active</span>
+                <span className="text-[10px] font-bold text-editorial-green bg-editorial-paper-2 px-2 py-0.5 rounded-full whitespace-nowrap">Active</span>
               </div>
             ) : (
-              <div className="flex items-center gap-3 bg-amber-50 rounded-lg border border-amber-200 px-3 py-2.5">
-                <p className="text-[12px] text-amber-800 flex-1">
+              <div className="flex items-center gap-3 bg-[#F6EED9] rounded-lg border border-[#E5D6A8] px-3 py-2.5">
+                <p className="text-[12px] text-[#6E5C2C] flex-1">
                   No Stripe account connected — customers can&apos;t check out yet.
                 </p>
               </div>
             )}
 
-            <div className="bg-slate-50 rounded-lg border border-slate-100 px-3 py-3 space-y-1.5">
-              <p className="text-[11px] font-semibold text-slate-600">How payouts work</p>
+            <div className="bg-editorial-paper-2 rounded-lg border border-editorial-line px-3 py-3 space-y-1.5">
+              <p className="text-[11px] font-semibold text-editorial-ink-soft">How payouts work</p>
               {[
                 "Customers pay at checkout — money goes directly to your Stripe account",
                 `LunchPad retains a ${env.PLATFORM_FEE_PERCENT}% platform fee automatically`,
                 "Stripe deposits funds to your bank on a rolling 2-day schedule",
               ].map((line) => (
                 <div key={line} className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 flex-shrink-0" />
-                  <p className="text-[11px] text-slate-500">{line}</p>
+                  <div className="w-1.5 h-1.5 rounded-full bg-editorial-ink-faint mt-1.5 flex-shrink-0" />
+                  <p className="text-[11px] text-editorial-ink-soft">{line}</p>
                 </div>
               ))}
             </div>
 
             <a
               href="/api/stripe/connect/authorize"
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-[13px] font-semibold text-white no-underline transition"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full text-[13px] font-semibold text-white no-underline transition hover:bg-opacity-90"
               style={{ background: "linear-gradient(135deg, #635bff, #4f46e5)" }}
             >
               {restaurant.stripeOnboardingComplete ? "Reconnect Stripe account" : "Connect Stripe account"}
             </a>
             {restaurant.stripeAccountId && (
               <a href={`https://dashboard.stripe.com/${restaurant.stripeAccountId}/dashboard`} target="_blank" rel="noopener noreferrer"
-                className="block text-center text-[11px] text-brand-700 font-medium no-underline hover:underline">
+                className="block text-center text-[11px] text-editorial-green font-medium no-underline hover:underline">
                 Open Stripe dashboard ↗
               </a>
             )}
@@ -572,33 +572,33 @@ export default async function AdminSettingsPage({
 
       {/* ── NOTIFICATIONS ───────────────────────────────────────────── */}
       {tab === "notifications" && (
-        <form action={updateKitchenSheetSettings} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden max-w-2xl">
-          <div className="px-4 py-3 border-b border-slate-50">
-            <p className="text-[13px] font-semibold text-ink">Kitchen sheet automation</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+        <form action={updateKitchenSheetSettings} className="rounded-[16px] border border-editorial-line bg-white overflow-hidden max-w-2xl shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <div className="px-4 py-3 border-b border-editorial-line">
+            <p className="text-[13px] font-semibold text-editorial-ink">Kitchen sheet automation</p>
+            <p className="text-[11px] text-editorial-ink-faint mt-0.5">
               Email the kitchen prep sheet automatically on each delivery day.
             </p>
           </div>
           <div className="px-4 py-4 space-y-3">
             <div>
-              <label className="text-[11px] text-slate-500 font-medium block mb-1">
-                Auto-send time <span className="text-slate-400 font-normal">(in your restaurant&apos;s timezone)</span>
+              <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">
+                Auto-send time <span className="text-editorial-ink-faint font-normal">(in your restaurant&apos;s timezone)</span>
               </label>
               <select name="kitchenSheetSendHour"
                 defaultValue={restaurant.kitchenSheetSendHour ?? ""}
-                className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                 <option value="">Disabled — send manually</option>
                 {Array.from({ length: 24 }, (_, h) => {
                   const label = h === 0 ? "12:00 AM (midnight)" : h < 12 ? `${h}:00 AM` : h === 12 ? "12:00 PM (noon)" : `${h - 12}:00 PM`;
                   return <option key={h} value={h}>{label}</option>;
                 })}
               </select>
-              <p className="text-[11px] text-slate-400 mt-1.5">
+              <p className="text-[11px] text-editorial-ink-faint mt-1.5">
                 Sent to your contact email once per delivery day. Set a contact email under General first.
               </p>
             </div>
             <button type="submit"
-              className="px-4 py-2 rounded-lg bg-slate-800 text-white text-[13px] font-semibold">
+              className="px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
               Save
             </button>
           </div>
@@ -607,40 +607,40 @@ export default async function AdminSettingsPage({
 
       {/* ── DANGER ──────────────────────────────────────────────────── */}
       {tab === "danger" && (
-        <div className="rounded-[14px] border border-red-100 bg-white overflow-hidden max-w-2xl">
-          <div className="px-4 py-3 border-b border-red-50 bg-red-50/50">
-            <p className="text-[13px] font-semibold text-red-700">Danger zone</p>
-            <p className="text-[11px] text-red-400 mt-0.5">These actions are permanent and cannot be undone.</p>
+        <div className="rounded-[16px] border border-[#E2C3B3] bg-white overflow-hidden max-w-2xl shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <div className="px-4 py-3 border-b border-[#E2C3B3] bg-[#F4E3DB]">
+            <p className="text-[13px] font-semibold text-[#7C3D24]">Danger zone</p>
+            <p className="text-[11px] text-[#7C3D24] mt-0.5">These actions are permanent and cannot be undone.</p>
           </div>
           <div className="px-4 py-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[12px] font-medium text-ink">Change password</p>
-                <p className="text-[11px] text-slate-400">Update your admin account password</p>
+                <p className="text-[12px] font-medium text-editorial-ink">Change password</p>
+                <p className="text-[11px] text-editorial-ink-faint">Update your admin account password</p>
               </div>
               <Link href="/admin/team"
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-[11px] font-semibold text-slate-600 no-underline hover:bg-slate-50 transition">
+                className="px-3 py-1.5 rounded-lg border border-editorial-line text-[11px] font-semibold text-editorial-ink-soft no-underline hover:bg-editorial-paper-2 transition">
                 Go to Team →
               </Link>
             </div>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[12px] font-medium text-ink">Cancel subscription</p>
-                <p className="text-[11px] text-slate-400">Downgrade or cancel your LunchPad plan</p>
+                <p className="text-[12px] font-medium text-editorial-ink">Cancel subscription</p>
+                <p className="text-[11px] text-editorial-ink-faint">Downgrade or cancel your LunchPad plan</p>
               </div>
               <Link href="/admin/subscription"
-                className="px-3 py-1.5 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 no-underline hover:bg-red-50 transition">
+                className="px-3 py-1.5 rounded-lg border border-[#E2C3B3] text-[11px] font-semibold text-[#7C3D24] no-underline hover:bg-[#F4E3DB] transition">
                 Manage plan →
               </Link>
             </div>
             {hasSampleData && (
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[12px] font-medium text-ink">Reset sample data</p>
-                  <p className="text-[11px] text-slate-400">Delete all sample restaurants, menus, and delivery dates</p>
+                  <p className="text-[12px] font-medium text-editorial-ink">Reset sample data</p>
+                  <p className="text-[11px] text-editorial-ink-faint">Delete all sample restaurants, menus, and delivery dates</p>
                 </div>
                 <form action={resetSampleData}>
-                  <button type="submit" className="px-3 py-1.5 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 no-underline hover:bg-red-50 transition">
+                  <button type="submit" className="px-3 py-1.5 rounded-lg border border-[#E2C3B3] text-[11px] font-semibold text-[#7C3D24] no-underline hover:bg-[#F4E3DB] transition">
                     Reset →
                   </button>
                 </form>

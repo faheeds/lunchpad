@@ -69,20 +69,20 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
       <>
         <div style={{
           background: "white", borderRadius: 16, padding: "20px 24px",
-          border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+          border: "1px solid #E3DBC6", boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
         }}>
-          <p style={{ fontSize: 14, color: "#64748b", marginBottom: 16 }}>
+          <p style={{ fontSize: 14, color: "#5B5446", marginBottom: 16 }}>
             Your subscription is active. To make changes to your plan or billing, please contact{" "}
-            <a href="mailto:support@lunchpad.us" style={{ color: "#c41230", fontWeight: 600 }}>
+            <a href="mailto:support@lunchpad.us" style={{ color: "#2C4031", fontWeight: 600 }}>
               support@lunchpad.us
             </a>.
           </p>
           <button
             onClick={() => setShowCancelModal(true)}
             style={{
-              padding: "10px 16px", borderRadius: 10,
-              background: "transparent", color: "#c0392b",
-              fontSize: 13, fontWeight: 600, border: "1px solid #fee2e2",
+              padding: "10px 16px", borderRadius: 20,
+              background: "transparent", color: "#7C3D24",
+              fontSize: 13, fontWeight: 600, border: "1px solid #E2C3B3",
               cursor: "pointer", transition: "all 0.15s",
             }}
           >
@@ -104,12 +104,12 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
     <>
       <div style={{
         background: "white", borderRadius: 16, padding: "24px",
-        border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+        border: "1px solid #E3DBC6", boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
       }}>
-        <p style={{ fontSize: 15, fontWeight: 700, color: "#1c0505", marginBottom: 4 }}>
+        <p style={{ fontSize: 15, fontWeight: 700, color: "#211D15", marginBottom: 4 }}>
           {isActiveSubscriber ? "Change your plan" : "Upgrade your plan"}
         </p>
-        <p style={{ fontSize: 13, color: "#78716c", marginBottom: 20 }}>
+        <p style={{ fontSize: 13, color: "#5B5446", marginBottom: 20 }}>
           {isActiveSubscriber
             ? "Switch plans anytime. Stripe will prorate the difference automatically."
             : "Choose a plan to unlock full access. You can change plans anytime."}
@@ -119,19 +119,19 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
           {availablePlans.map((p) => (
             <div key={p.id} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "14px 16px", border: "1px solid #e5e7eb", borderRadius: 12,
+              padding: "14px 16px", border: "1px solid #E3DBC6", borderRadius: 12,
             }}>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#1c0505" }}>{p.name}</p>
-                <p style={{ fontSize: 12, color: "#94a3b8" }}>{p.price}</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#211D15" }}>{p.name}</p>
+                <p style={{ fontSize: 12, color: "#938B78" }}>{p.price}</p>
               </div>
               <button
                 onClick={() => handleUpgrade(p.id)}
                 disabled={loading}
                 style={{
-                  padding: "8px 18px", borderRadius: 10,
-                  background: loading ? "#e5e7eb" : "#c41230",
-                  color: "white", fontSize: 13, fontWeight: 700,
+                  padding: "8px 18px", borderRadius: 20,
+                  background: loading ? "#E3DBC6" : "#2C4031",
+                  color: loading ? "#5B5446" : "#F6F1E6", fontSize: 13, fontWeight: 700,
                   border: "none", cursor: loading ? "not-allowed" : "pointer",
                 }}
               >
@@ -142,7 +142,7 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
         </div>
 
         {error && (
-          <p style={{ fontSize: 13, color: "#c0392b", background: "#fff5f5", padding: "10px 14px", borderRadius: 10, marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: "#7C3D24", background: "#F4E3DB", padding: "10px 14px", borderRadius: 10, marginBottom: 16, border: "1px solid #E2C3B3" }}>
             {error}
           </p>
         )}
@@ -151,9 +151,9 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
           <button
             onClick={() => setShowCancelModal(true)}
             style={{
-              width: "100%", padding: "10px 16px", borderRadius: 10,
-              background: "transparent", color: "#c0392b",
-              fontSize: 13, fontWeight: 600, border: "1px solid #fee2e2",
+              width: "100%", padding: "10px 16px", borderRadius: 20,
+              background: "transparent", color: "#7C3D24",
+              fontSize: 13, fontWeight: 600, border: "1px solid #E2C3B3",
               cursor: "pointer", transition: "all 0.15s", marginTop: 8,
             }}
           >

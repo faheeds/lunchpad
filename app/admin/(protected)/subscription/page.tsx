@@ -16,11 +16,11 @@ const PLAN_LABELS: Record<string, { name: string; price: string; description: st
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  TRIAL:     { label: "Free trial",   color: "#854d0e", bg: "#fef9c3" },
-  ACTIVE:    { label: "Active",       color: "#166534", bg: "#dcfce7" },
-  PAST_DUE:  { label: "Payment due",  color: "#991b1b", bg: "#fee2e2" },
-  CANCELLED: { label: "Cancelled",    color: "#64748b", bg: "#f1f5f9" },
-  PAUSED:    { label: "Paused",       color: "#64748b", bg: "#f1f5f9" },
+  TRIAL:     { label: "Free trial",   color: "#6E5C2C", bg: "#F6EED9" },
+  ACTIVE:    { label: "Active",       color: "#2C4031", bg: "#DEE2CF" },
+  PAST_DUE:  { label: "Payment due",  color: "#7C3D24", bg: "#F4E3DB" },
+  CANCELLED: { label: "Cancelled",    color: "#938B78", bg: "#EFE8D7" },
+  PAUSED:    { label: "Paused",       color: "#938B78", bg: "#EFE8D7" },
 };
 
 export default async function SubscriptionPage({ searchParams }: { searchParams: Promise<{ success?: string }> }) {
@@ -63,24 +63,25 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
   });
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      {/* Settings tab bar — Subscription is now a sub-tab of Settings called "Plan". */}
-      <div className="mb-6 -mx-4 px-4">
-        <SettingsTabs />
-      </div>
-
-      <h1 className="text-xl font-bold text-slate-800 mb-1">Plan</h1>
-      <p className="text-sm text-slate-500 mb-8">Manage your LunchPad plan and billing.</p>
-
-      {justActivated && (
-        <div style={{
-          background: "#dcfce7", border: "1px solid #86efac",
-          borderRadius: 12, padding: "14px 18px", marginBottom: 24,
-          fontSize: 14, color: "#166534", fontWeight: 600,
-        }}>
-          Your subscription is now active. Thank you!
+    <div className="min-h-screen bg-editorial-paper">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Settings tab bar — Subscription is now a sub-tab of Settings called "Plan". */}
+        <div className="mb-6 -mx-4 px-4">
+          <SettingsTabs />
         </div>
-      )}
+
+        <h1 className="text-xl font-editorial font-semibold text-editorial-ink mb-1">Plan</h1>
+        <p className="text-sm text-editorial-ink-faint mb-8">Manage your LunchPad plan and billing.</p>
+
+        {justActivated && (
+          <div style={{
+            background: "#DEE2CF", border: "1px solid #2C4031",
+            borderRadius: 12, padding: "14px 18px", marginBottom: 24,
+            fontSize: 14, color: "#2C4031", fontWeight: 600,
+          }}>
+            Your subscription is now active. Thank you!
+          </div>
+        )}
 
       {/* Current plan card with annual/monthly toggle */}
       <SubscriptionPlanToggle
@@ -94,10 +95,12 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
 
       {full.subscriptionStatus === "TRIAL" && (
         <div style={{
-          background: trialExpired ? "#fff5f5" : "#fefce8",
+          background: trialExpired ? "#F4E3DB" : "#F6EED9",
           borderRadius: 10, padding: "12px 14px", fontSize: 13,
-          color: trialExpired ? "#991b1b" : "#854d0e",
+          color: trialExpired ? "#7C3D24" : "#6E5C2C",
           marginBottom: 24,
+          borderColor: trialExpired ? "#E2C3B3" : "#E5D6A8",
+          borderWidth: "1px",
         }}>
           {trialExpired
             ? "Your free trial has expired. Add a payment method to continue using LunchPad."
@@ -107,9 +110,10 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
 
       {full.subscriptionStatus === "PAST_DUE" && (
         <div style={{
-          background: "#fff5f5", borderRadius: 10, padding: "12px 14px",
-          fontSize: 13, color: "#991b1b",
-          marginBottom: 24,
+          background: "#F4E3DB", borderRadius: 10, padding: "12px 14px",
+          fontSize: 13, color: "#7C3D24", marginBottom: 24,
+          borderColor: "#E2C3B3",
+          borderWidth: "1px",
         }}>
           Your last payment failed. Please update your billing information to avoid losing access.
         </div>
@@ -118,9 +122,10 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
       {/* Usage meter */}
       <div style={{
         background: "white", borderRadius: 16, padding: "20px 22px",
-        border: "1px solid #e5e7eb", marginBottom: 24,
+        border: "1px solid #E3DBC6", marginBottom: 24,
+        boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
       }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94a3b8", marginBottom: 12 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#938B78", marginBottom: 12 }}>
           Usage this month
         </p>
         <div className="space-y-3">
@@ -137,31 +142,31 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {!isUnlimited && (
                       <p className="text-[12px] font-semibold tabular-nums" style={{
-                        color: isRed ? "#dc2626" : isAmber ? "#d97706" : "#1c0505"
+                        color: isRed ? "#7C3D24" : isAmber ? "#C99A3F" : "#211D15"
                       }}>
                         {pct}%
                       </p>
                     )}
                     <p className="text-[12px] font-semibold tabular-nums" style={{
-                      color: isRed ? "#dc2626" : isAmber ? "#d97706" : "#1c0505"
+                      color: isRed ? "#7C3D24" : isAmber ? "#C99A3F" : "#211D15"
                     }}>
                       {row.used}{isUnlimited ? "" : ` / ${row.limit}`}
                     </p>
                   </div>
                 </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#f1f5f9" }}>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#EFE8D7" }}>
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
                       width: isUnlimited ? "100%" : `${pct}%`,
                       background: isUnlimited
-                        ? "linear-gradient(90deg, #10b981, #34d399)"
-                        : isRed ? "#dc2626" : isAmber ? "#f59e0b" : "#10b981",
+                        ? "linear-gradient(90deg, #2C4031, #4A6047)"
+                        : isRed ? "#7C3D24" : isAmber ? "#C99A3F" : "#2C4031",
                     }}
                   />
                 </div>
                 {atLimit && (
-                  <p className="text-[10px] text-red-600 mt-1">At limit — upgrade to add more.</p>
+                  <p className="text-[10px] text-[#7C3D24] mt-1">At limit — upgrade to add more.</p>
                 )}
               </div>
             );
@@ -176,6 +181,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
         hasActiveSubscription={!!full.stripeSubscriptionId}
         renewalDate={renewalDate}
       />
+      </div>
     </div>
   );
 }
