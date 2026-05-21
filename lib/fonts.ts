@@ -11,6 +11,10 @@ export const DISPLAY_FONTS: FontOption[] = [
     googleUrl: "https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap",
   },
   {
+    id: "Fraunces", name: "Fraunces (Editorial Serif)", family: "'Fraunces', serif",
+    googleUrl: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&display=swap",
+  },
+  {
     id: "Bebas Neue", name: "Bebas Neue", family: "'Bebas Neue', sans-serif",
     googleUrl: "https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap",
   },

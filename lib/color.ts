@@ -104,13 +104,13 @@ export function themeCssBlock(opts: {
   displayFont?:     string | null;
   bodyFont?:        string | null;
 }): string {
-  const primary       = opts.primaryColor    ?? "#c41230";
-  const accent        = opts.accentColor     ?? "#f59e0b";
-  const dark          = opts.darkColor       ?? "#1c0505";
+  const primary       = opts.primaryColor    ?? "#2C4031";
+  const accent        = opts.accentColor     ?? "#C0673E";
+  const dark          = opts.darkColor       ?? "#1E2C22";
   const heroTitle     = opts.heroTitleColor  ?? "#ffffff";
   const heroAccent    = opts.heroAccentColor ?? "#fbbf24";
-  const bodyText      = opts.bodyTextColor   ?? "#1c0505";
-  const displayFamily = opts.displayFont     ?? "Oswald";
+  const bodyText      = opts.bodyTextColor   ?? "#211D15";
+  const displayFamily = opts.displayFont     ?? "Fraunces";
   const bodyFamily    = opts.bodyFont        ?? "Inter";
 
   const { h, s } = hexToHsl(primary);
