@@ -58,14 +58,14 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, cta }: EmptyStateProps) {
   return (
-    <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-10 text-center">
+    <div className="rounded-[16px] border border-editorial-line bg-white px-4 py-10 text-center shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
       <div aria-hidden="true" className="mx-auto mb-3">
         {ICONS[icon]}
       </div>
-      <p className="text-[13px] font-medium text-slate-400">{title}</p>
-      <p className="text-[11px] text-slate-300 mt-1">{description}</p>
+      <p className="text-sm font-medium text-editorial-ink-faint">{title}</p>
+      <p className="text-[11px] text-editorial-ink-faint mt-1">{description}</p>
       {cta && (
-        <Link href={cta.href} className="inline-block mt-4 px-4 py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold hover:bg-brand-800 transition">
+        <Link href={cta.href} className="inline-block mt-4 px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-sm font-semibold hover:bg-editorial-green-deep transition">
           {cta.label}
         </Link>
       )}

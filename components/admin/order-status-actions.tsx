@@ -24,11 +24,11 @@ export function OrderStatusActions({ orderId, isArchived }: { orderId: string; i
         { action: isArchived ? "unarchive" : "archive", label: isArchived ? "Unarchive" : "Archive" },
       ].map(({ action, label }) => (
         <button key={action} type="button" disabled={isPending} onClick={() => update(action)}
-          className="px-2.5 py-1 rounded-full border border-slate-200 text-[11px] text-slate-600 disabled:opacity-40">
+          className="px-2.5 py-1 rounded-full border border-editorial-line text-[11px] text-editorial-ink hover:border-editorial-green hover:text-editorial-green transition disabled:opacity-40">
           {label}
         </button>
       ))}
-      {message && <p className="text-[11px] text-slate-500 w-full mt-0.5">{message}</p>}
+      {message && <p className="text-[11px] text-editorial-ink-soft w-full mt-0.5">{message}</p>}
     </div>
   );
 }
