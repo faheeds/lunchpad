@@ -92,68 +92,50 @@ export default async function ResetPasswordPage({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-editorial-paper flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-[20px] font-semibold text-ink">
+        <div className="mb-7 text-center">
+          <div className="flex justify-center mb-3.5">
+            <svg width="44" height="44" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="9" fill="#2C4031"/><g transform="translate(6.4 5.6) scale(0.8)" fill="none" stroke="#F6F1E6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M3 12a9 9 0 0 0 18 0"/><path d="M12 7v-2"/><path d="M9 5h6"/></g></svg>
+          </div>
+          <h1 className="font-editorial text-[25px] font-medium text-editorial-ink leading-tight">
             {restaurant?.name ? `${restaurant.name} Admin` : "LunchPad Admin"}
           </h1>
-          <p className="text-[12px] text-slate-500 mt-1">Choose a new password</p>
+          <p className="text-[12.5px] text-editorial-ink-soft mt-1.5">Choose a new password</p>
         </div>
 
-        <div className="rounded-[20px] border border-slate-100 bg-white p-6">
+        <div className="rounded-[20px] border border-editorial-line bg-white p-7 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
           {params.error === "invalid" ? (
             <div className="space-y-4">
-              <div className="rounded-xl bg-red-50 border border-red-100 px-3 py-3 text-[13px] text-red-900">
+              <div className="rounded-xl bg-[#F4E3DB] border border-[#E2C3B3] px-3.5 py-3 text-[12.5px] text-[#7C3D24]">
                 {ERROR_MESSAGES.invalid}
               </div>
-              <Link
-                href="/admin/forgot-password"
-                className="block w-full text-center py-3 rounded-xl bg-ink text-white text-[13px] font-semibold no-underline"
-              >
+              <Link href="/admin/forgot-password" className="block w-full text-center py-3 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold no-underline hover:bg-editorial-green-deep transition-colors">
                 Request a new link
               </Link>
             </div>
           ) : (
-            <form action={applyReset} className="space-y-3">
+            <form action={applyReset} className="space-y-3.5">
               <input type="hidden" name="token" value={token} />
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">New password</label>
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2.5"
-                  placeholder="At least 8 characters"
-                />
+                <label className="text-[11px] font-medium text-editorial-ink-soft mb-1 block">New password</label>
+                <input type="password" name="password" required minLength={8} autoComplete="new-password"
+                  className="w-full rounded-xl border border-editorial-line text-[13px] px-3.5 py-2.5 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green outline-none"
+                  placeholder="At least 8 characters" />
               </div>
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Confirm new password</label>
-                <input
-                  type="password"
-                  name="confirm"
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2.5"
-                  placeholder="Re-enter password"
-                />
+                <label className="text-[11px] font-medium text-editorial-ink-soft mb-1 block">Confirm new password</label>
+                <input type="password" name="confirm" required minLength={8} autoComplete="new-password"
+                  className="w-full rounded-xl border border-editorial-line text-[13px] px-3.5 py-2.5 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green outline-none"
+                  placeholder="Re-enter password" />
               </div>
               {errorMessage && (
-                <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2">{errorMessage}</p>
+                <p className="rounded-xl bg-[#F4E3DB] border border-[#E2C3B3] px-3.5 py-2.5 text-[12px] text-[#7C3D24]">{errorMessage}</p>
               )}
-              <button
-                type="submit"
-                className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold mt-1"
-              >
+              <button type="submit" className="w-full py-3 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition-colors mt-1">
                 Update password
               </button>
-              <Link
-                href="/admin/login"
-                className="block text-center text-[12px] text-slate-500 mt-3 no-underline"
-              >
+              <Link href="/admin/login" className="block text-center text-[12.5px] text-editorial-ink-soft hover:text-editorial-ink mt-2 no-underline transition-colors">
                 Back to sign in
               </Link>
             </form>
