@@ -26,17 +26,17 @@ export function WizardStepper({
   const pct = Math.round((completedCount / totalCount) * 100);
 
   return (
-    <div className="rounded-[14px] border border-slate-100 bg-white p-3">
+    <div className="rounded-[16px] border border-editorial-line bg-white p-3 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
       <div className="mb-3 px-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">
           Setup
         </p>
-        <p className="text-[16px] font-bold text-ink mt-0.5">
+        <p className="text-[16px] font-editorial font-[500] text-editorial-ink mt-0.5">
           {completedCount} of {totalCount}
         </p>
-        <div className="h-1.5 rounded-full overflow-hidden bg-slate-100 mt-2">
+        <div className="h-1.5 rounded-full overflow-hidden bg-editorial-paper-2 mt-2">
           <div
-            className="h-full rounded-full bg-brand-700 transition-all"
+            className="h-full rounded-full bg-editorial-green transition-all"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -48,21 +48,21 @@ export function WizardStepper({
           const href = `${pathname}?step=${step.id}`;
 
           const dotBg =
-            step.status === "done" ? "#16a34a" :
-            step.status === "skipped" ? "#94a3b8" :
-            isActive ? "#c41230" :
-            "#e2e8f0";
+            step.status === "done" ? "#2C4031" :
+            step.status === "skipped" ? "#938B78" :
+            isActive ? "#2C4031" :
+            "#EFE8D7";
           const dotFg =
             step.status === "done" || step.status === "skipped" || isActive
-              ? "#ffffff"
-              : "#94a3b8";
+              ? "#F6F1E6"
+              : "#938B78";
 
           return (
             <li key={step.id}>
               <Link
                 href={href}
                 className={`flex items-start gap-3 px-2 py-2.5 rounded-lg no-underline transition ${
-                  isActive ? "bg-brand-50" : "hover:bg-slate-50"
+                  isActive ? "bg-editorial-paper-2" : "hover:bg-editorial-paper-2"
                 }`}
               >
                 <div
@@ -81,16 +81,16 @@ export function WizardStepper({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p
-                    className={`text-[12px] font-semibold leading-tight ${
-                      isActive ? "text-brand-700" : "text-ink"
+                    className={`text-[12px] font-editorial font-[500] leading-tight ${
+                      isActive ? "text-editorial-green" : "text-editorial-ink"
                     }`}
                   >
                     {step.title}
                     {step.optional && (
-                      <span className="ml-1.5 text-[10px] font-normal text-slate-400">(optional)</span>
+                      <span className="ml-1.5 text-[10px] font-normal text-editorial-ink-faint">(optional)</span>
                     )}
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{step.blurb}</p>
+                  <p className="text-[11px] text-editorial-ink-faint mt-0.5 leading-snug">{step.blurb}</p>
                 </div>
               </Link>
             </li>
