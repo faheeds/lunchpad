@@ -6,14 +6,14 @@ export function PrintButton() {
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          .print-break { page-break-before: always; }
+          .print:break-before-page { page-break-before: always; }
           body { font-size: 12px; }
         }
       `}</style>
       <button
         type="button"
         onClick={() => window.print()}
-        className="no-print px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5"
+        className="no-print px-3 py-1.5 rounded-full border border-editorial-line text-[11px] font-medium text-editorial-ink-soft hover:border-editorial-green hover:text-editorial-green transition flex items-center gap-1.5"
       >
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 6 2 18 2 18 9"/>
