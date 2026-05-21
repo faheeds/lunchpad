@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 /**
  * Consume a reset token and update the admin's password.
  *
- * Returns nothing — on success the user is redirected to /admin/login?reset=1.
+ * Returns nothing â€” on success the user is redirected to /admin/login?reset=1.
  * On failure we redirect back with an `error` query param so the UI can
  * render a useful message without throwing into the boundary.
  */
@@ -83,7 +83,7 @@ export default async function ResetPasswordPage({
   const token = params.token ?? "";
   const errorMessage = params.error ? ERROR_MESSAGES[params.error] ?? "" : "";
 
-  // No token at all → bounce to the request form. We don't pre-validate the
+  // No token at all â†’ bounce to the request form. We don't pre-validate the
   // token here (one DB hit per pageview is fine but unnecessary); validation
   // happens on submit, which keeps invalid tokens from echoing back any
   // information about whether they exist.
