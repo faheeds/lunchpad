@@ -44,11 +44,11 @@ export function KitchenEmailButton({
         type="button"
         onClick={handleSend}
         disabled={state === "sending" || state === "sent"}
-        className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border transition"
+        className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full border transition"
         style={{
-          borderColor: state === "sent" ? "#bbf7d0" : state === "error" ? "#fecaca" : "#e2e8f0",
-          background: state === "sent" ? "#f0fdf4" : state === "error" ? "#fef2f2" : "white",
-          color: state === "sent" ? "#15803d" : state === "error" ? "#dc2626" : "#475569",
+          borderColor: state === "sent" ? "#DEE2CF" : state === "error" ? "#E2C3B3" : "#E3DBC6",
+          background: state === "sent" ? "#DEE2CF" : state === "error" ? "#F4E3DB" : "white",
+          color: state === "sent" ? "#2C4031" : state === "error" ? "#7C3D24" : "#5B5446",
           opacity: state === "sending" ? 0.7 : 1,
         }}
       >
@@ -77,10 +77,10 @@ export function KitchenEmailButton({
         )}
       </button>
       {state === "sent" && (
-        <p className="text-[10px] text-green-600">Sent to {contactEmail}</p>
+        <p className="text-[10px] text-editorial-green">Sent to {contactEmail}</p>
       )}
       {state === "error" && errorMsg && (
-        <p className="text-[10px] text-red-500">{errorMsg}</p>
+        <p className="text-[10px] text-[#7C3D24]">{errorMsg}</p>
       )}
     </div>
   );
