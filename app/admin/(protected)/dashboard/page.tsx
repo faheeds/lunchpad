@@ -152,13 +152,6 @@ export default async function AdminDashboardPage() {
   const weekRevenueAmount = weekRevenue._sum.amountCents ?? 0;
   const nextDelivery = upcomingDeliveryDates[0] ?? null;
 
-  const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-    PAID:      { bg: "bg-editorial-sage", text: "text-editorial-green", label: "Paid" },
-    PENDING:   { bg: "bg-[#F6EED9]", text: "text-[#6E5C2C]", label: "Pending" },
-    CANCELLED: { bg: "bg-[#F4E3DB]", text: "text-[#7C3D24]", label: "Cancelled" },
-    REFUNDED:  { bg: "bg-editorial-paper-2", text: "text-editorial-ink-faint", label: "Refunded" },
-  };
-
   const orderingUrl = `https://${restaurant.slug}.lunchpad.us`;
 
   // Build the inbox feed.
