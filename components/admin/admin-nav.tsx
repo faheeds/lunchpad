@@ -14,7 +14,7 @@ function ClocheMark({ size = 22 }: { size?: number }) {
 }
 
 // Top-level nav. Team and Subscription used to be their own entries,
-// but they're now sub-tabs of Settings — see components/admin/settings-tabs.tsx.
+// but they're now sub-tabs of Settings â€” see components/admin/settings-tabs.tsx.
 // One Settings tab in the top nav, sub-tabs inside the Settings area.
 const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/dashboard",      label: "Dashboard",    minRole: "STAFF"   },
@@ -23,20 +23,20 @@ const ALL_LINKS: { href: string; label: string; minRole: AdminRole }[] = [
   { href: "/admin/reports",        label: "Reports",      minRole: "MANAGER" },
   { href: "/admin/menu",           label: "Menu",         minRole: "MANAGER" },
   { href: "/admin/delivery-dates", label: "Schedule",     minRole: "MANAGER" },
-  // Discounts — slots between Menu (what you sell) and Locations (where).
+  // Discounts â€” slots between Menu (what you sell) and Locations (where).
   // MANAGER+ so finance/promo decisions stay scoped above frontline staff.
   { href: "/admin/discounts",      label: "Discounts",    minRole: "MANAGER" },
   { href: "/admin/locations",      label: "Locations",    minRole: "OWNER"   },
-  // Activity log — STAFF+ for transparency. Was kept near Team; now it's
+  // Activity log â€” STAFF+ for transparency. Was kept near Team; now it's
   // adjacent to Settings since Team moved inside Settings.
   { href: "/admin/activity",       label: "Activity",     minRole: "STAFF"   },
   { href: "/admin/settings",       label: "Settings",     minRole: "OWNER"   },
 ];
 
 const ROLE_BADGE: Record<string, { label: string; color: string }> = {
-  OWNER:   { label: "Owner",   color: "#7c3aed" },
-  MANAGER: { label: "Manager", color: "#0369a1" },
-  STAFF:   { label: "Staff",   color: "#374151" },
+  OWNER:   { label: "Owner",   color: "#2C4031" },
+  MANAGER: { label: "Manager", color: "#C0673E" },
+  STAFF:   { label: "Staff",   color: "#5B5446" },
 };
 
 export function AdminNav({
@@ -72,16 +72,16 @@ export function AdminNav({
   }
 
   return (
-    <header className="bg-white border-b border-slate-100 sticky top-0 z-20">
+    <header className="bg-white border-b border-editorial-line sticky top-0 z-20">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between py-2.5 border-b border-slate-50 gap-4">
+        <div className="flex items-center justify-between py-2.5 border-b border-editorial-line gap-4">
           <div className="flex items-center gap-2">
             <Link href="/admin/dashboard" className="no-underline flex items-center gap-2">
               <ClocheMark size={22} />
-              <span className="text-[13px] font-semibold text-ink">LunchPad</span>
+              <span className="font-editorial text-[15px] font-semibold text-editorial-ink">LunchPad</span>
             </Link>
-            <span className="text-slate-200">|</span>
-            <span className="text-[12px] text-slate-400">Admin</span>
+            <span className="text-editorial-line">|</span>
+            <span className="text-[12px] text-editorial-ink-faint">Admin</span>
             <span className="ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full text-white"
               style={{ background: badge.color }}>
               {badge.label}
@@ -94,9 +94,9 @@ export function AdminNav({
                 href="/admin/onboarding"
                 className="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full no-underline transition"
                 style={{
-                  background: "#fef3c7",
-                  color: "#92400e",
-                  border: "1px solid #fde68a",
+                  background: "#F6EED9",
+                  color: "#6E5C2C",
+                  border: "1px solid #E5D6A8",
                 }}
                 title="Continue setup"
               >
@@ -113,9 +113,9 @@ export function AdminNav({
                 title="Copy your ordering URL"
                 className="hidden sm:flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition"
                 style={{
-                  borderColor: urlCopied ? "#16a34a" : "#d1fae5",
-                  background: urlCopied ? "#f0fdf4" : "#f0fdf4",
-                  color: urlCopied ? "#16a34a" : "#15803d",
+                  borderColor: urlCopied ? "#2C4031" : "#C9D2BC",
+                  background: "#EDF0E4",
+                  color: "#2C4031",
                 }}>
                 {urlCopied ? (
                   <>
@@ -135,7 +135,7 @@ export function AdminNav({
               </button>
             )}
             <button type="button" onClick={() => signOut({ callbackUrl: "/admin/login" })}
-              className="text-[11px] text-slate-500 border border-slate-200 rounded-full px-3 py-1 hover:bg-slate-50 transition flex items-center gap-1.5">
+              className="text-[11px] text-editorial-ink-soft border border-editorial-line rounded-full px-3 py-1 hover:bg-editorial-paper transition flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
@@ -150,8 +150,8 @@ export function AdminNav({
               <Link key={link.href} href={link.href}
                 className="flex-shrink-0 px-3 py-1.5 rounded-lg text-[12px] no-underline transition whitespace-nowrap"
                 style={{
-                  background: active ? "#fff1f3" : "transparent",
-                  color: active ? "#c41230" : "#64748b",
+                  background: active ? "rgba(44,64,49,0.08)" : "transparent",
+                  color: active ? "#2C4031" : "#5B5446",
                   fontWeight: active ? 600 : 400,
                 }}>
                 {link.label}

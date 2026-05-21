@@ -62,12 +62,12 @@ export default async function AdminProtectedLayout({
 
   const restaurant = await requireRestaurant();
 
-  // ── Subscription gating ─────────────────────────────────────────────────
+  // â”€â”€ Subscription gating â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let full: Awaited<ReturnType<typeof prisma.restaurant.findUnique>> | null = null;
   try {
     full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
   } catch {
-    // Migration not yet applied — skip subscription gating
+    // Migration not yet applied â€” skip subscription gating
   }
 
   if (full) {
@@ -79,25 +79,26 @@ export default async function AdminProtectedLayout({
 
     if (isCancelled || isExpiredTrial) {
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="min-h-screen bg-editorial-paper flex items-center justify-center px-4">
           <div style={{
             background: "white", borderRadius: 20, padding: "40px 32px",
             maxWidth: 420, width: "100%", textAlign: "center",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
+            border: "1px solid #E3DBC6",
+            boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
           }}>
-            <p style={{ fontSize: 32, marginBottom: 16 }}>🔒</p>
-            <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1c0505", marginBottom: 8 }}>
+            <p style={{ fontSize: 32, marginBottom: 16 }}>ðŸ”’</p>
+            <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 500, color: "#211D15", marginBottom: 8 }}>
               {isCancelled ? "Subscription cancelled" : "Trial expired"}
             </h1>
-            <p style={{ fontSize: 14, color: "#78716c", lineHeight: 1.6, marginBottom: 28 }}>
+            <p style={{ fontSize: 14, color: "#5B5446", lineHeight: 1.6, marginBottom: 28 }}>
               {isCancelled
                 ? "Your LunchPad subscription has been cancelled. Reactivate to regain access."
                 : "Your 14-day free trial has ended. Choose a plan to continue using LunchPad."}
             </p>
             <Link href="/admin/subscription" style={{
-              display: "block", padding: "14px", borderRadius: 12,
-              background: "#c41230", color: "white",
-              fontWeight: 700, fontSize: 15, textDecoration: "none",
+              display: "block", padding: "14px", borderRadius: 100,
+              background: "#2C4031", color: "#F6F1E6",
+              fontWeight: 600, fontSize: 15, textDecoration: "none",
             }}>
               View plans
             </Link>
@@ -107,7 +108,7 @@ export default async function AdminProtectedLayout({
     }
   }
 
-  // ── Setup completion check ───────────────────────────────────────────────
+  // â”€â”€ Setup completion check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // The new onboarding wizard owns this signal via Restaurant.onboardingComplete.
   // If the operator has finished the wizard (even with optional steps skipped),
   // we trust their decision and let them into the rest of the admin. The legacy
@@ -131,34 +132,34 @@ export default async function AdminProtectedLayout({
     }
   }
 
-  // ── Trial days remaining warning ─────────────────────────────────────────
+  // â”€â”€ Trial days remaining warning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const trialDaysLeft = full?.subscriptionStatus === "TRIAL" && full.trialEndsAt
     ? Math.ceil((full.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-editorial-paper">
       {/* Past-due warning */}
       {full?.subscriptionStatus === "PAST_DUE" && (
         <div style={{
-          background: "#fef2f2", borderBottom: "1px solid #fecaca",
-          padding: "10px 16px", textAlign: "center", fontSize: 13, color: "#991b1b",
+          background: "#F4E3DB", borderBottom: "1px solid #E2C3B3",
+          padding: "10px 16px", textAlign: "center", fontSize: 13, color: "#7C3D24",
         }}>
           Your last payment failed.{" "}
-          <Link href="/admin/subscription" style={{ fontWeight: 700, color: "#991b1b" }}>
+          <Link href="/admin/subscription" style={{ fontWeight: 700, color: "#7C3D24" }}>
             Update billing
           </Link>{" "}
           to avoid losing access.
         </div>
       )}
-      {/* Trial expiry warning (≤ 3 days) */}
+      {/* Trial expiry warning (â‰¤ 3 days) */}
       {trialDaysLeft !== null && trialDaysLeft <= 3 && (
         <div style={{
-          background: "#fefce8", borderBottom: "1px solid #fde68a",
-          padding: "10px 16px", textAlign: "center", fontSize: 13, color: "#854d0e",
+          background: "#F6EED9", borderBottom: "1px solid #E5D6A8",
+          padding: "10px 16px", textAlign: "center", fontSize: 13, color: "#6E5C2C",
         }}>
           {trialDaysLeft === 0 ? "Your trial expires today." : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} left in your trial.`}{" "}
-          <Link href="/admin/subscription" style={{ fontWeight: 700, color: "#854d0e" }}>
+          <Link href="/admin/subscription" style={{ fontWeight: 700, color: "#6E5C2C" }}>
             Upgrade now
           </Link>
         </div>

@@ -10,13 +10,13 @@ export const dynamic = "force-dynamic";
 
 /**
  * Accept-invite flow. The invitee lands here from an email link with
- * `?token=...` in the URL. We never trust the token blindly — every server
+ * `?token=...` in the URL. We never trust the token blindly â€” every server
  * action below revalidates it (lookup by hash, check expiry, check not
  * already used, check not revoked) before mutating any state.
  *
  * Two outcomes:
- *  1. Invite is valid → render a form for the invitee to set name + password
- *  2. Invite is invalid/expired/used/revoked → render a friendly error and
+ *  1. Invite is valid â†’ render a form for the invitee to set name + password
+ *  2. Invite is invalid/expired/used/revoked â†’ render a friendly error and
  *     point them to /admin/login (they may already have an account)
  */
 
@@ -55,7 +55,7 @@ async function acceptInvite(formData: FormData) {
   }
 
   // The DB unique index on (restaurantId, email) means we can't create a
-  // duplicate admin row — surface that as a clear error rather than a
+  // duplicate admin row â€” surface that as a clear error rather than a
   // raw Prisma constraint violation.
   const existing = await prisma.adminUser.findFirst({
     where: { restaurantId: invite.restaurantId, email: invite.email },
@@ -93,7 +93,7 @@ async function acceptInvite(formData: FormData) {
 
   await logActivity({
     restaurantId: invite.restaurantId,
-    adminUserId: newAdmin.id, // self-event — the new admin accepted
+    adminUserId: newAdmin.id, // self-event â€” the new admin accepted
     entityType: "TEAM_MEMBER",
     entityId: newAdmin.id,
     action: "INVITE_ACCEPTED",
@@ -158,7 +158,7 @@ export default async function AcceptInvitePage({
     }
   }
 
-  // No token, no usable invite, and no error in flight → bounce to login.
+  // No token, no usable invite, and no error in flight â†’ bounce to login.
   // This catches stale bookmarks of the bare /admin/accept-invite URL.
   if (!token && !params.error) {
     redirect("/admin/login");
