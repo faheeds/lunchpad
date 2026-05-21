@@ -16,7 +16,7 @@ import Link from "next/link";
  */
 export function ScheduleTabs({ active }: { active: "dates" | "locations" }) {
   return (
-    <div className="border-b border-slate-200 -mx-1">
+    <div className="border-b border-editorial-line -mx-1">
       <div className="flex gap-1 px-1 overflow-x-auto no-scrollbar">
         <Tab href="/admin/delivery-dates" label="Dates" isActive={active === "dates"} />
         <Tab href="/admin/locations"      label="Locations" isActive={active === "locations"} />
@@ -27,8 +27,8 @@ export function ScheduleTabs({ active }: { active: "dates" | "locations" }) {
 
 function Tab({ href, label, isActive }: { href: string; label: string; isActive: boolean }) {
   const base = "px-3 py-2.5 text-[12px] font-semibold whitespace-nowrap border-b-2 transition no-underline";
-  const activeCls = "border-brand-700 text-brand-700";
-  const idleCls   = "border-transparent text-slate-500 hover:text-ink";
+  const activeCls = "border-editorial-green text-editorial-green";
+  const idleCls   = "border-transparent text-editorial-ink-faint hover:text-editorial-ink-soft";
   return (
     <Link href={href} className={`${base} ${isActive ? activeCls : idleCls}`}>
       {label}
