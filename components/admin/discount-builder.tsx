@@ -117,25 +117,26 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
   // ── Sentence renderers per template ──────────────────────────────────────
 
   return (
-    <div className="max-w-3xl mx-auto py-6 px-4">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-5">
-        <DiscountTemplateBadge kind={template.kind as DiscountIconName} size="lg" />
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] text-slate-500">{template.title}</p>
-          <input
-            value={state.name}
-            onChange={(e) => update({ name: e.target.value })}
-            placeholder="Discount name"
-            className="text-[20px] font-bold text-ink bg-transparent border-0 border-b-2 border-transparent focus:border-brand-300 focus:outline-none px-0 py-1 mt-0.5 w-full max-w-md"
-          />
+    <div className="min-h-screen bg-editorial-paper">
+      <div className="max-w-3xl mx-auto py-6 px-4">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-5">
+          <DiscountTemplateBadge kind={template.kind as DiscountIconName} size="lg" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] text-editorial-ink-soft">{template.title}</p>
+            <input
+              value={state.name}
+              onChange={(e) => update({ name: e.target.value })}
+              placeholder="Discount name"
+              className="text-[20px] font-editorial font-semibold text-editorial-ink bg-transparent border-0 border-b-2 border-transparent focus:border-editorial-green focus:outline-none px-0 py-1 mt-0.5 w-full max-w-md"
+            />
+          </div>
         </div>
-      </div>
 
       {/* Promo code field — distinctively styled, only on PROMO_CODE template */}
       {template.kind === "PROMO_CODE" && (
-        <div className="rounded-2xl border-2 border-dashed border-brand-200 bg-brand-50/50 p-4 mb-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 mb-2">
+        <div className="rounded-[16px] border border-editorial-line bg-editorial-paper-2 p-4 mb-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-editorial-ink-soft mb-2">
             Customer enters this code
           </p>
           <div className="flex items-center gap-2">
@@ -144,25 +145,25 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
               onChange={(e) => update({ code: e.target.value.toUpperCase().replace(/\s/g, "") })}
               placeholder="WELCOME20"
               maxLength={40}
-              className="flex-1 font-mono text-[20px] font-bold text-brand-800 bg-white border-2 border-brand-200 rounded-lg px-3 py-2 tracking-wider focus:outline-none focus:border-brand-500"
+              className="flex-1 font-mono text-[20px] font-bold text-editorial-ink bg-white border border-editorial-line rounded-[12px] px-3 py-2 tracking-wider focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
             />
             <button
               type="button"
               onClick={() => update({ code: generateCode() })}
-              className="text-[11px] font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+              className="text-[11px] font-semibold px-3 py-2 rounded-full border border-editorial-line bg-white hover:border-editorial-green hover:text-editorial-green text-editorial-ink"
               title="Generate a random code"
             >
               ⟲ Random
             </button>
           </div>
-          <p className="text-[11px] text-slate-500 mt-2">
+          <p className="text-[11px] text-editorial-ink-soft mt-2">
             Letters and numbers only. Customers type this exactly at checkout — keep it short and memorable.
           </p>
         </div>
       )}
 
       {/* The sentence */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 mb-5 text-[15px] leading-[2.2] text-ink">
+      <div className="rounded-[16px] border border-editorial-line bg-white p-5 mb-5 text-[15px] leading-[2.2] text-editorial-ink shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         {/* Amount + main clause */}
         <AmountPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
         {" off "}
@@ -198,8 +199,8 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
           scope, min order) since the main sentence is just the
           code mechanism. */}
       {template.kind === "PROMO_CODE" && (
-        <div className="rounded-xl border border-slate-100 bg-white px-5 py-3 mb-3 text-[14px] leading-[2.2]">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Eligibility</p>
+        <div className="rounded-[16px] border border-editorial-line bg-white px-5 py-3 mb-3 text-[14px] leading-[2.2] shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-1.5">Eligibility</p>
           <FirstOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
           {" · "}
           <SchoolPill state={state} update={update} schools={schools} openPillId={openPillId} setOpenPillId={setOpenPillId} />
@@ -208,8 +209,8 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-100 bg-white px-5 py-3 mb-3 text-[14px] leading-[2.2]">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Valid window</p>
+      <div className="rounded-[16px] border border-editorial-line bg-white px-5 py-3 mb-3 text-[14px] leading-[2.2] shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-1.5">Valid window</p>
         {"From "}
         <DatePill which="startsAt" state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
         {" through "}
@@ -217,8 +218,8 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
         {"."}
       </div>
 
-      <div className="rounded-xl border border-slate-100 bg-white px-5 py-3 mb-5 text-[14px] leading-[2.2]">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Limits</p>
+      <div className="rounded-[16px] border border-editorial-line bg-white px-5 py-3 mb-5 text-[14px] leading-[2.2] shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-1.5">Limits</p>
         <LimitPill which="total" state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
         {" · "}
         <LimitPill which="perUser" state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
@@ -229,17 +230,17 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-[13px] text-red-700">
+        <div className="mt-4 rounded-[16px] bg-[#F4E3DB] border border-[#E2C3B3] px-4 py-3 text-[13px] text-[#7C3D24]">
           {error}
         </div>
       )}
 
       {/* Save bar */}
-      <div className="flex items-center justify-between gap-3 mt-6">
+      <div className="flex items-center justify-between gap-3 mt-6 pb-6">
         <button
           type="button"
           onClick={() => router.push("/admin/discounts")}
-          className="text-[13px] text-slate-500 px-3 py-2 hover:text-ink"
+          className="text-[13px] text-editorial-ink-soft px-3 py-2 hover:text-editorial-ink"
           disabled={saving}
         >
           Cancel
@@ -249,7 +250,7 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
             type="button"
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="px-4 py-2 rounded-full border border-editorial-line bg-white text-[13px] font-semibold text-editorial-ink hover:border-editorial-green hover:text-editorial-green disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save as draft"}
           </button>
@@ -257,11 +258,12 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
             type="button"
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="px-5 py-2 rounded-lg bg-brand-700 text-white text-[13px] font-semibold hover:bg-brand-800 disabled:opacity-50"
+            className="px-5 py-2 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep disabled:opacity-50"
           >
             {saving ? "Saving…" : isEdit ? "Save changes" : "Activate discount"}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -285,15 +287,15 @@ function AmountPill({ state, update, openPillId, setOpenPillId }: PillSharedProp
     : `$${state.valueDisplay || "0"}`;
   return (
     <DiscountPill id="amount" label={label} openPillId={openPillId} setOpenPillId={setOpenPillId}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Discount amount</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">Discount amount</p>
       <div className="flex gap-2 mb-2">
         <button
           type="button"
           onClick={() => update({ kind: "PERCENT" })}
-          className={`flex-1 px-2 py-1.5 rounded-md text-[12px] font-semibold border ${
+          className={`flex-1 px-2 py-1.5 rounded-[10px] text-[12px] font-semibold border ${
             state.kind === "PERCENT"
-              ? "bg-brand-50 border-brand-300 text-brand-800"
-              : "bg-white border-slate-200 text-slate-600"
+              ? "bg-editorial-sage border-editorial-green text-editorial-green"
+              : "bg-white border-editorial-line text-editorial-ink-soft"
           }`}
         >
           Percent (%)
@@ -301,10 +303,10 @@ function AmountPill({ state, update, openPillId, setOpenPillId }: PillSharedProp
         <button
           type="button"
           onClick={() => update({ kind: "FIXED_AMOUNT" })}
-          className={`flex-1 px-2 py-1.5 rounded-md text-[12px] font-semibold border ${
+          className={`flex-1 px-2 py-1.5 rounded-[10px] text-[12px] font-semibold border ${
             state.kind === "FIXED_AMOUNT"
-              ? "bg-brand-50 border-brand-300 text-brand-800"
-              : "bg-white border-slate-200 text-slate-600"
+              ? "bg-editorial-sage border-editorial-green text-editorial-green"
+              : "bg-white border-editorial-line text-editorial-ink-soft"
           }`}
         >
           Fixed ($)
@@ -312,7 +314,7 @@ function AmountPill({ state, update, openPillId, setOpenPillId }: PillSharedProp
       </div>
       <div className="relative">
         {state.kind === "FIXED_AMOUNT" && (
-          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[14px]">$</span>
+          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-editorial-ink-faint text-[14px]">$</span>
         )}
         <input
           type="number"
@@ -321,13 +323,13 @@ function AmountPill({ state, update, openPillId, setOpenPillId }: PillSharedProp
           max={state.kind === "PERCENT" ? 100 : undefined}
           value={state.valueDisplay}
           onChange={(e) => update({ valueDisplay: e.target.value })}
-          className={`w-full border border-slate-200 rounded-md py-1.5 text-[14px] focus:outline-none focus:border-brand-400 ${
+          className={`w-full border border-editorial-line rounded-[10px] py-1.5 text-[14px] focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green ${
             state.kind === "FIXED_AMOUNT" ? "pl-6 pr-2" : "px-2"
           }`}
           autoFocus
         />
         {state.kind === "PERCENT" && (
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[14px]">%</span>
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-editorial-ink-faint text-[14px]">%</span>
         )}
       </div>
     </DiscountPill>
@@ -350,14 +352,14 @@ function SchoolPill({ state, update, schools, openPillId, setOpenPillId }: PillS
   }
   return (
     <DiscountPill id="schools" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
         Which schools?
       </p>
       {schools.length === 0 ? (
-        <p className="text-[12px] text-slate-500 italic">No active schools yet.</p>
+        <p className="text-[12px] text-editorial-ink-soft italic">No active schools yet.</p>
       ) : (
         <div className="space-y-1">
-          <label className="flex items-center gap-2 cursor-pointer text-[13px]">
+          <label className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
             <input
               type="checkbox"
               checked={state.schoolIds.length === 0}
@@ -367,7 +369,7 @@ function SchoolPill({ state, update, schools, openPillId, setOpenPillId }: PillS
             All schools
           </label>
           {schools.map((s) => (
-            <label key={s.id} className="flex items-center gap-2 cursor-pointer text-[13px]">
+            <label key={s.id} className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
               <input
                 type="checkbox"
                 checked={state.schoolIds.includes(s.id)}
@@ -389,9 +391,9 @@ function MinOrderPill({ state, update, openPillId, setOpenPillId }: PillSharedPr
   const label = isDefault ? "for any cart total" : `on orders over $${state.minOrderDollars}`;
   return (
     <DiscountPill id="minOrder" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Minimum order</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">Minimum order</p>
       <div className="relative">
-        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[14px]">$</span>
+        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-editorial-ink-faint text-[14px]">$</span>
         <input
           type="number"
           step={1}
@@ -399,14 +401,14 @@ function MinOrderPill({ state, update, openPillId, setOpenPillId }: PillSharedPr
           placeholder="0"
           value={state.minOrderDollars}
           onChange={(e) => update({ minOrderDollars: e.target.value })}
-          className="w-full border border-slate-200 rounded-md pl-6 pr-2 py-1.5 text-[14px] focus:outline-none focus:border-brand-400"
+          className="w-full border border-editorial-line rounded-[10px] pl-6 pr-2 py-1.5 text-[14px] focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
           autoFocus
         />
       </div>
       <button
         type="button"
         onClick={() => update({ minOrderDollars: "" })}
-        className="text-[11px] text-slate-500 mt-2 hover:text-ink"
+        className="text-[11px] text-editorial-ink-soft mt-2 hover:text-editorial-ink"
       >
         Clear — apply to any cart total
       </button>
@@ -420,7 +422,7 @@ function SiblingCountPill({ state, update, openPillId, setOpenPillId }: PillShar
   const options = [2, 3, 4, 5];
   return (
     <DiscountPill id="siblingCount" label={label} openPillId={openPillId} setOpenPillId={setOpenPillId}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
         Minimum students per order
       </p>
       <div className="flex gap-1.5">
@@ -429,10 +431,10 @@ function SiblingCountPill({ state, update, openPillId, setOpenPillId }: PillShar
             key={opt}
             type="button"
             onClick={() => update({ minItemCount: String(opt) })}
-            className={`flex-1 px-2 py-1.5 rounded-md text-[12px] font-semibold border ${
+            className={`flex-1 px-2 py-1.5 rounded-[10px] text-[12px] font-semibold border ${
               n === opt
-                ? "bg-brand-50 border-brand-300 text-brand-800"
-                : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                ? "bg-editorial-sage border-editorial-green text-editorial-green"
+                : "bg-white border-editorial-line text-editorial-ink-soft hover:border-editorial-green"
             }`}
           >
             {opt === 5 ? "5+" : `${opt}+`}
@@ -448,9 +450,9 @@ function FirstOrderPill({ state, update, openPillId, setOpenPillId }: PillShared
   const label = isDefault ? "any customer" : "first-time customers only";
   return (
     <DiscountPill id="firstOrder" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Who can use it</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">Who can use it</p>
       <div className="space-y-1">
-        <label className="flex items-center gap-2 cursor-pointer text-[13px]">
+        <label className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
           <input
             type="radio"
             name="firstOrder"
@@ -459,7 +461,7 @@ function FirstOrderPill({ state, update, openPillId, setOpenPillId }: PillShared
           />
           Anyone
         </label>
-        <label className="flex items-center gap-2 cursor-pointer text-[13px]">
+        <label className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
           <input
             type="radio"
             name="firstOrder"
@@ -487,19 +489,19 @@ function DatePill({
     : formatShortDate(v);
   return (
     <DiscountPill id={which} label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
         {which === "startsAt" ? "Starts on" : "Ends on"}
       </p>
       <input
         type="date"
         value={v}
         onChange={(e) => update({ [which]: e.target.value } as Partial<BuilderState>)}
-        className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[14px] focus:outline-none focus:border-brand-400"
+        className="w-full border border-editorial-line rounded-[10px] px-2 py-1.5 text-[14px] focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
       />
       <button
         type="button"
         onClick={() => update({ [which]: "" } as Partial<BuilderState>)}
-        className="text-[11px] text-slate-500 mt-2 hover:text-ink"
+        className="text-[11px] text-editorial-ink-soft mt-2 hover:text-editorial-ink"
       >
         Clear — {which === "startsAt" ? "starts immediately" : "no expiry"}
       </button>
@@ -523,7 +525,7 @@ function LimitPill({
     : which === "total" ? `${n} total uses` : `${n} use${n === 1 ? "" : "s"} per customer`;
   return (
     <DiscountPill id={`limit-${which}`} label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
         {which === "total" ? "Total redemptions cap" : "Per-customer cap"}
       </p>
       <input
@@ -533,12 +535,12 @@ function LimitPill({
         placeholder="No limit"
         value={v}
         onChange={(e) => update({ [field]: e.target.value } as Partial<BuilderState>)}
-        className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[14px] focus:outline-none focus:border-brand-400"
+        className="w-full border border-editorial-line rounded-[10px] px-2 py-1.5 text-[14px] focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
       />
       <button
         type="button"
         onClick={() => update({ [field]: "" } as Partial<BuilderState>)}
-        className="text-[11px] text-slate-500 mt-2 hover:text-ink"
+        className="text-[11px] text-editorial-ink-soft mt-2 hover:text-editorial-ink"
       >
         Clear — no limit
       </button>
@@ -561,8 +563,8 @@ function LivePreview({ state }: { state: BuilderState }) {
   const finalCents = Math.max(0, mockSubtotal - discountCents);
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+    <div className="rounded-[16px] border border-editorial-line bg-editorial-paper-2 p-5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-3">
         Live preview · sample $24 order
       </p>
       <div className="space-y-1.5 max-w-xs">
@@ -572,7 +574,7 @@ function LivePreview({ state }: { state: BuilderState }) {
           value={`−${fmt(discountCents)}`}
           accent
         />
-        <div className="border-t border-slate-200 my-1" />
+        <div className="border-t border-editorial-line my-1" />
         <ReceiptRow label="Customer pays" value={fmt(finalCents)} bold />
       </div>
     </div>
@@ -585,10 +587,10 @@ function ReceiptRow({ label, value, muted, accent, bold }: {
 }) {
   return (
     <div className="flex justify-between items-baseline">
-      <span className={`text-[13px] ${bold ? "font-bold text-ink" : muted ? "text-slate-500" : accent ? "text-green-700 font-semibold" : "text-slate-700"}`}>
+      <span className={`text-[13px] ${bold ? "font-bold text-editorial-ink" : muted ? "text-editorial-ink-soft" : accent ? "text-editorial-green font-semibold" : "text-editorial-ink-soft"}`}>
         {label}
       </span>
-      <span className={`text-[13px] ${bold ? "font-bold text-ink text-[15px]" : accent ? "font-semibold text-green-700" : "text-slate-700"}`}>
+      <span className={`text-[13px] ${bold ? "font-bold text-editorial-ink text-[15px]" : accent ? "font-semibold text-editorial-green" : "text-editorial-ink-soft"}`}>
         {value}
       </span>
     </div>

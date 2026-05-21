@@ -90,11 +90,11 @@ export default async function DiscountDetailPage({
   const deleteAction = deleteDiscount.bind(null, id);
 
   return (
-    <div>
+    <div className="min-h-screen bg-editorial-paper">
       <div className="max-w-3xl mx-auto pt-6 px-4">
         <Link
           href="/admin/discounts"
-          className="text-[12px] text-slate-500 no-underline inline-flex items-center gap-1 hover:text-ink"
+          className="text-[12px] text-editorial-ink-soft no-underline inline-flex items-center gap-1 hover:text-editorial-ink"
         >
           ← Discounts
         </Link>
@@ -117,10 +117,10 @@ export default async function DiscountDetailPage({
         </div>
 
         {/* Lifecycle controls */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-4 mb-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Status</p>
+        <div className="rounded-[16px] border border-editorial-line bg-white p-4 mb-5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">Status</p>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[13px] text-slate-600">
+            <p className="text-[13px] text-editorial-ink-soft">
               {discount.isActive
                 ? "Active — customers can apply this discount now."
                 : "Inactive — no customer will see or be able to apply this discount."}
@@ -128,10 +128,10 @@ export default async function DiscountDetailPage({
             <form action={toggleAction}>
               <button
                 type="submit"
-                className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition ${
+                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition ${
                   discount.isActive
-                    ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    : "bg-brand-50 text-brand-800 border border-brand-200 hover:bg-brand-100"
+                    ? "bg-editorial-paper-2 text-editorial-ink hover:bg-editorial-paper border border-editorial-line"
+                    : "bg-editorial-sage text-editorial-green border border-editorial-line hover:border-editorial-green"
                 }`}
               >
                 {discount.isActive ? "Deactivate" : "Activate"}
@@ -142,27 +142,27 @@ export default async function DiscountDetailPage({
 
         {/* Recent redemptions */}
         {recentRedemptions.length > 0 && (
-          <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden mb-5">
-            <div className="px-4 py-2.5 border-b border-slate-50">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden mb-5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+            <div className="px-4 py-2.5 border-b border-editorial-line">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-editorial-ink-faint">
                 Recent redemptions
               </p>
             </div>
-            <ul className="divide-y divide-slate-50">
+            <ul className="divide-y divide-editorial-line">
               {recentRedemptions.map((r) => (
                 <li key={r.id} className="px-4 py-2.5 flex items-center justify-between">
                   <div className="min-w-0">
                     <Link
                       href={`/admin/orders/${r.order.id}`}
-                      className="text-[13px] font-semibold text-ink no-underline hover:text-brand-700"
+                      className="text-[13px] font-semibold text-editorial-ink no-underline hover:text-editorial-green"
                     >
                       {r.order.orderNumber}
                     </Link>
-                    <p className="text-[11px] text-slate-500 truncate">
+                    <p className="text-[11px] text-editorial-ink-soft truncate">
                       {r.order.parentName} · {r.order.paidAt ? new Date(r.order.paidAt).toLocaleDateString() : "pending"}
                     </p>
                   </div>
-                  <span className="text-[13px] font-semibold text-green-700">
+                  <span className="text-[13px] font-semibold text-editorial-green">
                     −{fmt(r.amountCents)}
                   </span>
                 </li>
@@ -172,10 +172,10 @@ export default async function DiscountDetailPage({
         )}
 
         {/* Delete — separated visually, gated when redemptions exist */}
-        <div className="rounded-2xl border border-red-100 bg-red-50/40 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-red-700 mb-2">Danger zone</p>
+        <div className="rounded-[16px] border border-[#E2C3B3] bg-[#F4E3DB] p-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#7C3D24] mb-2">Danger zone</p>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[12px] text-slate-700">
+            <p className="text-[12px] text-[#6B5747]">
               {discount.currentRedemptions > 0
                 ? "This discount has redemptions on historic orders — delete is disabled to keep that record intact. Deactivate instead."
                 : "Permanently delete this discount. Cannot be undone."}
@@ -184,7 +184,7 @@ export default async function DiscountDetailPage({
               <button
                 type="submit"
                 disabled={discount.currentRedemptions > 0}
-                className="px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-red-200 text-red-700 bg-white hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-full text-[12px] font-semibold border border-[#E2C3B3] text-[#7C3D24] bg-white hover:bg-[#FAF6F3] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Delete
               </button>
@@ -202,11 +202,11 @@ function Stat({ label, value, hint, hintTruncate }: {
   label: string; value: string; hint?: string; hintTruncate?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-slate-100 bg-white p-3.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="text-[16px] font-bold text-ink mt-1 leading-none">{value}</p>
+    <div className="rounded-[16px] border border-editorial-line bg-white p-3.5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-editorial-ink-faint">{label}</p>
+      <p className="text-[16px] font-bold text-editorial-ink mt-1 leading-none">{value}</p>
       {hint && (
-        <p className={`text-[10px] text-slate-400 mt-1.5 ${hintTruncate ? "truncate" : ""}`}>
+        <p className={`text-[10px] text-editorial-ink-faint mt-1.5 ${hintTruncate ? "truncate" : ""}`}>
           {hint}
         </p>
       )}

@@ -84,12 +84,12 @@ export function DiscountPill({
         ref={btnRef}
         type="button"
         onClick={() => setOpenPillId(open ? null : id)}
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[14px] font-semibold transition ${
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[14px] font-semibold transition ${
           open
-            ? "bg-brand-700 text-white border-brand-700"
+            ? "bg-editorial-green text-editorial-paper border-editorial-green"
             : isDefault
-            ? "bg-slate-50 text-slate-500 border-slate-200 hover:border-brand-300 hover:bg-brand-50/40"
-            : "bg-brand-50 text-brand-800 border-brand-200 hover:border-brand-400"
+            ? "bg-editorial-paper-2 text-editorial-ink-soft border-editorial-line hover:border-editorial-green hover:bg-editorial-paper"
+            : "bg-editorial-sage text-editorial-green border-editorial-line hover:border-editorial-green"
         }`}
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -103,7 +103,7 @@ export function DiscountPill({
         <div
           ref={popRef}
           role="dialog"
-          className="absolute z-30 left-0 top-[calc(100%+6px)] min-w-[260px] rounded-xl bg-white border border-slate-200 shadow-lg p-3 text-[13px]"
+          className="absolute z-30 left-0 top-[calc(100%+6px)] min-w-[260px] rounded-[12px] bg-white border border-editorial-line shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] p-3 text-[13px]"
         >
           {children}
         </div>
