@@ -64,7 +64,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const restaurant = await getCurrentRestaurant();
-  const displayFont = getDisplayFont(restaurant?.displayFont);
+  const displayFont = restaurant ? getDisplayFont(restaurant.displayFont) : getDisplayFont("Fraunces");
   const bodyFont    = getBodyFont(restaurant?.bodyFont);
   const cssBlock = themeCssBlock({
     primaryColor:    restaurant?.primaryColor,

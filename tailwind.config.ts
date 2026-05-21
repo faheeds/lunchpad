@@ -36,10 +36,18 @@ const config: Config = {
         crimson: "#c41230",
         accent:  "#d97706",
         danger:  "#991b1b",
+        editorial: {
+          paper: "#F6F1E6", "paper-2": "#EFE8D7", card: "#FCFAF3",
+          ink: "#211D15", "ink-soft": "#5B5446", "ink-faint": "#938B78",
+          green: "#2C4031", "green-deep": "#1E2C22",
+          clay: "#C0673E", "clay-soft": "#D98C5F",
+          sage: "#DEE2CF", gold: "#C99A3F", line: "#E3DBC6",
+        },
       },
       fontFamily: {
-        display: ["var(--font-oswald)", "sans-serif"],
-        body:    ["var(--font-inter)", "sans-serif"],
+        display:   ["var(--font-oswald)", "sans-serif"],
+        body:      ["var(--font-inter)", "sans-serif"],
+        editorial: ["Fraunces", "Georgia", "serif"],
       },
       boxShadow: {
         soft: "0 20px 60px rgba(28,5,5,0.12)",
