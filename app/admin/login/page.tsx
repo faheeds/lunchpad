@@ -24,11 +24,11 @@ export default async function AdminLoginPage() {
           {restaurant ? (
             <LoginForm restaurantId={restaurant.id} />
           ) : (
-            /* Apex / unknown host â€” admins sign in only from their tenant
+            /* Apex / unknown host — admins sign in only from their tenant
                subdomain, where the auth provider has the restaurantId. */
             <div className="space-y-4">
               <div className="rounded-xl bg-[#F6EED9] border border-[#E5D6A8] px-3.5 py-3 text-[12.5px] text-[#6E5C2C]">
-                Open your restaurant&apos;s admin URL â€” for example{" "}
+                Open your restaurant&apos;s admin URL — for example{" "}
                 <code className="bg-editorial-paper rounded px-1">your-restaurant.lunchpad.us/admin/login</code>.
                 The exact URL is in the welcome email we sent when you signed up.
               </div>

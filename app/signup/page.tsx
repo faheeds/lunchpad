@@ -34,7 +34,7 @@ const PLANS = [
   },
 ];
 
-// Editorial display serif â€” matches the landing page + admin headings.
+// Editorial display serif — matches the landing page + admin headings.
 const SERIF = "'Fraunces', Georgia, serif";
 
 export default function SignupPage() {
@@ -52,7 +52,7 @@ export default function SignupPage() {
   // Step 2 field
   const [plan, setPlan] = useState("GROWTH");
 
-  // Captured after a successful signup â€” used by step 3 to route to the
+  // Captured after a successful signup — used by step 3 to route to the
   // correct tenant subdomain.
   const [createdSlug, setCreatedSlug] = useState<string>("");
 
@@ -95,7 +95,7 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ restaurantName, slug, contactEmail, ownerName, password, plan }),
       });
-      // Safely parse JSON â€” a non-JSON response (e.g. Vercel 500 HTML page) would
+      // Safely parse JSON — a non-JSON response (e.g. Vercel 500 HTML page) would
       // otherwise throw "Unexpected end of JSON input" and swallow the real error.
       const data = await res.json().catch(() => ({ error: `Server error (${res.status}). Please try again.` }));
       if (!res.ok) throw new Error(data.error ?? "Signup failed.");
@@ -137,7 +137,7 @@ export default function SignupPage() {
         }
       ` }} />
 
-      {/* Logo / brand â€” editorial green bowl mark + Fraunces wordmark,
+      {/* Logo / brand — editorial green bowl mark + Fraunces wordmark,
           matching the landing page and admin. */}
       <div style={{ marginBottom: 28, textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
@@ -169,12 +169,12 @@ export default function SignupPage() {
           border: "1px solid #E3DBC6",
           boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>ðŸŽ‰</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
           <h1 className="su-heading" style={{ fontFamily: SERIF, fontSize: 27, fontWeight: 500, color: "#211D15", marginBottom: 10 }}>
             You&apos;re all set!
           </h1>
           <p style={{ fontSize: 14, color: "#5B5446", lineHeight: 1.6, marginBottom: 12 }}>
-            Your 14-day free trial has started. Let&apos;s walk through setup â€” branding, your first location, menu, and a test order â€” then you&apos;re live.
+            Your 14-day free trial has started. Let&apos;s walk through setup — branding, your first location, menu, and a test order — then you&apos;re live.
           </p>
           <p style={{ fontSize: 12, color: "#938B78", marginBottom: 28, fontFamily: "monospace" }}>
             {createdSlug ? `${createdSlug}.lunchpad.us` : "yoursite.lunchpad.us"}
@@ -188,10 +188,10 @@ export default function SignupPage() {
               textDecoration: "none", textAlign: "center",
             }}
           >
-            Get started â†’
+            Get started →
           </a>
           <p style={{ fontSize: 11, color: "#B8AE97", marginTop: 14, lineHeight: 1.5 }}>
-            New subdomain may take 30â€“60 seconds to issue an SSL certificate the first time.
+            New subdomain may take 30–60 seconds to issue an SSL certificate the first time.
             If you see a security warning, refresh.
           </p>
         </div>
@@ -210,7 +210,7 @@ export default function SignupPage() {
             Create your account
           </h1>
           <p style={{ fontSize: 13, color: "#938B78", marginBottom: 24 }}>
-            Start your 14-day free trial â€” no credit card required.
+            Start your 14-day free trial — no credit card required.
           </p>
 
           <Field label="Restaurant name">
@@ -332,7 +332,7 @@ export default function SignupPage() {
                   <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                     {p.features.map((f) => (
                       <li key={f} style={{ fontSize: 11, color: "#5B5446", marginBottom: 4, display: "flex", gap: 6 }}>
-                        <span style={{ color: "#2C4031", fontWeight: 700 }}>âœ“</span> {f}
+                        <span style={{ color: "#2C4031", fontWeight: 700 }}>✓</span> {f}
                       </li>
                     ))}
                   </ul>
@@ -363,7 +363,7 @@ export default function SignupPage() {
   );
 }
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (

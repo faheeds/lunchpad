@@ -12,7 +12,7 @@ const RESET_TOKEN_LIFETIME_MINUTES = 60;
 /**
  * Issues a password reset link for the email + current tenant. Always
  * returns the same neutral confirmation message regardless of whether
- * the email matches an admin â€” this prevents the form from being used
+ * the email matches an admin — this prevents the form from being used
  * to enumerate which emails belong to which restaurant.
  *
  * Steps:
@@ -26,14 +26,14 @@ async function requestReset(formData: FormData) {
   "use server";
 
   const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
-  // Cheapest possible email shape check â€” full validation lives in the
+  // Cheapest possible email shape check — full validation lives in the
   // model and the server will simply not find a match for malformed input.
   if (!rawEmail || !rawEmail.includes("@")) {
     return;
   }
 
   // Restaurant context comes purely from the subdomain header. If a user
-  // somehow submits this form from the apex, just no-op silently â€” the
+  // somehow submits this form from the apex, just no-op silently — the
   // page renders a guidance card in that case and the form isn't there.
   const restaurant = await getCurrentRestaurant();
   if (!restaurant) return;
@@ -53,7 +53,7 @@ async function requestReset(formData: FormData) {
     const expiresAt = new Date(Date.now() + RESET_TOKEN_LIFETIME_MINUTES * 60 * 1000);
 
     // Invalidate any older unused tokens so the most recent link is the
-    // only one that works â€” limits damage from a leaked old email.
+    // only one that works — limits damage from a leaked old email.
     await prisma.adminPasswordResetToken.updateMany({
       where: { adminUserId: admin.id, usedAt: null },
       data: { usedAt: new Date() },
@@ -78,7 +78,7 @@ async function requestReset(formData: FormData) {
         expiresInMinutes: RESET_TOKEN_LIFETIME_MINUTES,
       });
     } catch (err) {
-      // Log but don't surface â€” same neutral UI either way to avoid
+      // Log but don't surface — same neutral UI either way to avoid
       // leaking which email is registered.
       console.error("[admin-password-reset] send failed:", err);
     }
@@ -119,7 +119,7 @@ export default async function ForgotPasswordPage({
           ) : params.sent ? (
             <div className="space-y-4">
               <div className="rounded-xl bg-editorial-sage border border-[#C6CDB2] px-3.5 py-3 text-[12.5px] text-editorial-green">
-                If an admin account exists for that email, we&apos;ve sent a password reset link. Check your inbox â€” the link expires in {RESET_TOKEN_LIFETIME_MINUTES} minutes.
+                If an admin account exists for that email, we&apos;ve sent a password reset link. Check your inbox — the link expires in {RESET_TOKEN_LIFETIME_MINUTES} minutes.
               </div>
               <Link href="/admin/login" className="block w-full text-center py-3 rounded-full border border-editorial-line text-editorial-ink text-[13px] font-semibold no-underline hover:border-editorial-green hover:text-editorial-green transition-colors">
                 Back to sign in

@@ -62,12 +62,12 @@ export default async function AdminProtectedLayout({
 
   const restaurant = await requireRestaurant();
 
-  // â”€â”€ Subscription gating â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Subscription gating ─────────────────────────────────────────────────
   let full: Awaited<ReturnType<typeof prisma.restaurant.findUnique>> | null = null;
   try {
     full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
   } catch {
-    // Migration not yet applied â€” skip subscription gating
+    // Migration not yet applied — skip subscription gating
   }
 
   if (full) {
@@ -86,7 +86,7 @@ export default async function AdminProtectedLayout({
             border: "1px solid #E3DBC6",
             boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
           }}>
-            <p style={{ fontSize: 32, marginBottom: 16 }}>ðŸ”’</p>
+            <p style={{ fontSize: 32, marginBottom: 16 }}>🔒</p>
             <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 500, color: "#211D15", marginBottom: 8 }}>
               {isCancelled ? "Subscription cancelled" : "Trial expired"}
             </h1>
@@ -108,7 +108,7 @@ export default async function AdminProtectedLayout({
     }
   }
 
-  // â”€â”€ Setup completion check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Setup completion check ───────────────────────────────────────────────
   // The new onboarding wizard owns this signal via Restaurant.onboardingComplete.
   // If the operator has finished the wizard (even with optional steps skipped),
   // we trust their decision and let them into the rest of the admin. The legacy
@@ -132,7 +132,7 @@ export default async function AdminProtectedLayout({
     }
   }
 
-  // â”€â”€ Trial days remaining warning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Trial days remaining warning ─────────────────────────────────────────
   const trialDaysLeft = full?.subscriptionStatus === "TRIAL" && full.trialEndsAt
     ? Math.ceil((full.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
@@ -152,7 +152,7 @@ export default async function AdminProtectedLayout({
           to avoid losing access.
         </div>
       )}
-      {/* Trial expiry warning (â‰¤ 3 days) */}
+      {/* Trial expiry warning (≤ 3 days) */}
       {trialDaysLeft !== null && trialDaysLeft <= 3 && (
         <div style={{
           background: "#F6EED9", borderBottom: "1px solid #E5D6A8",
