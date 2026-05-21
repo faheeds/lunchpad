@@ -124,10 +124,10 @@ export default async function CheckoutSuccessPage({
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--dark-bg)", marginBottom: 4, letterSpacing: "-0.02em" }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--body-text)", marginBottom: 4, letterSpacing: "-0.02em" }}>
               {isWeekly ? "Week booked!" : "Order confirmed!"}
             </h1>
-            <p style={{ fontSize: 12, color: "#94a3b8" }}>
+            <p style={{ fontSize: 12, color: "rgba(var(--body-text-rgb), 0.65)" }}>
               A confirmation email has been sent to you.
             </p>
           </div>
@@ -166,21 +166,21 @@ export default async function CheckoutSuccessPage({
               <div style={{ padding: "14px 18px", borderBottom: "1px solid #f8fafc", display: "flex", gap: 12, alignItems: "flex-start" }}>
                 <div style={{
                   flexShrink: 0, width: 40, height: 40, borderRadius: 10,
-                  background: "#fff1f3",
+                  background: "rgba(var(--brand-rgb), 0.08)",
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 }}>
-                  <p style={{ fontSize: 7, fontWeight: 700, color: "#c41230", textTransform: "uppercase" }}>
+                  <p style={{ fontSize: 7, fontWeight: 700, color: "var(--brand-hex)", textTransform: "uppercase" }}>
                     {formatInTimeZone(order.deliveryDate.deliveryDate, order.school.timezone, "MMM")}
                   </p>
-                  <p style={{ fontSize: 17, fontWeight: 800, color: "#c41230", lineHeight: 1 }}>
+                  <p style={{ fontSize: 17, fontWeight: 800, color: "var(--brand-hex)", lineHeight: 1 }}>
                     {formatInTimeZone(order.deliveryDate.deliveryDate, order.school.timezone, "d")}
                   </p>
                 </div>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--dark-bg)" }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--body-text)" }}>
                     {formatInTimeZone(order.deliveryDate.deliveryDate, order.school.timezone, "EEEE, MMMM d")}
                   </p>
-                  <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>
+                  <p style={{ fontSize: 11, color: "rgba(var(--body-text-rgb), 0.65)", marginTop: 1 }}>
                     {order.school.name}
                   </p>
                 </div>
@@ -188,11 +188,11 @@ export default async function CheckoutSuccessPage({
 
               {/* Student row */}
               <div style={{ padding: "12px 18px", borderBottom: "1px solid #f8fafc" }}>
-                <p style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>{getLabels(order.school.locationType).unit}</p>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--dark-bg)" }}>
+                <p style={{ fontSize: 10, fontWeight: 600, color: "rgba(var(--body-text-rgb), 0.65)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>{getLabels(order.school.locationType).unit}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--body-text)" }}>
                   {order.student.studentName}
                   {order.student.grade && getLabels(order.school.locationType).showGrade && (
-                    <span style={{ fontSize: 11, fontWeight: 400, color: "#94a3b8" }}> · {getLabels(order.school.locationType).grade} {order.student.grade}</span>
+                    <span style={{ fontSize: 11, fontWeight: 400, color: "rgba(var(--body-text-rgb), 0.65)" }}> · {getLabels(order.school.locationType).grade} {order.student.grade}</span>
                   )}
                 </p>
                 {getLabels(order.school.locationType).showSupervisor && (order.student.teacherName || order.student.classroom) && (
@@ -212,9 +212,9 @@ export default async function CheckoutSuccessPage({
                 return (
                   <div key={item.id} style={{ padding: "12px 18px", borderBottom: "1px solid #f8fafc", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--dark-bg)" }}>{item.itemNameSnapshot}</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--body-text)" }}>{item.itemNameSnapshot}</p>
                       {customizations.length > 0 && (
-                        <p style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{customizations.join(" · ")}</p>
+                        <p style={{ fontSize: 11, color: "rgba(var(--body-text-rgb), 0.65)", marginTop: 2 }}>{customizations.join(" · ")}</p>
                       )}
                       {item.allergyNotes && (
                         <span style={{
@@ -227,7 +227,7 @@ export default async function CheckoutSuccessPage({
                         </span>
                       )}
                     </div>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: "var(--dark-bg)", flexShrink: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "var(--body-text)", flexShrink: 0 }}>
                       {formatCurrency(item.lineTotalCents)}
                     </p>
                   </div>
@@ -254,8 +254,8 @@ export default async function CheckoutSuccessPage({
 
               {/* Total */}
               <div style={{ padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>Total paid</span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: "var(--dark-bg)", letterSpacing: "-0.02em" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(var(--body-text-rgb), 0.65)" }}>Total paid</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "var(--body-text)", letterSpacing: "-0.02em" }}>
                   {formatCurrency(order.totalCents)}
                 </span>
               </div>
@@ -302,26 +302,26 @@ export default async function CheckoutSuccessPage({
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flex: 1 }}>
                     <div style={{
                       flexShrink: 0, width: 36, height: 36, borderRadius: 9,
-                      background: "#fff1f3",
+                      background: "rgba(var(--brand-rgb), 0.08)",
                       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                     }}>
-                      <p style={{ fontSize: 6, fontWeight: 700, color: "#c41230", textTransform: "uppercase" }}>
+                      <p style={{ fontSize: 6, fontWeight: 700, color: "var(--brand-hex)", textTransform: "uppercase" }}>
                         {formatInTimeZone(item.deliveryDate.deliveryDate, item.deliveryDate.school.timezone, "MMM")}
                       </p>
-                      <p style={{ fontSize: 15, fontWeight: 800, color: "#c41230", lineHeight: 1 }}>
+                      <p style={{ fontSize: 15, fontWeight: 800, color: "var(--brand-hex)", lineHeight: 1 }}>
                         {formatInTimeZone(item.deliveryDate.deliveryDate, item.deliveryDate.school.timezone, "d")}
                       </p>
                     </div>
                     <div>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: "var(--dark-bg)" }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: "var(--body-text)" }}>
                         {formatInTimeZone(item.deliveryDate.deliveryDate, item.deliveryDate.school.timezone, "EEEE")}
                       </p>
-                      <p style={{ fontSize: 11, color: "#64748b" }}>
+                      <p style={{ fontSize: 11, color: "rgba(var(--body-text-rgb), 0.65)" }}>
                         {item.parentChild.studentName} · {item.itemNameSnapshot}
                       </p>
                     </div>
                   </div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--dark-bg)", flexShrink: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--body-text)", flexShrink: 0 }}>
                     {formatCurrency(item.lineTotalCents)}
                   </p>
                 </div>
@@ -371,7 +371,7 @@ export default async function CheckoutSuccessPage({
             <Link href="/history" style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               borderRadius: 14, padding: "13px 0",
-              background: "var(--brand-on-white, #c41230)",
+              background: "var(--brand-on-white)",
               color: "white", fontSize: 14, fontWeight: 700,
               textDecoration: "none",
             }}>
@@ -381,7 +381,7 @@ export default async function CheckoutSuccessPage({
               display: "flex", alignItems: "center", justifyContent: "center",
               borderRadius: 14, padding: "13px 0",
               border: "1px solid #e2e8f0",
-              color: "var(--dark-bg)", fontSize: 13, fontWeight: 600,
+              color: "var(--body-text)", fontSize: 13, fontWeight: 600,
               textDecoration: "none", background: "white",
             }}>
               Order another day

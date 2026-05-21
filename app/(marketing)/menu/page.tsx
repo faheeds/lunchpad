@@ -204,10 +204,10 @@ export default async function MenuPage() {
                     {meta.icon}
                   </div>
                   <div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: "#1c0505", margin: 0 }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: "var(--body-text)", margin: 0 }}>
                       {cat}
                     </p>
-                    <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>
+                    <p style={{ fontSize: 11, color: "rgba(var(--body-text-rgb), 0.65)", margin: 0 }}>
                       {catItems.length} {catItems.length === 1 ? "item" : "items"}
                     </p>
                   </div>
@@ -253,10 +253,10 @@ export default async function MenuPage() {
               border: "1px solid #e2e8f0",
             }}>
               <p style={{ fontSize: 32, marginBottom: 12 }}>🍽️</p>
-              <p style={{ fontSize: 15, fontWeight: 600, color: "#1c0505", marginBottom: 6 }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: "var(--body-text)", marginBottom: 6 }}>
                 Menu coming soon
               </p>
-              <p style={{ fontSize: 13, color: "#64748b" }}>
+              <p style={{ fontSize: 13, color: "rgba(var(--body-text-rgb), 0.6)" }}>
                 Check back shortly — items will appear here once the menu is configured.
               </p>
             </div>
