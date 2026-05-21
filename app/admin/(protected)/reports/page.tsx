@@ -128,13 +128,13 @@ export default async function AdminReportsPage({
     : 0;
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-5 pb-10 bg-editorial-paper min-h-screen">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-[17px] font-semibold text-ink">Reports</h1>
+        <h1 className="text-[17px] font-semibold text-editorial-ink font-editorial">Reports</h1>
         <a href={csvUrl} download
-          className="px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 no-underline hover:bg-slate-50 transition flex items-center gap-1.5">
+          className="px-3 py-1.5 rounded-full border border-editorial-line text-[11px] font-medium text-editorial-ink-soft no-underline hover:border-editorial-green hover:text-editorial-green transition flex items-center gap-1.5">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
@@ -143,12 +143,12 @@ export default async function AdminReportsPage({
       </div>
 
       {/* ── Filter bar ───────────────────────────────────────���─────── */}
-      <form className="rounded-[14px] border border-slate-100 bg-white p-3 space-y-2">
+      <form className="rounded-[16px] border border-editorial-line bg-white p-3 space-y-2 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Location</label>
+            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Location</label>
             <select name="schoolIds" defaultValue={selectedSchoolIds[0] ?? ""}
-              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
+              className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
               <option value="">All locations</option>
               {schools.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
@@ -156,9 +156,9 @@ export default async function AdminReportsPage({
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Delivery date</label>
+            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Delivery date</label>
             <select name="deliveryDateId" defaultValue={params.deliveryDateId ?? ""}
-              className="w-full rounded-lg border-slate-200 text-[12px] py-1.5 px-2">
+              className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
               <option value="">All dates</option>
               {deliveryDates.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -169,20 +169,20 @@ export default async function AdminReportsPage({
           </div>
         </div>
         <div>
-          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Date range</label>
+          <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Date range</label>
           <div className="grid grid-cols-2 gap-2">
             <input type="date" name="dateFrom" defaultValue={params.dateFrom ?? ""}
-              className="rounded-lg border-slate-200 text-[12px] px-2 py-1.5" placeholder="From" />
+              className="rounded-lg border border-editorial-line text-[12px] px-2 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" placeholder="From" />
             <input type="date" name="dateTo" defaultValue={params.dateTo ?? ""}
-              className="rounded-lg border-slate-200 text-[12px] px-2 py-1.5" placeholder="To" />
+              className="rounded-lg border border-editorial-line text-[12px] px-2 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" placeholder="To" />
           </div>
         </div>
         <div className="flex gap-2">
-          <button type="submit" className="flex-1 py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
+          <button type="submit" className="flex-1 py-2 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
             Apply filters
           </button>
           <Link href="/admin/reports"
-            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-500 text-[12px] font-medium no-underline hover:bg-slate-50 transition whitespace-nowrap">
+            className="px-4 py-2 rounded-full border border-editorial-line text-editorial-ink-soft text-[12px] font-medium no-underline hover:border-editorial-green hover:text-editorial-green transition whitespace-nowrap">
             Clear
           </Link>
         </div>
@@ -191,15 +191,15 @@ export default async function AdminReportsPage({
       {/* ── Summary tiles ──────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {([
-          { label: "Revenue",     value: formatCurrency(reports.totals.totalSalesCents), sub: "paid orders",  color: "#c41230", bg: "#fff1f3", border: "#fecdd3" },
-          { label: "Orders",      value: String(reports.totals.totalOrders),             sub: "paid orders",  color: "#0369a1", bg: "#eff6ff", border: "#bfdbfe" },
-          { label: "Items sold",  value: String(reports.totals.totalItemsSold),          sub: "line items",   color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-          { label: "Avg order",   value: formatCurrency(avgOrderValue),                  sub: "per order",    color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
-        ] as const).map(({ label, value, sub, color, bg, border }) => (
-          <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 14, padding: "12px 14px", minHeight: 80 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</p>
-            <p style={{ fontSize: 22, fontWeight: 800, color, letterSpacing: "-0.03em", lineHeight: 1, whiteSpace: "nowrap" }}>{value}</p>
-            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>{sub}</p>
+          { label: "Revenue",     value: formatCurrency(reports.totals.totalSalesCents), sub: "paid orders" },
+          { label: "Orders",      value: String(reports.totals.totalOrders),             sub: "paid orders" },
+          { label: "Items sold",  value: String(reports.totals.totalItemsSold),          sub: "line items" },
+          { label: "Avg order",   value: formatCurrency(avgOrderValue),                  sub: "per order" },
+        ] as const).map(({ label, value, sub }) => (
+          <div key={label} className="rounded-[16px] border border-editorial-line bg-white p-3 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+            <p className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide mb-2">{label}</p>
+            <p className="text-[22px] font-semibold text-editorial-ink mb-1" style={{ letterSpacing: "-0.03em", lineHeight: 1, whiteSpace: "nowrap" }}>{value}</p>
+            <p className="text-[10px] text-editorial-ink-faint">{sub}</p>
           </div>
         ))}
       </div>
@@ -211,12 +211,12 @@ export default async function AdminReportsPage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* ── By delivery date ───────────────────────────────────────── */}
       {dateBreakdown.length > 0 && (
-        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
-            <p className="text-[13px] font-semibold text-ink">By delivery date</p>
-            <p className="text-[11px] text-slate-400">{dateBreakdown.length} dates</p>
+        <div className="rounded-[16px] border border-editorial-line bg-white shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-editorial-line flex items-center justify-between">
+            <p className="text-[13px] font-semibold text-editorial-ink">By delivery date</p>
+            <p className="text-[11px] text-editorial-ink-faint">{dateBreakdown.length} dates</p>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-editorial-line">
             {dateBreakdown.map((row, i) => {
               const pct = reports.totals.totalSalesCents > 0
                 ? (row.revenue / reports.totals.totalSalesCents) * 100
@@ -225,20 +225,20 @@ export default async function AdminReportsPage({
                 <div key={i} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3 mb-1.5">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-semibold text-ink truncate">{row.dateLabel}</p>
-                      <p className="text-[11px] text-slate-400">{row.schoolName}</p>
+                      <p className="text-[12px] font-semibold text-editorial-ink truncate">{row.dateLabel}</p>
+                      <p className="text-[11px] text-editorial-ink-faint">{row.schoolName}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-[13px] font-semibold text-ink">{formatCurrency(row.revenue)}</p>
-                      <p className="text-[10px] text-slate-400">{row.orders} orders · {row.items} items</p>
+                      <p className="text-[13px] font-semibold text-editorial-ink">{formatCurrency(row.revenue)}</p>
+                      <p className="text-[10px] text-editorial-ink-faint">{row.orders} orders · {row.items} items</p>
                     </div>
                   </div>
                   {/* Revenue bar */}
-                  <div style={{ height: 4, background: "#f1f5f9", borderRadius: 100, overflow: "hidden" }}>
+                  <div style={{ height: 4, background: "#EFE8D7", borderRadius: 100, overflow: "hidden" }}>
                     <div style={{
                       height: "100%", borderRadius: 100,
                       width: `${Math.max(2, pct)}%`,
-                      background: "linear-gradient(90deg, #c41230, #ef4444)",
+                      background: "#2C4031",
                     }} />
                   </div>
                 </div>
@@ -250,20 +250,20 @@ export default async function AdminReportsPage({
 
       {/* ── By school ──────────────────────────────────────────────── */}
       {reports.schoolBreakdown.length > 0 && (
-        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-50">
-            <p className="text-[13px] font-semibold text-ink">By location</p>
+        <div className="rounded-[16px] border border-editorial-line bg-white shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-editorial-line">
+            <p className="text-[13px] font-semibold text-editorial-ink">By location</p>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-editorial-line">
             {reports.schoolBreakdown.map((school) => (
               <div key={school.schoolId} className="px-4 py-3 flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-ink truncate">{school.schoolName}</p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[13px] font-semibold text-editorial-ink truncate">{school.schoolName}</p>
+                  <p className="text-[11px] text-editorial-ink-faint">
                     {school.orders} order{school.orders !== 1 ? "s" : ""} · {school.itemsSold} items
                   </p>
                 </div>
-                <p className="text-[14px] font-semibold text-ink flex-shrink-0">
+                <p className="text-[14px] font-semibold text-editorial-ink flex-shrink-0">
                   {formatCurrency(school.salesCents)}
                 </p>
               </div>
@@ -275,12 +275,12 @@ export default async function AdminReportsPage({
 
       {/* ── Menu item performance ───────────────────────────────────── */}
       {reports.itemBreakdown.length > 0 && (
-        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
-            <p className="text-[13px] font-semibold text-ink">Menu item performance</p>
-            <p className="text-[11px] text-slate-400">ranked by quantity</p>
+        <div className="rounded-[16px] border border-editorial-line bg-white shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-editorial-line flex items-center justify-between">
+            <p className="text-[13px] font-semibold text-editorial-ink">Menu item performance</p>
+            <p className="text-[11px] text-editorial-ink-faint">ranked by quantity</p>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-editorial-line">
             {reports.itemBreakdown.map((item, i) => {
               const maxQty = reports.itemBreakdown[0]?.quantity ?? 1;
               const pct    = (item.quantity / maxQty) * 100;
@@ -289,32 +289,32 @@ export default async function AdminReportsPage({
                   <div className="flex items-center gap-3 mb-1.5">
                     <div style={{
                       width: 24, height: 24, borderRadius: "50%",
-                      background: i === 0 ? "#fff1f3" : "#f3f4f6",
+                      background: i === 0 ? "#EFE8D7" : "#F6F1E6",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 10, fontWeight: 700,
-                      color: i === 0 ? "#c41230" : "#9ca3af",
+                      color: i === 0 ? "#C0673E" : "#938B78",
                       flexShrink: 0,
                     }}>
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-ink truncate">{item.itemName}</p>
-                      <p className="text-[10px] text-slate-400 truncate">
+                      <p className="text-[13px] font-semibold text-editorial-ink truncate">{item.itemName}</p>
+                      <p className="text-[10px] text-editorial-ink-faint truncate">
                         {Object.entries(item.bySchool)
                           .map(([s, c]) => `${s}: ${c}`)
                           .join(" · ")}
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-[13px] font-semibold text-ink">{item.quantity}×</p>
-                      <p className="text-[11px] text-brand-700">{formatCurrency(item.salesCents)}</p>
+                      <p className="text-[13px] font-semibold text-editorial-ink">{item.quantity}×</p>
+                      <p className="text-[11px] text-editorial-green">{formatCurrency(item.salesCents)}</p>
                     </div>
                   </div>
-                  <div style={{ height: 3, background: "#f1f5f9", borderRadius: 100, overflow: "hidden", marginLeft: 36 }}>
+                  <div style={{ height: 3, background: "#EFE8D7", borderRadius: 100, overflow: "hidden", marginLeft: 36 }}>
                     <div style={{
                       height: "100%", borderRadius: 100,
                       width: `${Math.max(2, pct)}%`,
-                      background: i === 0 ? "linear-gradient(90deg, #c41230, #ef4444)" : "#e2e8f0",
+                      background: i === 0 ? "#2C4031" : "#EFE8D7",
                     }} />
                   </div>
                 </div>
@@ -326,12 +326,12 @@ export default async function AdminReportsPage({
 
       {/* Empty state */}
       {reports.totals.totalOrders === 0 && (
-        <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-10 text-center">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
+        <div className="rounded-[16px] border border-editorial-line bg-white shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] px-4 py-10 text-center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#938B78" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
             <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
           </svg>
-          <p className="text-[13px] font-medium text-slate-400">No paid orders match the current filters.</p>
-          <p className="text-[11px] text-slate-300 mt-1">Try widening the date range or clearing filters.</p>
+          <p className="text-[13px] font-medium text-editorial-ink-soft">No paid orders match the current filters.</p>
+          <p className="text-[11px] text-editorial-ink-faint mt-1">Try widening the date range or clearing filters.</p>
         </div>
       )}
     </div>
