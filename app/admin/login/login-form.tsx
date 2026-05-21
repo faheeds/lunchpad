@@ -34,12 +34,12 @@ export function LoginForm({ restaurantId }: { restaurantId: string }) {
       )}
       {invitedFlag === "1" && (
         <p className="rounded-xl bg-editorial-sage border border-[#C6CDB2] px-3.5 py-2.5 text-[12px] text-editorial-green">
-          Account created â€” sign in with your new password.
+          Account created — sign in with your new password.
         </p>
       )}
       {invitedFlag === "existing" && (
         <p className="rounded-xl bg-editorial-paper border border-editorial-line px-3.5 py-2.5 text-[12px] text-editorial-ink-soft">
-          You&apos;re already on this team â€” sign in with your existing password.
+          You&apos;re already on this team — sign in with your existing password.
         </p>
       )}
       <div>
@@ -56,7 +56,7 @@ export function LoginForm({ restaurantId }: { restaurantId: string }) {
           </Link>
         </div>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-          className="w-full rounded-xl border border-editorial-line text-[13px] px-3.5 py-2.5 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green outline-none" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
+          className="w-full rounded-xl border border-editorial-line text-[13px] px-3.5 py-2.5 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green outline-none" placeholder="••••••••" />
       </div>
       {error && <p className="rounded-xl bg-[#F4E3DB] border border-[#E2C3B3] px-3.5 py-2.5 text-[12px] text-[#7C3D24]">{error}</p>}
       <button type="submit" disabled={isPending}
