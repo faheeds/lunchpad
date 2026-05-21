@@ -111,9 +111,9 @@ async function parseExcelFile(file: File): Promise<MenuItemDraft[]> {
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
 const inputCss: React.CSSProperties = {
-  width: "100%", borderRadius: 7, border: "1px solid #d1d5db",
+  width: "100%", borderRadius: 7, border: "1px solid #E3DBC6",
   fontSize: 12, padding: "7px 10px", outline: "none",
-  background: "white", color: "#0f1923", boxSizing: "border-box",
+  background: "white", color: "#211D15", boxSizing: "border-box",
 };
 
 const smallBtnCss = (color: string, bg: string, border: string): React.CSSProperties => ({
@@ -249,31 +249,31 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
             onDrop={handleDrop}
             style={{
               display: "block",
-              border: `2px dashed ${dragging ? "#c41230" : "#d1d5db"}`,
-              borderRadius: 10,
+              border: `2px dashed ${dragging ? "#2C4031" : "#E3DBC6"}`,
+              borderRadius: 14,
               padding: "24px 20px",
               textAlign: "center",
               cursor: "pointer",
-              background: dragging ? "#fff1f3" : "#fafafa",
+              background: dragging ? "#EFE8D7" : "#F6F1E6",
               transition: "border-color 0.15s, background 0.15s",
             }}
           >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={dragging ? "#c41230" : "#9ca3af"}
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={dragging ? "#2C4031" : "#938B78"}
               strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
               style={{ margin: "0 auto 10px", display: "block" }}>
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            <p style={{ fontSize: 13, fontWeight: 600, color: dragging ? "#c41230" : "#374151", marginBottom: 4 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: dragging ? "#2C4031" : "#211D15", marginBottom: 4 }}>
               Click to choose a file, or drag &amp; drop here
             </p>
-            <p style={{ fontSize: 11, color: "#9ca3af" }}>Accepts .xlsx files — use the LunchPad template</p>
+            <p style={{ fontSize: 11, color: "#938B78" }}>Accepts .xlsx files — use the LunchPad template</p>
           </label>
 
           <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
             <a href="/api/admin/menu/template" download
-              style={{ fontSize: 12, color: "#0369a1", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+              style={{ fontSize: 12, color: "#2C4031", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
@@ -281,7 +281,7 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
               </svg>
               Download sample template
             </a>
-            <span style={{ fontSize: 11, color: "#9ca3af" }}>— fill it in, then upload it back here</span>
+            <span style={{ fontSize: 11, color: "#938B78" }}>— fill it in, then upload it back here</span>
           </div>
         </>
       )}
@@ -291,29 +291,29 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 0" }}>
           <div style={{
             width: 18, height: 18, borderRadius: "50%",
-            border: "2.5px solid #e5e7eb", borderTopColor: "#c41230", flexShrink: 0,
+            border: "2.5px solid #E3DBC6", borderTopColor: "#2C4031", flexShrink: 0,
             animation: "lp-spin 0.7s linear infinite",
           }} />
-          <p style={{ fontSize: 13, color: "#6b7280" }}>Parsing spreadsheet…</p>
+          <p style={{ fontSize: 13, color: "#5B5446" }}>Parsing spreadsheet…</p>
           <style>{`@keyframes lp-spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
 
       {/* Banners */}
       {error && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 14px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", marginBottom: 10 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 14px", borderRadius: 8, background: "#F4E3DB", border: "1px solid #E2C3B3", marginBottom: 10 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C3D24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
             <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
           </svg>
-          <p style={{ fontSize: 12, color: "#dc2626", lineHeight: 1.5 }}>{error}</p>
+          <p style={{ fontSize: 12, color: "#7C3D24", lineHeight: 1.5 }}>{error}</p>
         </div>
       )}
       {success && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0", marginBottom: 10 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 8, background: "#DEE2CF", border: "1px solid #C7CDB8", marginBottom: 10 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2C4031" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <path d="M20 6L9 17l-5-5"/>
           </svg>
-          <p style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>{success}</p>
+          <p style={{ fontSize: 12, color: "#2C4031", fontWeight: 600 }}>{success}</p>
         </div>
       )}
 
@@ -322,19 +322,19 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
         <div>
           {/* Preview header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#0f1923" }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#211D15" }}>
               {items.length} item{items.length !== 1 ? "s" : ""} ready to import
             </p>
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" onClick={() => { setItems([]); setError(""); setSuccess(""); }}
-                style={smallBtnCss("#6b7280", "white", "#d1d5db")}>
+                style={smallBtnCss("#5B5446", "white", "#E3DBC6")}>
                 Clear
               </button>
               <button type="button" onClick={handleImport} disabled={importing}
                 style={{
                   padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700,
                   color: "white", border: "none", cursor: importing ? "default" : "pointer",
-                  background: importing ? "#9ca3af" : "#c41230",
+                  background: importing ? "#938B78" : "#2C4031",
                 }}>
                 {importing ? "Importing…" : `Import ${items.length}`}
               </button>
@@ -344,7 +344,7 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
           {/* Item cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 440, overflowY: "auto", paddingRight: 2 }}>
             {items.map((item, idx) => (
-              <div key={idx} style={{ border: "1px solid #e5e7eb", borderRadius: 10, background: "white", overflow: "hidden" }}>
+              <div key={idx} style={{ border: "1px solid #E3DBC6", borderRadius: 12, background: "white", overflow: "hidden", boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)" }}>
 
                 {/* Item row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px" }}>
@@ -352,11 +352,11 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                   <button type="button"
                     onClick={() => updateItem(idx, { _expanded: !item._expanded })}
                     style={{
-                      width: 20, height: 20, borderRadius: 4, border: "1px solid #d1d5db",
+                      width: 20, height: 20, borderRadius: 4, border: "1px solid #E3DBC6",
                       background: "white", cursor: "pointer", display: "flex",
                       alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 0,
                     }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#5B5446" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                       style={{ transform: item._expanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
                       <polyline points="9 18 15 12 9 6"/>
                     </svg>
@@ -382,9 +382,9 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                   {/* Options badge */}
                   <span style={{
                     fontSize: 10, fontWeight: 600, flexShrink: 0,
-                    color: item.options.length > 0 ? "#0369a1" : "#9ca3af",
-                    background: item.options.length > 0 ? "#eff6ff" : "#f3f4f6",
-                    border: `1px solid ${item.options.length > 0 ? "#bfdbfe" : "#e5e7eb"}`,
+                    color: item.options.length > 0 ? "#2C4031" : "#938B78",
+                    background: item.options.length > 0 ? "#DEE2CF" : "#EFE8D7",
+                    border: `1px solid ${item.options.length > 0 ? "#D0D5C0" : "#E3DBC6"}`,
                     borderRadius: 100, padding: "2px 8px", whiteSpace: "nowrap",
                   }}>
                     {item.options.length} opt{item.options.length !== 1 ? "s" : ""}
@@ -394,7 +394,7 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                   {item.requiredChoices.length > 0 && (
                     <span style={{
                       fontSize: 10, fontWeight: 600, flexShrink: 0,
-                      color: "#92400e", background: "#fef3c7", border: "1px solid #fde68a",
+                      color: "#C0673E", background: "#F6EED9", border: "1px solid #E5D6A8",
                       borderRadius: 100, padding: "2px 8px", whiteSpace: "nowrap",
                     }}>
                       {item.requiredChoices.length} choice{item.requiredChoices.length !== 1 ? "s" : ""}
@@ -405,9 +405,9 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                   <button type="button"
                     onClick={() => updateItem(idx, { isActive: !item.isActive })}
                     style={smallBtnCss(
-                      item.isActive ? "#15803d" : "#9ca3af",
-                      item.isActive ? "#dcfce7" : "#f3f4f6",
-                      item.isActive ? "#bbf7d0" : "#e5e7eb",
+                      item.isActive ? "#2C4031" : "#938B78",
+                      item.isActive ? "#DEE2CF" : "#EFE8D7",
+                      item.isActive ? "#D0D5C0" : "#E3DBC6",
                     )}>
                     {item.isActive ? "On" : "Off"}
                   </button>
@@ -415,11 +415,11 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                   {/* Remove item */}
                   <button type="button" onClick={() => removeItem(idx)}
                     style={{
-                      width: 24, height: 24, borderRadius: 6, border: "1px solid #fecaca",
-                      background: "#fef2f2", cursor: "pointer", display: "flex",
+                      width: 24, height: 24, borderRadius: 6, border: "1px solid #E2C3B3",
+                      background: "#F4E3DB", cursor: "pointer", display: "flex",
                       alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0,
                     }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#7C3D24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
                   </button>
@@ -427,9 +427,9 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
 
                 {/* Expanded section: description + options */}
                 {item._expanded && (
-                  <div style={{ padding: "0 10px 10px", borderTop: "1px solid #f3f4f6" }}>
+                  <div style={{ padding: "0 10px 10px", borderTop: "1px solid #EFE8D7" }}>
                     <div style={{ paddingTop: 8 }}>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}>
+                      <label style={{ fontSize: 10, fontWeight: 600, color: "#5B5446", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}>
                         Description
                       </label>
                       <input value={item.description}
@@ -443,7 +443,7 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                         bloat the table. Operators can polish on the /admin/menu page
                         post-import where each item gets a full editor. */}
                     <div style={{ marginTop: 10 }}>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}>
+                      <label style={{ fontSize: 10, fontWeight: 600, color: "#5B5446", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}>
                         Required choices (comma-separated, optional)
                       </label>
                       <input
@@ -467,17 +467,17 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
 
                     <div style={{ marginTop: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        <label style={{ fontSize: 10, fontWeight: 600, color: "#5B5446", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                           Options ({item.options.length})
                         </label>
                         <button type="button" onClick={() => addOption(idx)}
-                          style={smallBtnCss("#0369a1", "#eff6ff", "#bfdbfe")}>
+                          style={smallBtnCss("#2C4031", "#DEE2CF", "#D0D5C0")}>
                           + Add option
                         </button>
                       </div>
 
                       {item.options.length === 0 && (
-                        <p style={{ fontSize: 11, color: "#9ca3af", fontStyle: "italic" }}>
+                        <p style={{ fontSize: 11, color: "#938B78", fontStyle: "italic" }}>
                           No options yet — click &quot;Add option&quot; to add add-ons or removals.
                         </p>
                       )}
@@ -485,8 +485,8 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                       {item.options.map((opt, oi) => (
                         <div key={oi} style={{
                           display: "flex", alignItems: "center", gap: 5, padding: "6px 8px", borderRadius: 7,
-                          background: opt.optionType === "REMOVAL" ? "#fef9c3" : "#f0fdf4",
-                          border: `1px solid ${opt.optionType === "REMOVAL" ? "#fde68a" : "#bbf7d0"}`,
+                          background: opt.optionType === "REMOVAL" ? "#F6EED9" : "#DEE2CF",
+                          border: `1px solid ${opt.optionType === "REMOVAL" ? "#E5D6A8" : "#D0D5C0"}`,
                           marginBottom: 4,
                         }}>
                           <select value={opt.optionType}
@@ -513,20 +513,20 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                             onClick={() => updateOption(idx, oi, { isDefault: !opt.isDefault })}
                             title="Mark as default"
                             style={smallBtnCss(
-                              opt.isDefault ? "#7c3aed" : "#9ca3af",
-                              opt.isDefault ? "#f5f3ff" : "#f3f4f6",
-                              opt.isDefault ? "#ddd6fe" : "#e5e7eb",
+                              opt.isDefault ? "#2C4031" : "#938B78",
+                              opt.isDefault ? "#DEE2CF" : "#EFE8D7",
+                              opt.isDefault ? "#D0D5C0" : "#E3DBC6",
                             )}>
                             {opt.isDefault ? "Default ✓" : "Default"}
                           </button>
 
                           <button type="button" onClick={() => removeOption(idx, oi)}
                             style={{
-                              width: 22, height: 22, borderRadius: 5, border: "1px solid #fecaca",
-                              background: "#fef2f2", cursor: "pointer", display: "flex",
+                              width: 22, height: 22, borderRadius: 5, border: "1px solid #E2C3B3",
+                              background: "#F4E3DB", cursor: "pointer", display: "flex",
                               alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0,
                             }}>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#7C3D24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                             </svg>
                           </button>
@@ -543,10 +543,10 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
           <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
             <button type="button" onClick={handleImport} disabled={importing}
               style={{
-                padding: "10px 24px", borderRadius: 10, fontSize: 13, fontWeight: 700,
-                background: importing ? "#9ca3af" : "linear-gradient(135deg, #c41230, #8b0d22)",
+                padding: "10px 24px", borderRadius: 20, fontSize: 13, fontWeight: 700,
+                background: importing ? "#938B78" : "#2C4031",
                 color: "white", border: "none", cursor: importing ? "default" : "pointer",
-                boxShadow: importing ? "none" : "0 2px 10px rgba(196,18,48,0.3)",
+                boxShadow: importing ? "none" : "0 2px 10px rgba(44,64,49,0.3)",
               }}>
               {importing ? "Importing…" : `Import ${items.length} item${items.length !== 1 ? "s" : ""} →`}
             </button>
