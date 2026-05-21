@@ -398,15 +398,15 @@ export default async function AdminTeamPage() {
     : ["STAFF", "MANAGER"];
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-5 pb-10 bg-editorial-paper min-h-screen">
 
       {/* Settings tab bar — Team is now a sub-tab of Settings. */}
       <SettingsTabs />
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-[17px] font-semibold text-ink">Team</h1>
-        <p className="text-[11px] text-slate-400 mt-0.5">
+        <h1 className="text-[17px] font-editorial font-semibold text-editorial-ink">Team</h1>
+        <p className="text-[11px] text-editorial-ink-faint mt-0.5">
           {team.length} member{team.length !== 1 ? "s" : ""}
           {pendingInvites.length > 0 && (
             <> · {pendingInvites.length} pending invite{pendingInvites.length !== 1 ? "s" : ""}</>
@@ -417,9 +417,9 @@ export default async function AdminTeamPage() {
       {/* ── Role legend ────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-2">
         {Object.entries(ROLE_CONFIG).map(([key, cfg]) => (
-          <div key={key} style={{ background: cfg.bg, borderRadius: 12, padding: "10px 12px", border: `1px solid ${cfg.color}22` }}>
+          <div key={key} className="rounded-[12px] border border-editorial-line bg-editorial-paper-2 px-3 py-2">
             <span style={{ fontSize: 10, fontWeight: 700, color: cfg.color }}>{cfg.label}</span>
-            <p style={{ fontSize: 10, color: "#6b7280", marginTop: 3, lineHeight: 1.4 }}>{cfg.description}</p>
+            <p style={{ fontSize: 10, color: "#5B5446", marginTop: 3, lineHeight: 1.4 }}>{cfg.description}</p>
           </div>
         ))}
       </div>
@@ -428,7 +428,7 @@ export default async function AdminTeamPage() {
 
       {team.length > 0 && (
 
-        <div className="rounded-[14px] border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
+        <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden divide-y divide-editorial-line shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         {team.map((member) => {
           const cfg = ROLE_CONFIG[member.role] ?? ROLE_CONFIG.STAFF;
           const isSelf = member.id === currentAdminId;
@@ -451,9 +451,9 @@ export default async function AdminTeamPage() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-[13px] font-semibold text-ink">{member.name}</p>
+                    <p className="text-[13px] font-semibold text-editorial-ink">{member.name}</p>
                     {isSelf && (
-                      <span className="text-[10px] text-slate-400 font-medium">(you)</span>
+                      <span className="text-[10px] text-editorial-ink-faint font-medium">(you)</span>
                     )}
                     <span style={{
                       fontSize: 10, fontWeight: 700,
@@ -463,11 +463,11 @@ export default async function AdminTeamPage() {
                       {cfg.label}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                  <p className="text-[11px] text-editorial-ink-faint mt-0.5 truncate">
                     {member.email}
-                    <span className="text-slate-300 mx-1">·</span>
+                    <span className="text-editorial-line mx-1">·</span>
                     Joined {fmtDate(member.createdAt)}
-                    <span className="text-slate-300 mx-1">·</span>
+                    <span className="text-editorial-line mx-1">·</span>
                     Last active {fmtRelative(member.lastActiveAt)}
                   </p>
                 </div>
@@ -481,14 +481,14 @@ export default async function AdminTeamPage() {
                     <select
                       name="role"
                       defaultValue={member.role}
-                      className="flex-1 rounded-lg border border-slate-200 text-[11px] py-1.5 px-2 max-w-[140px]"
+                      className="flex-1 rounded-lg border border-editorial-line text-[11px] py-1.5 px-2 max-w-[140px] focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                     >
                       {assignableRoles.map((r) => (
                         <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                       ))}
                     </select>
                     <button type="submit"
-                      className="text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-semibold hover:bg-slate-200 transition whitespace-nowrap">
+                      className="text-[11px] px-2.5 py-1.5 rounded-lg bg-editorial-paper-2 text-editorial-ink-soft font-semibold hover:bg-editorial-line transition whitespace-nowrap">
                       Change role
                     </button>
                   </form>
@@ -498,7 +498,7 @@ export default async function AdminTeamPage() {
                       <input type="hidden" name="adminId" value={member.id} />
                       <ConfirmButton
                         message={`Remove ${member.name} from the team?`}
-                        className="text-[11px] px-2.5 py-1.5 rounded-lg border border-red-100 text-red-500 font-semibold hover:bg-red-50 transition whitespace-nowrap">
+                        className="text-[11px] px-2.5 py-1.5 rounded-lg border border-[#E2C3B3] text-[#7C3D24] font-semibold hover:bg-[#F4E3DB] transition whitespace-nowrap">
                         Remove
                       </ConfirmButton>
                     </form>
@@ -521,13 +521,13 @@ export default async function AdminTeamPage() {
 
       {/* ── Pending invitations ────────────────────────────────────── */}
       {pendingInvites.length > 0 && (
-        <div className="rounded-[14px] border border-amber-100 bg-amber-50/50 overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-amber-100/80">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+        <div className="rounded-[16px] border border-editorial-line bg-editorial-paper-2 overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <div className="px-4 py-2.5 border-b border-editorial-line">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-editorial-ink-soft">
               Pending invitations
             </p>
           </div>
-          <div className="divide-y divide-amber-100/60">
+          <div className="divide-y divide-editorial-line bg-white">
             {pendingInvites.map((invite) => {
               const cfg = ROLE_CONFIG[invite.role] ?? ROLE_CONFIG.STAFF;
               const canManageThisInvite = roleLevel(invite.role) <= roleLevel(currentAdminRole);
@@ -536,7 +536,7 @@ export default async function AdminTeamPage() {
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-[13px] font-semibold text-ink">{invite.name ?? invite.email}</p>
+                        <p className="text-[13px] font-semibold text-editorial-ink">{invite.name ?? invite.email}</p>
                         <span style={{
                           fontSize: 10, fontWeight: 700,
                           color: cfg.color, background: cfg.bg,
@@ -545,11 +545,11 @@ export default async function AdminTeamPage() {
                           {cfg.label}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                      <p className="text-[11px] text-editorial-ink-faint mt-0.5 truncate">
                         {invite.email}
-                        <span className="text-slate-300 mx-1">·</span>
+                        <span className="text-editorial-line mx-1">·</span>
                         Invited by {invite.invitedBy.name}
-                        <span className="text-slate-300 mx-1">·</span>
+                        <span className="text-editorial-line mx-1">·</span>
                         Expires {fmtDate(invite.expiresAt)}
                       </p>
                     </div>
@@ -558,7 +558,7 @@ export default async function AdminTeamPage() {
                         <form action={resendInvite}>
                           <input type="hidden" name="inviteId" value={invite.id} />
                           <button type="submit"
-                            className="text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-semibold hover:bg-slate-200 transition whitespace-nowrap">
+                            className="text-[11px] px-2.5 py-1.5 rounded-lg bg-editorial-line text-editorial-ink-soft font-semibold hover:bg-editorial-line/80 transition whitespace-nowrap">
                             Resend
                           </button>
                         </form>
@@ -566,7 +566,7 @@ export default async function AdminTeamPage() {
                           <input type="hidden" name="inviteId" value={invite.id} />
                           <ConfirmButton
                             message={`Cancel the invite for ${invite.email}?`}
-                            className="text-[11px] px-2.5 py-1.5 rounded-lg border border-red-100 text-red-500 font-semibold hover:bg-red-50 transition whitespace-nowrap">
+                            className="text-[11px] px-2.5 py-1.5 rounded-lg border border-[#E2C3B3] text-[#7C3D24] font-semibold hover:bg-[#F4E3DB] transition whitespace-nowrap">
                             Cancel
                           </ConfirmButton>
                         </form>
@@ -581,67 +581,67 @@ export default async function AdminTeamPage() {
       )}
 
       {/* ── Change my password ─────────────────────────────────────── */}
-      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-editorial-ink">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B5446" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
             Change my password
           </span>
-          <span className="text-[11px] text-slate-400">tap to expand</span>
+          <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
         </summary>
-        <form action={changePassword} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
+        <form action={changePassword} className="px-4 pb-4 border-t border-editorial-line pt-3 space-y-3">
           <div>
-            <label className="text-[11px] text-slate-500 font-semibold block mb-1">Current password</label>
+            <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Current password</label>
             <input type="password" name="currentPassword" required placeholder="Your current password"
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+              className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
           </div>
           <div>
-            <label className="text-[11px] text-slate-500 font-semibold block mb-1">New password</label>
+            <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">New password</label>
             <input type="password" name="newPassword" required minLength={8} placeholder="Min 8 characters"
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+              className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
           </div>
           <div>
-            <label className="text-[11px] text-slate-500 font-semibold block mb-1">Confirm new password</label>
+            <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Confirm new password</label>
             <input type="password" name="confirmPassword" required minLength={8} placeholder="Repeat new password"
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+              className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
           </div>
           <button type="submit"
-            className="w-full py-2.5 rounded-lg bg-slate-800 text-white text-[13px] font-semibold">
+            className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
             Update password
           </button>
         </form>
       </details>
 
       {/* ── Invite team member (magic link) ────────────────────────── */}
-      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-editorial-ink">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2C4031" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
             </svg>
             Invite team member
           </span>
-          <span className="text-[11px] text-slate-400">tap to expand</span>
+          <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
         </summary>
 
-        <form action={inviteAdmin} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
-          <p className="text-[11px] text-slate-500 leading-relaxed">
+        <form action={inviteAdmin} className="px-4 pb-4 border-t border-editorial-line pt-3 space-y-3">
+          <p className="text-[11px] text-editorial-ink-soft leading-relaxed">
             We&apos;ll email a magic link that expires in {INVITE_LIFETIME_DAYS} days. The invitee
             sets their own name and password when they accept — you don&apos;t need to share a
             password.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Full name</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Full name</label>
               <input type="text" name="name" required placeholder="Jane Smith"
-                className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Role</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Role</label>
               <select name="role" defaultValue="STAFF"
-                className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                 {assignableRoles.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABEL[r]} — {ROLE_CONFIG[r].description}
@@ -651,12 +651,12 @@ export default async function AdminTeamPage() {
             </div>
           </div>
           <div>
-            <label className="text-[11px] text-slate-500 font-semibold block mb-1">Email address</label>
+            <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Email address</label>
             <input type="email" name="email" required placeholder="jane@example.com"
-              className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+              className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
           </div>
           <button type="submit"
-            className="w-full py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+            className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
             Send invitation
           </button>
         </form>

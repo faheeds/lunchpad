@@ -61,7 +61,7 @@ export function CancelSubscriptionModal({
         <p
           id="cancel-dialog-title"
           style={{
-            fontSize: 16, fontWeight: 800, color: "#1c0505",
+            fontSize: 16, fontWeight: 800, color: "#211D15",
             marginBottom: 8,
           }}
         >
@@ -69,7 +69,7 @@ export function CancelSubscriptionModal({
         </p>
 
         <p style={{
-          fontSize: 13, color: "#64748b", lineHeight: 1.6,
+          fontSize: 13, color: "#5B5446", lineHeight: 1.6,
           marginBottom: 20,
         }}>
           Canceling stops future renewals on <strong>{renewalDate}</strong>. Your account stays active until then. Are you sure?
@@ -77,8 +77,8 @@ export function CancelSubscriptionModal({
 
         {error && (
           <p style={{
-            fontSize: 12, color: "#c0392b", background: "#fff5f5",
-            padding: "10px 12px", borderRadius: 8, marginBottom: 16,
+            fontSize: 12, color: "#7C3D24", background: "#F4E3DB",
+            padding: "10px 12px", borderRadius: 8, marginBottom: 16, border: "1px solid #E2C3B3",
           }}>
             {error}
           </p>
@@ -89,9 +89,9 @@ export function CancelSubscriptionModal({
             onClick={onClose}
             disabled={isLoading}
             style={{
-              flex: 1, padding: "10px 16px", borderRadius: 10,
-              background: "transparent", color: "#64748b",
-              fontSize: 13, fontWeight: 600, border: "1px solid #e5e7eb",
+              flex: 1, padding: "10px 16px", borderRadius: 20,
+              background: "transparent", color: "#5B5446",
+              fontSize: 13, fontWeight: 600, border: "1px solid #E3DBC6",
               cursor: isLoading ? "not-allowed" : "pointer",
               opacity: isLoading ? 0.6 : 1,
             }}
@@ -103,8 +103,8 @@ export function CancelSubscriptionModal({
             disabled={isLoading}
             autoFocus
             style={{
-              flex: 1, padding: "10px 16px", borderRadius: 10,
-              background: "#dc2626", color: "white",
+              flex: 1, padding: "10px 16px", borderRadius: 20,
+              background: "#7C3D24", color: "white",
               fontSize: 13, fontWeight: 600, border: "none",
               cursor: isLoading ? "not-allowed" : "pointer",
               opacity: isLoading ? 0.7 : 1,
