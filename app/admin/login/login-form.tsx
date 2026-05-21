@@ -12,11 +12,7 @@ export function LoginForm({ restaurantId }: { restaurantId: string }) {
   const [isPending, setIsPending] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Surfaced when an admin lands here after completing /admin/reset-password.
   const justReset = searchParams.get("reset") === "1";
-  // Surfaced after a teammate accepts an invite. `existing` means their
-  // email was already on the team, so the invite was just consumed without
-  // creating a new admin row.
   const invitedFlag = searchParams.get("invited");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -30,43 +26,41 @@ export function LoginForm({ restaurantId }: { restaurantId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-3.5">
       {justReset && (
-        <p className="text-[12px] text-green-800 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+        <p className="rounded-xl bg-editorial-sage border border-[#C6CDB2] px-3.5 py-2.5 text-[12px] text-editorial-green">
           Password updated. Sign in with your new password.
         </p>
       )}
       {invitedFlag === "1" && (
-        <p className="text-[12px] text-green-800 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+        <p className="rounded-xl bg-editorial-sage border border-[#C6CDB2] px-3.5 py-2.5 text-[12px] text-editorial-green">
           Account created — sign in with your new password.
         </p>
       )}
       {invitedFlag === "existing" && (
-        <p className="text-[12px] text-blue-800 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+        <p className="rounded-xl bg-editorial-paper border border-editorial-line px-3.5 py-2.5 text-[12px] text-editorial-ink-soft">
           You&apos;re already on this team — sign in with your existing password.
         </p>
       )}
       <div>
-        <label className="text-[11px] text-slate-500 mb-1 block">Email</label>
+        <label className="text-[11px] font-medium text-editorial-ink-soft mb-1 block">Email</label>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-          className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2.5" placeholder="admin@example.com" />
+          className="w-full rounded-xl border border-editorial-line text-[13px] px-3.5 py-2.5 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green outline-none" placeholder="admin@example.com" />
       </div>
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-[11px] text-slate-500">Password</label>
-          <Link
-            href="/admin/forgot-password"
-            className="text-[11px] font-medium text-brand-700 hover:text-brand-900 no-underline"
-          >
+          <label className="text-[11px] font-medium text-editorial-ink-soft">Password</label>
+          <Link href="/admin/forgot-password"
+            className="text-[11px] font-medium text-editorial-green hover:text-editorial-green-deep no-underline">
             Forgot password?
           </Link>
         </div>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-          className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2.5" placeholder="••••••••" />
+          className="w-full rounded-xl border border-editorial-line text-[13px] px-3.5 py-2.5 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green outline-none" placeholder="••••••••" />
       </div>
-      {error && <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+      {error && <p className="rounded-xl bg-[#F4E3DB] border border-[#E2C3B3] px-3.5 py-2.5 text-[12px] text-[#7C3D24]">{error}</p>}
       <button type="submit" disabled={isPending}
-        className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold disabled:opacity-50 mt-1">
+        className="w-full py-3 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition-colors disabled:opacity-50 mt-1">
         {isPending ? "Signing in..." : "Sign in"}
       </button>
     </form>

@@ -94,40 +94,34 @@ export default async function ForgotPasswordPage({
   const restaurant = await getCurrentRestaurant();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-editorial-paper flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-[20px] font-semibold text-ink">
+        <div className="mb-7 text-center">
+          <div className="flex justify-center mb-3.5">
+            <svg width="44" height="44" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="9" fill="#2C4031"/><g transform="translate(6.4 5.6) scale(0.8)" fill="none" stroke="#F6F1E6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M3 12a9 9 0 0 0 18 0"/><path d="M12 7v-2"/><path d="M9 5h6"/></g></svg>
+          </div>
+          <h1 className="font-editorial text-[25px] font-medium text-editorial-ink leading-tight">
             {restaurant?.name ? `${restaurant.name} Admin` : "LunchPad Admin"}
           </h1>
-          <p className="text-[12px] text-slate-500 mt-1">Reset your admin password</p>
+          <p className="text-[12.5px] text-editorial-ink-soft mt-1.5">Reset your admin password</p>
         </div>
 
-        <div className="rounded-[20px] border border-slate-100 bg-white p-6">
+        <div className="rounded-[20px] border border-editorial-line bg-white p-7 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
           {!restaurant ? (
-            // Apex / unknown host — admins reset from their own subdomain.
-            // Showing the form here would be useless because we wouldn't
-            // know which tenant's AdminUser to look up.
             <div className="space-y-4">
-              <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-3 text-[13px] text-amber-900">
-                Open your restaurant&apos;s admin URL (e.g. <code className="bg-white/60 rounded px-1">your-restaurant.lunchpad.us/admin/forgot-password</code>) and request the reset from there. Each admin account is tied to its restaurant.
+              <div className="rounded-xl bg-[#F6EED9] border border-[#E5D6A8] px-3.5 py-3 text-[12.5px] text-[#6E5C2C]">
+                Open your restaurant&apos;s admin URL (e.g. <code className="bg-editorial-paper rounded px-1">your-restaurant.lunchpad.us/admin/forgot-password</code>) and request the reset from there. Each admin account is tied to its restaurant.
               </div>
-              <Link
-                href="/admin/login"
-                className="block w-full text-center py-3 rounded-xl bg-ink text-white text-[13px] font-semibold no-underline"
-              >
+              <Link href="/admin/login" className="block w-full text-center py-3 rounded-full border border-editorial-line text-editorial-ink text-[13px] font-semibold no-underline hover:border-editorial-green hover:text-editorial-green transition-colors">
                 Back to sign in
               </Link>
             </div>
           ) : params.sent ? (
             <div className="space-y-4">
-              <div className="rounded-xl bg-green-50 border border-green-100 px-3 py-3 text-[13px] text-green-900">
+              <div className="rounded-xl bg-editorial-sage border border-[#C6CDB2] px-3.5 py-3 text-[12.5px] text-editorial-green">
                 If an admin account exists for that email, we&apos;ve sent a password reset link. Check your inbox — the link expires in {RESET_TOKEN_LIFETIME_MINUTES} minutes.
               </div>
-              <Link
-                href="/admin/login"
-                className="block w-full text-center py-3 rounded-xl bg-ink text-white text-[13px] font-semibold no-underline"
-              >
+              <Link href="/admin/login" className="block w-full text-center py-3 rounded-full border border-editorial-line text-editorial-ink text-[13px] font-semibold no-underline hover:border-editorial-green hover:text-editorial-green transition-colors">
                 Back to sign in
               </Link>
             </div>
@@ -139,32 +133,21 @@ export default async function ForgotPasswordPage({
                 const { redirect } = await import("next/navigation");
                 redirect("/admin/forgot-password?sent=1");
               }}
-              className="space-y-3"
+              className="space-y-3.5"
             >
-              <p className="text-[12px] text-slate-500">
+              <p className="text-[12.5px] text-editorial-ink-soft leading-relaxed">
                 Enter the email tied to your admin account. We&apos;ll send a reset link that expires in {RESET_TOKEN_LIFETIME_MINUTES} minutes.
               </p>
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  autoComplete="email"
-                  className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2.5"
-                  placeholder="admin@example.com"
-                />
+                <label className="text-[11px] font-medium text-editorial-ink-soft mb-1 block">Email</label>
+                <input type="email" name="email" required autoComplete="email"
+                  className="w-full rounded-xl border border-editorial-line text-[13px] px-3.5 py-2.5 text-editorial-ink focus:border-editorial-green focus:ring-1 focus:ring-editorial-green outline-none"
+                  placeholder="admin@example.com" />
               </div>
-              <button
-                type="submit"
-                className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold mt-1"
-              >
+              <button type="submit" className="w-full py-3 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition-colors mt-1">
                 Send reset link
               </button>
-              <Link
-                href="/admin/login"
-                className="block text-center text-[12px] text-slate-500 mt-3 no-underline"
-              >
+              <Link href="/admin/login" className="block text-center text-[12.5px] text-editorial-ink-soft hover:text-editorial-ink mt-2 no-underline transition-colors">
                 Back to sign in
               </Link>
             </form>
