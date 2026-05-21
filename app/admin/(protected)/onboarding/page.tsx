@@ -334,11 +334,15 @@ export default async function OnboardingPage({
   ]);
   await requireAdminRole("OWNER");
 
+  const today = new Date();
+  const ninetyDaysFromNow = new Date(today);
+  ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
+
   const [locationCount, menuItemCount, deliveryDateCount, teamCount, schools] = await Promise.all([
     prisma.school.count({ where: { restaurantId: restaurant.id, isActive: true } }),
     prisma.menuItem.count({ where: { restaurantId: restaurant.id, isActive: true } }),
     prisma.deliveryDate.count({
-      where: { school: { restaurantId: restaurant.id }, deliveryDate: { gte: new Date() } },
+      where: { school: { restaurantId: restaurant.id }, deliveryDate: { gte: today } },
     }),
     prisma.adminUser.count({ where: { restaurantId: restaurant.id } }),
     prisma.school.findMany({
@@ -364,6 +368,8 @@ export default async function OnboardingPage({
   } as const;
 
   const orderingUrl = `https://${restaurant.slug}.lunchpad.us`;
+  const todayStr = today.toISOString().slice(0, 10);
+  const ninetyDaysStr = ninetyDaysFromNow.toISOString().slice(0, 10);
 
   // Determine active step: explicit ?step=, else first non-done step.
   const requestedStep = params.step ? parseInt(params.step, 10) : NaN;
@@ -409,17 +415,17 @@ export default async function OnboardingPage({
   const displayActiveStep = groupHeadFor(activeStep);
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-5 pb-10 bg-editorial-paper min-h-screen">
       <div>
-        <h1 className="text-[20px] font-bold text-ink">Welcome — let&apos;s get you live</h1>
-        <p className="text-[12px] text-slate-500 mt-1">
+        <h1 className="text-[20px] font-editorial font-[500] text-editorial-ink">Welcome — let&apos;s get you live</h1>
+        <p className="text-[12px] text-editorial-ink-soft mt-1">
           We&apos;ll walk you through the essentials. Each step is skippable and you can come back any time.
         </p>
       </div>
 
       {params.error && (
-        <div className="rounded-[12px] bg-amber-50 border border-amber-200 px-4 py-3">
-          <p className="text-[12px] text-amber-800">
+        <div className="rounded-[16px] bg-editorial-sage/30 border border-editorial-clay/30 px-4 py-3">
+          <p className="text-[12px] text-editorial-clay">
             {params.error === "name_required" ? "Please enter a location name." :
              params.error === "invalid_email" ? "That doesn't look like a valid email address." :
              params.error === "missing_fields" ? "Please fill in the date range, weekdays, and cutoff." :
@@ -438,11 +444,11 @@ export default async function OnboardingPage({
         <main>
           {/* ── STEP 1: Operator type ───────────────────────────── */}
           {(activeStep === 1 || activeStep === 2) && (
-            <form action={saveOperatorType} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <form action={saveOperatorType} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 1 of 5 · About you · Choose type</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">What kind of operation are you?</h2>
-                <p className="text-[12px] text-slate-500 mt-1">We&apos;ll seed sensible defaults for you. You can change this later.</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 1 of 5 · About you · Choose type</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">What kind of operation are you?</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">We&apos;ll seed sensible defaults for you. You can change this later.</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -452,45 +458,45 @@ export default async function OnboardingPage({
                   { value: "hybrid",  label: "Both",                blurb: "You serve schools and offices. Defaults won't auto-pick either." },
                 ].map((opt) => (
                   <label key={opt.value}
-                    className="cursor-pointer rounded-xl border border-slate-200 p-4 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-700 transition">
+                    className="cursor-pointer rounded-[16px] border border-editorial-line p-4 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
                     <input type="radio" name="operatorType" value={opt.value} required defaultChecked={restaurant.operatorType === opt.value} className="sr-only" />
-                    <p className="text-[13px] font-bold text-ink">{opt.label}</p>
-                    <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">{opt.blurb}</p>
+                    <p className="text-[13px] font-editorial font-[500] text-editorial-ink">{opt.label}</p>
+                    <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">{opt.blurb}</p>
                   </label>
                 ))}
               </div>
 
               {/* Support contact — used in transactional emails & ordering page footer.
                   Contact email is pre-filled from signup; phone is new info. */}
-              <div className="border-t border-slate-100 pt-4 mt-2 space-y-3">
+              <div className="border-t border-editorial-line pt-4 mt-2 space-y-3">
                 <div>
-                  <p className="text-[12px] font-semibold text-ink">Customer support contact</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                  <p className="text-[12px] font-editorial font-[500] text-editorial-ink">Customer support contact</p>
+                  <p className="text-[11px] text-editorial-ink-soft mt-0.5 leading-relaxed">
                     These appear in your customers&apos; order confirmation emails and on your ordering page footer
                     so they know where to reach you with questions.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] text-slate-500 font-medium block mb-1">Support email</label>
+                    <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Support email</label>
                     <input
                       type="email"
                       name="contactEmail"
                       defaultValue={restaurant.contactEmail ?? ""}
                       placeholder="orders@yourrestaurant.com"
-                      className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
+                      className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-slate-500 font-medium block mb-1">
-                      Support phone <span className="text-slate-400 font-normal">(optional)</span>
+                    <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">
+                      Support phone <span className="text-editorial-ink-faint font-normal">(optional)</span>
                     </label>
                     <input
                       type="tel"
                       name="contactPhone"
                       defaultValue={restaurant.contactPhone ?? ""}
                       placeholder="+1 (555) 123-4567"
-                      className="w-full rounded-lg border border-slate-200 text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
+                      className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                     />
                   </div>
                 </div>
@@ -505,10 +511,10 @@ export default async function OnboardingPage({
                   seedSampleData ignores formData, so the outer form's
                   fields tagging along is harmless. */}
               <div className="flex items-center justify-between pt-2 gap-3">
-                <button type="submit" formAction={seedSampleData} className="px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-[13px] font-semibold hover:bg-slate-50 transition">
+                <button type="submit" formAction={seedSampleData} className="px-4 py-2.5 rounded-full border border-editorial-line text-editorial-ink text-[13px] font-semibold hover:border-editorial-green hover:text-editorial-green transition">
                   Skip for now
                 </button>
-                <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                   Continue →
                 </button>
               </div>
@@ -518,11 +524,11 @@ export default async function OnboardingPage({
           {/* ── STEP 2: Branding ─────────────────────────────────── */}
           {(activeStep === 1 || activeStep === 2) && (
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-              <form id="onboarding-branding-form" action={saveBranding} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+              <form id="onboarding-branding-form" action={saveBranding} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 1 of 5 · About you · Set branding</p>
-                  <h2 className="text-[18px] font-bold text-ink mt-1">Make it yours</h2>
-                  <p className="text-[12px] text-slate-500 mt-1">Watch the preview update as you change things.</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 1 of 5 · About you · Set branding</p>
+                  <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Make it yours</h2>
+                  <p className="text-[12px] text-editorial-ink-soft mt-1">Watch the preview update as you change things.</p>
                 </div>
 
                 <input type="hidden" name="name" value={restaurant.name} />
@@ -536,8 +542,8 @@ export default async function OnboardingPage({
                   </div>
                 </div>
 
-                <div className="border-t border-slate-50 pt-4">
-                  <p className="text-[12px] font-semibold text-ink mb-3">Theme</p>
+                <div className="border-t border-editorial-line pt-4">
+                  <p className="text-[12px] font-editorial font-[500] text-editorial-ink mb-3">Theme</p>
                   <ThemePicker
                     currentPrimary={restaurant.primaryColor     ?? "#c41230"}
                     currentAccent={restaurant.accentColor       ?? "#f59e0b"}
@@ -551,15 +557,15 @@ export default async function OnboardingPage({
                 </div>
 
                 <div className="flex items-center justify-between pt-2">
-                  <Link href="/admin/onboarding?step=1" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                  <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                  <Link href="/admin/onboarding?step=1" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
+                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                     Save & continue →
                   </button>
                 </div>
               </form>
 
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-2">Live preview</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint mb-2">Live preview</p>
                 <LiveBrandingPreview
                   formId="onboarding-branding-form"
                   initial={{
@@ -582,37 +588,36 @@ export default async function OnboardingPage({
 
           {/* ── STEP 3: Stripe Connect ───────────────────────────── */}
           {activeStep === 3 && (
-            <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <div className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 2 of 5 · Connect Stripe</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">Connect Stripe so customers can pay you</h2>
-                <p className="text-[12px] text-slate-500 mt-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 2 of 5 · Connect Stripe</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Connect Stripe so customers can pay you</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">
                   Customer payments go directly to your Stripe account. LunchPad takes a small platform fee automatically.
                 </p>
               </div>
 
               {restaurant.stripeOnboardingComplete && restaurant.stripeAccountId ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-2">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                  <p className="text-[12px] font-semibold text-green-800">Stripe connected — you&apos;re ready to take payments.</p>
+                <div className="bg-editorial-sage/30 border border-editorial-sage rounded-lg px-4 py-3 flex items-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2C4031" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  <p className="text-[12px] font-semibold text-editorial-green">Stripe connected — you&apos;re ready to take payments.</p>
                 </div>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-                  <p className="text-[12px] text-amber-900">No Stripe account connected yet. Without this, customers can browse but can&apos;t check out.</p>
+                <div className="bg-editorial-sage/30 border border-editorial-clay/30 rounded-lg px-4 py-3">
+                  <p className="text-[12px] text-editorial-clay">No Stripe account connected yet. Without this, customers can browse but can&apos;t check out.</p>
                 </div>
               )}
 
               <a
                 href="/api/stripe/connect/authorize"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold text-white no-underline"
-                style={{ background: "linear-gradient(135deg, #635bff, #4f46e5)" }}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-semibold text-white no-underline bg-editorial-green hover:bg-editorial-green-deep transition"
               >
                 {restaurant.stripeOnboardingComplete ? "Reconnect Stripe →" : "Connect Stripe →"}
               </a>
 
               <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=2" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <Link href="/admin/onboarding?step=4" className="text-[12px] text-brand-700 font-semibold no-underline">
+                <Link href="/admin/onboarding?step=2" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
+                <Link href="/admin/onboarding?step=4" className="text-[12px] text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
                   {restaurant.stripeOnboardingComplete ? "Continue →" : "Skip for now →"}
                 </Link>
               </div>
@@ -621,11 +626,11 @@ export default async function OnboardingPage({
 
           {/* ── STEP 4: First location ───────────────────────────── */}
           {(activeStep === 4 || activeStep === 5) && (
-            <form action={createFirstLocation} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <form action={createFirstLocation} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 5 · Menu & locations · Add a location</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">Add your first location</h2>
-                <p className="text-[12px] text-slate-500 mt-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 3 of 5 · Menu & locations · Add a location</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Add your first location</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">
                   {locationCount > 0
                     ? `You already have ${locationCount} location${locationCount === 1 ? "" : "s"}. Add another below or continue.`
                     : "Pick a name, type, and timezone. You can add more locations later."}
@@ -633,20 +638,20 @@ export default async function OnboardingPage({
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-500 font-semibold block mb-1">Type</label>
+                <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Type</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-slate-200 px-3 py-2.5 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-700 transition">
+                  <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-editorial-line px-3 py-2.5 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
                     <input type="radio" name="locationType" value="SCHOOL" defaultChecked={restaurant.operatorType !== "office"} className="mt-0.5" />
                     <div>
-                      <p className="text-[12px] font-semibold text-ink">School</p>
-                      <p className="text-[10px] text-slate-400">Students, classrooms, teachers</p>
+                      <p className="text-[12px] font-editorial font-[500] text-editorial-ink">School</p>
+                      <p className="text-[10px] text-editorial-ink-faint">Students, classrooms, teachers</p>
                     </div>
                   </label>
-                  <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-slate-200 px-3 py-2.5 has-[:checked]:bg-brand-50 has-[:checked]:border-brand-700 transition">
+                  <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-editorial-line px-3 py-2.5 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
                     <input type="radio" name="locationType" value="OFFICE" defaultChecked={restaurant.operatorType === "office"} className="mt-0.5" />
                     <div>
-                      <p className="text-[12px] font-semibold text-ink">Office</p>
-                      <p className="text-[10px] text-slate-400">Employees, teams, floors</p>
+                      <p className="text-[12px] font-editorial font-[500] text-editorial-ink">Office</p>
+                      <p className="text-[10px] text-editorial-ink-faint">Employees, teams, floors</p>
                     </div>
                   </label>
                 </div>
@@ -654,14 +659,14 @@ export default async function OnboardingPage({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location name</label>
+                  <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Location name</label>
                   <input type="text" name="name" required placeholder="HQ — Main Office"
-                    className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                    className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-500 font-semibold block mb-1">Timezone</label>
+                  <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Timezone</label>
                   <select name="timezone" defaultValue={restaurant.timezone || "America/Los_Angeles"}
-                    className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                    className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                     {TIMEZONES.map((tz) => (
                       <option key={tz.value} value={tz.value}>{tz.label}</option>
                     ))}
@@ -670,21 +675,21 @@ export default async function OnboardingPage({
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-500 font-semibold block mb-1">Default ordering cutoff</label>
+                <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Default ordering cutoff</label>
                 <input type="time" name="cutoffTime" defaultValue="21:00" required
-                  className="w-full sm:max-w-[200px] rounded-lg border-slate-200 text-[13px] px-3 py-2" />
-                <p className="text-[10px] text-slate-400 mt-1">The time the night before delivery when ordering closes.</p>
+                  className="w-full sm:max-w-[200px] rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                <p className="text-[10px] text-editorial-ink-faint mt-1">The time the night before delivery when ordering closes.</p>
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=3" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                <Link href="/admin/onboarding?step=3" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
                 <div className="flex gap-2">
                   {locationCount > 0 && (
-                    <Link href="/admin/onboarding?step=5" className="px-4 py-2 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-600 no-underline">
+                    <Link href="/admin/onboarding?step=5" className="px-4 py-2 rounded-full border border-editorial-line text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
                       Skip →
                     </Link>
                   )}
-                  <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                     Add location →
                   </button>
                 </div>
@@ -694,40 +699,40 @@ export default async function OnboardingPage({
 
           {/* ── STEP 5: Menu items ───────────────────────────────── */}
           {(activeStep === 4 || activeStep === 5) && (
-            <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <div className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 3 of 5 · Menu & locations · Build menu</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">Build your menu</h2>
-                <p className="text-[12px] text-slate-500 mt-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 3 of 5 · Menu & locations · Build menu</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Build your menu</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">
                   You currently have <strong>{menuItemCount}</strong> active item{menuItemCount === 1 ? "" : "s"}. We recommend at least 3 to launch.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Link href="/admin/menu" className="block rounded-xl border border-slate-200 p-4 no-underline hover:border-brand-700 hover:bg-brand-50 transition">
-                  <p className="text-[13px] font-bold text-ink">Add manually</p>
-                  <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">Add items one by one with photos, prices, and dietary tags.</p>
+                <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition">
+                  <p className="text-[13px] font-editorial font-[500] text-editorial-ink">Add manually</p>
+                  <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">Add items one by one with photos, prices, and dietary tags.</p>
                 </Link>
-                <Link href="/admin/menu" className="block rounded-xl border border-slate-200 p-4 no-underline hover:border-brand-700 hover:bg-brand-50 transition">
-                  <p className="text-[13px] font-bold text-ink">Bulk upload Excel</p>
-                  <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">Download our template, fill it in, drop it back. Fast for 20+ items.</p>
+                <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition">
+                  <p className="text-[13px] font-editorial font-[500] text-editorial-ink">Bulk upload Excel</p>
+                  <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">Download our template, fill it in, drop it back. Fast for 20+ items.</p>
                 </Link>
-                <Link href="/admin/menu" className="block rounded-xl border border-slate-200 p-4 no-underline hover:border-brand-700 hover:bg-brand-50 transition">
-                  <p className="text-[13px] font-bold text-ink">AI categorize</p>
-                  <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">Paste a list, we&apos;ll suggest categories, prices, and tags.</p>
+                <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition">
+                  <p className="text-[13px] font-editorial font-[500] text-editorial-ink">AI categorize</p>
+                  <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">Paste a list, we&apos;ll suggest categories, prices, and tags.</p>
                 </Link>
-                <Link href="/admin/menu" className="block rounded-xl border border-brand-200 p-4 no-underline hover:border-brand-700 hover:bg-brand-50 transition" style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: "#dcfce7", color: "#15803d", border: "1px solid #bbf7d0" }}>Fastest</span>
-                  <p className="text-[13px] font-bold text-ink">Import from URL</p>
-                  <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">Paste your existing menu page URL. We&apos;ll extract items, prices, photos, and add-ons automatically.</p>
+                <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition" style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: "#DEE2CF", color: "#2C4031", border: "1px solid #C0673E" }}>Fastest</span>
+                  <p className="text-[13px] font-editorial font-[500] text-editorial-ink">Import from URL</p>
+                  <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">Paste your existing menu page URL. We&apos;ll extract items, prices, photos, and add-ons automatically.</p>
                 </Link>
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=4" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                <Link href="/admin/onboarding?step=4" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
                 <Link href="/admin/onboarding?step=6"
-                  className={`px-5 py-2.5 rounded-lg text-[13px] font-semibold no-underline ${
-                    menuItemCount >= 3 ? "bg-brand-700 text-white" : "border border-slate-200 text-slate-600"
+                  className={`px-5 py-2.5 rounded-full text-[13px] font-semibold no-underline transition ${
+                    menuItemCount >= 3 ? "bg-editorial-green text-editorial-paper hover:bg-editorial-green-deep" : "border border-editorial-line text-editorial-ink hover:border-editorial-green hover:text-editorial-green"
                   }`}>
                   {menuItemCount >= 3 ? "Continue →" : "Skip for now →"}
                 </Link>
@@ -737,23 +742,23 @@ export default async function OnboardingPage({
 
           {/* ── STEP 6: Recurring schedule ───────────────────────── */}
           {activeStep === 6 && (
-            <form action={generateRecurringForWizard} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <form action={generateRecurringForWizard} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 4 of 5 · Delivery schedule</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">Generate a recurring schedule</h2>
-                <p className="text-[12px] text-slate-500 mt-1">Pick a date range and weekday pattern. We&apos;ll create the dates and auto-attach your menu items.</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 4 of 5 · Delivery schedule</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Generate a recurring schedule</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">Pick a date range and weekday pattern. We&apos;ll create the dates and auto-attach your menu items.</p>
               </div>
 
               {schools.length === 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-                  <p className="text-[12px] text-amber-900">Add a location first (step 4) before generating a schedule.</p>
+                <div className="bg-editorial-sage/30 border border-editorial-clay/30 rounded-lg px-4 py-3">
+                  <p className="text-[12px] text-editorial-clay">Add a location first (step 4) before generating a schedule.</p>
                 </div>
               ) : (
                 <>
                   <div>
-                    <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location</label>
+                    <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Location</label>
                     <select name="schoolId" required
-                      className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                      className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                       {schools.map((s) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
@@ -762,21 +767,21 @@ export default async function OnboardingPage({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[11px] text-slate-500 font-semibold block mb-1">From</label>
+                      <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">From</label>
                       <input type="date" name="startDate" required
-                        defaultValue={new Date().toISOString().slice(0, 10)}
-                        className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                        defaultValue={todayStr}
+                        className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                     </div>
                     <div>
-                      <label className="text-[11px] text-slate-500 font-semibold block mb-1">Through</label>
+                      <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Through</label>
                       <input type="date" name="endDate" required
-                        defaultValue={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}
-                        className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                        defaultValue={ninetyDaysStr}
+                        className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[11px] text-slate-500 font-semibold block mb-1">On these weekdays</label>
+                    <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">On these weekdays</label>
                     <div className="grid grid-cols-7 gap-1.5">
                       {[
                         { v: 1, l: "Mon", on: true  },
@@ -788,7 +793,7 @@ export default async function OnboardingPage({
                         { v: 0, l: "Sun", on: false },
                       ].map((d) => (
                         <label key={d.v}
-                          className="flex flex-col items-center justify-center cursor-pointer rounded-lg border border-slate-200 py-2 has-[:checked]:bg-brand-700 has-[:checked]:text-white has-[:checked]:border-brand-700 transition">
+                          className="flex flex-col items-center justify-center cursor-pointer rounded-lg border border-editorial-line py-2 has-[:checked]:bg-editorial-green has-[:checked]:text-editorial-paper has-[:checked]:border-editorial-green transition">
                           <input type="checkbox" name="weekdays" value={d.v} defaultChecked={d.on} className="sr-only" />
                           <span className="text-[11px] font-semibold">{d.l}</span>
                         </label>
@@ -798,18 +803,18 @@ export default async function OnboardingPage({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[11px] text-slate-500 font-semibold block mb-1">Cutoff</label>
+                      <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Cutoff</label>
                       <select name="cutoffDaysBefore" defaultValue="1"
-                        className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                        className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                         <option value="0">Same day</option>
                         <option value="1">1 day before</option>
                         <option value="2">2 days before</option>
                       </select>
                     </div>
                     <div>
-                      <label className="text-[11px] text-slate-500 font-semibold block mb-1">Cutoff hour</label>
+                      <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Cutoff hour</label>
                       <select name="cutoffHour" defaultValue="9"
-                        className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                        className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                         {Array.from({ length: 24 }, (_, h) => (
                           <option key={h} value={h}>{h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`}</option>
                         ))}
@@ -820,13 +825,13 @@ export default async function OnboardingPage({
               )}
 
               <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=5" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                <Link href="/admin/onboarding?step=5" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
                 <div className="flex gap-2">
-                  <Link href="/admin/onboarding?step=7" className="px-4 py-2 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-600 no-underline">
+                  <Link href="/admin/onboarding?step=7" className="px-4 py-2 rounded-full border border-editorial-line text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
                     Skip →
                   </Link>
                   {schools.length > 0 && (
-                    <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                    <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                       Generate dates →
                     </button>
                   )}
@@ -837,23 +842,23 @@ export default async function OnboardingPage({
 
           {/* ── STEP 7: Invite team ──────────────────────────────── */}
           {(activeStep >= 7 && activeStep <= 10) && (
-            <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <div className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Invite team (optional)</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">Invite your team</h2>
-                <p className="text-[12px] text-slate-500 mt-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 5 of 5 · Go live · Invite team (optional)</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Invite your team</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">
                   You currently have <strong>{teamCount}</strong> team member{teamCount === 1 ? "" : "s"}.
                   Add co-owners or staff so they can help manage orders.
                 </p>
               </div>
 
-              <Link href="/admin/team" className="inline-block px-4 py-2 rounded-lg bg-slate-800 text-white text-[12px] font-semibold no-underline">
+              <Link href="/admin/team" className="inline-block px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold no-underline hover:bg-editorial-green-deep transition">
                 Open Team page →
               </Link>
 
               <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=6" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <Link href="/admin/onboarding?step=8" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold no-underline">
+                <Link href="/admin/onboarding?step=6" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
+                <Link href="/admin/onboarding?step=8" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold no-underline hover:bg-editorial-green-deep transition">
                   Continue →
                 </Link>
               </div>
@@ -862,27 +867,27 @@ export default async function OnboardingPage({
 
           {/* ── STEP 8: Test order ───────────────────────────────── */}
           {(activeStep >= 7 && activeStep <= 10) && (
-            <div className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <div className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Place a test order</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">Place a test order</h2>
-                <p className="text-[12px] text-slate-500 mt-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 5 of 5 · Go live · Place a test order</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Place a test order</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">
                   Open your customer ordering page in a new tab. Place a real order — use a $0.50 menu item or your real card; you&apos;ll refund yourself in a click. This is the moment you&apos;ll feel confident sharing the URL with customers.
                 </p>
               </div>
 
-              <div className="rounded-lg bg-slate-50 border border-slate-100 px-4 py-3 flex items-center gap-3 flex-wrap">
-                <p className="text-[12px] font-mono text-slate-600 flex-1 min-w-0 truncate">{orderingUrl}</p>
+              <div className="rounded-lg bg-editorial-paper-2 border border-editorial-line px-4 py-3 flex items-center gap-3 flex-wrap">
+                <p className="text-[12px] font-mono text-editorial-ink flex-1 min-w-0 truncate">{orderingUrl}</p>
                 <CopyUrlButton url={orderingUrl} />
                 <a href={orderingUrl} target="_blank" rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold no-underline">
+                  className="px-3 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[11px] font-semibold no-underline hover:bg-editorial-green-deep transition">
                   Open ↗
                 </a>
               </div>
 
-              <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 space-y-1">
-                <p className="text-[11px] font-semibold text-amber-900">Quick checklist while you test:</p>
-                <ul className="text-[11px] text-amber-800 list-disc pl-5 space-y-0.5">
+              <div className="bg-editorial-sage/30 border border-editorial-sage rounded-lg px-4 py-3 space-y-1">
+                <p className="text-[11px] font-semibold text-editorial-green">Quick checklist while you test:</p>
+                <ul className="text-[11px] text-editorial-clay list-disc pl-5 space-y-0.5">
                   <li>Does the hero image and color scheme look right?</li>
                   <li>Can you add a menu item to your cart?</li>
                   <li>Does Stripe checkout actually charge your card?</li>
@@ -892,8 +897,8 @@ export default async function OnboardingPage({
               </div>
 
               <form action={markTestOrderPlaced} className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=7" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                <Link href="/admin/onboarding?step=7" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
+                <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                   I placed a test order — continue →
                 </button>
               </form>
@@ -902,36 +907,36 @@ export default async function OnboardingPage({
 
           {/* ── STEP 9: Notifications ────────────────────────────── */}
           {(activeStep >= 7 && activeStep <= 10) && (
-            <form action={saveNotifications} className="rounded-[14px] border border-slate-100 bg-white p-5 space-y-4">
+            <form action={saveNotifications} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Step 5 of 5 · Go live · Notifications (optional)</p>
-                <h2 className="text-[18px] font-bold text-ink mt-1">Notification preferences</h2>
-                <p className="text-[12px] text-slate-500 mt-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 5 of 5 · Go live · Notifications (optional)</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Notification preferences</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">
                   Auto-email the kitchen prep sheet on each delivery day. You can change this any time in Settings → Notifications.
                 </p>
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-500 font-semibold block mb-1">
-                  Auto-send kitchen sheet at <span className="font-normal text-slate-400">(in your timezone)</span>
+                <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">
+                  Auto-send kitchen sheet at <span className="font-normal text-editorial-ink-faint">(in your timezone)</span>
                 </label>
                 <select name="kitchenSheetSendHour"
                   defaultValue={restaurant.kitchenSheetSendHour ?? ""}
-                  className="w-full sm:max-w-[300px] rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                  className="w-full sm:max-w-[300px] rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                   <option value="">Disabled — I'll send it manually</option>
                   {Array.from({ length: 24 }, (_, h) => {
                     const label = h === 0 ? "12:00 AM (midnight)" : h < 12 ? `${h}:00 AM` : h === 12 ? "12:00 PM (noon)" : `${h - 12}:00 PM`;
                     return <option key={h} value={h}>{label}</option>;
                   })}
                 </select>
-                <p className="text-[11px] text-slate-400 mt-1.5">
+                <p className="text-[11px] text-editorial-ink-faint mt-1.5">
                   Sent to your contact email once per delivery day. Set a contact email under Settings → General if you haven&apos;t.
                 </p>
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=8" className="text-[12px] text-slate-500 no-underline">← Back</Link>
-                <button type="submit" className="px-5 py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+                <Link href="/admin/onboarding?step=8" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
+                <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                   Save & continue →
                 </button>
               </div>
@@ -940,29 +945,29 @@ export default async function OnboardingPage({
 
           {/* ── STEP 10 (FINAL): Share & launch ────────────────── */}
           {(activeStep >= 7 && activeStep <= 10) && (
-            <div className="rounded-[14px] border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6 space-y-5">
+            <div className="rounded-[16px] border border-editorial-sage bg-gradient-to-br from-editorial-sage/30 to-editorial-paper p-6 space-y-5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
-                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-3">
+                <div className="w-12 h-12 rounded-full bg-editorial-green flex items-center justify-center mb-3">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Step 5 of 5 · Go live · Share & launch — last one!</p>
-                <h2 className="text-[22px] font-bold text-ink mt-1">You&apos;re ready to launch.</h2>
-                <p className="text-[13px] text-slate-600 mt-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 5 of 5 · Go live · Share & launch — last one!</p>
+                <h2 className="text-[22px] font-editorial font-[500] text-editorial-ink mt-1">You&apos;re ready to launch.</h2>
+                <p className="text-[13px] text-editorial-ink-soft mt-1">
                   Share the URL below with your customers, then click <strong>Launch</strong> when you&apos;re done.
                   You can change anything later from your dashboard.
                 </p>
               </div>
 
-              <div className="rounded-lg bg-white border border-slate-200 px-4 py-3 flex items-center gap-3 flex-wrap">
-                <p className="text-[13px] font-mono text-ink flex-1 min-w-0 truncate font-semibold">{orderingUrl}</p>
+              <div className="rounded-lg bg-white border border-editorial-line px-4 py-3 flex items-center gap-3 flex-wrap">
+                <p className="text-[13px] font-mono text-editorial-ink flex-1 min-w-0 truncate font-semibold">{orderingUrl}</p>
                 <CopyUrlButton url={orderingUrl} />
               </div>
 
               <div className="space-y-2">
-                <details className="rounded-lg border border-slate-200 bg-white">
-                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">📧 Email template (click to expand)</summary>
-                  <div className="px-4 pb-3 border-t border-slate-50 pt-2">
-                    <pre className="text-[11px] text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{`Hi everyone,
+                <details className="rounded-lg border border-editorial-line bg-white">
+                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-editorial-ink cursor-pointer">📧 Email template (click to expand)</summary>
+                  <div className="px-4 pb-3 border-t border-editorial-line pt-2">
+                    <pre className="text-[11px] text-editorial-ink-soft whitespace-pre-wrap font-mono leading-relaxed">{`Hi everyone,
 
 We're excited to share our online lunch ordering page!
 
@@ -975,25 +980,25 @@ Orders close the night before delivery. Questions? Reply to this email.
                   </div>
                 </details>
 
-                <details className="rounded-lg border border-slate-200 bg-white">
-                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">💬 SMS template</summary>
-                  <div className="px-4 pb-3 border-t border-slate-50 pt-2">
-                    <pre className="text-[11px] text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{`Order lunch from ${restaurant.name}: ${orderingUrl}`}</pre>
+                <details className="rounded-lg border border-editorial-line bg-white">
+                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-editorial-ink cursor-pointer">💬 SMS template</summary>
+                  <div className="px-4 pb-3 border-t border-editorial-line pt-2">
+                    <pre className="text-[11px] text-editorial-ink-soft whitespace-pre-wrap font-mono leading-relaxed">{`Order lunch from ${restaurant.name}: ${orderingUrl}`}</pre>
                   </div>
                 </details>
 
-                <details className="rounded-lg border border-slate-200 bg-white">
-                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-ink cursor-pointer">📷 QR code (print on flyers, counter cards, etc.)</summary>
-                  <div className="px-4 pb-3 border-t border-slate-50 pt-2">
+                <details className="rounded-lg border border-editorial-line bg-white">
+                  <summary className="px-4 py-2.5 text-[12px] font-semibold text-editorial-ink cursor-pointer">📷 QR code (print on flyers, counter cards, etc.)</summary>
+                  <div className="px-4 pb-3 border-t border-editorial-line pt-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(orderingUrl)}`}
                       alt="QR code for ordering page"
                       width={240}
                       height={240}
-                      className="rounded-lg border border-slate-200"
+                      className="rounded-lg border border-editorial-line"
                     />
-                    <p className="text-[10px] text-slate-400 mt-2">Right-click → Save image.</p>
+                    <p className="text-[10px] text-editorial-ink-faint mt-2">Right-click → Save image.</p>
                   </div>
                 </details>
               </div>
@@ -1003,23 +1008,23 @@ Orders close the night before delivery. Questions? Reply to this email.
                 {steps.slice(0, 9).map((s) => (
                   <div key={s.id} className="flex items-center gap-1.5">
                     <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                      s.status === "done" ? "bg-green-500 text-white" : "bg-slate-200 text-slate-500"
+                      s.status === "done" ? "bg-editorial-green text-editorial-paper" : "bg-editorial-paper-2 text-editorial-ink-faint"
                     }`}>
                       {s.status === "done" ? "✓" : s.id}
                     </span>
-                    <span className={`text-[11px] ${s.status === "done" ? "text-ink" : "text-slate-400"}`}>{s.title}</span>
+                    <span className={`text-[11px] ${s.status === "done" ? "text-editorial-ink" : "text-editorial-ink-faint"}`}>{s.title}</span>
                   </div>
                 ))}
               </div>
 
               <form action={launchAndComplete} className="flex flex-wrap items-center justify-between gap-2 pt-3">
-                <Link href="/admin/onboarding?step=9" className="text-[12px] text-slate-500 no-underline">← Back</Link>
+                <Link href="/admin/onboarding?step=9" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
                 <div className="flex flex-wrap gap-2">
                   <a href={orderingUrl} target="_blank" rel="noopener noreferrer"
-                    className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-ink no-underline">
+                    className="px-4 py-2.5 rounded-full border border-editorial-line bg-white text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
                     Preview ordering page ↗
                   </a>
-                  <button type="submit" className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-[13px] font-semibold">
+                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                     Launch — go to dashboard →
                   </button>
                 </div>
