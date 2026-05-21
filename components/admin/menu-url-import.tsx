@@ -195,7 +195,7 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
       {/* URL input row */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "#5B5446" }}>
             Menu URL
           </label>
           {/* Quota badge — shows after the first successful call.
@@ -207,15 +207,15 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
               style={{
                 fontSize: 10, fontWeight: 700, padding: "3px 8px",
                 background: quota.remaining === 0
-                  ? "#fef2f2"
-                  : quota.remaining <= 3 ? "#fef3c7" : "#f1f5f9",
+                  ? "#F4E3DB"
+                  : quota.remaining <= 3 ? "#F6EED9" : "#EFE8D7",
                 color: quota.remaining === 0
-                  ? "#991b1b"
-                  : quota.remaining <= 3 ? "#92400e" : "#475569",
+                  ? "#7C3D24"
+                  : quota.remaining <= 3 ? "#6E5C2C" : "#5B5446",
                 border: `1px solid ${
                   quota.remaining === 0
-                    ? "#fecaca"
-                    : quota.remaining <= 3 ? "#fde68a" : "#cbd5e1"
+                    ? "#E2C3B3"
+                    : quota.remaining <= 3 ? "#E5D6A8" : "#E3DBC6"
                 }`,
                 borderRadius: 100, whiteSpace: "nowrap",
               }}
@@ -234,8 +234,8 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
             disabled={extracting}
             style={{
               flex: 1, padding: "8px 12px", fontSize: 13,
-              border: "1px solid #cbd5e1", borderRadius: 8,
-              outline: "none",
+              border: "1px solid #E3DBC6", borderRadius: 8,
+              outline: "none", color: "#211D15",
             }}
           />
           <button
@@ -244,7 +244,7 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
             disabled={extracting || !url.trim() || quota?.remaining === 0}
             style={{
               padding: "8px 16px", fontSize: 12, fontWeight: 600,
-              background: "#0f172a", color: "#fff",
+              background: "#2C4031", color: "#fff",
               border: "none", borderRadius: 8, cursor: "pointer",
               opacity: extracting || !url.trim() || quota?.remaining === 0 ? 0.5 : 1,
               whiteSpace: "nowrap",
@@ -253,7 +253,7 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
             {extracting ? "Fetching menu…" : "Fetch menu"}
           </button>
         </div>
-        <p style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.4 }}>
+        <p style={{ fontSize: 11, color: "#938B78", lineHeight: 1.4 }}>
           Works best on plain HTML menus. JavaScript-heavy sites (some Toast,
           Square, Squarespace pages) may not extract — paste the menu text
           into a Google Doc and share that URL as a fallback.
@@ -264,8 +264,8 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
       {error && (
         <div style={{
           padding: "10px 12px", fontSize: 12, lineHeight: 1.5,
-          background: "#fef2f2", border: "1px solid #fecaca",
-          borderRadius: 8, color: "#991b1b",
+          background: "#F4E3DB", border: "1px solid #E2C3B3",
+          borderRadius: 8, color: "#7C3D24",
         }}>
           {error}
         </div>
@@ -273,8 +273,8 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
       {success && (
         <div style={{
           padding: "10px 12px", fontSize: 12, lineHeight: 1.5,
-          background: "#f0fdf4", border: "1px solid #bbf7d0",
-          borderRadius: 8, color: "#15803d",
+          background: "#DEE2CF", border: "1px solid #D0D5C0",
+          borderRadius: 8, color: "#2C4031",
         }}>
           {success}
         </div>
@@ -284,14 +284,14 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
       {items.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#211D15" }}>
               {items.length} item{items.length === 1 ? "" : "s"} extracted — review before importing
             </p>
             <button
               type="button"
               onClick={() => setItems([])}
               style={{
-                fontSize: 11, color: "#64748b", background: "transparent",
+                fontSize: 11, color: "#938B78", background: "transparent",
                 border: "none", cursor: "pointer", textDecoration: "underline",
               }}
             >
@@ -315,7 +315,7 @@ export function MenuUrlImport({ onImported }: { onImported?: () => void }) {
             style={{
               marginTop: 8,
               padding: "10px 16px", fontSize: 13, fontWeight: 700,
-              background: "#1D9E75", color: "#fff",
+              background: "#2C4031", color: "#fff",
               border: "none", borderRadius: 8, cursor: "pointer",
               opacity: importing ? 0.5 : 1,
             }}
@@ -340,14 +340,14 @@ function ItemRow({
   onRemove: () => void;
 }) {
   const inputCss: React.CSSProperties = {
-    border: "1px solid #d1d5db", borderRadius: 6,
-    padding: "5px 8px", fontSize: 12, outline: "none", background: "white",
+    border: "1px solid #E3DBC6", borderRadius: 6,
+    padding: "5px 8px", fontSize: 12, outline: "none", background: "white", color: "#211D15",
   };
 
   return (
     <div style={{
-      border: "1px solid #e2e8f0", borderRadius: 10, padding: 10,
-      background: "white", display: "flex", flexDirection: "column", gap: 8,
+      border: "1px solid #E3DBC6", borderRadius: 12, padding: 10,
+      background: "white", display: "flex", flexDirection: "column", gap: 8, boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
     }}>
       {/* Header row — name, price/range, badges, expand/remove */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -357,12 +357,12 @@ function ItemRow({
           aria-label={item._expanded ? "Collapse" : "Expand"}
           style={{
             width: 22, height: 22, padding: 0, flexShrink: 0,
-            background: "transparent", border: "1px solid #e2e8f0",
+            background: "transparent", border: "1px solid #E3DBC6",
             borderRadius: 5, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: item._expanded ? "rotate(90deg)" : "none", transition: "transform 120ms" }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5B5446" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: item._expanded ? "rotate(90deg)" : "none", transition: "transform 120ms" }}>
             <polyline points="9 18 15 12 9 6"/>
           </svg>
         </button>
@@ -382,7 +382,7 @@ function ItemRow({
             style={{
               width: 32, height: 32, flexShrink: 0,
               objectFit: "cover", borderRadius: 5,
-              border: "1px solid #e2e8f0",
+              border: "1px solid #E3DBC6",
             }}
           />
         )}
@@ -395,7 +395,7 @@ function ItemRow({
         />
 
         {/* Price display — range when sized, single price otherwise */}
-        <div style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, color: "#0f172a", minWidth: 72, textAlign: "right" }}>
+        <div style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, color: "#211D15", minWidth: 72, textAlign: "right" }}>
           {item.sizes.length > 0
             ? (() => {
                 const prices = item.sizes.map((s) => s.priceCents);
@@ -410,7 +410,7 @@ function ItemRow({
         {item.sizes.length > 0 && (
           <span style={{
             fontSize: 9, fontWeight: 700, padding: "2px 6px",
-            background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a",
+            background: "#F6EED9", color: "#C0673E", border: "1px solid #E5D6A8",
             borderRadius: 100, whiteSpace: "nowrap",
           }}>
             {item.sizes.length} sizes
@@ -419,7 +419,7 @@ function ItemRow({
         {item.requiredChoices.length > 0 && (
           <span style={{
             fontSize: 9, fontWeight: 700, padding: "2px 6px",
-            background: "#dbeafe", color: "#1e40af", border: "1px solid #bfdbfe",
+            background: "#DEE2CF", color: "#2C4031", border: "1px solid #D0D5C0",
             borderRadius: 100, whiteSpace: "nowrap",
           }}>
             {item.requiredChoices.length} choices
@@ -428,7 +428,7 @@ function ItemRow({
         {item.options.length > 0 && (
           <span style={{
             fontSize: 9, fontWeight: 700, padding: "2px 6px",
-            background: "#eff6ff", color: "#0369a1", border: "1px solid #bfdbfe",
+            background: "#DEE2CF", color: "#2C4031", border: "1px solid #D0D5C0",
             borderRadius: 100, whiteSpace: "nowrap",
           }}>
             {item.options.length} opt{item.options.length === 1 ? "" : "s"}
@@ -440,9 +440,9 @@ function ItemRow({
           onClick={() => onUpdate({ isActive: !item.isActive })}
           style={{
             fontSize: 10, fontWeight: 600, padding: "3px 8px",
-            background: item.isActive ? "#dcfce7" : "#f1f5f9",
-            color: item.isActive ? "#15803d" : "#475569",
-            border: `1px solid ${item.isActive ? "#bbf7d0" : "#cbd5e1"}`,
+            background: item.isActive ? "#DEE2CF" : "#EFE8D7",
+            color: item.isActive ? "#2C4031" : "#5B5446",
+            border: `1px solid ${item.isActive ? "#D0D5C0" : "#E3DBC6"}`,
             borderRadius: 100, cursor: "pointer", whiteSpace: "nowrap",
           }}
         >
@@ -455,12 +455,12 @@ function ItemRow({
           aria-label="Remove from import"
           style={{
             width: 22, height: 22, padding: 0, flexShrink: 0,
-            background: "#fef2f2", border: "1px solid #fecaca",
+            background: "#F4E3DB", border: "1px solid #E2C3B3",
             borderRadius: 5, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#7C3D24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
@@ -468,7 +468,7 @@ function ItemRow({
 
       {/* Expanded body — description, category, image, sizes, choices, options */}
       {item._expanded && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4, borderTop: "1px solid #f1f5f9" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4, borderTop: "1px solid #EFE8D7" }}>
           {/* Description + category row */}
           <div style={{ display: "flex", gap: 8 }}>
             <input
@@ -490,7 +490,7 @@ function ItemRow({
               We show it for every item (not just ones that came with
               an image) so people can attach photos during this same pass. */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <label style={{ fontSize: 11, color: "#64748b", flexShrink: 0, minWidth: 50 }}>Image:</label>
+            <label style={{ fontSize: 11, color: "#5B5446", flexShrink: 0, minWidth: 50 }}>Image:</label>
             <input
               value={item.imageUrl}
               onChange={(e) => onUpdate({ imageUrl: e.target.value.trim() })}
@@ -504,7 +504,7 @@ function ItemRow({
                 aria-label="Clear image"
                 style={{
                   width: 22, height: 22, padding: 0, flexShrink: 0,
-                  background: "#fef2f2", border: "1px solid #fecaca",
+                  background: "#F4E3DB", border: "1px solid #E2C3B3",
                   borderRadius: 5, cursor: "pointer",
                 }}
               >
@@ -516,9 +516,9 @@ function ItemRow({
           {/* Base price (only meaningful when no sizes) */}
           {item.sizes.length === 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <label style={{ fontSize: 11, color: "#64748b" }}>Price:</label>
+              <label style={{ fontSize: 11, color: "#5B5446" }}>Price:</label>
               <div style={{ position: "relative" }}>
-                <span style={{ position: "absolute", left: 7, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#64748b" }}>$</span>
+                <span style={{ position: "absolute", left: 7, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#5B5446" }}>$</span>
                 <input
                   value={dollars(item.basePriceCents)}
                   onChange={(e) => onUpdate({ basePriceCents: parseDollars(e.target.value) })}
@@ -532,7 +532,7 @@ function ItemRow({
               from them so we hide that field and show the sizes instead. */}
           {item.sizes.length > 0 && (
             <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#475569", marginBottom: 4 }}>SIZES</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#5B5446", marginBottom: 4 }}>SIZES</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {item.sizes.map((sz, si) => (
                   <div key={si} style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -542,7 +542,7 @@ function ItemRow({
                       style={{ ...inputCss, flex: 1, minWidth: 0 }}
                     />
                     <div style={{ position: "relative", flexShrink: 0 }}>
-                      <span style={{ position: "absolute", left: 7, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#64748b" }}>$</span>
+                      <span style={{ position: "absolute", left: 7, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#5B5446" }}>$</span>
                       <input
                         value={dollars(sz.priceCents)}
                         onChange={(e) => onUpdate({ sizes: item.sizes.map((s, j) => j === si ? { ...s, priceCents: parseDollars(e.target.value) } : s) })}
@@ -555,7 +555,7 @@ function ItemRow({
                       aria-label="Remove size"
                       style={{
                         width: 22, height: 22, padding: 0,
-                        background: "#fef2f2", border: "1px solid #fecaca",
+                        background: "#F4E3DB", border: "1px solid #E2C3B3",
                         borderRadius: 5, cursor: "pointer", flexShrink: 0,
                       }}
                     >
@@ -570,7 +570,7 @@ function ItemRow({
           {/* Required choices */}
           {item.requiredChoices.length > 0 && (
             <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#475569", marginBottom: 4 }}>REQUIRED CHOICES (pick-one)</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#5B5446", marginBottom: 4 }}>REQUIRED CHOICES (pick-one)</p>
               <input
                 value={item.requiredChoices.join(", ")}
                 onChange={(e) => onUpdate({
@@ -584,16 +584,16 @@ function ItemRow({
           {/* Options */}
           {item.options.length > 0 && (
             <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#475569", marginBottom: 4 }}>OPTIONS</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#5B5446", marginBottom: 4 }}>OPTIONS</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {item.options.map((opt, oi) => (
                   <div key={oi} style={{
                     display: "flex", gap: 6, alignItems: "center",
                     padding: "4px 6px", borderRadius: 6,
-                    background: opt.optionType === "REMOVAL" ? "#fef9c3" : "#f0fdf4",
-                    border: `1px solid ${opt.optionType === "REMOVAL" ? "#fde68a" : "#bbf7d0"}`,
+                    background: opt.optionType === "REMOVAL" ? "#F6EED9" : "#DEE2CF",
+                    border: `1px solid ${opt.optionType === "REMOVAL" ? "#E5D6A8" : "#D0D5C0"}`,
                   }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#475569", flexShrink: 0, minWidth: 50 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#5B5446", flexShrink: 0, minWidth: 50 }}>
                       {opt.optionType === "REMOVAL" ? "REMOVE" : "ADD"}
                     </span>
                     <input
@@ -603,7 +603,7 @@ function ItemRow({
                     />
                     {opt.optionType === "ADD_ON" && (
                       <div style={{ position: "relative", flexShrink: 0 }}>
-                        <span style={{ position: "absolute", left: 7, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#64748b" }}>+$</span>
+                        <span style={{ position: "absolute", left: 7, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#5B5446" }}>+$</span>
                         <input
                           value={dollars(opt.priceDeltaCents)}
                           onChange={(e) => onUpdate({ options: item.options.map((o, j) => j === oi ? { ...o, priceDeltaCents: parseDollars(e.target.value) } : o) })}

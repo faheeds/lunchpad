@@ -366,67 +366,67 @@ export default async function AdminMenuPage() {
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 
   return (
-    <div className="space-y-5 pb-10">
-      <h1 className="text-[17px] font-semibold text-ink">Menu</h1>
+    <div className="bg-editorial-paper min-h-screen space-y-5 pb-10">
+      <h1 className="text-[32px] font-editorial font-medium text-editorial-ink">Menu</h1>
 
       {/* Add item */}
-      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[13px] font-semibold text-ink">+ Add menu item</span>
-          <span className="text-[11px] text-slate-400">tap to expand</span>
+          <span className="text-[14px] font-editorial font-medium text-editorial-ink">+ Add menu item</span>
+          <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
         </summary>
-        <form action={createMenuItem} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
+        <form action={createMenuItem} className="px-4 pb-4 border-t border-editorial-line pt-3 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
             <div>
               <ImageUpload name="imageUrl" label="Photo" aspect="square" />
             </div>
             <div className="space-y-2">
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Item name</label>
+                <label className="text-[12px] text-editorial-ink-soft mb-1 block">Item name</label>
                 <input name="name" placeholder="e.g. Crispy Chicken Sandwich" required
-                  className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                  className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
               </div>
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">Price</label>
+                <label className="text-[12px] text-editorial-ink-soft mb-1 block">Price</label>
                 <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 pointer-events-none">$</span>
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-editorial-ink-faint pointer-events-none">$</span>
                   <input name="price" type="number" step="0.01" min="0" placeholder="12.99" required
-                    className="w-full rounded-lg border-slate-200 text-[13px] pl-6 pr-3 py-2" />
+                    className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] pl-6 pr-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                 </div>
               </div>
             </div>
           </div>
           <div>
-            <label className="text-[11px] text-slate-500 mb-1 block">Description</label>
+            <label className="text-[12px] text-editorial-ink-soft mb-1 block">Description</label>
             <input name="description" placeholder="A short, mouth-watering description"
-              className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
           </div>
           <div>
-            <label className="text-[11px] text-slate-500 mb-1 block">Category <span className="text-slate-400 font-normal">(optional)</span></label>
+            <label className="text-[12px] text-editorial-ink-soft mb-1 block">Category <span className="text-editorial-ink-faint font-normal">(optional)</span></label>
             <input name="category" placeholder="e.g. Sandwiches, Salads, Pizza"
-              className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+              className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
           </div>
           <div>
-            <label className="text-[11px] text-slate-500 mb-1 block">Dietary tags</label>
+            <label className="text-[12px] text-editorial-ink-soft mb-1 block">Dietary tags</label>
             <DietaryTagsPicker />
           </div>
           <div>
-            <label className="text-[11px] text-slate-500 mb-1 block">
-              Required choices <span className="text-slate-400 font-normal">(optional — pick-one)</span>
+            <label className="text-[12px] text-editorial-ink-soft mb-1 block">
+              Required choices <span className="text-editorial-ink-faint font-normal">(optional — pick-one)</span>
             </label>
             <textarea name="requiredChoices" rows={3}
               placeholder={"One per line, e.g.\nBeef\nCrispy Chicken\nVegan"}
-              className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2 leading-snug resize-y font-mono" />
-            <p className="text-[10px] text-slate-400 mt-1">
+              className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 leading-snug resize-y font-mono focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+            <p className="text-[11px] text-editorial-ink-faint mt-1">
               Customers must pick exactly one to add this item to their cart. Leave blank if not needed.
             </p>
           </div>
-          <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
-            <input type="checkbox" name="isActive" defaultChecked className="rounded" />
+          <label className="flex items-center gap-2 text-[12px] text-editorial-ink-soft cursor-pointer">
+            <input type="checkbox" name="isActive" defaultChecked className="rounded border-editorial-line text-editorial-green focus:ring-editorial-green" />
             Active (visible to customers)
           </label>
           <button type="submit"
-            className="w-full py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+            className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
             Create item
           </button>
         </form>
@@ -436,37 +436,37 @@ export default async function AdminMenuPage() {
           the Excel upload because operators with an existing online menu
           will reach for this first; Excel is the fallback for those
           starting from scratch. */}
-      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[13px] font-semibold text-ink">🪄 Import menu from a URL</span>
-          <span className="text-[11px] text-slate-400">AI-powered · review before saving</span>
+          <span className="text-[14px] font-editorial font-medium text-editorial-ink">🪄 Import menu from a URL</span>
+          <span className="text-[11px] text-editorial-ink-faint">AI-powered · review before saving</span>
         </summary>
-        <div className="px-4 pb-4 border-t border-slate-50 pt-3">
+        <div className="px-4 pb-4 border-t border-editorial-line pt-3">
           <MenuUrlImport />
         </div>
       </details>
 
       {/* Bulk upload */}
-      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[13px] font-semibold text-ink">⬆ Bulk upload menu</span>
-          <span className="text-[11px] text-slate-400">Upload Excel file</span>
+          <span className="text-[14px] font-editorial font-medium text-editorial-ink">⬆ Bulk upload menu</span>
+          <span className="text-[11px] text-editorial-ink-faint">Upload Excel file</span>
         </summary>
-        <div className="px-4 pb-4 border-t border-slate-50 pt-3">
+        <div className="px-4 pb-4 border-t border-editorial-line pt-3">
           <BulkMenuUpload />
         </div>
       </details>
 
       {/* Add option */}
-      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[13px] font-semibold text-ink">+ Add option to existing item</span>
-          <span className="text-[11px] text-slate-400">tap to expand</span>
+          <span className="text-[14px] font-editorial font-medium text-editorial-ink">+ Add option to existing item</span>
+          <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
         </summary>
-        <form action={createMenuOption} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-2">
+        <form action={createMenuOption} className="px-4 pb-4 border-t border-editorial-line pt-3 space-y-2">
           <div>
-            <label className="text-[11px] text-slate-500 mb-1 block">Menu item</label>
-            <select name="menuItemId" className="w-full rounded-lg border-slate-200 text-[13px] py-2">
+            <label className="text-[12px] text-editorial-ink-soft mb-1 block">Menu item</label>
+            <select name="menuItemId" className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
               {items.map((item) => (
                 <option key={item.id} value={item.id}>{item.name}</option>
               ))}
@@ -474,30 +474,30 @@ export default async function AdminMenuPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Option name</label>
+              <label className="text-[12px] text-editorial-ink-soft mb-1 block">Option name</label>
               <input name="name" placeholder="e.g. Extra cheese" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Type</label>
-              <select name="optionType" className="w-full rounded-lg border-slate-200 text-[13px] py-2">
+              <label className="text-[12px] text-editorial-ink-soft mb-1 block">Type</label>
+              <select name="optionType" className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                 <option value="ADD_ON">Add-on</option>
                 <option value="REMOVAL">Removal</option>
               </select>
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Price delta (cents, 0 = free)</label>
+              <label className="text-[12px] text-editorial-ink-soft mb-1 block">Price delta (cents, 0 = free)</label>
               <input name="priceDeltaCents" defaultValue="0" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Sort order</label>
+              <label className="text-[12px] text-editorial-ink-soft mb-1 block">Sort order</label>
               <input name="sortOrder" defaultValue="0" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
           </div>
           <button type="submit"
-            className="w-full py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+            className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
             Add option
           </button>
         </form>
@@ -517,36 +517,36 @@ export default async function AdminMenuPage() {
         if (!catItems?.length) return null;
         return (
           <div key={cat}>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-3">
               <span className="text-base">{CAT_ICONS[cat]}</span>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{cat}</p>
-              <span className="text-[10px] text-slate-300">{catItems.length} items</span>
+              <p className="text-[16px] font-editorial font-medium text-editorial-ink">{cat}</p>
+              <span className="text-[12px] text-editorial-ink-faint">{catItems.length} items</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {catItems.map((item) => {
                 const addons = item.options.filter((o) => o.optionType === "ADD_ON");
                 const removals = item.options.filter((o) => o.optionType === "REMOVAL");
                 return (
-                  <details key={item.id} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+                  <details key={item.id} className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
                     <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer list-none">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-[13px] font-semibold text-ink truncate">{item.name}</p>
+                          <p className="text-[14px] font-editorial font-medium text-editorial-ink truncate">{item.name}</p>
                           {!item.isActive && (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 flex-shrink-0">
+                            <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-editorial-paper-2 text-editorial-ink-faint flex-shrink-0">
                               Inactive
                             </span>
                           )}
                         </div>
-                        <p className="text-[12px] font-semibold text-brand-700 mt-0.5">{fmt(item.basePriceCents)}</p>
+                        <p className="text-[13px] font-semibold text-editorial-green mt-0.5">{fmt(item.basePriceCents)}</p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-[10px] text-slate-400">{item.options.length} options</span>
-                        <span className="text-slate-300 text-[11px]">▼</span>
+                        <span className="text-[11px] text-editorial-ink-faint">{item.options.length} options</span>
+                        <span className="text-editorial-ink-faint text-[11px]">▼</span>
                       </div>
                     </summary>
 
-                    <div className="border-t border-slate-50 px-4 py-3 space-y-3">
+                    <div className="border-t border-editorial-line px-4 py-3 space-y-3">
                       {/* Photo */}
                       <form action={updateItemImageUrl} className="space-y-2">
                         <input type="hidden" name="id" value={item.id} />
@@ -560,11 +560,11 @@ export default async function AdminMenuPage() {
                             />
                           </div>
                           <div className="flex flex-col gap-2 pt-5">
-                            <p className="text-[11px] text-slate-500 leading-relaxed">
+                            <p className="text-[12px] text-editorial-ink-soft leading-relaxed">
                               A clear, well-lit shot of the dish helps parents pick faster. Square crops, ~600&times;600 minimum.
                             </p>
                             <button type="submit"
-                              className="self-start px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold hover:bg-brand-800 transition">
+                              className="self-start px-3 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
                               Save photo
                             </button>
                           </div>
@@ -572,49 +572,49 @@ export default async function AdminMenuPage() {
                       </form>
 
                       {/* Category + dietary tags */}
-                      <form action={updateItemTagsAndCategory} className="space-y-2 border-t border-slate-50 pt-3">
+                      <form action={updateItemTagsAndCategory} className="space-y-2 border-t border-editorial-line pt-3">
                         <input type="hidden" name="id" value={item.id} />
                         <div>
-                          <label className="text-[11px] text-slate-500 block mb-1">Category</label>
+                          <label className="text-[12px] text-editorial-ink-soft block mb-1">Category</label>
                           <input
                             name="category"
                             defaultValue={item.category ?? ""}
                             placeholder="e.g. Sandwiches, Salads, Pizza"
-                            className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-1.5"
+                            className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[12px] px-3 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] text-slate-500 block mb-1">Dietary tags</label>
+                          <label className="text-[12px] text-editorial-ink-soft block mb-1">Dietary tags</label>
                           <DietaryTagsPicker defaultValue={item.dietaryTags ?? []} />
                         </div>
                         <button type="submit"
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-900 transition">
+                          className="px-3 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
                           Save tags & category
                         </button>
                       </form>
 
                       {/* Required choices — top-level pick-one selector */}
-                      <form action={updateItemRequiredChoices} className="space-y-2 border-t border-slate-50 pt-3">
+                      <form action={updateItemRequiredChoices} className="space-y-2 border-t border-editorial-line pt-3">
                         <input type="hidden" name="id" value={item.id} />
                         <div>
-                          <label className="text-[11px] text-slate-500 block mb-1">
+                          <label className="text-[12px] text-editorial-ink-soft block mb-1">
                             Required choices
-                            <span className="text-slate-400 font-normal ml-1">(pick one — leave blank if none)</span>
+                            <span className="text-editorial-ink-faint font-normal ml-1">(pick one — leave blank if none)</span>
                           </label>
                           <textarea
                             name="requiredChoices"
                             defaultValue={(item.requiredChoices ?? []).join("\n")}
                             placeholder={"e.g.\nBeef\nCrispy Chicken\nGrilled Chicken\nBeyond Vegan"}
                             rows={Math.max(3, (item.requiredChoices?.length ?? 0) + 1)}
-                            className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-2 leading-snug resize-y font-mono"
+                            className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[12px] px-3 py-2 leading-snug resize-y font-mono focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                           />
-                          <p className="text-[10px] text-slate-400 mt-1">
+                          <p className="text-[11px] text-editorial-ink-faint mt-1">
                             One per line. Customers must pick exactly one to add this item to their cart.
                             Different from add-ons / removals (those are configured in the Options panel).
                           </p>
                         </div>
                         <button type="submit"
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-900 transition">
+                          className="px-3 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
                           Save required choices
                         </button>
                       </form>
@@ -625,12 +625,12 @@ export default async function AdminMenuPage() {
                           When set, the per-item basePriceCents becomes a
                           fallback the customer never sees — they always pick
                           a size first. */}
-                      <form action={updateItemSizes} className="space-y-2 border-t border-slate-50 pt-3">
+                      <form action={updateItemSizes} className="space-y-2 border-t border-editorial-line pt-3">
                         <input type="hidden" name="id" value={item.id} />
                         <div>
-                          <label className="text-[11px] text-slate-500 block mb-1">
+                          <label className="text-[12px] text-editorial-ink-soft block mb-1">
                             Sizes
-                            <span className="text-slate-400 font-normal ml-1">
+                            <span className="text-editorial-ink-faint font-normal ml-1">
                               (one per line, e.g. <span className="font-mono">Small | 4.50</span> — leave blank for single-price)
                             </span>
                           </label>
@@ -639,31 +639,31 @@ export default async function AdminMenuPage() {
                             defaultValue={(item.sizes ?? []).map((s) => `${s.name} | ${(s.priceCents / 100).toFixed(s.priceCents % 100 === 0 ? 0 : 2)}`).join("\n")}
                             placeholder={"e.g.\nSmall | 4.00\nMedium | 5.00\nLarge | 6.00"}
                             rows={Math.max(3, (item.sizes?.length ?? 0) + 1)}
-                            className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-2 leading-snug resize-y font-mono"
+                            className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[12px] px-3 py-2 leading-snug resize-y font-mono focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                           />
-                          <p className="text-[10px] text-slate-400 mt-1">
+                          <p className="text-[11px] text-editorial-ink-faint mt-1">
                             Customers pick exactly one to add this item to their cart. The size's price replaces
                             the item's base price; add-ons still stack on top.
                           </p>
                         </div>
                         <button type="submit"
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-900 transition">
+                          className="px-3 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
                           Save sizes
                         </button>
                       </form>
 
                       {/* Toggle active */}
                       <div className="flex items-center justify-between">
-                        <p className="text-[11px] text-slate-500 leading-relaxed max-w-[240px]">
+                        <p className="text-[12px] text-editorial-ink-soft leading-relaxed max-w-[240px]">
                           {item.description || "No description"}
                         </p>
                         <form action={toggleItemActive}>
                           <input type="hidden" name="id" value={item.id} />
                           <button type="submit"
-                            className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition ${
+                            className={`px-3 py-1 rounded-full text-[12px] font-semibold border transition ${
                               item.isActive
-                                ? "border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-700"
-                                : "border-brand-200 text-brand-700 hover:bg-brand-50"
+                                ? "border-editorial-line text-editorial-ink-soft hover:bg-editorial-paper-2 hover:border-editorial-line hover:text-editorial-ink"
+                                : "border-editorial-green text-editorial-green hover:bg-editorial-paper-2"
                             }`}>
                             {item.isActive ? "Deactivate" : "Activate"}
                           </button>
@@ -673,20 +673,20 @@ export default async function AdminMenuPage() {
                       {/* Quick price edit */}
                       <form action={updateItemPrice} className="flex items-center gap-2">
                         <input type="hidden" name="id" value={item.id} />
-                        <label className="text-[11px] text-slate-500 flex-shrink-0">Price ($)</label>
+                        <label className="text-[12px] text-editorial-ink-soft flex-shrink-0">Price ($)</label>
                         <div className="relative flex-1">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-slate-400">$</span>
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-editorial-ink-faint">$</span>
                           <input
                             name="price"
                             type="number"
                             step="0.01"
                             min="0"
                             defaultValue={(item.basePriceCents / 100).toFixed(2)}
-                            className="w-full rounded-lg border border-slate-200 text-[13px] pl-6 pr-3 py-1.5"
+                            className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] pl-6 pr-3 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                           />
                         </div>
                         <button type="submit"
-                          className="px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold flex-shrink-0 hover:bg-brand-800 transition">
+                          className="px-3 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold flex-shrink-0 hover:bg-editorial-green-deep transition">
                           Save
                         </button>
                       </form>
@@ -694,16 +694,16 @@ export default async function AdminMenuPage() {
                       {/* Quick description edit */}
                       <form action={updateItemDescription} className="flex items-start gap-2">
                         <input type="hidden" name="id" value={item.id} />
-                        <label className="text-[11px] text-slate-500 flex-shrink-0 mt-2">Description</label>
+                        <label className="text-[12px] text-editorial-ink-soft flex-shrink-0 mt-2">Description</label>
                         <textarea
                           name="description"
                           rows={2}
                           defaultValue={item.description ?? ""}
                           placeholder="Signature Burgers & Sandwiches. Description here…"
-                          className="flex-1 rounded-lg border border-slate-200 text-[12px] px-3 py-1.5 resize-none"
+                          className="flex-1 rounded-lg border border-editorial-line text-editorial-ink text-[12px] px-3 py-1.5 resize-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                         />
                         <button type="submit"
-                          className="px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold flex-shrink-0 hover:bg-brand-800 transition mt-0.5">
+                          className="px-3 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold flex-shrink-0 hover:bg-editorial-green-deep transition mt-0.5">
                           Save
                         </button>
                       </form>
@@ -711,21 +711,21 @@ export default async function AdminMenuPage() {
                       {/* Location availability */}
                       {schools.length > 1 && (
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-editorial-ink-faint mb-2">
                             Location availability
                           </p>
                           {item.schoolRestrictions.length === 0 ? (
-                            <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-2">
+                            <p className="text-[12px] text-editorial-green bg-editorial-sage border border-editorial-line rounded-lg px-3 py-2 mb-2">
                               ✓ Available at all locations
                             </p>
                           ) : (
-                            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-2">
+                            <p className="text-[12px] text-[#6E5C2C] bg-[#F6EED9] border border-[#E5D6A8] rounded-lg px-3 py-2 mb-2">
                               ⚠ Restricted to {item.schoolRestrictions.length} location{item.schoolRestrictions.length !== 1 ? "s" : ""}
                             </p>
                           )}
                           <form action={updateSchoolRestrictions} className="space-y-1.5">
                             <input type="hidden" name="menuItemId" value={item.id} />
-                            <p className="text-[11px] text-slate-400 mb-1.5">
+                            <p className="text-[12px] text-editorial-ink-faint mb-1.5">
                               Check the locations that should see this item. Leave all unchecked = visible at every location.
                             </p>
                             {schools.map((school) => {
@@ -736,11 +736,11 @@ export default async function AdminMenuPage() {
                                     type="checkbox"
                                     name={`school_${school.id}`}
                                     defaultChecked={isChecked}
-                                    className="rounded border-slate-300 text-brand-700"
+                                    className="rounded border-editorial-line text-editorial-green focus:ring-editorial-green"
                                   />
-                                  <span className="text-[12px] text-ink">
+                                  <span className="text-[12px] text-editorial-ink">
                                     {school.name}
-                                    <span className="text-[10px] uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded-full"
+                                    <span className="text-[11px] uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded-full"
                                       style={{
                                         background: school.locationType === "OFFICE" ? "#eff6ff" : "#fff1f3",
                                         color: school.locationType === "OFFICE" ? "#1e40af" : "#9f1239",
@@ -752,7 +752,7 @@ export default async function AdminMenuPage() {
                               );
                             })}
                             <button type="submit"
-                              className="mt-2 px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold hover:bg-brand-800 transition">
+                              className="mt-2 px-3 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
                               Save availability
                             </button>
                           </form>
@@ -761,67 +761,67 @@ export default async function AdminMenuPage() {
 
                       {/* Options (add-ons + removals) — editable */}
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-editorial-ink-faint mb-2">
                           Options ({item.options.length})
                         </p>
 
                         {item.options.length === 0 && (
-                          <p className="text-[12px] text-slate-400 mb-2">No options yet — add one below.</p>
+                          <p className="text-[12px] text-editorial-ink-faint mb-2">No options yet — add one below.</p>
                         )}
 
                         {/* Existing options */}
                         {item.options.map((o) => (
-                          <details key={o.id} className="rounded-[10px] border border-slate-100 bg-slate-50/50 mb-1.5 overflow-hidden">
+                          <details key={o.id} className="rounded-[12px] border border-editorial-line bg-editorial-paper-2 mb-1.5 overflow-hidden">
                             <summary className="flex items-center gap-2 px-3 py-2 cursor-pointer list-none">
                               <span style={{
-                                fontSize: 10, fontWeight: 700,
+                                fontSize: 11, fontWeight: 700,
                                 color: o.optionType === "ADD_ON" ? "#0369a1" : "#b91c1c",
                                 background: o.optionType === "ADD_ON" ? "#eff6ff" : "#fee2e2",
-                                borderRadius: 100, padding: "1px 7px", flexShrink: 0,
+                                borderRadius: 100, padding: "2px 8px", flexShrink: 0,
                               }}>
                                 {o.optionType === "ADD_ON" ? "Add-on" : "Removal"}
                               </span>
-                              <p className="text-[12px] font-medium text-ink flex-1 truncate">{o.name}</p>
+                              <p className="text-[12px] font-medium text-editorial-ink flex-1 truncate">{o.name}</p>
                               {o.priceDeltaCents !== 0 && (
-                                <span className="text-[11px] text-slate-500 flex-shrink-0">
+                                <span className="text-[11px] text-editorial-ink-soft flex-shrink-0">
                                   +{fmt(o.priceDeltaCents)}
                                 </span>
                               )}
-                              <span className="text-[10px] text-slate-400 flex-shrink-0">Edit ▼</span>
+                              <span className="text-[11px] text-editorial-ink-faint flex-shrink-0">Edit ▼</span>
                             </summary>
 
                             {/* Inline edit form */}
-                            <div className="border-t border-slate-100 px-3 pb-3 pt-2 space-y-2">
+                            <div className="border-t border-editorial-line px-3 pb-3 pt-2 space-y-2">
                               <form action={updateMenuOption} className="space-y-2">
                                 <input type="hidden" name="optionId" value={o.id} />
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
-                                    <label className="text-[10px] text-slate-500 font-medium block mb-1">Name</label>
+                                    <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Name</label>
                                     <input type="text" name="name" required defaultValue={o.name}
-                                      className="w-full rounded-lg border border-slate-200 bg-white text-[12px] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                                      className="w-full rounded-lg border border-editorial-line bg-white text-editorial-ink text-[12px] px-2.5 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] text-slate-500 font-medium block mb-1">Type</label>
+                                    <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Type</label>
                                     <select name="optionType" defaultValue={o.optionType}
-                                      className="w-full rounded-lg border border-slate-200 bg-white text-[12px] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+                                      className="w-full rounded-lg border border-editorial-line bg-white text-editorial-ink text-[12px] px-2.5 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                                       <option value="ADD_ON">Add-on</option>
                                       <option value="REMOVAL">Removal</option>
                                     </select>
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-[10px] text-slate-500 font-medium block mb-1">
+                                  <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">
                                     Extra price ($ — enter 0 for free)
                                   </label>
                                   <div className="relative">
-                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">$</span>
+                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-editorial-ink-faint">$</span>
                                     <input type="number" name="priceDollars" step="0.01" min="0"
                                       defaultValue={(o.priceDeltaCents / 100).toFixed(2)}
-                                      className="w-full rounded-lg border border-slate-200 bg-white text-[12px] pl-6 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                                      className="w-full rounded-lg border border-editorial-line bg-white text-editorial-ink text-[12px] pl-6 pr-3 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                                   </div>
                                 </div>
                                 <button type="submit"
-                                  className="w-full py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold">
+                                  className="w-full py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
                                   Save changes
                                 </button>
                               </form>
@@ -831,7 +831,7 @@ export default async function AdminMenuPage() {
                                 <input type="hidden" name="optionId" value={o.id} />
                                 <ConfirmButton
                                   message={`Delete "${o.name}"?`}
-                                  className="w-full py-1.5 rounded-lg border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 transition">
+                                  className="w-full py-1.5 rounded-full border border-editorial-clay text-editorial-clay text-[12px] font-semibold hover:bg-editorial-paper-2 transition">
                                   Delete option
                                 </ConfirmButton>
                               </form>
@@ -840,43 +840,43 @@ export default async function AdminMenuPage() {
                         ))}
 
                         {/* Add option inline */}
-                        <details className="rounded-[10px] border border-dashed border-slate-200 bg-white overflow-hidden mt-2">
-                          <summary className="flex items-center gap-1.5 px-3 py-2 cursor-pointer list-none text-[12px] text-slate-500 font-medium">
+                        <details className="rounded-[12px] border border-dashed border-editorial-line bg-white overflow-hidden mt-2">
+                          <summary className="flex items-center gap-1.5 px-3 py-2 cursor-pointer list-none text-[12px] text-editorial-ink-soft font-medium">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
                             </svg>
                             Add option
                           </summary>
-                          <form action={createMenuOption} className="border-t border-slate-100 px-3 pb-3 pt-2 space-y-2">
+                          <form action={createMenuOption} className="border-t border-editorial-line px-3 pb-3 pt-2 space-y-2">
                             <input type="hidden" name="menuItemId" value={item.id} />
                             <input type="hidden" name="sortOrder" value={item.options.length} />
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <label className="text-[10px] text-slate-500 font-medium block mb-1">Name</label>
+                                <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Name</label>
                                 <input type="text" name="name" required placeholder="e.g. Extra cheese"
-                                  className="w-full rounded-lg border border-slate-200 text-[12px] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                                  className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[12px] px-2.5 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                               </div>
                               <div>
-                                <label className="text-[10px] text-slate-500 font-medium block mb-1">Type</label>
+                                <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Type</label>
                                 <select name="optionType"
-                                  className="w-full rounded-lg border border-slate-200 text-[12px] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+                                  className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[12px] px-2.5 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                                   <option value="ADD_ON">Add-on</option>
                                   <option value="REMOVAL">Removal</option>
                                 </select>
                               </div>
                             </div>
                             <div>
-                              <label className="text-[10px] text-slate-500 font-medium block mb-1">
+                              <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">
                                 Extra price ($ — enter 0 for free)
                               </label>
                               <div className="relative">
-                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">$</span>
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-editorial-ink-faint">$</span>
                                 <input type="number" name="priceDollars" step="0.01" min="0" defaultValue="0"
-                                  className="w-full rounded-lg border border-slate-200 text-[12px] pl-6 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-700/20" />
+                                  className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[12px] pl-6 pr-3 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                               </div>
                             </div>
                             <button type="submit"
-                              className="w-full py-1.5 rounded-lg bg-brand-700 text-white text-[11px] font-semibold">
+                              className="w-full py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
                               Add option
                             </button>
                           </form>
