@@ -27,19 +27,11 @@ export function CopyUrlButton({ url }: { url: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      style={{
-        padding: "4px 10px",
-        borderRadius: 6,
-        border: `1px solid ${copied ? "#bbf7d0" : "#d1d5db"}`,
-        background: copied ? "#f0fdf4" : "white",
-        color: copied ? "#15803d" : "#6b7280",
-        fontSize: 11,
-        fontWeight: 600,
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-        flexShrink: 0,
-        transition: "all 0.15s",
-      }}
+      className={`px-3 py-2 rounded-full text-[12px] font-medium border transition ${
+        copied
+          ? "bg-editorial-sage border-editorial-green text-editorial-green"
+          : "bg-white border-editorial-line text-editorial-ink-soft hover:text-editorial-ink"
+      }`}
     >
       {copied ? "Copied!" : "Copy"}
     </button>

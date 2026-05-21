@@ -39,27 +39,27 @@ export interface Nudge {
 
 const ICONS: Record<NudgeKind, React.ReactNode> = {
   invite_team: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0369a1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-editorial-green">
       <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
       <circle cx="8.5" cy="7" r="4"/>
       <path d="M20 8v6M23 11h-6"/>
     </svg>
   ),
   notifications: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#854d0e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#6E5C2C]">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
   ),
   test_order: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-editorial-clay">
       <circle cx="9" cy="21" r="1"/>
       <circle cx="20" cy="21" r="1"/>
       <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
     </svg>
   ),
   share_url: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-editorial-green">
       <circle cx="18" cy="5" r="3"/>
       <circle cx="6" cy="12" r="3"/>
       <circle cx="18" cy="19" r="3"/>
@@ -69,11 +69,11 @@ const ICONS: Record<NudgeKind, React.ReactNode> = {
   ),
 };
 
-const BG_TONE: Record<NudgeKind, { bg: string; border: string; iconBg: string }> = {
-  invite_team:    { bg: "#eff6ff", border: "#bfdbfe", iconBg: "#dbeafe" },
-  notifications:  { bg: "#fef9c3", border: "#fde68a", iconBg: "#fef3c7" },
-  test_order:     { bg: "#f5f3ff", border: "#ddd6fe", iconBg: "#ede9fe" },
-  share_url:      { bg: "#ecfdf5", border: "#a7f3d0", iconBg: "#d1fae5" },
+const BG_TONE: Record<NudgeKind, { bg: string; border: string; iconBg: string; textBg: string }> = {
+  invite_team:    { bg: "bg-white", border: "border-editorial-line", iconBg: "bg-editorial-paper-2", textBg: "text-editorial-ink" },
+  notifications:  { bg: "bg-white", border: "border-editorial-line", iconBg: "bg-[#F6EED9]", textBg: "text-editorial-ink" },
+  test_order:     { bg: "bg-white", border: "border-editorial-line", iconBg: "bg-editorial-paper-2", textBg: "text-editorial-ink" },
+  share_url:      { bg: "bg-white", border: "border-editorial-line", iconBg: "bg-editorial-sage", textBg: "text-editorial-ink" },
 };
 
 function dismissKey(slug: string, kind: NudgeKind) {
@@ -110,7 +110,7 @@ export function HomeNudges({ nudges, slug }: { nudges: Nudge[]; slug: string }) 
 
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">
+      <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-ink-faint mb-2">
         Suggested next steps
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -119,31 +119,17 @@ export function HomeNudges({ nudges, slug }: { nudges: Nudge[]; slug: string }) 
           return (
             <div
               key={n.kind}
-              style={{
-                background: tone.bg,
-                border: `1px solid ${tone.border}`,
-                borderRadius: 14,
-                padding: "12px 14px",
-                display: "flex",
-                gap: 12,
-                position: "relative",
-              }}
+              className={`${tone.bg} border ${tone.border} rounded-[16px] p-4 flex gap-3 relative shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]`}
             >
-              <div
-                style={{
-                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                  background: tone.iconBg,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}
-              >
+              <div className={`w-9 h-9 rounded-[10px] flex-shrink-0 ${tone.iconBg} flex items-center justify-center`}>
                 {ICONS[n.kind]}
               </div>
               <div className="flex-1 min-w-0 pr-5">
-                <p className="text-[13px] font-semibold text-ink leading-tight">{n.title}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{n.body}</p>
+                <p className={`text-[13px] font-semibold font-editorial ${tone.textBg} leading-tight`}>{n.title}</p>
+                <p className="text-[11px] text-editorial-ink-soft mt-0.5 leading-snug">{n.body}</p>
                 <Link
                   href={n.ctaHref}
-                  className="inline-block mt-2 text-[12px] font-semibold text-brand-700 no-underline"
+                  className="inline-block mt-2 text-[12px] font-bold text-editorial-green no-underline hover:text-editorial-green-deep transition"
                 >
                   {n.ctaText} →
                 </Link>
@@ -152,12 +138,7 @@ export function HomeNudges({ nudges, slug }: { nudges: Nudge[]; slug: string }) 
                 type="button"
                 onClick={() => handleDismiss(n.kind)}
                 aria-label="Dismiss"
-                style={{
-                  position: "absolute", top: 8, right: 8,
-                  width: 20, height: 20, padding: 0,
-                  background: "transparent", border: "none", cursor: "pointer",
-                  color: "#94a3b8", fontSize: 16, lineHeight: 1,
-                }}
+                className="absolute top-3 right-3 w-5 h-5 p-0 bg-transparent border-none cursor-pointer text-editorial-ink-faint text-base leading-none hover:text-editorial-ink transition"
               >
                 ×
               </button>
