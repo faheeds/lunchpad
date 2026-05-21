@@ -58,10 +58,10 @@ function fmtDate(value: string | Date, timezone: string) {
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  PAID:      { bg: "#dcfce7", text: "#15803d", label: "Paid" },
-  PENDING:   { bg: "#fef9c3", text: "#854d0e", label: "Pending" },
-  REFUNDED:  { bg: "#fee2e2", text: "#b91c1c", label: "Refunded" },
-  CANCELLED: { bg: "#f3f4f6", text: "#6b7280", label: "Cancelled" },
+  PAID:      { bg: "#DEE2CF", text: "#2C4031", label: "Paid" },
+  PENDING:   { bg: "#F6EED9", text: "#6E5C2C", label: "Pending" },
+  REFUNDED:  { bg: "#F4E3DB", text: "#7C3D24", label: "Refunded" },
+  CANCELLED: { bg: "#F4E3DB", text: "#7C3D24", label: "Cancelled" },
 };
 
 type BulkAction = {
@@ -218,10 +218,10 @@ export function OrdersList({
     <div className="space-y-2">
 
       {/* Bulk action bar */}
-      <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
-        <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer select-none">
+      <div className="rounded-[16px] border border-editorial-line bg-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+        <label className="flex items-center gap-2 text-[12px] text-editorial-ink-soft cursor-pointer select-none">
           <input type="checkbox" checked={allSelected} onChange={toggleAll}
-            className="rounded border-slate-300 accent-brand-700" />
+            className="rounded border-editorial-line accent-editorial-green" />
           <span>
             {selectedIds.size > 0
               ? `${selectedIds.size} of ${orders.length} selected`
@@ -239,8 +239,8 @@ export function OrdersList({
                 onClick={() => runBulkAction(action)}
                 className={
                   isDanger
-                    ? "px-3 py-1.5 rounded-full border border-red-200 text-[11px] font-medium text-red-600 hover:bg-red-50 transition disabled:opacity-35 disabled:cursor-default"
-                    : "px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-35 disabled:cursor-default"
+                    ? "px-3 py-1.5 rounded-full border border-[#E2C3B3] text-[11px] font-medium text-[#7C3D24] hover:bg-[#F4E3DB] transition disabled:opacity-35 disabled:cursor-default"
+                    : "px-3 py-1.5 rounded-full border border-editorial-line text-[11px] font-medium text-editorial-ink hover:border-editorial-green hover:text-editorial-green transition disabled:opacity-35 disabled:cursor-default"
                 }
               >
                 {action.label}
@@ -249,7 +249,7 @@ export function OrdersList({
           })}
         </div>
         {message && (
-          <p className={`w-full text-[12px] font-medium ${message.ok ? "text-green-700" : "text-red-600"}`}>
+          <p className={`w-full text-[12px] font-medium ${message.ok ? "text-editorial-green" : "text-[#7C3D24]"}`}>
             {message.text}
           </p>
         )}
@@ -264,54 +264,40 @@ export function OrdersList({
         const removals = order.items.flatMap((i) => i.removals);
 
         return (
-          <div key={order.id} style={{
-            background: "white",
-            borderRadius: 14,
-            border: selectedIds.has(order.id) ? "1.5px solid #c41230" : "1px solid #f1f5f9",
-            overflow: "hidden",
-            transition: "border-color 0.15s",
-          }}>
+          <div key={order.id} className={`rounded-[16px] bg-white border overflow-hidden transition-all shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] ${selectedIds.has(order.id) ? "border-editorial-green border-2" : "border-editorial-line"}`}>
             {/* Primary row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <div className="flex items-center gap-2.5 p-3.5">
               {/* Checkbox */}
               <input type="checkbox" checked={selectedIds.has(order.id)}
                 onChange={() => toggleSelect(order.id)}
-                style={{ width: 15, height: 15, accentColor: "#c41230", flexShrink: 0, cursor: "pointer" }} />
+                className="w-4 h-4 accent-editorial-green flex-shrink-0 cursor-pointer rounded border-editorial-line" />
 
               {/* Avatar initial */}
-              <div style={{
-                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                background: "#fff1f3", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#c41230",
-              }}>
+              <div className="w-8 h-8 rounded-full flex-shrink-0 bg-[#F4E3DB] flex items-center justify-center text-sm font-bold text-editorial-clay">
                 {order.student.studentName[0]?.toUpperCase() ?? "?"}
               </div>
 
               {/* Student + school */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#0f1923" }}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-editorial-ink">
                     {order.student.studentName}
                   </p>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700,
-                    background: badge.bg, color: badge.text,
-                    borderRadius: 100, padding: "2px 8px",
-                  }}>
+                  <span className="px-2 py-1 rounded-full text-[10px] font-semibold" style={{ background: badge.bg, color: badge.text }}>
                     {badge.label}
                   </span>
                   {order.archivedAt && (
-                    <span style={{ fontSize: 10, fontWeight: 600, background: "#f1f5f9", color: "#94a3b8", borderRadius: 100, padding: "2px 8px" }}>
+                    <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-editorial-paper-2 text-editorial-ink-faint">
                       Archived
                     </span>
                   )}
                   {allergy && (
-                    <span style={{ fontSize: 10, fontWeight: 600, background: "#fef9c3", color: "#92400e", borderRadius: 100, padding: "2px 8px" }}>
+                    <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-[#F4E3DB] text-editorial-clay">
                       ⚠ Allergy
                     </span>
                   )}
                 </div>
-                <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>
+                <p className="text-[11px] text-editorial-ink-soft mt-0.5">
                   {order.school.name} · Gr {order.student.grade}
                   {order.student.teacherName ? ` · ${order.student.teacherName}` : ""}
                   {" · "}{fmtDate(order.deliveryDate.deliveryDate, order.school.timezone)}
@@ -320,25 +306,20 @@ export function OrdersList({
 
               {/* Items preview — narrow on mobile, expands on desktop */}
               <p
-                className="hidden sm:block max-w-[140px] lg:max-w-[260px] xl:max-w-[400px]"
-                style={{ fontSize: 11, color: "#64748b", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                className="hidden sm:block max-w-[140px] lg:max-w-[260px] xl:max-w-[400px] text-[11px] text-editorial-ink-faint flex-shrink-0 overflow-hidden text-ellipsis whitespace-nowrap"
               >
                 {order.items.map((i) => i.itemNameSnapshot).join(", ")}
               </p>
 
               {/* Total */}
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#0f1923", flexShrink: 0 }}>
+              <p className="text-sm font-bold text-editorial-ink flex-shrink-0">
                 {formatCurrency(order.totalCents)}
               </p>
 
               {/* Expand toggle */}
               <button type="button" onClick={() => toggleExpand(order.id)}
-                style={{
-                  width: 24, height: 24, borderRadius: 6, border: "1px solid #e2e8f0",
-                  background: "white", cursor: "pointer", display: "flex",
-                  alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 0,
-                }}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                className="flex-shrink-0 p-0 w-6 h-6 rounded border border-editorial-line bg-white cursor-pointer flex items-center justify-center hover:bg-editorial-paper transition">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#938B78" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                   style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
@@ -347,38 +328,38 @@ export function OrdersList({
 
             {/* Expanded detail */}
             {isOpen && (
-              <div style={{ borderTop: "1px solid #f8fafc", padding: "10px 14px 12px" }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-2">
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#475569" }}>
+              <div className="border-t border-editorial-line p-3.5 bg-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-2 mb-3 pb-3 border-b border-editorial-line">
+                  <div className="flex flex-col gap-1 text-sm text-editorial-ink-soft">
                     {addons.length > 0 && (
-                      <p><span style={{ color: "#94a3b8", fontWeight: 600 }}>Add-ons: </span>{formatList(addons)}</p>
+                      <p><span className="text-editorial-ink-faint font-semibold">Add-ons: </span>{formatList(addons)}</p>
                     )}
                     {removals.length > 0 && (
-                      <p><span style={{ color: "#94a3b8", fontWeight: 600 }}>Removals: </span>{formatList(removals)}</p>
+                      <p><span className="text-editorial-ink-faint font-semibold">Removals: </span>{formatList(removals)}</p>
                     )}
                     {allergy && (
-                      <p style={{ color: "#b45309" }}>
-                        <span style={{ fontWeight: 600 }}>Allergy: </span>{allergy}
+                      <p className="text-editorial-clay">
+                        <span className="font-semibold">Allergy: </span>{allergy}
                       </p>
                     )}
                     {order.specialInstructions && (
-                      <p><span style={{ color: "#94a3b8", fontWeight: 600 }}>Special: </span>{order.specialInstructions}</p>
+                      <p><span className="text-editorial-ink-faint font-semibold">Special: </span>{order.specialInstructions}</p>
                     )}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#475569" }}>
-                    <p><span style={{ color: "#94a3b8", fontWeight: 600 }}>Order #: </span>{order.orderNumber}</p>
-                    <p><span style={{ color: "#94a3b8", fontWeight: 600 }}>Parent: </span>{order.parentName}</p>
-                    <p><span style={{ color: "#94a3b8", fontWeight: 600 }}>Email: </span>{order.parentEmail}</p>
+                  <div className="flex flex-col gap-1 text-sm text-editorial-ink-soft">
+                    <p><span className="text-editorial-ink-faint font-semibold">Order #: </span>{order.orderNumber}</p>
+                    <p><span className="text-editorial-ink-faint font-semibold">Parent: </span>{order.parentName}</p>
+                    <p><span className="text-editorial-ink-faint font-semibold">Email: </span>{order.parentEmail}</p>
                     {order.student.classroom && (
-                      <p><span style={{ color: "#94a3b8", fontWeight: 600 }}>Classroom: </span>{order.student.classroom}</p>
+                      <p><span className="text-editorial-ink-faint font-semibold">Classroom: </span>{order.student.classroom}</p>
                     )}
                   </div>
                 </div>
 
                 {/* Actions row */}
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, paddingTop: 10, borderTop: "1px solid #f8fafc" }}>
+                <div className="flex gap-3 items-center flex-wrap">
                   <Link href={`/admin/orders/${order.id}`}
-                    style={{ fontSize: 12, color: "#c41230", fontWeight: 600, textDecoration: "none" }}>
+                    className="text-sm text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
                     Edit order →
                   </Link>
                   <OrderStatusActions orderId={order.id} isArchived={Boolean(order.archivedAt)} />
