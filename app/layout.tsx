@@ -31,12 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
       ? { default: restaurant.name, template: `%s | ${restaurant.name}` }
       : { default: "LunchPad", template: "%s | LunchPad" },
     description,
-    icons: {
-      icon: [
-        { url: "/favicon.svg", type: "image/svg+xml" },
-        { url: "/icon.png" },
-      ],
-    },
+    icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }] },
     // Open Graph (link previews in iMessage, WhatsApp, Slack, etc.)
     // For the platform landing (no restaurant), force LunchPad branding so the
     // share preview is never the most-recently-loaded restaurant's logo.
@@ -64,7 +59,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#c41230",
+  themeColor: "#2C4031",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
