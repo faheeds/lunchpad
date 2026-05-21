@@ -315,28 +315,28 @@ export default async function DeliveryDatesPage() {
   const past     = deliveryDates.filter((d) => d.deliveryDate < now);
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="bg-editorial-paper min-h-screen space-y-5 pb-10">
 
       <ScheduleTabs active="dates" />
 
       {/* ── Add delivery date ───────────────────────────────────────── */}
-      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c41230" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-editorial-ink">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-editorial-green">
               <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/>
             </svg>
             Add delivery date
           </span>
-          <span className="text-[11px] text-slate-400">tap to expand</span>
+          <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
         </summary>
 
-        <form action={createDeliveryDate} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-3">
+        <form action={createDeliveryDate} className="px-4 pb-4 border-t border-editorial-line pt-3 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Location</label>
               <select name="schoolId" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                 <option value="">Select location…</option>
                 {schools.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -344,57 +344,57 @@ export default async function DeliveryDatesPage() {
               </select>
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Delivery date</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Delivery date</label>
               <input type="date" name="deliveryDate" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Ordering closes at</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Ordering closes at</label>
               <input type="datetime-local" name="cutoffAt" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
-              <p className="text-[10px] text-slate-400 mt-1">In the school&apos;s timezone</p>
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+              <p className="text-[10px] text-editorial-ink-faint mt-1">In the school&apos;s timezone</p>
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Notes <span className="font-normal text-slate-400">(optional)</span></label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Notes <span className="font-normal text-editorial-ink-faint">(optional)</span></label>
               <input type="text" name="notes" placeholder="e.g. Pizza day!"
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
           </div>
-          <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
+          <label className="flex items-center gap-2 text-[12px] text-editorial-ink-soft cursor-pointer">
             <input type="checkbox" name="orderingOpen" defaultChecked className="rounded" />
             Open for ordering immediately
           </label>
           <button type="submit"
-            className="w-full py-2.5 rounded-lg bg-brand-700 text-white text-[13px] font-semibold">
+            className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
             Create delivery date
           </button>
         </form>
       </details>
 
       {/* ── Generate recurring schedule ─────────────────────────────── */}
-      <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-editorial-ink">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-editorial-green">
               <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/>
             </svg>
             Generate recurring schedule
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">New</span>
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-editorial-sage text-editorial-green">New</span>
           </span>
-          <span className="text-[11px] text-slate-400">tap to expand</span>
+          <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
         </summary>
 
-        <form action={generateRecurringSchedule} className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-4">
-          <p className="text-[12px] text-slate-500 leading-relaxed">
+        <form action={generateRecurringSchedule} className="px-4 pb-4 border-t border-editorial-line pt-3 space-y-4">
+          <p className="text-[12px] text-editorial-ink-soft leading-relaxed">
             Generate every Monday/Wednesday/Friday for the semester in one click. Auto-attaches active menu items and skips US federal holidays if you choose.
           </p>
 
           <div>
-            <label className="text-[11px] text-slate-500 font-semibold block mb-1">Location</label>
+            <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Location</label>
             <select name="schoolId" required
-              className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+              className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
               <option value="">Select location…</option>
               {schools.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
@@ -404,19 +404,19 @@ export default async function DeliveryDatesPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">From</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">From</label>
               <input type="date" name="startDate" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Through</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Through</label>
               <input type="date" name="endDate" required
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2" />
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
           </div>
 
           <div>
-            <label className="text-[11px] text-slate-500 font-semibold block mb-1">On these weekdays</label>
+            <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">On these weekdays</label>
             <div className="grid grid-cols-7 gap-1.5">
               {[
                 { v: 1, l: "Mon", on: true },
@@ -428,7 +428,7 @@ export default async function DeliveryDatesPage() {
                 { v: 0, l: "Sun", on: false },
               ].map((d) => (
                 <label key={d.v}
-                  className="flex flex-col items-center justify-center cursor-pointer rounded-lg border border-slate-200 py-2 has-[:checked]:bg-brand-700 has-[:checked]:text-white has-[:checked]:border-brand-700 transition">
+                  className="flex flex-col items-center justify-center cursor-pointer rounded-lg border border-editorial-line py-2 has-[:checked]:bg-editorial-green has-[:checked]:text-editorial-paper has-[:checked]:border-editorial-green transition">
                   <input type="checkbox" name="weekdays" value={d.v} defaultChecked={d.on} className="sr-only" />
                   <span className="text-[11px] font-semibold">{d.l}</span>
                 </label>
@@ -438,9 +438,9 @@ export default async function DeliveryDatesPage() {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Cutoff</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Cutoff</label>
               <select name="cutoffDaysBefore" defaultValue="1"
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                 <option value="0">Same day</option>
                 <option value="1">1 day before</option>
                 <option value="2">2 days before</option>
@@ -448,18 +448,18 @@ export default async function DeliveryDatesPage() {
               </select>
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Cutoff hour</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Cutoff hour</label>
               <select name="cutoffHour" defaultValue="9"
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                 {Array.from({ length: 24 }, (_, h) => (
                   <option key={h} value={h}>{h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 font-semibold block mb-1">Minute</label>
+              <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Minute</label>
               <select name="cutoffMinute" defaultValue="0"
-                className="w-full rounded-lg border-slate-200 text-[13px] px-3 py-2">
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
                 <option value="0">:00</option>
                 <option value="15">:15</option>
                 <option value="30">:30</option>
@@ -469,21 +469,21 @@ export default async function DeliveryDatesPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
+            <label className="flex items-center gap-2 text-[12px] text-editorial-ink-soft cursor-pointer">
               <input type="checkbox" name="skipHolidays" defaultChecked className="rounded" />
               Skip US federal holidays
             </label>
-            <label className="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
+            <label className="flex items-center gap-2 text-[12px] text-editorial-ink-soft cursor-pointer">
               <input type="checkbox" name="orderingOpen" defaultChecked className="rounded" />
               Open all generated dates for ordering immediately
             </label>
           </div>
 
           <button type="submit"
-            className="w-full py-2.5 rounded-lg bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-700 transition">
+            className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
             Generate dates
           </button>
-          <p className="text-[10px] text-slate-400 text-center">
+          <p className="text-[10px] text-editorial-ink-faint text-center">
             Existing dates won&apos;t be duplicated. Review the generated dates below and remove any you don&apos;t want.
           </p>
         </form>
@@ -492,7 +492,7 @@ export default async function DeliveryDatesPage() {
       {/* ── Upcoming dates ──────────────────────────────────────────── */}
       {upcoming.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint mb-2">
             Upcoming ({upcoming.length})
           </p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
@@ -504,26 +504,26 @@ export default async function DeliveryDatesPage() {
               const effectivelyOpen = date.orderingOpen && !cutoffPassed;
 
               return (
-                <details key={date.id} className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+                <details key={date.id} className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
                   <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer list-none">
                     {/* Calendar tile */}
                     <div style={{
                       flexShrink: 0, width: 44, height: 44, borderRadius: 12,
-                      background: "#fff1f3", display: "flex", flexDirection: "column",
+                      background: "#DEE2CF", display: "flex", flexDirection: "column",
                       alignItems: "center", justifyContent: "center",
                     }}>
-                      <p style={{ fontSize: 8, fontWeight: 700, color: "#c41230", textTransform: "uppercase" }}>
+                      <p style={{ fontSize: 8, fontWeight: 700, color: "#2C4031", textTransform: "uppercase" }}>
                         {formatInTimeZone(date.deliveryDate, tz, "MMM")}
                       </p>
-                      <p style={{ fontSize: 18, fontWeight: 800, color: "#c41230", lineHeight: 1 }}>
+                      <p style={{ fontSize: 18, fontWeight: 800, color: "#2C4031", lineHeight: 1 }}>
                         {formatInTimeZone(date.deliveryDate, tz, "d")}
                       </p>
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-ink truncate">{date.school.name}</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[13px] font-semibold text-editorial-ink truncate">{date.school.name}</p>
+                      <p className="text-[11px] text-editorial-ink-faint">
                         {formatInTimeZone(date.deliveryDate, tz, "EEEE")}
                         {date.notes ? ` · ${date.notes}` : ""}
                       </p>
@@ -532,19 +532,19 @@ export default async function DeliveryDatesPage() {
                     {/* Badges */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {orderCount > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 700, background: "#dcfce7", color: "#15803d", borderRadius: 100, padding: "3px 10px" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, background: "#DEE2CF", color: "#2C4031", borderRadius: 100, padding: "3px 10px" }}>
                           {orderCount} order{orderCount !== 1 ? "s" : ""}
                         </span>
                       )}
                       {menuCount > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 600, background: "#eff6ff", color: "#0369a1", borderRadius: 100, padding: "3px 8px" }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, background: "#EFE8D7", color: "#211D15", borderRadius: 100, padding: "3px 8px" }}>
                           {menuCount} items
                         </span>
                       )}
                       <span style={{
                         fontSize: 10, fontWeight: 700,
-                        background: effectivelyOpen ? "#dcfce7" : cutoffPassed ? "#fef9c3" : "#f3f4f6",
-                        color: effectivelyOpen ? "#15803d" : cutoffPassed ? "#854d0e" : "#6b7280",
+                        background: effectivelyOpen ? "#DEE2CF" : cutoffPassed ? "#F6EED9" : "#EFE8D7",
+                        color: effectivelyOpen ? "#2C4031" : cutoffPassed ? "#6E5C2C" : "#5B5446",
                         borderRadius: 100, padding: "3px 10px",
                       }}>
                         {effectivelyOpen ? "Open" : cutoffPassed ? "Cutoff passed" : "Closed"}
@@ -553,24 +553,24 @@ export default async function DeliveryDatesPage() {
                   </summary>
 
                   {/* Expanded body */}
-                  <div className="border-t border-slate-50 px-4 py-3 space-y-3">
+                  <div className="border-t border-editorial-line px-4 py-3 space-y-3">
                     {/* Cutoff + toggle */}
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
-                        <p className="text-[11px] text-slate-500">
-                          Cutoff: <span className="font-medium text-ink">
+                        <p className="text-[11px] text-editorial-ink-soft">
+                          Cutoff: <span className="font-medium text-editorial-ink">
                             {formatInTimeZone(date.cutoffAt, tz, "EEE MMM d · h:mm a zzz")}
                           </span>
                         </p>
                         {orderCount > 0 && (
                           <div className="flex items-center gap-3">
                             <Link href={`/admin/orders?deliveryDateId=${date.id}`}
-                              className="text-[11px] text-brand-700 font-medium no-underline hover:underline">
+                              className="text-[11px] text-editorial-green font-medium no-underline hover:underline">
                               View {orderCount} order{orderCount !== 1 ? "s" : ""} →
                             </Link>
                             <a href={`/api/admin/labels?deliveryDateId=${date.id}`}
                               target="_blank" rel="noopener noreferrer"
-                              className="text-[11px] text-slate-500 font-medium no-underline hover:underline flex items-center gap-1">
+                              className="text-[11px] text-editorial-ink-soft font-medium no-underline hover:underline flex items-center gap-1">
                               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
                               </svg>
@@ -581,15 +581,15 @@ export default async function DeliveryDatesPage() {
                       </div>
                       <div className="flex gap-2 flex-shrink-0 flex-wrap">
                         {cutoffPassed ? (
-                          <span style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>Cutoff passed</span>
+                          <span style={{ fontSize: 11, color: "#938B78", fontStyle: "italic" }}>Cutoff passed</span>
                         ) : (
                           <form action={toggleDateOpen}>
                             <input type="hidden" name="id" value={date.id} />
                             <button type="submit"
                               className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition ${
                                 date.orderingOpen
-                                  ? "border-slate-200 text-slate-600 hover:border-red-200 hover:text-red-700"
-                                  : "border-brand-200 text-brand-700 hover:bg-brand-50"
+                                  ? "border-editorial-line text-editorial-ink-soft hover:border-editorial-green hover:text-editorial-green"
+                                  : "border-editorial-line text-editorial-ink-soft hover:bg-editorial-paper-2"
                               }`}>
                               {date.orderingOpen ? "Close ordering" : "Open ordering"}
                             </button>
@@ -599,39 +599,39 @@ export default async function DeliveryDatesPage() {
                     </div>
 
                     {/* ── Cancel this date ─────────────────────────────────── */}
-                    <details className="rounded-lg border border-red-100 bg-red-50/30 overflow-hidden">
-                      <summary className="px-3 py-2 text-[11px] text-red-700 font-semibold cursor-pointer list-none flex items-center gap-1.5 hover:bg-red-50 transition">
+                    <details className="rounded-lg border border-[#E2C3B3] bg-[#F4E3DB] overflow-hidden">
+                      <summary className="px-3 py-2 text-[11px] text-[#7C3D24] font-semibold cursor-pointer list-none flex items-center gap-1.5 hover:bg-[#F1D9CC] transition">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                         </svg>
                         Cancel this delivery date
                       </summary>
-                      <form action={cancelDeliveryDate} className="px-3 pb-3 border-t border-red-100 pt-3 space-y-2">
+                      <form action={cancelDeliveryDate} className="px-3 pb-3 border-t border-[#E2C3B3] pt-3 space-y-2">
                         <input type="hidden" name="id" value={date.id} />
                         {orderCount > 0 ? (
-                          <div className="rounded-lg border border-red-200 bg-white px-3 py-2.5">
-                            <p className="text-[12px] font-bold text-red-800 mb-1">⚠ This date has {orderCount} paid order{orderCount !== 1 ? "s" : ""}.</p>
-                            <p className="text-[11px] text-red-700 leading-relaxed">
+                          <div className="rounded-lg border border-[#E2C3B3] bg-white px-3 py-2.5">
+                            <p className="text-[12px] font-bold text-[#7C3D24] mb-1">⚠ This date has {orderCount} paid order{orderCount !== 1 ? "s" : ""}.</p>
+                            <p className="text-[11px] text-[#7C3D24] leading-relaxed">
                               Cancelling will issue a Stripe refund for every order, set them all to CANCELLED, and notify customers by email.
                               The date will be hidden from the parent ordering page. This <strong>cannot be undone</strong>.
                             </p>
                           </div>
                         ) : (
-                          <p className="text-[11px] text-slate-600">No orders on this date — cancelling just removes it from the schedule.</p>
+                          <p className="text-[11px] text-editorial-ink-soft">No orders on this date — cancelling just removes it from the schedule.</p>
                         )}
                         <div>
-                          <label className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide block mb-1">Reason (optional)</label>
+                          <label className="text-[10px] text-editorial-ink-soft font-semibold uppercase tracking-wide block mb-1">Reason (optional)</label>
                           <input
                             type="text"
                             name="reason"
                             placeholder="e.g. Snow day, school closure"
-                            className="w-full rounded-lg border border-slate-200 text-[12px] px-3 py-1.5"
+                            className="w-full rounded-lg border border-editorial-line text-[12px] px-3 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
                           />
                         </div>
                         <div className="flex items-center gap-2 pt-1">
                           <ConfirmButton
-                            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-[11px] font-semibold hover:bg-red-700 transition"
+                            className="px-3 py-1.5 rounded-lg bg-[#7C3D24] text-white text-[11px] font-semibold hover:bg-[#6B3420] transition"
                             message={
                               orderCount > 0
                                 ? `Cancel this delivery date and refund ${orderCount} paid order${orderCount !== 1 ? "s" : ""}? This cannot be undone.`
@@ -649,11 +649,11 @@ export default async function DeliveryDatesPage() {
                     {/* Menu items currently on this date */}
                     {date.menuAvailability.length > 0 && (
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Menu items on this date</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-editorial-ink-faint mb-1.5">Menu items on this date</p>
                         <div className="flex flex-wrap gap-1.5">
                           {date.menuAvailability.map((entry) => (
                             <span key={entry.id}
-                              className="px-2.5 py-1 rounded-full text-[11px] bg-brand-50 text-brand-800 border border-brand-100">
+                              className="px-2.5 py-1 rounded-full text-[11px] bg-editorial-paper-2 text-editorial-ink border border-editorial-line">
                               {entry.menuItem.name}
                             </span>
                           ))}
@@ -662,14 +662,14 @@ export default async function DeliveryDatesPage() {
                     )}
 
                     {/* Attach / update menu items */}
-                    <details className="rounded-lg border border-slate-100 overflow-hidden">
-                      <summary className="px-3 py-2 text-[12px] text-brand-700 font-medium cursor-pointer list-none hover:bg-slate-50 transition">
+                    <details className="rounded-lg border border-editorial-line overflow-hidden">
+                      <summary className="px-3 py-2 text-[12px] text-editorial-green font-medium cursor-pointer list-none hover:bg-editorial-paper-2 transition">
                         {date.menuAvailability.length > 0 ? "Update menu items →" : "+ Attach menu items"}
                       </summary>
-                      <form action={attachMenuItems} className="px-3 pb-3 border-t border-slate-50 pt-2 space-y-2">
+                      <form action={attachMenuItems} className="px-3 pb-3 border-t border-editorial-line pt-2 space-y-2">
                         <input type="hidden" name="deliveryDateId" value={date.id} />
                         <input type="hidden" name="schoolId" value={date.schoolId} />
-                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide pt-1">
+                        <p className="text-[10px] text-editorial-ink-faint font-medium uppercase tracking-wide pt-1">
                           Check items to include · set a qty cap (optional)
                         </p>
                         {(() => {
@@ -697,14 +697,14 @@ export default async function DeliveryDatesPage() {
                                   <div key={item.id} className="flex items-center gap-2">
                                     <input type="checkbox" name="menuItemIds" value={item.id}
                                       defaultChecked={!!existing}
-                                      className="rounded flex-shrink-0 accent-brand-700" />
-                                    <span className="text-[12px] text-slate-700 flex-1 truncate">{item.name}</span>
+                                      className="rounded flex-shrink-0 accent-editorial-green" />
+                                    <span className="text-[12px] text-editorial-ink flex-1 truncate">{item.name}</span>
                                     <div className="flex items-center gap-1 flex-shrink-0">
                                       {soldCount > 0 && (
                                         <span style={{
                                           fontSize: 9, fontWeight: 700,
-                                          background: isSoldOut ? "#fee2e2" : "#f0fdf4",
-                                          color: isSoldOut ? "#b91c1c" : "#15803d",
+                                          background: isSoldOut ? "#F4E3DB" : "#DEE2CF",
+                                          color: isSoldOut ? "#7C3D24" : "#2C4031",
                                           borderRadius: 100, padding: "1px 6px",
                                         }}>
                                           {soldCount} sold{isSoldOut ? " · SOLD OUT" : ""}
@@ -718,8 +718,8 @@ export default async function DeliveryDatesPage() {
                                         placeholder="∞"
                                         style={{
                                           width: 48, fontSize: 11, textAlign: "center",
-                                          borderRadius: 6, border: "1px solid #e2e8f0",
-                                          padding: "2px 4px", color: "#475569",
+                                          borderRadius: 6, border: "1px solid #E3DBC6",
+                                          padding: "2px 4px", color: "#5B5446",
                                         }}
                                       />
                                     </div>
@@ -730,7 +730,7 @@ export default async function DeliveryDatesPage() {
                           );
                         })()}
                         <button type="submit"
-                          className="w-full py-2 rounded-lg bg-brand-700 text-white text-[12px] font-semibold">
+                          className="w-full py-2 rounded-lg bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
                           Save menu items
                         </button>
                       </form>
@@ -753,12 +753,12 @@ export default async function DeliveryDatesPage() {
 
       {/* ── Past dates ──────────────────────────────────────────────── */}
       {past.length > 0 && (
-        <details className="rounded-[14px] border border-slate-100 bg-white overflow-hidden">
+        <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
           <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-            <span className="text-[13px] font-semibold text-slate-500">Past dates ({past.length})</span>
-            <span className="text-[11px] text-slate-400">tap to expand</span>
+            <span className="text-[13px] font-semibold text-editorial-ink-soft">Past dates ({past.length})</span>
+            <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
           </summary>
-          <div className="border-t border-slate-50 divide-y divide-slate-50">
+          <div className="border-t border-editorial-line divide-y divide-editorial-line">
             {past.slice().reverse().map((date) => {
               const tz         = date.school.timezone;
               const orderCount = date._count.orders;
@@ -767,19 +767,19 @@ export default async function DeliveryDatesPage() {
                   <div className="flex items-center gap-3">
                     <div style={{
                       flexShrink: 0, width: 36, height: 36, borderRadius: 10,
-                      background: "#f3f4f6", display: "flex", flexDirection: "column",
+                      background: "#EFE8D7", display: "flex", flexDirection: "column",
                       alignItems: "center", justifyContent: "center",
                     }}>
-                      <p style={{ fontSize: 7, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" }}>
+                      <p style={{ fontSize: 7, fontWeight: 700, color: "#938B78", textTransform: "uppercase" }}>
                         {formatInTimeZone(date.deliveryDate, tz, "MMM")}
                       </p>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: "#6b7280", lineHeight: 1 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "#5B5446", lineHeight: 1 }}>
                         {formatInTimeZone(date.deliveryDate, tz, "d")}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[12px] font-medium text-slate-600">{date.school.name}</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[12px] font-medium text-editorial-ink-soft">{date.school.name}</p>
+                      <p className="text-[11px] text-editorial-ink-faint">
                         {formatInTimeZone(date.deliveryDate, tz, "EEE, MMM d yyyy")}
                         {date.notes ? ` · ${date.notes}` : ""}
                       </p>
@@ -790,13 +790,13 @@ export default async function DeliveryDatesPage() {
                       <>
                         <Link href={`/admin/orders?deliveryDateId=${date.id}&archived=include`}
                           className="text-[11px] font-semibold no-underline"
-                          style={{ color: "#6b7280" }}>
+                          style={{ color: "#938B78" }}>
                           {orderCount} orders
                         </Link>
                         <a href={`/api/admin/labels?deliveryDateId=${date.id}`}
                           target="_blank" rel="noopener noreferrer"
                           className="text-[11px] font-medium no-underline hover:underline flex items-center gap-1"
-                          style={{ color: "#94a3b8" }}>
+                          style={{ color: "#938B78" }}>
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
                           </svg>
@@ -804,7 +804,7 @@ export default async function DeliveryDatesPage() {
                         </a>
                       </>
                     )}
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-editorial-ink-faint">
                       {date.menuAvailability.length} items
                     </span>
                   </div>
