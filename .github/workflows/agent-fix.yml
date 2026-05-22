@@ -7,11 +7,15 @@
 #   2. Checks out the PR branch
 #   3. Runs Claude with a "address these findings" prompt
 #   4. Commits + pushes to the same PR branch (no new PR)
-#   5. Re-runs typecheck + tests + self-review on the updated state
+#   5. Re-runs typecheck + tests + build + guard + self-review
 #   6. Posts the new verdict and enables auto-merge if all green
 #
 # Re-trigger by re-labeling. Stops when verdict is PASS (auto-merge)
 # or when you stop labeling (manual takeover).
+#
+# HARDENING (2026-05): the self-review step is `continue-on-error` and a
+# type-safety guard blocks auto-merge on new `as any` / `@ts-ignore`, so
+# a crashed reviewer or a suppressed cast can no longer slip a fix through.
 
 name: Engineering Agent — Fix Loop
 
@@ -208,8 +212,27 @@ jobs:
           git commit -m "Agent fix: address self-review findings on PR #${{ steps.pr.outputs.pr }}"
           git push
 
+      - name: Guard - block type-safety escapes
+        if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        id: guard
+        continue-on-error: true
+        run: |
+          # `as any`, `as unknown`, `@ts-ignore`, `@ts-expect-error` suppress
+          # type errors tsc would otherwise catch. If the PR's full diff
+          # contains any, withhold auto-merge for human review.
+          ADDED=$(git diff origin/main...HEAD -- '*.ts' '*.tsx' \
+            | grep -E '^\+' | grep -vE '^\+\+\+' \
+            | grep -Ec 'as any|as unknown|@ts-ignore|@ts-expect-error' || true)
+          echo "Type-safety escapes in this PR diff: ${ADDED:-0}"
+          if [ "${ADDED:-0}" -gt 0 ]; then
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Re-run self-review
         if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PR_NUMBER: ${{ steps.pr.outputs.pr }}
@@ -219,21 +242,22 @@ jobs:
         run: bash /tmp/agent/run-self-review.sh
 
       - name: Post new verdict
-        if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        if: always() && steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.AGENT_PAT }}
         run: |
-          BODY="$(cat review-verdict.md 2>/dev/null || echo 'Re-review crashed — see workflow logs.')"
+          BODY="$(cat review-verdict.md 2>/dev/null || echo 'Re-review crashed — see workflow logs. Auto-merge withheld.')"
           gh pr comment ${{ steps.pr.outputs.pr }} --body "$BODY"
 
       - name: Enable auto-merge if all green
-        if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        if: always() && steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.AGENT_PAT }}
         run: |
           TSC="${{ steps.tsc.outputs.result }}"
           TESTS="${{ steps.tests.outputs.result }}"
           BUILD="${{ steps.build.outputs.result }}"
+          GUARD="${{ steps.guard.outputs.result }}"
           REVIEW_PASS="no"
           if grep -q "^## Self-Review: PASS" review-verdict.md 2>/dev/null; then
             REVIEW_PASS="yes"
@@ -242,13 +266,21 @@ jobs:
           if [ "$TESTS" = "pass" ] || [ "$TESTS" = "skip" ]; then
             TESTS_OK="yes"
           fi
-          echo "tsc=$TSC, tests=$TESTS, review=$REVIEW_PASS"
-          if [ "$TSC" = "pass" ] && [ "$TESTS_OK" = "yes" ] && [ "$BUILD" = "pass" ] && [ "$REVIEW_PASS" = "yes" ]; then
+          echo "tsc=$TSC tests=$TESTS build=$BUILD guard=$GUARD review=$REVIEW_PASS"
+          if [ "$TSC" = "pass" ] && [ "$TESTS_OK" = "yes" ] && [ "$BUILD" = "pass" ] && [ "$GUARD" = "pass" ] && [ "$REVIEW_PASS" = "yes" ]; then
             echo "All green after fix — enabling auto-merge."
             gh pr merge ${{ steps.pr.outputs.pr }} --auto --squash
           else
             echo "Still not green — leaving PR for next fix loop or human review."
           fi
+
+      - name: Flag type-safety escape on PR
+        if: always() && steps.guard.outputs.result == 'fail' && steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          gh pr comment ${{ steps.pr.outputs.pr }} \
+            --body "Auto-merge withheld: this PR's diff contains \`as any\` / \`as unknown\` / \`@ts-ignore\` / \`@ts-expect-error\`. Those suppress type errors \`tsc\` would catch. Please review the suppressed cast(s) before merging."
 
       - name: Note if no changes
         if: steps.pr.outputs.skip != 'true' && steps.diff.outputs.changed != 'true'

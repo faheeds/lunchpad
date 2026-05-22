@@ -6,6 +6,11 @@
 # This is the "second opinion" that used to live in a separate QA workflow.
 # It runs in the SAME workflow as the agent but uses a fresh Claude context
 # and a reviewer prompt — distinct role and instructions from the engineer.
+#
+# HARDENING (2026-05): the reviewer model call is retried and is NEVER
+# allowed to abort this script. If review genuinely cannot run, we still
+# emit a NEEDS_FIXES verdict so the workflow (a) posts a visible comment
+# and (b) withholds auto-merge. An un-reviewed PR must never auto-merge.
 
 set -euo pipefail
 
@@ -16,7 +21,7 @@ FULL_DIFF=$(git diff origin/main...HEAD || true)
 # Cap to ~30K chars to keep tokens reasonable.
 # Uses pure-bash parameter expansion to avoid the `echo | head -c` pipe,
 # which crashed under `set -euo pipefail` when `head` closed the pipe
-# before `echo` finished (SIGPIPE → exit 1).
+# before `echo` finished (SIGPIPE -> exit 1).
 if [ "${#FULL_DIFF}" -gt 30000 ]; then
   FULL_DIFF="${FULL_DIFF:0:30000}
 
@@ -43,11 +48,11 @@ $FULL_DIFF
 Look specifically for:
 1. Correctness bugs — missing await, wrong arg order, off-by-one, missing null checks, no-op operations (e.g. setting a field to its existing value).
 2. Multi-tenant data leaks — any new Prisma query that does not filter by restaurantId where it should.
-3. Type safety regressions — \`any\`, type assertions \`as Foo\`, ignored generics.
-4. Schema usage diverging from prisma/schema.prisma (e.g. setting an enum value that doesn't exist).
+3. Type safety regressions — \`any\`, type assertions \`as Foo\`, \`as any\`, \`@ts-ignore\`, \`@ts-expect-error\`, ignored generics. Treat EVERY \`as any\` as a likely bug — a real Stripe-refund outage shipped because \`as any\` hid an invalid enum value from tsc.
+4. Schema usage diverging from prisma/schema.prisma (e.g. setting an enum value that doesn't exist, or calling a third-party API with an invalid enum/string literal).
 5. Hardcoded school-y copy that should use the label utility.
 6. UI changes missing accessibility basics (alt text, aria-label, keyboard nav).
-7. Anything touching app/api/stripe/* or lib/orders.ts — these require extra scrutiny.
+7. Anything touching app/api/stripe/* or lib/orders.ts or lib/refund.ts — these require extra scrutiny.
 8. Scope creep — changes outside the issue's stated scope.
 
 Write your verdict to review-verdict.md as Markdown with this EXACT shape (the leading "## Self-Review:" line is parsed by the workflow to decide auto-merge):
@@ -69,25 +74,43 @@ Be terse. No preamble. No praise. If you find nothing wrong in an area, say "No 
 EOF
 )
 
-claude \
-  --print \
-  --dangerously-skip-permissions \
-  --model claude-haiku-4-5 \
-  "$PROMPT" > review-verdict.md 2>&1
+# Run the reviewer model with up to 3 attempts. The `claude` call sits
+# inside an `if` condition, which exempts it from `set -e` — a transient
+# API failure retries instead of aborting the whole script.
+REVIEW_OK=0
+for attempt in 1 2 3; do
+  if claude \
+      --print \
+      --dangerously-skip-permissions \
+      --model claude-haiku-4-5 \
+      "$PROMPT" > review-verdict.md 2>&1 \
+     && grep -q "^## Self-Review:" review-verdict.md; then
+    REVIEW_OK=1
+    echo "Self-review succeeded on attempt $attempt."
+    break
+  fi
+  echo "Self-review attempt $attempt failed or produced malformed output." >&2
+  if [ "$attempt" -lt 3 ]; then
+    sleep $((attempt * 10))
+  fi
+done
 
-# Defensive fallback in case the model didn't follow the format.
-if ! grep -q "^## Self-Review:" review-verdict.md; then
-  RAW=$(cat review-verdict.md)
+# If the reviewer never produced a valid verdict, emit a fail-safe one.
+# NEEDS_FIXES (never PASS) guarantees the workflow will NOT auto-merge.
+if [ "$REVIEW_OK" -ne 1 ]; then
+  RAW=$(cat review-verdict.md 2>/dev/null || echo "(no output captured)")
   cat > review-verdict.md << ENDFALLBACK
 ## Self-Review: NEEDS_FIXES
 
-Reviewer did not produce a structured verdict. Raw output:
+**The automated reviewer could not produce a verdict after 3 attempts** —
+a transient model/API failure or malformed output. Auto-merge is
+deliberately withheld: a human must review this PR before merging it.
+
+Raw output from the final attempt:
 
 \`\`\`
 $RAW
 \`\`\`
-
-Please review manually.
 ENDFALLBACK
 fi
 
