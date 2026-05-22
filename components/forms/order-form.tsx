@@ -519,7 +519,7 @@ export function OrderForm({
         {progressSteps.map((label, i) => (
           i < progressSteps.length - 1 && (
             <div key={label} className="flex items-center gap-1 flex-1">
-              <div className={cn("flex-1 h-1 rounded-full transition-colors", i < step - 1 ? "bg-editorial-green" : "border-editorial-line")} />
+              <div className={cn("flex-1 h-1 rounded-full transition-colors", i < step - 1 ? "bg-editorial-green" : "bg-editorial-line")} />
             </div>
           )
         ))}
@@ -555,7 +555,7 @@ export function OrderForm({
                   setCartItems([]);
                   setSelectedMenuItemId("");
                 }}
-                className="w-full rounded-[14px] border border-border-editorial-line bg-white p-3.5 text-[14px] font-semibold text-editorial-ink"
+                className="w-full rounded-[14px] border border-editorial-line bg-white p-3.5 text-[14px] font-semibold text-editorial-ink"
               >
                 <option value="" disabled>Select a location</option>
                 {groupedSchools.school.length > 0 && groupedSchools.office.length > 0 ? (
@@ -583,7 +583,7 @@ export function OrderForm({
                   key={school.id}
                   type="button"
                   onClick={() => { setSelectedSchoolId(school.id); setSelectedDeliveryDateId(deliveryDates.find((d) => d.school.id === school.id)?.id ?? ""); setCartItems([]); setSelectedMenuItemId(""); }}
-                  className={cn("w-full rounded-[14px] border p-3.5 text-left mb-2 transition", selectedSchoolId === school.id ? "border-editorial-green bg-white border-2" : "border-border-editorial-line bg-white")}
+                  className={cn("w-full rounded-[14px] border p-3.5 text-left mb-2 transition", selectedSchoolId === school.id ? "border-editorial-green bg-white border-2" : "border-editorial-line bg-white")}
                 >
                   <p className={cn("text-[14px] font-semibold", selectedSchoolId === school.id ? "text-editorial-green" : "text-editorial-ink")}>{school.name}</p>
                   <p className={cn("text-[12px] mt-0.5", selectedSchoolId === school.id ? "text-editorial-green" : "text-slate-500")}>
@@ -608,7 +608,7 @@ export function OrderForm({
                     key={date.id}
                     type="button"
                     onClick={() => { setSelectedDeliveryDateId(date.id); setCartItems([]); setSelectedMenuItemId(""); }}
-                    className={cn("flex-shrink-0 rounded-[12px] border p-3 text-center min-w-[60px] transition", sel ? "border-editorial-green bg-white border-2" : "border-border-editorial-line bg-white")}
+                    className={cn("flex-shrink-0 rounded-[12px] border p-3 text-center min-w-[60px] transition", sel ? "border-editorial-green bg-white border-2" : "border-editorial-line bg-white")}
                   >
                     <p className={cn("text-[9px] uppercase tracking-wide mb-0.5", sel ? "text-editorial-green" : "text-slate-400")}>
                       {formatInTimeZone(date.deliveryDate, date.school.timezone, "EEE")}
@@ -660,7 +660,7 @@ export function OrderForm({
       {step === 2 && (
         <div ref={menuScrollRef}>
           <button type="button" onClick={() => window.history.back()} className="text-[12px] text-slate-500 flex items-center gap-1 mb-3">← Back</button>
-          <div className="rounded-[14px] bg-editorial-paper border border-border-editorial-line px-3 py-2.5 mb-4 text-[12px] text-editorial-ink flex justify-between items-center">
+          <div className="rounded-[14px] bg-editorial-paper border border-editorial-line px-3 py-2.5 mb-4 text-[12px] text-editorial-ink flex justify-between items-center">
             <span>{formatInTimeZone(selectedDelivery!.deliveryDate, selectedDelivery!.school.timezone, "EEE MMM d")}</span>
             <span className="font-semibold">{selectedDelivery?.school.name}</span>
           </div>
@@ -689,7 +689,7 @@ export function OrderForm({
                         "w-full rounded-[14px] border p-3 text-left flex gap-2.5 items-start transition",
                         isSoldOut ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed" :
                         isSelected ? "border-editorial-green bg-white border-2" :
-                        inCart ? "border-green-200 bg-green-50/40 border" : "border-border-editorial-line bg-white"
+                        inCart ? "border-green-200 bg-green-50/40 border" : "border-editorial-line bg-white"
                       )}
                     >
                       {item.imageUrl ? (
@@ -698,7 +698,7 @@ export function OrderForm({
                           alt={item.name}
                           width={36}
                           height={36}
-                          className="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-border-editorial-line"
+                          className="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-editorial-line"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                         />
                       ) : (
@@ -764,7 +764,7 @@ export function OrderForm({
                             "px-3 py-1.5 rounded-full border text-[12px] font-semibold transition",
                             active
                               ? "border-editorial-green bg-white text-editorial-green"
-                              : "border-border-editorial-line bg-white text-editorial-ink hover:border-border-editorial-line",
+                              : "border-editorial-line bg-white text-editorial-ink hover:border-editorial-line",
                           )}
                         >
                           {size.name}
@@ -788,7 +788,7 @@ export function OrderForm({
                         type="button"
                         onClick={() => setSelectedChoice(choice)}
                         className={cn("w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-[12px] text-left transition",
-                          selectedChoice === choice ? "border-editorial-green bg-white text-editorial-ink font-semibold" : "border-border-editorial-line bg-white text-editorial-ink")}
+                          selectedChoice === choice ? "border-editorial-green bg-white text-editorial-ink font-semibold" : "border-editorial-line bg-white text-editorial-ink")}
                       >
                         <div className={cn("w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center",
                           selectedChoice === choice ? "border-editorial-green bg-editorial-green" : "border-slate-300")}>
@@ -808,7 +808,7 @@ export function OrderForm({
                     {selectedMenuItem.options.filter((o) => o.optionType === "ADD_ON" && !requiredChoices.includes(o.name)).map((option) => (
                       <button key={option.id} type="button" onClick={() => toggle(option.name, selectedAdditions, setSelectedAdditions)}
                         className={cn("w-full px-2.5 py-1.5 rounded-full text-[11px] border text-left transition",
-                          selectedAdditions.includes(option.name) ? "bg-green-100 border-editorial-green text-editorial-ink font-medium" : "bg-white border-border-editorial-line text-editorial-ink")}>
+                          selectedAdditions.includes(option.name) ? "bg-green-100 border-editorial-green text-editorial-ink font-medium" : "bg-white border-editorial-line text-editorial-ink")}>
                         + {option.name}{option.priceDeltaCents ? ` +${fmt(option.priceDeltaCents)}` : ""}
                       </button>
                     ))}
@@ -822,7 +822,7 @@ export function OrderForm({
                     {selectedMenuItem.options.filter((o) => o.optionType === "REMOVAL").map((option) => (
                       <button key={option.id} type="button" onClick={() => toggle(option.name, selectedRemovals, setSelectedRemovals)}
                         className={cn("w-full px-2.5 py-1.5 rounded-full text-[11px] border text-left transition",
-                          selectedRemovals.includes(option.name) ? "bg-red-100 border-red-300 text-red-900 font-medium" : "bg-white border-border-editorial-line text-editorial-ink")}>
+                          selectedRemovals.includes(option.name) ? "bg-red-100 border-red-300 text-red-900 font-medium" : "bg-white border-editorial-line text-editorial-ink")}>
                         No {option.name}
                       </button>
                     ))}
@@ -840,7 +840,7 @@ export function OrderForm({
                   Add to cart — {fmt(selectedItemTotalCents)}
                 </button>
                 <button type="button" onClick={() => setSelectedMenuItemId("")}
-                  className="px-4 py-2.5 rounded-xl border border-border-editorial-line bg-white text-[13px] text-editorial-ink">
+                  className="px-4 py-2.5 rounded-xl border border-editorial-line bg-white text-[13px] text-editorial-ink">
                   Cancel
                 </button>
               </div>
@@ -849,7 +849,7 @@ export function OrderForm({
 
           {/* Cart display on menu step */}
           {cartItems.length > 0 && (
-            <div className="rounded-[18px] border border-border-editorial-line bg-white p-4 mb-4">
+            <div className="rounded-[18px] border border-editorial-line bg-white p-4 mb-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-3">
                 Your cart {totalUnits > 0 ? `· ${totalUnits} item${totalUnits === 1 ? "" : "s"}` : ""}
               </p>
@@ -871,12 +871,12 @@ export function OrderForm({
                           {item.quantity > 1 && <span className="text-slate-400"> · {fmt(item.lineTotalCents)} each</span>}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 rounded-full border border-border-editorial-line bg-white px-1 py-1 flex-shrink-0">
+                      <div className="flex items-center gap-1 rounded-full border border-editorial-line bg-white px-1 py-1 flex-shrink-0">
                         <button
                           type="button"
                           onClick={() => decrementCartItem(item.id)}
                           aria-label={item.quantity > 1 ? `Decrease ${item.itemName}` : `Remove ${item.itemName}`}
-                          className="w-7 h-7 rounded-full bg-white border border-border-editorial-line text-editorial-ink text-[14px] font-semibold flex items-center justify-center hover:bg-editorial-paper"
+                          className="w-7 h-7 rounded-full bg-white border border-editorial-line text-editorial-ink text-[14px] font-semibold flex items-center justify-center hover:bg-editorial-paper"
                         >
                           {item.quantity > 1 ? "−" : "×"}
                         </button>
@@ -887,7 +887,7 @@ export function OrderForm({
                           type="button"
                           onClick={() => incrementCartItem(item.id)}
                           aria-label={`Add another ${item.itemName}`}
-                          className="w-7 h-7 rounded-full bg-white border border-border-editorial-line text-editorial-ink text-[14px] font-semibold flex items-center justify-center hover:bg-editorial-paper"
+                          className="w-7 h-7 rounded-full bg-white border border-editorial-line text-editorial-ink text-[14px] font-semibold flex items-center justify-center hover:bg-editorial-paper"
                         >
                           +
                         </button>
@@ -928,7 +928,7 @@ export function OrderForm({
                     key={child.id}
                     type="button"
                     onClick={() => setSelectedParentChildId(child.id)}
-                    className={cn("px-3 py-1.5 rounded-full text-[12px] font-medium border transition", selectedParentChildId === child.id ? "bg-editorial-ink text-white border-editorial-ink" : "bg-white text-slate-600 border-border-editorial-line")}
+                    className={cn("px-3 py-1.5 rounded-full text-[12px] font-medium border transition", selectedParentChildId === child.id ? "bg-editorial-ink text-white border-editorial-ink" : "bg-white text-slate-600 border-editorial-line")}
                   >
                     {child.studentName}{labels.showGrade ? `, Gr ${child.grade}` : ""}
                   </button>
@@ -936,7 +936,7 @@ export function OrderForm({
                 <button
                   type="button"
                   onClick={() => setSelectedParentChildId("")}
-                  className={cn("px-3 py-1.5 rounded-full text-[12px] font-medium border transition", !selectedParentChildId ? "bg-editorial-ink text-white border-editorial-ink" : "bg-white text-slate-500 border-dashed border-border-editorial-line")}
+                  className={cn("px-3 py-1.5 rounded-full text-[12px] font-medium border transition", !selectedParentChildId ? "bg-editorial-ink text-white border-editorial-ink" : "bg-white text-slate-500 border-dashed border-editorial-line")}
                 >
                   + Manual entry
                 </button>
@@ -949,31 +949,31 @@ export function OrderForm({
               submit. Toggling it off lets the orderer place an order for a
               coworker. */}
           {isOffice && (
-            <label className="flex items-center gap-2 rounded-[14px] border border-border-editorial-line bg-white px-3 py-2.5 cursor-pointer">
+            <label className="flex items-center gap-2 rounded-[14px] border border-editorial-line bg-white px-3 py-2.5 cursor-pointer">
               <input
                 type="checkbox"
                 checked={orderForSelf}
                 onChange={(e) => setOrderForSelf(e.target.checked)}
-                className="h-4 w-4 rounded border-border-editorial-line"
+                className="h-4 w-4 rounded border-editorial-line"
               />
               <span className="text-[14px] text-editorial-ink">Ordering for myself</span>
               <span className="text-[11px] text-slate-400 ml-auto">Uncheck if ordering for a coworker</span>
             </label>
           )}
 
-          <div className="rounded-[18px] border border-border-editorial-line bg-white p-4 space-y-3">
+          <div className="rounded-[18px] border border-editorial-line bg-white p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] text-slate-500 mb-1 block">
                   {isOffice ? "Your name" : "Parent name"}
                 </label>
-                <input className="w-full rounded-xl border-border-editorial-line text-[14px] px-3 py-2" value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="Your name" required />
+                <input className="w-full rounded-xl border-editorial-line text-[14px] px-3 py-2" value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="Your name" required />
               </div>
               <div>
                 <label className="text-[11px] text-slate-500 mb-1 block">
                   {isOffice ? "Your email" : "Parent email"}
                 </label>
-                <input type="email" className="w-full rounded-xl border-border-editorial-line text-[14px] px-3 py-2" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="email@example.com" required />
+                <input type="email" className="w-full rounded-xl border-editorial-line text-[14px] px-3 py-2" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="email@example.com" required />
               </div>
 
               {/* Recipient name — hidden for office self-orders, shown otherwise */}
@@ -981,7 +981,7 @@ export function OrderForm({
                 <div>
                   <label className="text-[11px] text-slate-500 mb-1 block">{labels.unitName}</label>
                   <input
-                    className="w-full rounded-xl border-border-editorial-line text-[14px] px-3 py-2"
+                    className="w-full rounded-xl border-editorial-line text-[14px] px-3 py-2"
                     value={studentName}
                     onChange={(e) => setStudentName(e.target.value)}
                     placeholder={isOffice ? "Coworker's name" : "Student name"}
@@ -994,7 +994,7 @@ export function OrderForm({
               {labels.showGrade && (
                 <div>
                   <label className="text-[11px] text-slate-500 mb-1 block">{labels.grade}</label>
-                  <select className="w-full rounded-xl border-border-editorial-line text-[14px] px-3 py-2" value={grade} onChange={(e) => setGrade(e.target.value)} required>
+                  <select className="w-full rounded-xl border-editorial-line text-[14px] px-3 py-2" value={grade} onChange={(e) => setGrade(e.target.value)} required>
                     <option value="" disabled>Select {labels.grade.toLowerCase()}</option>
                     {gradeOptions.map((g) => (
                       <option key={g} value={g}>{g}</option>
@@ -1008,7 +1008,7 @@ export function OrderForm({
                 {isOffice ? "Allergies / dietary notes" : "Allergy notes"}
               </label>
               <textarea
-                className="w-full rounded-xl border-border-editorial-line text-[14px] px-3 py-2 resize-none"
+                className="w-full rounded-xl border-editorial-line text-[14px] px-3 py-2 resize-none"
                 rows={2}
                 value={allergyNotes}
                 onChange={(e) => setAllergyNotes(e.target.value)}
@@ -1048,7 +1048,7 @@ export function OrderForm({
         <div className="space-y-4">
           <button type="button" onClick={() => window.history.back()} className="text-[12px] text-slate-500 flex items-center gap-1 mb-2">← Back</button>
 
-          <div className="rounded-[18px] border border-border-editorial-line bg-white divide-y divide-editorial-sage overflow-hidden">
+          <div className="rounded-[18px] border border-editorial-line bg-white divide-y divide-editorial-sage overflow-hidden">
             <div className="p-4">
               <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Delivery</p>
               <p className="text-[14px] font-semibold text-editorial-ink">{selectedDelivery && formatInTimeZone(selectedDelivery.deliveryDate, selectedDelivery.school.timezone, "EEEE, MMMM d")}</p>
@@ -1119,7 +1119,7 @@ export function OrderForm({
                       placeholder="Promo code"
                       aria-label="Promo code"
                       autoFocus
-                      className="flex-1 rounded-lg border border-border-editorial-line px-3 py-2 text-[14px] font-mono tracking-wider uppercase focus:outline-none focus:border-editorial-green"
+                      className="flex-1 rounded-lg border border-editorial-line px-3 py-2 text-[14px] font-mono tracking-wider uppercase focus:outline-none focus:border-editorial-green"
                     />
                     <button
                       type="button"
