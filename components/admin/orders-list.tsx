@@ -17,7 +17,7 @@ type OrderListItem = {
   parentName: string;
   parentEmail: string;
   school: { name: string; timezone: string };
-  deliveryDate: { deliveryDate: string | Date };
+  deliveryDate: { deliveryDate: string | Date; originalCutoffAt: string | Date | null };
   student: {
     studentName: string;
     grade: string;
@@ -262,6 +262,7 @@ export function OrdersList({
         const allergy  = order.items.map((i) => i.allergyNotes).find(Boolean) || order.student.allergyNotes;
         const addons   = order.items.flatMap((i) => i.additions);
         const removals = order.items.flatMap((i) => i.removals);
+        const isLate = order.deliveryDate.originalCutoffAt && new Date(order.createdAt) > new Date(order.deliveryDate.originalCutoffAt);
 
         return (
           <div key={order.id} className={`rounded-[16px] bg-white border overflow-hidden transition-all shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] ${selectedIds.has(order.id) ? "border-editorial-green border-2" : "border-editorial-line"}`}>
@@ -289,6 +290,11 @@ export function OrdersList({
                   {order.archivedAt && (
                     <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-editorial-paper-2 text-editorial-ink-faint">
                       Archived
+                    </span>
+                  )}
+                  {isLate && (
+                    <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-[#F6EED9] text-[#6E5C2C]">
+                      Late
                     </span>
                   )}
                   {allergy && (
