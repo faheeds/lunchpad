@@ -149,7 +149,7 @@ export default async function HomePage() {
                     position: "relative", scrollSnapAlign: "start",
                     boxShadow: "0 3px 10px rgba(var(--dark-rgb),0.18)", display: "block", textDecoration: "none",
                   }}>
-                    <img src={item.src} alt={item.alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <img src={item.src} alt={item.alt} width={90} height={90} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   </Link>
                 ))}
               </div>

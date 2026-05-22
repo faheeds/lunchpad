@@ -83,6 +83,8 @@ export function ImageUpload({
           <img
             src={url}
             alt=""
+            width={400}
+            height={aspect === "square" ? 400 : aspect === "wide" ? 225 : 300}
             className={`${ASPECT_CLASSES[aspect]} w-full object-cover rounded-[12px] border border-slate-200`}
           />
           <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 bg-black/40 rounded-[12px] transition">
