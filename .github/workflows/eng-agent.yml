@@ -11,6 +11,15 @@
 # cross-workflow event handoff (which is what caused all the label-timing
 # and PAT-propagation headaches before).
 #
+# HARDENING (2026-05): three production bugs slipped through because the
+# self-review step crashed silently or never blocked a merge. Now:
+#   - the self-review step is `continue-on-error` so a crashed reviewer
+#     can't skip the verdict-posting + auto-merge gate;
+#   - run-self-review.sh always writes a verdict (NEEDS_FIXES on failure);
+#   - a type-safety guard blocks auto-merge if the diff adds `as any` /
+#     `@ts-ignore` / `@ts-expect-error`;
+#   - auto-merge requires tsc + tests + build + guard + a real PASS.
+#
 # Stop the loop: remove `agent-ready` from any pending issues, or
 # disable this workflow in the Actions UI.
 
@@ -239,9 +248,29 @@ jobs:
           echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
 
+      - name: Guard - block type-safety escapes
+        if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        id: guard
+        continue-on-error: true
+        run: |
+          # `as any`, `as unknown`, `@ts-ignore`, `@ts-expect-error` suppress
+          # type errors that tsc would otherwise catch. A production Stripe
+          # refund outage shipped exactly this way. If the agent's diff adds
+          # any, withhold auto-merge so a human reviews the suppression.
+          ADDED=$(git diff origin/main...HEAD -- '*.ts' '*.tsx' \
+            | grep -E '^\+' | grep -vE '^\+\+\+' \
+            | grep -Ec 'as any|as unknown|@ts-ignore|@ts-expect-error' || true)
+          echo "New type-safety escapes introduced by this diff: ${ADDED:-0}"
+          if [ "${ADDED:-0}" -gt 0 ]; then
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Self-review the diff
         if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
         id: review
+        continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
@@ -251,27 +280,26 @@ jobs:
         run: bash scripts/agent/run-self-review.sh
 
       - name: Post review verdict
-        if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        if: always() && steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.AGENT_PAT }}
         run: |
-          BODY="$(cat review-verdict.md 2>/dev/null || echo 'Self-review crashed — see workflow logs.')"
+          BODY="$(cat review-verdict.md 2>/dev/null || echo 'Self-review crashed — see workflow logs. Auto-merge withheld.')"
           gh pr comment ${{ steps.pr.outputs.number }} --body "$BODY"
 
       - name: Enable auto-merge if all green
-        if: steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
+        if: always() && steps.pick.outputs.skip != 'true' && steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.AGENT_PAT }}
         run: |
           TSC="${{ steps.tsc.outputs.result }}"
           TESTS="${{ steps.tests.outputs.result }}"
           BUILD="${{ steps.build.outputs.result }}"
+          GUARD="${{ steps.guard.outputs.result }}"
           REVIEW_PASS="no"
           if grep -q "^## Self-Review: PASS" review-verdict.md 2>/dev/null; then
             REVIEW_PASS="yes"
           fi
-
-          echo "tsc=$TSC, tests=$TESTS, review=$REVIEW_PASS"
 
           # Tests can legitimately be `skip` if no test script exists — treat as ok.
           TESTS_OK="no"
@@ -279,12 +307,22 @@ jobs:
             TESTS_OK="yes"
           fi
 
-          if [ "$TSC" = "pass" ] && [ "$TESTS_OK" = "yes" ] && [ "$BUILD" = "pass" ] && [ "$REVIEW_PASS" = "yes" ]; then
+          echo "tsc=$TSC tests=$TESTS build=$BUILD guard=$GUARD review=$REVIEW_PASS"
+
+          if [ "$TSC" = "pass" ] && [ "$TESTS_OK" = "yes" ] && [ "$BUILD" = "pass" ] && [ "$GUARD" = "pass" ] && [ "$REVIEW_PASS" = "yes" ]; then
             echo "All green — enabling auto-merge."
             gh pr merge ${{ steps.pr.outputs.number }} --auto --squash
           else
             echo "Not all green — leaving PR for human review."
           fi
+
+      - name: Flag type-safety escape on PR
+        if: always() && steps.guard.outputs.result == 'fail' && steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_PAT }}
+        run: |
+          gh pr comment ${{ steps.pr.outputs.number }} \
+            --body "Auto-merge withheld: this diff introduces \`as any\` / \`as unknown\` / \`@ts-ignore\` / \`@ts-expect-error\`. Those suppress type errors that \`tsc\` would otherwise catch — a production Stripe-refund bug shipped exactly this way. Please review the suppressed cast(s) before merging."
 
       - name: Comment on issue
         if: always() && steps.pick.outputs.skip != 'true'
