@@ -254,6 +254,9 @@ model DeliveryDate {
   schoolId            String
   deliveryDate        DateTime
   cutoffAt            DateTime
+  // When cutoff is extended, stores the original cutoff time. Used to mark
+  // orders placed after this point as "late" in the kitchen sheet.
+  originalCutoff      DateTime?
   orderingOpen        Boolean              @default(true)
   notes               String?
   // Soft-cancel for operator-initiated cancellations (snow days, school

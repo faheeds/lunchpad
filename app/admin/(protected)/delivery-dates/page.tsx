@@ -5,6 +5,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { auth } from "@/lib/auth";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { ScheduleTabs } from "@/components/admin/schedule-tabs";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -273,6 +274,63 @@ async function attachMenuItems(formData: FormData) {
     }),
   );
   revalidatePath("/admin/delivery-dates");
+}
+
+async function extendCutoff(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("OWNER");
+
+  const deliveryDateId = String(formData.get("deliveryDateId"));
+  const newCutoffStr = String(formData.get("newCutoff"));
+
+  if (!deliveryDateId || !newCutoffStr) return;
+
+  const date = await prisma.deliveryDate.findFirst({
+    where: { id: deliveryDateId, school: { restaurantId: restaurant.id } },
+    include: { school: true },
+  });
+  if (!date) throw new Error("Delivery date not found");
+
+  // Don't allow extending a date whose delivery date has already passed
+  if (date.deliveryDate < new Date()) {
+    throw new Error("Cannot extend ordering for a delivery date that has already passed");
+  }
+
+  const newCutoff = fromZonedTime(newCutoffStr.replace("T", " ") + ":00", date.school.timezone);
+
+  // Record original cutoff if not already recorded (first extension)
+  const originalCutoff = date.originalCutoff || date.cutoffAt;
+
+  await prisma.deliveryDate.update({
+    where: { id: deliveryDateId },
+    data: {
+      cutoffAt: newCutoff,
+      originalCutoff: originalCutoff,
+    },
+  });
+
+  // Log activity
+  const { logActivity } = await import("@/lib/activity");
+  const session = await auth();
+  const admin = session?.user as { id?: string } | undefined;
+
+  await logActivity({
+    restaurantId: restaurant.id,
+    adminUserId: admin?.id,
+    entityType: "DELIVERY_DATE",
+    entityId: deliveryDateId,
+    action: "EXTENDED",
+    summary: `Ordering cutoff extended to ${formatInTimeZone(newCutoff, date.school.timezone, "EEE MMM d · h:mm a zzz")}`,
+    metadata: {
+      from: date.cutoffAt.toISOString(),
+      to: newCutoff.toISOString(),
+      originalCutoff: originalCutoff.toISOString(),
+    },
+  });
+
+  revalidatePath("/admin/delivery-dates");
+  revalidatePath("/admin/orders");
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -559,7 +617,7 @@ export default async function DeliveryDatesPage() {
 
                   {/* Expanded body */}
                   <div className="border-t border-editorial-line px-4 py-3 space-y-3">
-                    {/* Cutoff + toggle */}
+                    {/* Cutoff + toggle + extend */}
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
                         <p className="text-[11px] text-editorial-ink-soft">
@@ -586,7 +644,49 @@ export default async function DeliveryDatesPage() {
                       </div>
                       <div className="flex gap-2 flex-shrink-0 flex-wrap">
                         {cutoffPassed ? (
-                          <span style={{ fontSize: 11, color: "#938B78", fontStyle: "italic" }}>Cutoff passed</span>
+                          <details className="rounded-lg border border-editorial-line overflow-hidden">
+                            <summary className="px-3 py-1 rounded-full text-[11px] font-semibold border border-editorial-line text-editorial-ink-soft cursor-pointer list-none hover:bg-editorial-paper-2 transition">
+                              Extend ordering →
+                            </summary>
+                            <div className="border-t border-editorial-line px-3 py-2 space-y-2">
+                              <p className="text-[10px] text-editorial-ink-soft mb-2">Quick options:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {[1, 2].map((hours) => {
+                                  const newCutoff = new Date(date.cutoffAt);
+                                  newCutoff.setHours(newCutoff.getHours() + hours);
+                                  const dateStr = newCutoff.toISOString().slice(0, 16);
+                                  return (
+                                    <form key={hours} action={extendCutoff} className="contents">
+                                      <input type="hidden" name="deliveryDateId" value={date.id} />
+                                      <input type="hidden" name="newCutoff" value={dateStr} />
+                                      <button type="submit"
+                                        className="px-2 py-1 rounded text-[10px] font-medium bg-editorial-sage text-editorial-green hover:bg-editorial-green hover:text-editorial-paper transition">
+                                        +{hours}h
+                                      </button>
+                                    </form>
+                                  );
+                                })}
+                              </div>
+                              <details className="rounded border border-editorial-line overflow-hidden mt-2">
+                                <summary className="px-2 py-1 text-[10px] font-medium text-editorial-green cursor-pointer list-none hover:bg-editorial-paper-2 transition">
+                                  Custom time →
+                                </summary>
+                                <form action={extendCutoff} className="border-t border-editorial-line px-2 py-2 space-y-1.5">
+                                  <input type="hidden" name="deliveryDateId" value={date.id} />
+                                  <div>
+                                    <label className="text-[9px] text-editorial-ink-soft font-semibold block mb-0.5">New cutoff time</label>
+                                    <input type="datetime-local" name="newCutoff" required
+                                      defaultValue={date.cutoffAt.toISOString().slice(0, 16)}
+                                      className="w-full rounded border border-editorial-line text-[11px] px-2 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                                  </div>
+                                  <button type="submit"
+                                    className="w-full py-1.5 rounded text-[10px] font-semibold bg-editorial-green text-editorial-paper hover:bg-editorial-green-deep transition">
+                                    Extend cutoff
+                                  </button>
+                                </form>
+                              </details>
+                            </div>
+                          </details>
                         ) : (
                           <form action={toggleDateOpen}>
                             <input type="hidden" name="id" value={date.id} />

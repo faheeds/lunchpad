@@ -17,7 +17,7 @@ type OrderListItem = {
   parentName: string;
   parentEmail: string;
   school: { name: string; timezone: string };
-  deliveryDate: { deliveryDate: string | Date };
+  deliveryDate: { deliveryDate: string | Date; originalCutoff: string | Date | null };
   student: {
     studentName: string;
     grade: string;
@@ -32,6 +32,13 @@ type OrderListItem = {
     allergyNotes: string | null;
   }[];
 };
+
+function isOrderLate(order: OrderListItem): boolean {
+  if (!order.deliveryDate.originalCutoff) return false;
+  const createdAt = new Date(order.createdAt);
+  const originalCutoff = new Date(order.deliveryDate.originalCutoff);
+  return createdAt > originalCutoff;
+}
 
 type AdminRoleClient = "STAFF" | "MANAGER" | "OWNER";
 
@@ -262,6 +269,7 @@ export function OrdersList({
         const allergy  = order.items.map((i) => i.allergyNotes).find(Boolean) || order.student.allergyNotes;
         const addons   = order.items.flatMap((i) => i.additions);
         const removals = order.items.flatMap((i) => i.removals);
+        const isLate   = isOrderLate(order);
 
         return (
           <div key={order.id} className={`rounded-[16px] bg-white border overflow-hidden transition-all shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)] ${selectedIds.has(order.id) ? "border-editorial-green border-2" : "border-editorial-line"}`}>
@@ -286,6 +294,11 @@ export function OrdersList({
                   <span className="px-2 py-1 rounded-full text-[10px] font-semibold" style={{ background: badge.bg, color: badge.text }}>
                     {badge.label}
                   </span>
+                  {isLate && (
+                    <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-[#FEE4CC] text-[#B8530F]">
+                      🕐 Late
+                    </span>
+                  )}
                   {order.archivedAt && (
                     <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-editorial-paper-2 text-editorial-ink-faint">
                       Archived

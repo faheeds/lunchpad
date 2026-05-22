@@ -46,8 +46,14 @@ const styles = StyleSheet.create({
   }
 });
 
+function isOrderLate(order: LabelOrder): boolean {
+  if (!order.deliveryDate.originalCutoff) return false;
+  return order.createdAt > order.deliveryDate.originalCutoff;
+}
+
 function LabelCard({ order }: { order: LabelOrder }) {
   const allergy = order.items.map((item) => item.allergyNotes).find(Boolean) || order.student.allergyNotes;
+  const isLate = isOrderLate(order);
   const itemLines = order.items.map((item) => ({
     name: item.itemNameSnapshot,
     additions: item.additions.length ? item.additions.join(", ") : "None",
@@ -72,6 +78,7 @@ function LabelCard({ order }: { order: LabelOrder }) {
           </View>
         ))}
         <Text>Order: {order.orderNumber}</Text>
+        {isLate ? <Text style={styles.alert}>⏰ LATE ORDER</Text> : null}
         {allergy ? <Text style={styles.alert}>Allergy / diet: {allergy}</Text> : null}
       </>
     </View>
@@ -103,6 +110,12 @@ export async function generateLabelsPdfBuffer(orders: LabelOrder[]) {
 
 export function mapOrderToLabelRows(orders: LabelOrder[]) {
   return orders.map((order) => {
+    const isLate = isOrderLate(order);
+    const alerts: string[] = [];
+    if (isLate) alerts.push("⏰ LATE ORDER");
+    const allergy = order.items.map((item) => item.allergyNotes).find(Boolean) ?? order.student.allergyNotes;
+    if (allergy) alerts.push(`Allergy / diet: ${allergy}`);
+
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -114,7 +127,7 @@ export function mapOrderToLabelRows(orders: LabelOrder[]) {
       itemName: order.items.map((item) => item.itemNameSnapshot).join(" | "),
       additions: order.items.flatMap((item) => item.additions),
       removals: order.items.flatMap((item) => item.removals),
-      alert: order.items.map((item) => item.allergyNotes).find(Boolean) ?? order.student.allergyNotes ?? ""
+      alert: alerts.join(" | ")
     };
   });
 }
