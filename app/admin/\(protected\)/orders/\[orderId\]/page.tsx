@@ -4,7 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { updateOrderAsAdmin } from "@/lib/orders";
-import { sendOrderModifiedEmail } from "@/lib/email/service";
+import { issueOrderRefund } from "@/lib/refund";
+import { sendOrderModifiedEmail, sendRefundEmail } from "@/lib/email/service";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -12,8 +13,6 @@ import { listActivity } from "@/lib/activity";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import { getLabels } from "@/lib/location-labels";
-import { issueOrderRefund } from "@/lib/refund";
-import { sendRefundEmail } from "@/lib/email/service";
 import { RefundModalClient } from "@/components/admin/refund-modal-client";
 
 export const dynamic = "force-dynamic";
@@ -191,7 +190,6 @@ export default async function AdminOrderDetailPage({
         </div>
       </div>
 
-
       {/* Refund section */}
       {(order.status === "PAID" || order.status === "PARTIALLY_REFUNDED") && (
         <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
@@ -228,6 +226,7 @@ export default async function AdminOrderDetailPage({
           </div>
         </div>
       )}
+
       {/* Edit form */}
       <form action={saveOrder} className="space-y-3">
         <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">

@@ -207,6 +207,66 @@ export function buildCancellationEmail(args: CancellationTemplateArgs) {
   };
 }
 
+type RefundTemplateArgs = {
+  parentName: string;
+  studentName: string;
+  deliveryDate: Date;
+  timezone: string;
+  items: { itemName: string }[];
+  amountCents: number;
+  orderNumber: string;
+  restaurantName: string;
+  restaurantLogoUrl?: string | null;
+  restaurantPrimaryColor?: string | null;
+  restaurantContactEmail?: string | null;
+  restaurantContactPhone?: string | null;
+};
+
+export function buildRefundEmail(args: RefundTemplateArgs) {
+  const deliveryDateStr = formatInTimeZone(args.deliveryDate, args.timezone, "EEEE, MMMM d");
+  const itemsList = args.items.map((i) => i.itemName).join(", ");
+  const help = helpBlock({
+    restaurantName: args.restaurantName,
+    contactEmail: args.restaurantContactEmail,
+    contactPhone: args.restaurantContactPhone,
+  });
+
+  return {
+    subject: `${args.restaurantName} — refund issued (${args.orderNumber})`,
+    text: [
+      `Hi ${args.parentName},`,
+      "",
+      `A refund has been issued for your order from ${args.restaurantName} for ${args.studentName} on ${deliveryDateStr}.`,
+      "",
+      `Items refunded: ${itemsList}`,
+      `Refund amount: ${formatCurrency(args.amountCents)}`,
+      `Order number: ${args.orderNumber}`,
+      "",
+      "Your refund will be returned to the original payment method within 5-10 business days.",
+      "",
+      `If you have any questions about this refund, please reply to this email and the ${args.restaurantName} team will help.`
+    ].join("\n"),
+    html: `
+      <div style="${base}">
+        ${brandHeader(args.restaurantName, args.restaurantLogoUrl, args.restaurantPrimaryColor)}
+        <div style="${card};border-top:none;border-radius:0 0 10px 10px;margin-top:0">
+          <h2 style="margin:0 0 12px;font-size:20px;color:#1c2a35">Refund issued</h2>
+          <p style="margin:0 0 8px">Hi ${args.parentName},</p>
+          <p style="margin:0 0 16px">A refund has been issued for your order for <strong>${args.studentName}</strong> on <strong>${deliveryDateStr}</strong>.</p>
+          <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+            <tr><td style="padding: 6px 0;"><strong>Items</strong></td><td>${itemsList}</td></tr>
+            <tr><td style="padding: 6px 0;"><strong>Refund amount</strong></td><td>${formatCurrency(args.amountCents)}</td></tr>
+            <tr><td style="padding: 6px 0;"><strong>Order number</strong></td><td>${args.orderNumber}</td></tr>
+          </table>
+          <p style="margin:0 0 8px">Your refund will be returned to the original payment method within <strong>5-10 business days</strong>.</p>
+          ${help.html}
+          <p style="color:#64748b;font-size:13px;margin:8px 0 0">If you have questions about this refund, please contact the ${args.restaurantName} team using the info above.</p>
+        </div>
+      </div>
+    `
+  };
+}
+
 type CutoffReminderTemplateArgs = {
   parentName: string;
   studentName: string;
