@@ -19,7 +19,6 @@ export function OrderStatusActions({ orderId, isArchived }: { orderId: string; i
     <div className="flex flex-wrap gap-1.5 items-center">
       {[
         { action: "resend_confirmation", label: "Resend email" },
-        { action: "refund", label: "Mark refunded" },
         { action: "cancel", label: "Cancel" },
         { action: isArchived ? "unarchive" : "archive", label: isArchived ? "Unarchive" : "Archive" },
       ].map(({ action, label }) => (
