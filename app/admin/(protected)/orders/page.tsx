@@ -80,7 +80,7 @@ export default async function AdminOrdersPage({
     }),
     prisma.deliveryDate.findMany({
       where: { school: { restaurantId: restaurant.id } },
-      include: { school: true, _count: { select: { orders: { where: { status: "PAID" } } } } },
+      include: { school: true },
       orderBy: { deliveryDate: "desc" },
       take: 60,
     }),

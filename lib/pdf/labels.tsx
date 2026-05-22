@@ -107,7 +107,7 @@ export function mapOrderToLabelRows(orders: LabelOrder[]) {
   return orders.map((order) => {
     const isLate = order.deliveryDate.originalCutoffAt && new Date(order.createdAt) > new Date(order.deliveryDate.originalCutoffAt);
     const allergy = order.items.map((item) => item.allergyNotes).find(Boolean) ?? order.student.allergyNotes ?? "";
-    const alert = isLate ? "LATE ORDER" : allergy;
+    const alert = [isLate ? "LATE ORDER" : "", allergy].filter(Boolean).join(" | ");
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
