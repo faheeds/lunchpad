@@ -519,9 +519,11 @@ export default async function OnboardingPage({
                 <button type="submit" formAction={seedSampleData} className="px-4 py-2.5 rounded-full border border-editorial-line text-editorial-ink text-[13px] font-semibold hover:border-editorial-green hover:text-editorial-green transition">
                   Skip for now
                 </button>
-                <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-                  Continue →
-                </button>
+                {status[1] !== "done" && (
+                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                    Continue →
+                  </button>
+                )}
               </div>
             </form>
           )}
@@ -563,9 +565,11 @@ export default async function OnboardingPage({
 
                 <div className="flex items-center justify-between pt-2">
                   <Link href="/admin/onboarding?step=1" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
-                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-                    Save & continue →
-                  </button>
+                  {status[2] !== "done" && (
+                    <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                      Save & continue →
+                    </button>
+                  )}
                 </div>
               </form>
 
@@ -694,9 +698,11 @@ export default async function OnboardingPage({
                       Skip →
                     </Link>
                   )}
-                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-                    Add location →
-                  </button>
+                  {status[4] !== "done" && (
+                    <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                      Add location →
+                    </button>
+                  )}
                 </div>
               </div>
             </form>
@@ -735,12 +741,14 @@ export default async function OnboardingPage({
 
               <div className="flex items-center justify-between pt-2">
                 <Link href="/admin/onboarding?step=4" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
-                <Link href="/admin/onboarding?step=6"
-                  className={`px-5 py-2.5 rounded-full text-[13px] font-semibold no-underline transition ${
-                    menuItemCount >= 3 ? "bg-editorial-green text-editorial-paper hover:bg-editorial-green-deep" : "border border-editorial-line text-editorial-ink hover:border-editorial-green hover:text-editorial-green"
-                  }`}>
-                  {menuItemCount >= 3 ? "Continue →" : "Skip for now →"}
-                </Link>
+                {status[5] !== "done" && (
+                  <Link href="/admin/onboarding?step=6"
+                    className={`px-5 py-2.5 rounded-full text-[13px] font-semibold no-underline transition ${
+                      menuItemCount >= 3 ? "bg-editorial-green text-editorial-paper hover:bg-editorial-green-deep" : "border border-editorial-line text-editorial-ink hover:border-editorial-green hover:text-editorial-green"
+                    }`}>
+                    {menuItemCount >= 3 ? "Continue →" : "Skip for now →"}
+                  </Link>
+                )}
               </div>
             </div>
           )}
@@ -835,7 +843,7 @@ export default async function OnboardingPage({
                   <Link href="/admin/onboarding?step=7" className="px-4 py-2 rounded-full border border-editorial-line text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
                     Skip →
                   </Link>
-                  {schools.length > 0 && (
+                  {schools.length > 0 && status[6] !== "done" && (
                     <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                       Generate dates →
                     </button>
@@ -863,9 +871,11 @@ export default async function OnboardingPage({
 
               <div className="flex items-center justify-between pt-2">
                 <Link href="/admin/onboarding?step=6" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
-                <Link href="/admin/onboarding?step=8" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold no-underline hover:bg-editorial-green-deep transition">
-                  Continue →
-                </Link>
+                {status[7] !== "done" && (
+                  <Link href="/admin/onboarding?step=8" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold no-underline hover:bg-editorial-green-deep transition">
+                    Continue →
+                  </Link>
+                )}
               </div>
             </div>
           )}
@@ -903,9 +913,11 @@ export default async function OnboardingPage({
 
               <form action={markTestOrderPlaced} className="flex items-center justify-between pt-2">
                 <Link href="/admin/onboarding?step=7" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
-                <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-                  I placed a test order — continue →
-                </button>
+                {status[8] !== "done" && (
+                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                    I placed a test order — continue →
+                  </button>
+                )}
               </form>
             </div>
           )}
@@ -941,9 +953,11 @@ export default async function OnboardingPage({
 
               <div className="flex items-center justify-between pt-2">
                 <Link href="/admin/onboarding?step=8" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
-                <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-                  Save & continue →
-                </button>
+                {status[9] !== "done" && (
+                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                    Save & continue →
+                  </button>
+                )}
               </div>
             </form>
           )}
@@ -1029,9 +1043,11 @@ Orders close the night before delivery. Questions? Reply to this email.
                     className="px-4 py-2.5 rounded-full border border-editorial-line bg-white text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
                     Preview ordering page ↗
                   </a>
-                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-                    Launch — go to dashboard →
-                  </button>
+                  {status[10] !== "done" && (
+                    <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                      Launch — go to dashboard →
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
