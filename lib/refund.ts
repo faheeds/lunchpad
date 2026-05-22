@@ -51,7 +51,6 @@ export async function issueOrderRefund(args: {
         {
           payment_intent: paymentIntentId,
           amount: amountCents,
-          reason: "requested_by_merchant" as any, // Stripe SDK type
           metadata: {
             orderId: order.id,
             orderNumber: order.orderNumber,
