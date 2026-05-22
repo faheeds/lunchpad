@@ -1,4 +1,4 @@
-export type OrderStatus = "PAID" | "PENDING" | "REFUNDED" | "CANCELLED";
+export type OrderStatus = "PAID" | "PENDING" | "REFUNDED" | "PARTIALLY_REFUNDED" | "CANCELLED";
 
 export type StatusColors = {
   label: string;
@@ -22,6 +22,11 @@ export const getOrderStatusColors = (status: string): StatusColors => {
       label: "Refunded",
       bg: "#F4E3DB", // pale brownish
       color: "#7C3D24", // brownish
+    },
+    PARTIALLY_REFUNDED: {
+      label: "Partially refunded",
+      bg: "#F6EED9", // pale tan
+      color: "#6E5C2C", // brownish
     },
     CANCELLED: {
       label: "Cancelled",
