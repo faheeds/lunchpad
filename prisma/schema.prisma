@@ -24,6 +24,7 @@ enum OrderStatus {
   PENDING
   PAID
   REFUNDED
+  PARTIALLY_REFUNDED
   CANCELLED
 }
 
@@ -254,6 +255,7 @@ model DeliveryDate {
   schoolId            String
   deliveryDate        DateTime
   cutoffAt            DateTime
+  originalCutoffAt    DateTime?
   orderingOpen        Boolean              @default(true)
   notes               String?
   // Soft-cancel for operator-initiated cancellations (snow days, school
@@ -501,6 +503,9 @@ model Order {
   confirmationSentAt  DateTime?
   checkoutSessionId   String?      @unique
   paymentIntentId     String?      @unique
+  refundId            String?      @unique
+  refundAmountCents   Int          @default(0)
+  refundedByAdminId   String?
   /// Set when an admin records this as a comped/free order. Line items still
   /// carry their menu prices (so kitchen sheets see real items) but
   /// Payment.amountCents is 0. Reports can filter on `compedAt IS NULL` to
