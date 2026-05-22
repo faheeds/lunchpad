@@ -72,13 +72,13 @@ export function OrderSelfService({
   if (done) {
     return (
       <div style={{
-        background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 14,
+        background: "#DEE2CF", border: "1px solid #C0AFA0", borderRadius: 14,
         padding: "14px 16px", marginTop: 12, textAlign: "center",
       }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d", marginBottom: 2 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "#2C4031", marginBottom: 2 }}>
           Order cancelled — refund issued
         </p>
-        <p style={{ fontSize: 11, color: "#16a34a" }}>
+        <p style={{ fontSize: 12, color: "#2C4031" }}>
           The refund will return to your card within 5-10 business days. Taking you to your history…
         </p>
       </div>
@@ -87,14 +87,14 @@ export function OrderSelfService({
 
   return (
     <div style={{
-      background: "white", borderRadius: 14, border: "1px solid #f1f5f9",
+      background: "#FCFAF3", borderRadius: 14, border: "1px solid #E3DBC6",
       padding: "14px 16px", marginTop: 12,
     }}>
       <p style={{
-        fontSize: 11, fontWeight: 700, color: "#94a3b8",
+        fontSize: 11, fontWeight: 700, color: "#2C4031",
         textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10,
       }}>
-        Need to change something?
+        ✓ You can edit or cancel until the delivery cutoff
       </p>
 
       {/* Contact-restaurant chips */}
@@ -106,8 +106,8 @@ export function OrderSelfService({
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "8px 12px", borderRadius: 10,
-                background: "#f8fafc", border: "1px solid #e2e8f0",
-                fontSize: 12, color: "#1c2a35", textDecoration: "none", fontWeight: 600,
+                background: "#F6F1E6", border: "1px solid #E3DBC6",
+                fontSize: 12, color: "#211D15", textDecoration: "none", fontWeight: 600,
               }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -123,8 +123,8 @@ export function OrderSelfService({
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "8px 12px", borderRadius: 10,
-                background: "#f8fafc", border: "1px solid #e2e8f0",
-                fontSize: 12, color: "#1c2a35", textDecoration: "none", fontWeight: 600,
+                background: "#F6F1E6", border: "1px solid #E3DBC6",
+                fontSize: 12, color: "#211D15", textDecoration: "none", fontWeight: 600,
               }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -138,9 +138,9 @@ export function OrderSelfService({
 
       {/* Cancel button — only before cutoff */}
       {cutoffPassed ? (
-        <p style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 12, color: "#938B78", lineHeight: 1.5 }}>
           The ordering cutoff for this delivery has passed. To cancel or change this order,{" "}
-          please contact <strong style={{ color: "#1c2a35" }}>{restaurantName}</strong>{" "}
+          please contact <strong style={{ color: "#211D15" }}>{restaurantName}</strong>{" "}
           {contactEmail || contactPhone ? "using the buttons above." : "directly."}
         </p>
       ) : (
@@ -153,7 +153,7 @@ export function OrderSelfService({
               display: "block", width: "100%",
               padding: "10px 12px", borderRadius: 10,
               background: "transparent",
-              border: "1px solid #fca5a5", color: "#b91c1c",
+              border: "1px solid #F4E3DB", color: "#7C3D24",
               fontSize: 12, fontWeight: 600,
               cursor: busy ? "not-allowed" : "pointer",
               opacity: busy ? 0.6 : 1,
@@ -163,7 +163,7 @@ export function OrderSelfService({
             {busy ? "Cancelling…" : "Cancel order & refund"}
           </button>
           {error && (
-            <p style={{ fontSize: 11, color: "#b91c1c", marginTop: 6 }}>{error}</p>
+            <p style={{ fontSize: 11, color: "#7C3D24", marginTop: 6 }}>{error}</p>
           )}
         </>
       )}
