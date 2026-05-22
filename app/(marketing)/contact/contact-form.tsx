@@ -46,13 +46,14 @@ export function ContactForm() {
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "11px 14px", borderRadius: 12,
-    border: "1.5px solid #e2e8f0", fontSize: 14, color: "var(--body-text)",
-    background: "white", outline: "none", fontFamily: "inherit",
+    border: "1.5px solid #E3DBC6", fontSize: 14, color: "#211D15",
+    background: "#FCFAF3", outline: "none", fontFamily: "inherit",
     WebkitAppearance: "none",
+    transition: "border-color 0.2s",
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 600, color: "rgba(var(--body-text-rgb), 0.65)",
+    fontSize: 11, fontWeight: 600, color: "#5B5446",
     textTransform: "uppercase", letterSpacing: "0.1em",
     display: "block", marginBottom: 6,
   };
@@ -62,17 +63,18 @@ export function ContactForm() {
       <div style={{ padding: "60px 24px", textAlign: "center" }}>
         <div style={{
           width: 64, height: 64, borderRadius: "50%",
-          background: "linear-gradient(135deg, var(--brand-hex), color-mix(in srgb, var(--brand-hex) 80%, #000))",
+          background: "linear-gradient(135deg, #2C4031, #1E2C22)",
           display: "flex", alignItems: "center", justifyContent: "center",
           margin: "0 auto 20px", fontSize: 28,
-          boxShadow: "0 4px 16px rgba(var(--brand-rgb),0.35)",
+          color: "#DEE2CF",
+          boxShadow: "0 4px 16px rgba(44, 64, 49, 0.35)",
         }}>
           ✓
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--body-text)", marginBottom: 10 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#211D15", marginBottom: 10 }}>
           Message sent!
         </h2>
-        <p style={{ fontSize: 14, color: "rgba(var(--body-text-rgb), 0.65)", lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
+        <p style={{ fontSize: 14, color: "#5B5446", lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
           Thanks for reaching out. We&apos;ll get back to you as soon as possible.
         </p>
       </div>
@@ -85,17 +87,57 @@ export function ContactForm() {
 
         <div>
           <label style={labelStyle}>Name</label>
-          <input name="name" required placeholder="Your name" style={inputStyle} />
+          <input
+            name="name"
+            required
+            placeholder="Your name"
+            style={inputStyle}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#2C4031";
+              e.currentTarget.style.background = "white";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#E3DBC6";
+              e.currentTarget.style.background = "#FCFAF3";
+            }}
+          />
         </div>
 
         <div>
           <label style={labelStyle}>Phone <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
-          <input name="phone" type="tel" placeholder="e.g. (425) 555-0100" style={inputStyle} />
+          <input
+            name="phone"
+            type="tel"
+            placeholder="e.g. (425) 555-0100"
+            style={inputStyle}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#2C4031";
+              e.currentTarget.style.background = "white";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#E3DBC6";
+              e.currentTarget.style.background = "#FCFAF3";
+            }}
+          />
         </div>
 
         <div>
           <label style={labelStyle}>Email</label>
-          <input name="email" type="email" required placeholder="your@email.com" style={inputStyle} />
+          <input
+            name="email"
+            type="email"
+            required
+            placeholder="your@email.com"
+            style={inputStyle}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#2C4031";
+              e.currentTarget.style.background = "white";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#E3DBC6";
+              e.currentTarget.style.background = "#FCFAF3";
+            }}
+          />
         </div>
 
         <div>
@@ -105,7 +147,18 @@ export function ContactForm() {
             required
             value={feedbackType}
             onChange={(e) => setFeedbackType(e.target.value as FeedbackType)}
-            style={{ ...inputStyle, color: feedbackType ? "var(--body-text)" : "rgba(var(--body-text-rgb), 0.5)" }}
+            style={{
+              ...inputStyle,
+              color: feedbackType ? "#211D15" : "#938B78",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#2C4031";
+              e.currentTarget.style.background = "white";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#E3DBC6";
+              e.currentTarget.style.background = "#FCFAF3";
+            }}
           >
             <option value="" disabled>Select a category…</option>
             <option value="order_issue">Order issue</option>
@@ -122,6 +175,14 @@ export function ContactForm() {
                 required
                 placeholder="Find this in your confirmation email"
                 style={inputStyle}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#2C4031";
+                  e.currentTarget.style.background = "white";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#E3DBC6";
+                  e.currentTarget.style.background = "#FCFAF3";
+                }}
               />
             </div>
             <div>
@@ -132,6 +193,14 @@ export function ContactForm() {
                 rows={4}
                 placeholder="Please describe what went wrong with your order…"
                 style={{ ...inputStyle, resize: "none", lineHeight: 1.55 }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#2C4031";
+                  e.currentTarget.style.background = "white";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#E3DBC6";
+                  e.currentTarget.style.background = "#FCFAF3";
+                }}
               />
             </div>
           </>
@@ -146,15 +215,23 @@ export function ContactForm() {
               rows={5}
               placeholder="Share your thoughts, suggestions, or questions…"
               style={{ ...inputStyle, resize: "none", lineHeight: 1.55 }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "#2C4031";
+                e.currentTarget.style.background = "white";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "#E3DBC6";
+                e.currentTarget.style.background = "#FCFAF3";
+              }}
             />
           </div>
         )}
 
         {status === "error" && (
           <div style={{
-            background: "rgba(var(--brand-rgb),0.08)", border: "1px solid rgba(var(--brand-rgb),0.2)",
+            background: "#DEE2CF", border: "1px solid #E3DBC6",
             borderRadius: 12, padding: "12px 16px",
-            fontSize: 13, color: "var(--brand-hex)",
+            fontSize: 13, color: "#C0673E",
           }}>
             {errorMsg}
           </div>
@@ -165,13 +242,24 @@ export function ContactForm() {
             type="submit"
             disabled={status === "submitting"}
             style={{
-              width: "100%", padding: "15px 20px", borderRadius: 14, border: "none",
+              width: "100%", padding: "15px 20px", borderRadius: 999, border: "none",
               background: status === "submitting"
-                ? "rgba(var(--brand-rgb),0.5)"
-                : "linear-gradient(135deg, var(--brand-hex) 0%, color-mix(in srgb, var(--brand-hex) 80%, #000) 100%)",
-              color: "white", fontSize: 15, fontWeight: 700, cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(var(--brand-rgb),0.35)",
+                ? "rgba(44, 64, 49, 0.5)"
+                : "linear-gradient(135deg, #2C4031 0%, #1E2C22 100%)",
+              color: "#F6F1E6", fontSize: 15, fontWeight: 700, cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(44, 64, 49, 0.35)",
               letterSpacing: "0.02em",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 6px 16px rgba(44, 64, 49, 0.4)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(44, 64, 49, 0.35)";
             }}
           >
             {status === "submitting" ? "Sending…" : "Send message"}
