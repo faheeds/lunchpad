@@ -164,13 +164,13 @@ export default async function ParentAccountPage() {
                   {initials(parent.name)}
                 </div>
                 <div>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: "white" }}>{parent.name ?? getLabels(parent.children[0]?.school.locationType).orderer}</p>
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>{parent.email}</p>
+                  <p style={{ fontSize: 16, fontWeight: 700, color: "white" }}>{parent.name ?? getLabels(parent.children[0]?.school.locationType).orderer}</p>
+                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)" }}>{parent.email}</p>
                 </div>
               </div>
               <form action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}>
                 <button type="submit" style={{
-                  fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)",
+                  fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.6)",
                   border: "1px solid rgba(255,255,255,0.15)", borderRadius: 100,
                   padding: "6px 14px", background: "transparent", cursor: "pointer",
                 }}>
@@ -181,22 +181,22 @@ export default async function ParentAccountPage() {
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
                 <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{parent.children.length}</p>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{getLabels(parent.children[0]?.school.locationType).unitPlural}</p>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{getLabels(parent.children[0]?.school.locationType).unitPlural}</p>
               </div>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
                 <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{orders.filter((o) => o.status === "PAID").length}</p>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Orders</p>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Orders</p>
               </div>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
                 <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{activeWeeklyPlanCount}</p>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Weekly</p>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Weekly</p>
               </div>
             </div>
           </div>
 
           {/* ── Saved kids ─────────────────────────────────────────── */}
           <section>
-            <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#938B78", marginBottom: 8 }}>Your {getLabels(parent.children[0]?.school.locationType).unitPlural.toLowerCase()}</p>
+            <p style={{ fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#938B78", marginBottom: 8 }}>Your {getLabels(parent.children[0]?.school.locationType).unitPlural.toLowerCase()}</p>
 
             {parent.children.map((child) => (
               <div key={child.id} style={{ borderRadius: 18, border: "1px solid #E3DBC6", background: "#FCFAF3", marginBottom: 8, overflow: "hidden" }}>
@@ -211,11 +211,11 @@ export default async function ParentAccountPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: "#211D15" }}>{child.studentName}</p>
-                    <p style={{ fontSize: 12, color: "#938B78" }}>{child.school.name}{child.grade && getLabels(child.school.locationType).showGrade ? ` · ${getLabels(child.school.locationType).grade} ${child.grade}` : ""}</p>
+                    <p style={{ fontSize: 14, color: "#938B78" }}>{child.school.name}{child.grade && getLabels(child.school.locationType).showGrade ? ` · ${getLabels(child.school.locationType).grade} ${child.grade}` : ""}</p>
                     {child.allergyNotes && (
                       <span style={{
                         display: "inline-block", marginTop: 4,
-                        fontSize: 10, fontWeight: 700,
+                        fontSize: 14, fontWeight: 700,
                         color: "#7C3D24", background: "#F4E3DB",
                         borderRadius: 100, padding: "2px 8px",
                       }}>
@@ -224,7 +224,7 @@ export default async function ParentAccountPage() {
                     )}
                   </div>
                   <Link href={`/order?childId=${child.id}`} style={{
-                    fontSize: 12, fontWeight: 700, color: "white",
+                    fontSize: 14, fontWeight: 700, color: "white",
                     background: "var(--brand-on-white)",
                     borderRadius: 100, padding: "7px 14px",
                     textDecoration: "none", flexShrink: 0,
@@ -233,8 +233,8 @@ export default async function ParentAccountPage() {
                   </Link>
                 </div>
                 <details style={{ borderTop: "1px solid #E3DBC6" }}>
-                  <summary style={{ padding: "10px 16px", fontSize: 12, color: "#938B78", fontWeight: 500, cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 8 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <summary style={{ padding: "10px 16px", fontSize: 14, color: "#938B78", fontWeight: 500, cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                     Edit details
@@ -242,10 +242,10 @@ export default async function ParentAccountPage() {
                   <form action={updateChild} style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid #E3DBC6" }}>
                     <input type="hidden" name="childId" value={child.id} />
                     <input name="studentName" defaultValue={child.studentName} placeholder={getLabels(child.school.locationType).unitName}
-                      style={{ width: "100%", borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 13, padding: "8px 12px" }} required />
+                      style={{ width: "100%", borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 14, padding: "8px 12px" }} required />
                     <GradeSelect schools={schools} defaultSchoolId={child.schoolId} defaultGrade={child.grade} />
                     <input name="allergyNotes" defaultValue={child.allergyNotes ?? ""} placeholder="Allergy / dietary notes"
-                      style={{ width: "100%", borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 13, padding: "8px 12px" }} />
+                      style={{ width: "100%", borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 14, padding: "8px 12px" }} />
                     <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
                       <SubmitButton label="Save changes" pendingLabel="Saving…" />
                       <form action={archiveChild}>
@@ -253,7 +253,7 @@ export default async function ParentAccountPage() {
                         <button type="submit" style={{
                           padding: "8px 14px", borderRadius: 10,
                           border: `1px solid rgba(var(--brand-rgb), 0.2)`, color: "var(--brand-on-white)",
-                          fontSize: 12, fontWeight: 600, background: "transparent", cursor: "pointer",
+                          fontSize: 14, fontWeight: 600, background: "transparent", cursor: "pointer",
                         }}>
                           Remove
                         </button>
@@ -266,18 +266,18 @@ export default async function ParentAccountPage() {
 
             {/* Add child */}
             <details style={{ borderRadius: 18, border: "1px dashed #E3DBC6", background: "#FCFAF3", overflow: "hidden" }}>
-              <summary style={{ padding: "12px 16px", fontSize: 12, color: "#938B78", cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 12 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <summary style={{ padding: "12px 16px", fontSize: 14, color: "#938B78", cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 12 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
                 </svg>
                 Add {getLabels(schools[0]?.locationType).ordererRefersToUnit}
               </summary>
               <form action={addChild} style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid #E3DBC6" }}>
                 <input name="studentName" placeholder={getLabels(schools[0]?.locationType).unitName} required
-                  style={{ width: "100%", borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 13, padding: "8px 12px" }} />
+                  style={{ width: "100%", borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 14, padding: "8px 12px" }} />
                 <GradeSelect schools={schools} />
                 <input name="allergyNotes" placeholder="Allergy / dietary notes"
-                  style={{ width: "100%", borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 13, padding: "8px 12px" }} />
+                  style={{ width: "100%", borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 14, padding: "8px 12px" }} />
                 <SubmitButton label={`Save ${getLabels(schools[0]?.locationType).unit.toLowerCase()}`} pendingLabel="Saving…" />
               </form>
             </details>
@@ -286,9 +286,9 @@ export default async function ParentAccountPage() {
           {/* ── Weekly plan ────────────────────────────────────────── */}
           {parent.children.length > 0 && (
             <section>
-              <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#938B78", marginBottom: 8 }}>Weekly lunch plan</p>
+              <p style={{ fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#938B78", marginBottom: 8 }}>Weekly lunch plan</p>
               <div style={{ borderRadius: 18, border: "1px solid #E3DBC6", background: "#FCFAF3", padding: 16 }}>
-                <p style={{ fontSize: 13, color: "#938B78", lineHeight: 1.5, marginBottom: 12 }}>
+                <p style={{ fontSize: 14, color: "#938B78", lineHeight: 1.5, marginBottom: 12 }}>
                   Set a default meal per weekday. One checkout covers the whole week.
                 </p>
                 <WeeklyPlanPlanner
@@ -340,9 +340,9 @@ export default async function ParentAccountPage() {
           {/* ── Order history ──────────────────────────────────────── */}
           <section>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#938B78" }}>Order history</p>
+              <p style={{ fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#938B78" }}>Order history</p>
               {orders.length > 0 && (
-                <Link href="/history" style={{ fontSize: 11, fontWeight: 600, color: "var(--brand-on-white, #c41230)", textDecoration: "none" }}>
+                <Link href="/history" style={{ fontSize: 14, fontWeight: 600, color: "var(--brand-on-white, #c41230)", textDecoration: "none" }}>
                   View all →
                 </Link>
               )}
@@ -356,12 +356,12 @@ export default async function ParentAccountPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                         <p style={{ fontSize: 14, fontWeight: 600, color: "#211D15" }}>{order.student.studentName}</p>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: s.color, background: s.bg, borderRadius: 100, padding: "2px 8px" }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: s.color, background: s.bg, borderRadius: 100, padding: "2px 8px" }}>
                           {s.label}
                         </span>
                       </div>
-                      <p style={{ fontSize: 13, color: "#5B5446" }}>{order.items.map((i) => i.itemNameSnapshot).join(", ")}</p>
-                      <p style={{ fontSize: 12, color: "#938B78", marginTop: 4 }}>
+                      <p style={{ fontSize: 14, color: "#5B5446" }}>{order.items.map((i) => i.itemNameSnapshot).join(", ")}</p>
+                      <p style={{ fontSize: 14, color: "#938B78", marginTop: 4 }}>
                         {order.school.name} · {formatInTimeZone(order.deliveryDate.deliveryDate, order.school.timezone, "EEE, MMM d")}
                       </p>
                     </div>
@@ -371,7 +371,7 @@ export default async function ParentAccountPage() {
                       </p>
                       {order.status === "PAID" && (
                         <Link href={`/order?reorder=${order.id}`} style={{
-                          fontSize: 11, fontWeight: 600, color: "var(--brand-on-white)",
+                          fontSize: 14, fontWeight: 600, color: "var(--brand-on-white)",
                           textDecoration: "none", display: "block", marginTop: 4,
                         }}>
                           Reorder →
@@ -386,7 +386,7 @@ export default async function ParentAccountPage() {
                 <p style={{ fontSize: 14, fontWeight: 500, color: "#938B78" }}>No orders yet.</p>
                 <Link href="/order" style={{
                   display: "inline-block", marginTop: 10,
-                  fontSize: 13, fontWeight: 700, color: "white",
+                  fontSize: 14, fontWeight: 700, color: "white",
                   background: "var(--brand-on-white)",
                   borderRadius: 100, padding: "9px 20px", textDecoration: "none",
                 }}>
@@ -409,10 +409,10 @@ export default async function ParentAccountPage() {
             padding: "12px 16px", boxShadow: "0 4px 20px rgba(33,29,21,0.12)",
           }} className="pointer-events-auto flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <p style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-on-white)" }}>
+              <p style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-on-white)" }}>
                 Upcoming week
               </p>
-              <p style={{ fontSize: 12, color: "#938B78", marginTop: 2 }}>
+              <p style={{ fontSize: 14, color: "#938B78", marginTop: 2 }}>
                 {activeWeeklyPlanCount} planned item{activeWeeklyPlanCount === 1 ? "" : "s"} ready for checkout
               </p>
             </div>

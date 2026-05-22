@@ -24,7 +24,7 @@ export default async function ContactPage() {
           boxShadow: "0 4px 16px -8px rgba(0,0,0,0.25)",
         }}>
           <p style={{
-            fontSize: 9, fontWeight: 700, letterSpacing: "0.22em",
+            fontSize: 14, fontWeight: 700, letterSpacing: "0.22em",
             textTransform: "uppercase", color: "#DEE2CF", marginBottom: 6,
           }}>
             ★ {restaurantName} ★
@@ -36,7 +36,7 @@ export default async function ContactPage() {
           }}>
             Contact Us
           </h1>
-          <p style={{ fontSize: 13, color: "rgba(246, 241, 230, 0.75)", lineHeight: 1.55 }}>
+          <p style={{ fontSize: 14, color: "rgba(246, 241, 230, 0.75)", lineHeight: 1.55 }}>
             Questions about an order or general feedback? We&apos;d love to hear from you.
           </p>
         </div>

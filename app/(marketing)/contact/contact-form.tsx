@@ -53,7 +53,7 @@ export function ContactForm() {
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 600, color: "#5B5446",
+    fontSize: 14, fontWeight: 600, color: "#5B5446",
     textTransform: "uppercase", letterSpacing: "0.1em",
     display: "block", marginBottom: 6,
   };
@@ -231,7 +231,7 @@ export function ContactForm() {
           <div style={{
             background: "#DEE2CF", border: "1px solid #E3DBC6",
             borderRadius: 12, padding: "12px 16px",
-            fontSize: 13, color: "#C0673E",
+            fontSize: 14, color: "#C0673E",
           }}>
             {errorMsg}
           </div>

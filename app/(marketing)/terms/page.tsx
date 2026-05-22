@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
@@ -108,9 +109,9 @@ export default async function TermsPage() {
               </h2>
               <p className="text-editorial-ink-soft leading-relaxed">
                 If you have any questions about these Terms of Service, please contact us at our{" "}
-                <a href="/contact" className="text-editorial-green hover:text-editorial-green-deep transition-colors">
+                <Link href="/contact" className="text-editorial-green hover:text-editorial-green-deep transition-colors">
                   contact page
-                </a>
+                </Link>
                 .
               </p>
             </section>

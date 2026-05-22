@@ -147,7 +147,7 @@ export default async function CheckoutSuccessPage({
                 display: "flex", justifyContent: "space-between", alignItems: "center",
               }}>
                 <div>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 2 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 2 }}>
                     Order
                   </p>
                   <p style={{ fontSize: 15, fontWeight: 800, color: "white", letterSpacing: "0.02em" }}>
@@ -155,7 +155,7 @@ export default async function CheckoutSuccessPage({
                   </p>
                 </div>
                 <span style={{
-                  fontSize: 10, fontWeight: 700,
+                  fontSize: 14, fontWeight: 700,
                   background: "#DEE2CF", color: "#2C4031",
                   borderRadius: 100, padding: "4px 10px",
                 }}>
@@ -181,7 +181,7 @@ export default async function CheckoutSuccessPage({
                   <p style={{ fontSize: 14, fontWeight: 700, color: "#211D15" }}>
                     {formatInTimeZone(order.deliveryDate.deliveryDate, order.school.timezone, "EEEE, MMMM d")}
                   </p>
-                  <p style={{ fontSize: 12, color: "#5B5446", marginTop: 1 }}>
+                  <p style={{ fontSize: 14, color: "#5B5446", marginTop: 1 }}>
                     {order.school.name}
                   </p>
                 </div>
@@ -189,15 +189,15 @@ export default async function CheckoutSuccessPage({
 
               {/* Student row */}
               <div style={{ padding: "12px 18px", borderBottom: "1px solid #E3DBC6" }}>
-                <p style={{ fontSize: 10, fontWeight: 600, color: "#938B78", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>{getLabels(order.school.locationType).unit}</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#938B78", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>{getLabels(order.school.locationType).unit}</p>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "#211D15" }}>
                   {order.student.studentName}
                   {order.student.grade && getLabels(order.school.locationType).showGrade && (
-                    <span style={{ fontSize: 12, fontWeight: 400, color: "#938B78" }}> · {getLabels(order.school.locationType).grade} {order.student.grade}</span>
+                    <span style={{ fontSize: 14, fontWeight: 400, color: "#938B78" }}> · {getLabels(order.school.locationType).grade} {order.student.grade}</span>
                   )}
                 </p>
                 {getLabels(order.school.locationType).showSupervisor && (order.student.teacherName || order.student.classroom) && (
-                  <p style={{ fontSize: 12, color: "#938B78", marginTop: 1 }}>
+                  <p style={{ fontSize: 14, color: "#938B78", marginTop: 1 }}>
                     {[order.student.teacherName, order.student.classroom].filter(Boolean).join(" · ")}
                   </p>
                 )}
@@ -215,12 +215,12 @@ export default async function CheckoutSuccessPage({
                     <div style={{ flex: 1 }}>
                       <p style={{ fontSize: 14, fontWeight: 600, color: "#211D15" }}>{item.itemNameSnapshot}</p>
                       {customizations.length > 0 && (
-                        <p style={{ fontSize: 12, color: "#938B78", marginTop: 2 }}>{customizations.join(" · ")}</p>
+                        <p style={{ fontSize: 14, color: "#938B78", marginTop: 2 }}>{customizations.join(" · ")}</p>
                       )}
                       {item.allergyNotes && (
                         <span style={{
                           display: "inline-block", marginTop: 4,
-                          fontSize: 10, fontWeight: 700,
+                          fontSize: 14, fontWeight: 700,
                           color: "#7C3D24", background: "#F4E3DB",
                           borderRadius: 100, padding: "2px 8px",
                         }}>
@@ -242,11 +242,11 @@ export default async function CheckoutSuccessPage({
                   if for some reason the join is empty. */}
               {order.discountCents > 0 && (
                 <>
-                  <div style={{ padding: "8px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#938B78" }}>
+                  <div style={{ padding: "8px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, color: "#938B78" }}>
                     <span>Subtotal</span>
                     <span>{formatCurrency(order.subtotalCents)}</span>
                   </div>
-                  <div style={{ padding: "4px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, fontWeight: 600, color: "#2C4031" }}>
+                  <div style={{ padding: "4px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, fontWeight: 600, color: "#2C4031" }}>
                     <span>🎁 {order.discountRedemption?.discount.name ?? "Discount"}</span>
                     <span>−{formatCurrency(order.discountCents)}</span>
                   </div>
@@ -255,7 +255,7 @@ export default async function CheckoutSuccessPage({
 
               {/* Total */}
               <div style={{ padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#938B78" }}>Total paid</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#938B78" }}>Total paid</span>
                 <span style={{ fontSize: 18, fontWeight: 800, color: "#211D15", letterSpacing: "-0.02em" }}>
                   {formatCurrency(order.totalCents)}
                 </span>
@@ -277,7 +277,7 @@ export default async function CheckoutSuccessPage({
                 display: "flex", justifyContent: "space-between", alignItems: "center",
               }}>
                 <div>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 2 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 2 }}>
                     Weekly plan
                   </p>
                   <p style={{ fontSize: 15, fontWeight: 800, color: "white" }}>
@@ -285,7 +285,7 @@ export default async function CheckoutSuccessPage({
                   </p>
                 </div>
                 <span style={{
-                  fontSize: 10, fontWeight: 700,
+                  fontSize: 14, fontWeight: 700,
                   background: "#DEE2CF", color: "#2C4031",
                   borderRadius: 100, padding: "4px 10px",
                 }}>
@@ -314,15 +314,15 @@ export default async function CheckoutSuccessPage({
                       </p>
                     </div>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: "#211D15" }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "#211D15" }}>
                         {formatInTimeZone(item.deliveryDate.deliveryDate, item.deliveryDate.school.timezone, "EEEE")}
                       </p>
-                      <p style={{ fontSize: 12, color: "#938B78" }}>
+                      <p style={{ fontSize: 14, color: "#938B78" }}>
                         {item.parentChild.studentName} · {item.itemNameSnapshot}
                       </p>
                     </div>
                   </div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "#211D15", flexShrink: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#211D15", flexShrink: 0 }}>
                     {formatCurrency(item.lineTotalCents)}
                   </p>
                 </div>
@@ -330,7 +330,7 @@ export default async function CheckoutSuccessPage({
 
               {/* Total */}
               <div style={{ padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#938B78" }}>Total paid</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#938B78" }}>Total paid</span>
                 <span style={{ fontSize: 18, fontWeight: 800, color: "#211D15", letterSpacing: "-0.02em" }}>
                   {formatCurrency(batch.totalCents)}
                 </span>
@@ -382,7 +382,7 @@ export default async function CheckoutSuccessPage({
               display: "flex", alignItems: "center", justifyContent: "center",
               borderRadius: 14, padding: "13px 0",
               border: "1px solid #E3DBC6",
-              color: "#211D15", fontSize: 13, fontWeight: 600,
+              color: "#211D15", fontSize: 14, fontWeight: 600,
               textDecoration: "none", background: "#FCFAF3",
             }}>
               Order another day
