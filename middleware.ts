@@ -28,8 +28,9 @@ export async function middleware(req: NextRequest) {
 
   // Always forward the current pathname so server components can read it
   // (used by admin layout to skip setup-redirect on the setup page itself).
-  const res = NextResponse.next();
-  res.headers.set("x-pathname", pathname);
+  // Set headers on the request so server components' headers() function can read them.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
 
   if (isProduction) {
     restaurantSlug = host.replace(`.${rootDomain}`, "");
@@ -40,20 +41,20 @@ export async function middleware(req: NextRequest) {
   } else {
     // Unknown host — could be a restaurant's custom domain (e.g. lunch.example.com).
     // Forward as x-custom-domain; restaurant.ts will do the DB lookup.
-    res.headers.set("x-custom-domain", host);
-    return res;
+    requestHeaders.set("x-custom-domain", host);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   if (!restaurantSlug) {
     // No restaurant context — show the platform landing page
-    return res;
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Forward the slug via header so server components can read it
   // without hitting the DB in middleware (avoid cold-start latency).
   // The actual DB lookup happens in lib/restaurant.ts on first use.
-  res.headers.set("x-restaurant-slug", restaurantSlug);
-  return res;
+  requestHeaders.set("x-restaurant-slug", restaurantSlug);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
