@@ -33,6 +33,7 @@ import { createStripeCheckoutSession } from "@/lib/payments/checkout";
 import { stripe } from "@/lib/payments/stripe";
 import { requireRestaurant } from "@/lib/restaurant";
 import { getMobileAuth, CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
+import { logInfo, logWarn, logException } from "@/lib/log";
 
 export { corsOptions as OPTIONS };
 
@@ -44,8 +45,16 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    logInfo("mobile_order_started", {
+      restaurantId: restaurant.id,
+      deliveryDateId: body.deliveryDateId,
+    });
+
     // Basic validation
     if (!body.deliveryDateId || !body.schoolId || !body.studentName || !body.parentEmail) {
+      logWarn("mobile_order_missing_fields", {
+        restaurantId: restaurant.id,
+      });
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400, headers: CORS_HEADERS }
@@ -54,6 +63,9 @@ export async function POST(request: NextRequest) {
 
     // Check if the restaurant has completed Stripe onboarding before allowing orders
     if (!restaurant.stripeOnboardingComplete) {
+      logWarn("mobile_order_stripe_not_onboarded", {
+        restaurantId: restaurant.id,
+      });
       return NextResponse.json(
         { error: "This operator isn't accepting payments yet." },
         { status: 503, headers: CORS_HEADERS }
@@ -73,6 +85,12 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
       if (duplicate) {
+        logWarn("mobile_order_duplicate_pending", {
+          restaurantId: restaurant.id,
+          parentUserId,
+          deliveryDateId: body.deliveryDateId,
+          duplicateOrderId: duplicate.id,
+        });
         return NextResponse.json(
           { error: "You already have a pending order for this date." },
           { status: 429, headers: CORS_HEADERS }
@@ -117,7 +135,18 @@ export async function POST(request: NextRequest) {
       parentUserId
     );
 
+    logInfo("mobile_order_pending_created", {
+      restaurantId: restaurant.id,
+      orderId: provisionalOrder.id,
+      orderNumber: provisionalOrder.orderNumber,
+      amountCents: provisionalOrder.totalCents,
+      parentUserId: parentUserId ? "set" : "unset",
+    });
+
     if (!stripe) {
+      logWarn("mobile_order_stripe_not_configured", {
+        restaurantId: restaurant.id,
+      });
       return NextResponse.json(
         { error: "Stripe is not configured" },
         { status: 500, headers: CORS_HEADERS }
@@ -169,13 +198,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    logInfo("mobile_order_checkout_session_created", {
+      restaurantId: restaurant.id,
+      orderId: provisionalOrder.id,
+      sessionId: session.id,
+    });
+
     return NextResponse.json(
       { checkoutUrl: session.url, orderId: provisionalOrder.id },
       { headers: CORS_HEADERS }
     );
   } catch (err) {
+    logException(err, "mobile_order_creation_failed");
     const message = err instanceof Error ? err.message : "Failed to create order";
-    console.error("Native order error:", err);
     return NextResponse.json(
       { error: message },
       { status: 400, headers: CORS_HEADERS }

@@ -17,6 +17,7 @@ import { createAdminOrder } from "@/lib/orders";
 import { createStripeCheckoutSession } from "@/lib/payments/checkout";
 import { sendOrderConfirmationEmail } from "@/lib/email/service";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
+import { logInfo, logWarn, logException } from "@/lib/log";
 
 const paymentModeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("stripe_link") }),
@@ -62,16 +63,20 @@ export async function POST(request: Request): Promise<Response> {
   try {
     ({ restaurantId, adminUserId } = await assertAdminApiRequest("STAFF"));
   } catch (err) {
+    logWarn("admin_order_unauthorized");
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unauthorized" },
       { status: 401 },
     );
   }
 
+  logInfo("admin_order_creation_started", { restaurantId, adminUserId });
+
   let parsed: z.infer<typeof bodySchema>;
   try {
     parsed = bodySchema.parse(await request.json());
   } catch (err) {
+    logWarn("admin_order_validation_failed", { restaurantId });
     const message =
       err instanceof z.ZodError
         ? err.issues[0]?.message ?? "Invalid request."
@@ -87,6 +92,10 @@ export async function POST(request: Request): Promise<Response> {
     try {
       await assertAdminApiRequest("MANAGER");
     } catch {
+      logWarn("admin_order_insufficient_role", {
+        restaurantId,
+        attemptedPaymentMode: parsed.paymentMode.kind,
+      });
       return NextResponse.json(
         { error: `Only managers and owners can ${parsed.paymentMode.kind === "comped" ? "comp orders" : "record manual payments"}.` },
         { status: 403 },
@@ -114,7 +123,17 @@ export async function POST(request: Request): Promise<Response> {
       restaurantId,
       adminUserId,
     });
+
+    logInfo("admin_order_created", {
+      restaurantId,
+      adminUserId,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      paymentMode: parsed.paymentMode.kind,
+      amountCents: order.totalCents,
+    });
   } catch (err) {
+    logException(err, "admin_order_creation_failed", { restaurantId, adminUserId });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unable to create order." },
       { status: 400 },
@@ -134,6 +153,7 @@ export async function POST(request: Request): Promise<Response> {
   let checkoutUrl: string | null = null;
   if (parsed.paymentMode.kind === "stripe_link") {
     if (!stripe) {
+      logWarn("admin_order_stripe_not_configured", { restaurantId });
       return NextResponse.json(
         { error: "Stripe is not configured. Add STRIPE_SECRET_KEY to use the checkout-link mode." },
         { status: 500 },
@@ -170,6 +190,12 @@ export async function POST(request: Request): Promise<Response> {
       },
     });
 
+    logInfo("admin_order_checkout_session_created", {
+      restaurantId,
+      orderId: order.id,
+      sessionId: session.id,
+    });
+
     checkoutUrl = session.url ?? null;
   } else {
     // PAID immediately (manual / comped) — email the receipt. Best-effort:
@@ -177,8 +203,17 @@ export async function POST(request: Request): Promise<Response> {
     // and on the kitchen sheet.
     try {
       await sendOrderConfirmationEmail(order.id, restaurantId);
+      logInfo("admin_order_confirmation_email_sent", {
+        restaurantId,
+        orderId: order.id,
+        paymentMode: parsed.paymentMode.kind,
+      });
     } catch (e) {
-      console.error("[admin-order/new] confirmation email failed:", e);
+      logWarn("admin_order_confirmation_email_failed", {
+        restaurantId,
+        orderId: order.id,
+        errorMessage: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
