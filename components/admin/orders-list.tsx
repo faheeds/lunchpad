@@ -35,6 +35,7 @@ type OrderListItem = {
     additions: string[];
     removals: string[];
     allergyNotes: string | null;
+    refundedAt: string | Date | null;
   }[];
 };
 
@@ -380,6 +381,7 @@ export function OrdersList({
                       id: item.id,
                       itemNameSnapshot: item.itemNameSnapshot,
                       lineTotalCents: item.lineTotalCents,
+                      refundedAt: item.refundedAt,
                     }))}
                     totalCents={order.totalCents}
                     discountCents={order.discountCents}

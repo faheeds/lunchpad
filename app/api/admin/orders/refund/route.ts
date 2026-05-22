@@ -20,11 +20,17 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { orderId, amountCents } = body;
+  const { orderId, amountCents, itemIds } = body;
 
   if (!orderId || typeof amountCents !== "number") {
     return NextResponse.json({ error: "Missing or invalid parameters" }, { status: 400 });
   }
+
+  // itemIds is optional — present only for "select items" refunds. It
+  // tells issueOrderRefund which OrderItem rows to stamp as refunded.
+  const refundedItemIds = Array.isArray(itemIds)
+    ? itemIds.filter((id): id is string => typeof id === "string")
+    : undefined;
 
   try {
     await issueOrderRefund({
@@ -32,9 +38,10 @@ export async function POST(request: Request) {
       restaurantId,
       adminUserId,
       amountCents,
+      refundedItemIds,
     });
 
-    // Send refund email (best-effort)
+    // Send refund email (best-effort).
     await sendRefundEmail(orderId, restaurantId, amountCents).catch(() => {});
 
     return NextResponse.json({ success: true });

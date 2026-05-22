@@ -553,6 +553,9 @@ model OrderItem {
   lineTotalCents      Int
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  /// Set when this line item was included in an admin refund. Lets the
+  /// refund modal grey out already-refunded items on a later refund.
+  refundedAt          DateTime?
   order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   menuItem            MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
 }

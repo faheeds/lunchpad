@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ItemLevelRefundModal } from "@/components/admin/item-level-refund-modal";
 
@@ -11,6 +11,7 @@ interface OrderRefundActionProps {
     id: string;
     itemNameSnapshot: string;
     lineTotalCents: number;
+    refundedAt: string | Date | null;
   }>;
   totalCents: number;
   discountCents: number;
@@ -32,36 +33,39 @@ export function OrderRefundAction({
   myRole,
 }: OrderRefundActionProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const isFullyRefunded = refundedAmountCents >= totalCents;
   const canRefund = orderStatus === "PAID" || orderStatus === "PARTIALLY_REFUNDED";
-  // Only MANAGER and OWNER can refund
+  // Only MANAGER and OWNER can refund.
   const canRefundByRole = myRole !== "STAFF";
 
-  async function handleRefund(amountCents: number) {
-    startTransition(async () => {
-      try {
-        const res = await fetch("/api/admin/orders/refund", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId, amountCents }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          alert(data.error || "Refund failed");
-          return;
-        }
-
-        setIsOpen(false);
-        router.refresh();
-      } catch (error) {
-        alert(error instanceof Error ? error.message : "Refund failed");
+  // Resolves only when the refund actually completes; throws on failure
+  // so the modal can show the error inline and the success view.
+  async function handleRefund(amountCents: number, itemIds: string[]) {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/admin/orders/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, amountCents, itemIds }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Refund failed");
       }
-    });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Refresh on close (not on submit) so the modal's success view stays
+  // visible — refreshing immediately can unmount this component when the
+  // order flips to fully-refunded.
+  function handleClose() {
+    setIsOpen(false);
+    router.refresh();
   }
 
   if (!canRefund || !canRefundByRole || isFullyRefunded) return null;
@@ -70,11 +74,11 @@ export function OrderRefundAction({
     <>
       <button
         type="button"
-        disabled={isPending}
+        disabled={isLoading}
         onClick={() => setIsOpen(true)}
         className="px-2.5 py-1 rounded-full border border-editorial-line text-[11px] text-editorial-ink hover:border-editorial-green hover:text-editorial-green transition disabled:opacity-40"
       >
-        {isPending ? "Processing..." : "Refund"}
+        {isLoading ? "Processing..." : "Refund"}
       </button>
 
       <ItemLevelRefundModal
@@ -86,9 +90,9 @@ export function OrderRefundAction({
         refundedAmountCents={refundedAmountCents}
         parentName={parentName}
         studentName={studentName}
-        onClose={() => setIsOpen(false)}
+        onClose={handleClose}
         onSubmit={handleRefund}
-        isLoading={isPending}
+        isLoading={isLoading}
       />
     </>
   );
