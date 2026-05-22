@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -9,6 +10,10 @@ import { KitchenEmailButton } from "@/components/admin/kitchen-email-button";
 
 export const dynamic = "force-dynamic";
 
+
+export const metadata: Metadata = {
+  title: "Kitchen",
+};
 export default async function KitchenSheetPage({
   searchParams,
 }: {

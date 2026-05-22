@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { listOrders } from "@/lib/orders";
@@ -33,6 +34,10 @@ const SORT_OPTIONS: { value: OrderSortKey; label: string }[] = [
   { value: "amount-asc",    label: "Amount — lowest" },
 ];
 
+
+export const metadata: Metadata = {
+  title: "Orders",
+};
 export default async function AdminOrdersPage({
   searchParams,
 }: {

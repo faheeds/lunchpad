@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { mapOrderToLabelRows } from "@/lib/pdf/labels";
@@ -5,6 +6,10 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Print Labels",
+};
 
 export default async function LabelsPrintPage({
   searchParams

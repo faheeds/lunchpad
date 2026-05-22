@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
@@ -198,6 +199,10 @@ const TIMEZONES = [
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+
+export const metadata: Metadata = {
+  title: "Settings",
+};
 export default async function AdminSettingsPage({
   searchParams,
 }: {

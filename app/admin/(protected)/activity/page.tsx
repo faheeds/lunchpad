@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 /**
  * Restaurant-wide change log. Shows every audited mutation across the
  * tenant in reverse-chronological order. Visible to STAFF+ for transparency:
@@ -61,6 +62,10 @@ function fmtRelative(d: Date): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d);
 }
 
+
+export const metadata: Metadata = {
+  title: "Activity",
+};
 export default async function AdminActivityPage({
   searchParams,
 }: {

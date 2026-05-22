@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import Link from "next/link";
@@ -276,6 +277,10 @@ async function attachMenuItems(formData: FormData) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+
+export const metadata: Metadata = {
+  title: "Schedule",
+};
 export default async function DeliveryDatesPage() {
   const [restaurant] = await Promise.all([requireRestaurant(), requireAdminRole("MANAGER")]);
 

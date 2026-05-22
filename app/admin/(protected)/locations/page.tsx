@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { ScheduleTabs } from "@/components/admin/schedule-tabs";
@@ -109,6 +110,10 @@ async function toggleSchool(formData: FormData) {
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
+
+export const metadata: Metadata = {
+  title: "Locations",
+};
 export default async function AdminSchoolsPage({
   searchParams,
 }: {

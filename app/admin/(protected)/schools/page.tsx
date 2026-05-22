@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 /**
@@ -5,6 +6,10 @@ import { redirect } from "next/navigation";
  * and office customers. Forward any old bookmarks to the new path,
  * preserving query string (e.g. ?edit=<id>).
  */
+
+export const metadata: Metadata = {
+  title: "Schools",
+};
 export default async function SchoolsRedirect({
   searchParams,
 }: {

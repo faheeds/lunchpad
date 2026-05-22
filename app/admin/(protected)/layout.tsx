@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 import { requireAdmin } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
@@ -167,6 +168,7 @@ export default async function AdminProtectedLayout({
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <AdminNav adminRole={adminRole} restaurantSlug={restaurant.slug} onboardingPill={await computeOnboardingPill(full as any)} />
       <div className="max-w-7xl mx-auto px-4 py-4">
+        <Breadcrumbs />
         {children}
       </div>
     </div>

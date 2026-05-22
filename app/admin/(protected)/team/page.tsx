@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import { randomBytes, createHash } from "crypto";
 import { prisma } from "@/lib/db";
@@ -354,6 +355,10 @@ function fmtRelative(d: Date | null): string {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+
+export const metadata: Metadata = {
+  title: "Team",
+};
 export default async function AdminTeamPage() {
   const [restaurant, session] = await Promise.all([requireRestaurant(), auth()]);
   // Managers can now see/use the team page (to invite staff/managers).

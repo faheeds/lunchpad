@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { formatInTimeZone } from "date-fns-tz";
@@ -9,6 +10,10 @@ import { SampleDataBanner } from "@/components/admin/sample-data-banner";
 
 export const dynamic = "force-dynamic";
 
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
 export default async function AdminDashboardPage() {
   const restaurant = await requireRestaurant();
 
