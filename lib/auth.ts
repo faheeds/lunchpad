@@ -182,6 +182,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.parentRestaurantId = token.parentRestaurantId as string | undefined;
       }
       return session;
+    },
+    // After OAuth on the apex, NextAuth must be allowed to redirect the
+    // user back to the tenant subdomain they started on. The default
+    // redirect logic only permits same-origin URLs, so a returnTo like
+    // https://<tenant>.lunchpad.us/history was silently rejected and the
+    // user landed on the apex landing page instead. Allow any host on
+    // the platform root domain; same-origin also covers custom domains.
+    async redirect({ url, baseUrl }) {
+      const rootDomain = process.env.ROOT_DOMAIN || "lunchpad.us";
+      try {
+        const target = new URL(url, baseUrl);
+        const base = new URL(baseUrl);
+        const onPlatform =
+          target.hostname === base.hostname ||
+          target.hostname === rootDomain ||
+          target.hostname.endsWith("." + rootDomain);
+        if (onPlatform && (target.protocol === "https:" || target.protocol === "http:")) {
+          return target.toString();
+        }
+      } catch {
+        // Malformed URL - fall through to baseUrl.
+      }
+      return baseUrl;
     }
   },
   providers: [
