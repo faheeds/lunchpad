@@ -10,21 +10,21 @@ export function SiteFooter() {
         <div className="flex flex-wrap justify-center gap-6 text-center sm:justify-start sm:text-left">
           <Link
             href="/terms"
-            className="text-sm text-editorial-ink hover:text-editorial-green transition-colors"
+            className="text-sm text-editorial-ink hover:text-editorial-green transition-colors font-editorial"
           >
             Terms of Service
           </Link>
           <span className="text-editorial-ink-faint">•</span>
           <Link
             href="/privacy"
-            className="text-sm text-editorial-ink hover:text-editorial-green transition-colors"
+            className="text-sm text-editorial-ink hover:text-editorial-green transition-colors font-editorial"
           >
             Privacy Policy
           </Link>
           <span className="text-editorial-ink-faint">•</span>
           <Link
             href="/contact"
-            className="text-sm text-editorial-ink hover:text-editorial-green transition-colors"
+            className="text-sm text-editorial-ink hover:text-editorial-green transition-colors font-editorial"
           >
             Contact Us
           </Link>
@@ -32,7 +32,7 @@ export function SiteFooter() {
 
         {/* Copyright */}
         <div className="mt-8 border-t border-editorial-line pt-8 text-center">
-          <p className="text-xs text-editorial-ink-faint">
+          <p className="text-sm text-editorial-ink-faint font-editorial">
             © {new Date().getFullYear()} LunchPad. All rights reserved.
           </p>
         </div>
