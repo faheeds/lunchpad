@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
+import { differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
 import type { LocationType } from "@prisma/client";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { getGradesForSchoolName } from "@/lib/grades";
@@ -135,8 +136,21 @@ function getCategoryIcon(category: string): string {
   return "🍽";
 }
 
-// Steps: 1=school/date, 2=student, 3=menu, 4=review
+// Steps: 1=date, 2=menu & cart, 3=recipient & contact, 4=review & pay
 type Step = 1 | 2 | 3 | 4;
+type Toast = { id: string; message: string; type: "success" | "error" };
+function getTimeToDeadline(cutoffAt: string, timezone: string): { days: number; hours: number; minutes: number; display: string } {
+  const now = new Date();
+  const cutoff = new Date(cutoffAt);
+  const days = differenceInDays(cutoff, now);
+  const hours = differenceInHours(cutoff, now) - days * 24;
+  const minutes = differenceInMinutes(cutoff, now) - days * 24 * 60 - hours * 60;
+  let display = "";
+  if (days > 0) display = `${days} day${days > 1 ? "s" : ""} left`;
+  else if (hours > 0) display = `${hours}h ${minutes}m left`;
+  else display = `${minutes}m left`;
+  return { days, hours, minutes, display };
+}
 
 export function OrderForm({
   deliveryDates, menuItemsByDeliveryDate, savedChildren = [], operatorType,
@@ -169,9 +183,19 @@ export function OrderForm({
   // "ordering for myself" toggle on. Reset to true whenever the user picks
   // an office (covers switching from a school location mid-flow).
   const [orderForSelf, setOrderForSelf] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const menuScrollRef = useRef<HTMLDivElement>(null);
   const customizePanelRef = useRef<HTMLDivElement>(null);
   const itemSlugAutoSelected = useRef(false);
+
+  function addToast(message: string, type: "success" | "error" = "success") {
+    const id = crypto.randomUUID();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3000);
+  }
 
   // Scroll to the customize panel as soon as an item is selected
   useEffect(() => {
@@ -348,6 +372,7 @@ export function OrderForm({
         lineTotalCents: selectedItemTotalCents, quantity: 1,
       }];
     });
+    addToast(`Added ${selectedMenuItem.name} to cart`);
     setSelectedChoice(""); setSelectedSize(""); setSelectedAdditions([]); setSelectedRemovals([]); setSelectedMenuItemId(""); setError("");
   }
 
@@ -473,40 +498,42 @@ export function OrderForm({
       // and don't need to be carried by the client.
       discountCode: codeApplied || undefined,
     };
-    const response = await fetch("/api/checkout/create-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-    const data = await response.json();
-    if (!response.ok) { setError(data.error || "Unable to start checkout."); return; }
-    window.location.href = data.checkoutUrl;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/checkout/create-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await response.json();
+      if (!response.ok) { setError(data.error || "Unable to start checkout."); return; }
+      window.location.href = data.checkoutUrl;
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  // Step 2 label tracks the location: "Student" for schools, "Diner" for offices,
-  // and "Recipient" before a location is picked (we don't yet know which one).
-  // Stepper label for step 2 — uses operator-aware labels even before a location is picked.
-  const step2Label = labels.unit;
-  const progressSteps = ["Date", step2Label, "Menu", "Review"];
+  // Progress steps are: Date, Menu, Recipient, Review
+  const progressSteps = ["Date", "Menu", "Recipient", "Review"];
 
   return (
-    <div className="pb-32">
+    <div className="pb-48">
       {/* Reorder unavailability notice */}
       {unavailableReorderItems.length > 0 && (
         <div style={{
-          borderRadius: 14, border: "1px solid #fed7aa",
-          background: "#fff7ed", padding: "12px 14px",
+          borderRadius: 14, border: "1px solid #E3DBC6",
+          background: "#F6F1E6", padding: "12px 14px",
           display: "flex", gap: 10, alignItems: "flex-start",
           marginBottom: 16,
         }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0673E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <div>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#9a3412", marginBottom: 2 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#211D15", marginBottom: 2 }}>
               {unavailableReorderItems.length === 1
                 ? "1 item isn't available for this date"
                 : `${unavailableReorderItems.length} items aren't available for this date`}
             </p>
-            <p style={{ fontSize: 11, color: "#c2410c", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 12, color: "#C0673E", lineHeight: 1.5 }}>
               {unavailableReorderItems.join(", ")} {unavailableReorderItems.length === 1 ? "has" : "have"} been removed from your cart. Pick a replacement from the menu below.
             </p>
           </div>
@@ -516,19 +543,47 @@ export function OrderForm({
       {/* Progress */}
       <div className="flex items-center gap-1 mb-4">
         {progressSteps.map((label, i) => (
-          <div key={label} className="flex items-center gap-1 flex-1">
-            <div className={cn("flex-1 h-1 rounded-full transition-colors", i < step ? "bg-brand-700" : "bg-slate-100")} />
-            {i === progressSteps.length - 1 && (
-              <div className={cn("flex-1 h-1 rounded-full", step === 4 ? "bg-brand-700" : "bg-slate-100")} />
-            )}
-          </div>
+          <div key={label} className="flex-1 h-1 rounded-full transition-colors" style={{
+            backgroundColor: i < step - 1 || (i === step - 1 && step > 1) ? "#2C4031" : "#E3DBC6"
+          }} />
         ))}
       </div>
-      <div className="flex justify-between mb-4">
+      <div className="flex justify-between mb-6">
         {progressSteps.map((label, i) => (
-          <span key={label} className={cn("text-[10px] font-medium", i + 1 === step ? "text-brand-700" : "text-slate-400")}>
+          <span key={label} className={cn("text-[10px] font-medium", i + 1 === step ? "text-editorial-ink" : "text-editorial-ink-faint")}>
             {label}
           </span>
+        ))}
+      </div>
+
+      {/* Persistent cart summary (visible from Step 2+) */}
+      {step >= 2 && cartItems.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 border-t" style={{ backgroundColor: "#F6F1E6", borderColor: "#E3DBC6" }}>
+          <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+            <span className="text-[13px] font-semibold" style={{ color: "#211D15" }}>
+              {totalUnits} item{totalUnits !== 1 ? "s" : ""} • {fmt(totalCents)}
+            </span>
+            {step < 4 && (
+              <button type="button" onClick={() => { window.history.pushState({ orderStep: step + 1 }, ""); setStep((step + 1) as Step); }}
+                className="text-[12px] font-medium px-3 py-1.5 rounded-full transition"
+                style={{ backgroundColor: "#2C4031", color: "#F6F1E6" }}>
+                Next →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast notifications */}
+      <div className="fixed top-4 right-4 space-y-2 z-50 max-w-xs">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className="px-4 py-3 rounded-lg text-[13px] font-medium text-white animate-in fade-in slide-in-from-right-2 duration-300"
+            style={{ backgroundColor: toast.type === "success" ? "#2C4031" : "#C0673E" }}
+          >
+            {toast.type === "success" ? "✓ " : "⚠ "}{toast.message}
+          </div>
         ))}
       </div>
 
@@ -536,7 +591,7 @@ export function OrderForm({
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#938B78" }}>
               {/* "School" / "Office" — or "Location" when the tenant mixes both */}
               {(() => {
                 const types = new Set(schools.map((s) => s.locationType));
@@ -555,7 +610,8 @@ export function OrderForm({
                   setCartItems([]);
                   setSelectedMenuItemId("");
                 }}
-                className="w-full rounded-[14px] border border-slate-200 bg-white p-3.5 text-[13px] font-semibold text-ink"
+                className="w-full rounded-[14px] border p-3.5 text-[14px] font-semibold"
+                style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6", color: "#211D15" }}
               >
                 <option value="" disabled>Select a location</option>
                 {groupedSchools.school.length > 0 && groupedSchools.office.length > 0 ? (
@@ -583,10 +639,14 @@ export function OrderForm({
                   key={school.id}
                   type="button"
                   onClick={() => { setSelectedSchoolId(school.id); setSelectedDeliveryDateId(deliveryDates.find((d) => d.school.id === school.id)?.id ?? ""); setCartItems([]); setSelectedMenuItemId(""); }}
-                  className={cn("w-full rounded-[14px] border p-3.5 text-left mb-2 transition", selectedSchoolId === school.id ? "border-brand-600 bg-brand-50 border-2" : "border-slate-100 bg-white")}
+                  className={cn("w-full rounded-[14px] border p-3.5 text-left mb-2 transition", selectedSchoolId === school.id ? "border-2" : "border")}
+                  style={{
+                    backgroundColor: selectedSchoolId === school.id ? "#F6F1E6" : "#FCFAF3",
+                    borderColor: selectedSchoolId === school.id ? "#2C4031" : "#E3DBC6",
+                  }}
                 >
-                  <p className={cn("text-[13px] font-semibold", selectedSchoolId === school.id ? "text-brand-900" : "text-ink")}>{school.name}</p>
-                  <p className={cn("text-[11px] mt-0.5", selectedSchoolId === school.id ? "text-brand-700" : "text-slate-500")}>
+                  <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{school.name}</p>
+                  <p className="text-[12px] mt-0.5" style={{ color: selectedSchoolId === school.id ? "#2C4031" : "#938B78" }}>
                     {school.locationType === "OFFICE" ? "Office" : "School"}
                   </p>
                 </button>
@@ -594,9 +654,9 @@ export function OrderForm({
             )}
           </div>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Delivery date</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2" style={{ color: "#938B78" }}>Delivery date</p>
             {!selectedSchoolId && (
-              <p className="text-[12px] text-slate-400 bg-slate-50 rounded-xl px-3 py-2.5">
+              <p className="text-[13px] rounded-xl px-3 py-2.5" style={{ backgroundColor: "#F6F1E6", color: "#938B78" }}>
                 Choose {schools.some((s) => s.locationType === "OFFICE") && schools.some((s) => s.locationType === "SCHOOL") ? "a location" : isOffice ? "an office" : "a school"} above to see available dates.
               </p>
             )}
@@ -608,29 +668,36 @@ export function OrderForm({
                     key={date.id}
                     type="button"
                     onClick={() => { setSelectedDeliveryDateId(date.id); setCartItems([]); setSelectedMenuItemId(""); }}
-                    className={cn("flex-shrink-0 rounded-[12px] border p-3 text-center min-w-[60px] transition", sel ? "border-brand-600 bg-brand-50 border-2" : "border-slate-100 bg-white")}
+                    className={cn("flex-shrink-0 rounded-[12px] border p-3 text-center min-w-[60px] transition", sel ? "border-2" : "border")}
+                    style={{
+                      backgroundColor: sel ? "#F6F1E6" : "#FCFAF3",
+                      borderColor: sel ? "#2C4031" : "#E3DBC6",
+                    }}
                   >
-                    <p className={cn("text-[9px] uppercase tracking-wide mb-0.5", sel ? "text-brand-700" : "text-slate-400")}>
+                    <p className="text-[9px] uppercase tracking-wide mb-0.5" style={{ color: sel ? "#2C4031" : "#938B78" }}>
                       {formatInTimeZone(date.deliveryDate, date.school.timezone, "EEE")}
                     </p>
-                    <p className={cn("text-[18px] font-semibold leading-none", sel ? "text-brand-900" : "text-ink")}>
+                    <p className="text-[18px] font-semibold leading-none" style={{ color: "#211D15" }}>
                       {formatInTimeZone(date.deliveryDate, date.school.timezone, "d")}
                     </p>
-                    <p className={cn("text-[9px] mt-0.5", sel ? "text-brand-700" : "text-slate-400")}>
+                    <p className="text-[9px] mt-0.5" style={{ color: sel ? "#2C4031" : "#938B78" }}>
                       {formatInTimeZone(date.deliveryDate, date.school.timezone, "MMM")}
                     </p>
-                    <p className="text-[8px] text-slate-400 mt-1 leading-tight">
+                    <p className="text-[8px] mt-1 leading-tight" style={{ color: "#938B78" }}>
                       by {formatInTimeZone(date.cutoffAt, date.school.timezone, "h:mm a")}
                     </p>
                   </button>
                 );
               })}
             </div>
-            {selectedDelivery && (
-              <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2.5 text-[12px] text-amber-900">
-                ⚠ Order by <strong>{formatInTimeZone(selectedDelivery.cutoffAt, selectedDelivery.school.timezone, "MMM d h:mm a zzz")}</strong>
-              </div>
-            )}
+            {selectedDelivery && (() => {
+              const deadline = getTimeToDeadline(selectedDelivery.cutoffAt, selectedDelivery.school.timezone);
+              return (
+                <div className="mt-3 rounded-xl px-3 py-2.5 text-[13px]" style={{ backgroundColor: "#F6F1E6", color: "#211D15" }}>
+                  Order by <strong>{formatInTimeZone(selectedDelivery.cutoffAt, selectedDelivery.school.timezone, "EEEE h:mm a")}</strong> — {deadline.display}
+                </div>
+              );
+            })()}
           </div>
           <button type="button" onClick={() => {
             if (!selectedSchoolId) {
@@ -642,30 +709,36 @@ export function OrderForm({
             window.history.pushState({ orderStep: 2 }, "");
             setStep(2);
           }}
-            className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold">
+            className="w-full py-3 rounded-xl text-white text-[14px] font-semibold"
+            style={{ backgroundColor: "#2C4031" }}>
             Continue →
           </button>
-          {error && <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+          {error && <p className="text-[13px] rounded-xl px-3 py-2" style={{ color: "#C0673E", backgroundColor: "#F6F1E6" }}>{error}</p>}
         </div>
       )}
 
-      {/* STEP 2: Recipient (Student / Employee / Self) */}
-      {step === 2 && (
+      {/* STEP 3: Recipient & Contact */}
+      {step === 3 && (
         <div className="space-y-4">
-          <button type="button" onClick={() => window.history.back()} className="text-[12px] text-slate-500 flex items-center gap-1 mb-2">← Back</button>
+          <button type="button" onClick={() => window.history.back()} className="text-[12px] flex items-center gap-1 mb-2" style={{ color: "#938B78" }}>← Back</button>
 
           {/* Saved profiles — only shown for school locations. Office orders
               are typically self-service and don't carry "saved coworkers". */}
           {!isOffice && savedChildren.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">Ordering for</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2" style={{ color: "#938B78" }}>Ordering for</p>
               <div className="flex gap-2 flex-wrap mb-1">
                 {savedChildren.filter((c) => c.schoolId === selectedSchoolId).map((child) => (
                   <button
                     key={child.id}
                     type="button"
                     onClick={() => setSelectedParentChildId(child.id)}
-                    className={cn("px-3 py-1.5 rounded-full text-[12px] font-medium border transition", selectedParentChildId === child.id ? "bg-ink text-white border-ink" : "bg-white text-slate-600 border-slate-200")}
+                    className="px-3 py-1.5 rounded-full text-[12px] font-medium border transition"
+                    style={{
+                      backgroundColor: selectedParentChildId === child.id ? "#211D15" : "#FCFAF3",
+                      color: selectedParentChildId === child.id ? "#F6F1E6" : "#938B78",
+                      borderColor: selectedParentChildId === child.id ? "#211D15" : "#E3DBC6",
+                    }}
                   >
                     {child.studentName}{labels.showGrade ? `, Gr ${child.grade}` : ""}
                   </button>
@@ -673,7 +746,13 @@ export function OrderForm({
                 <button
                   type="button"
                   onClick={() => setSelectedParentChildId("")}
-                  className={cn("px-3 py-1.5 rounded-full text-[12px] font-medium border transition", !selectedParentChildId ? "bg-ink text-white border-ink" : "bg-white text-slate-500 border-dashed border-slate-200")}
+                  className="px-3 py-1.5 rounded-full text-[12px] font-medium border transition"
+                  style={{
+                    backgroundColor: !selectedParentChildId ? "#211D15" : "#FCFAF3",
+                    color: !selectedParentChildId ? "#F6F1E6" : "#938B78",
+                    borderColor: !selectedParentChildId ? "#211D15" : "#E3DBC6",
+                    borderStyle: !selectedParentChildId ? "solid" : "dashed",
+                  }}
                 >
                   + Manual entry
                 </button>
@@ -686,43 +765,45 @@ export function OrderForm({
               submit. Toggling it off lets the orderer place an order for a
               coworker. */}
           {isOffice && (
-            <label className="flex items-center gap-2 rounded-[14px] border border-slate-100 bg-white px-3 py-2.5 cursor-pointer">
+            <label className="flex items-center gap-2 rounded-[14px] border px-3 py-2.5 cursor-pointer" style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}>
               <input
                 type="checkbox"
                 checked={orderForSelf}
                 onChange={(e) => setOrderForSelf(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded"
+                style={{ borderColor: "#E3DBC6" }}
               />
-              <span className="text-[12px] text-ink">Ordering for myself</span>
-              <span className="text-[11px] text-slate-400 ml-auto">Uncheck if ordering for a coworker</span>
+              <span className="text-[13px]" style={{ color: "#211D15" }}>Ordering for myself</span>
+              <span className="text-[12px] ml-auto" style={{ color: "#938B78" }}>Uncheck if ordering for a coworker</span>
             </label>
           )}
 
-          <div className="rounded-[18px] border border-slate-100 bg-white p-4 space-y-3">
+          <div className="rounded-[18px] border p-4 space-y-3" style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">
+                <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>
                   {isOffice ? "Your name" : "Parent name"}
                 </label>
-                <input className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="Your name" required />
+                <input className="w-full rounded-xl text-[13px] px-3 py-2" value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="Your name" required style={{ backgroundColor: "white", borderColor: "#E3DBC6" }} />
               </div>
               <div>
-                <label className="text-[11px] text-slate-500 mb-1 block">
+                <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>
                   {isOffice ? "Your email" : "Parent email"}
                 </label>
-                <input type="email" className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="email@example.com" required />
+                <input type="email" className="w-full rounded-xl text-[13px] px-3 py-2" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="email@example.com" required style={{ backgroundColor: "white", borderColor: "#E3DBC6" }} />
               </div>
 
               {/* Recipient name — hidden for office self-orders, shown otherwise */}
               {!(isOffice && orderForSelf) && (
                 <div>
-                  <label className="text-[11px] text-slate-500 mb-1 block">{labels.unitName}</label>
+                  <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>{labels.unitName}</label>
                   <input
-                    className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2"
+                    className="w-full rounded-xl text-[13px] px-3 py-2"
                     value={studentName}
                     onChange={(e) => setStudentName(e.target.value)}
                     placeholder={isOffice ? "Coworker's name" : "Student name"}
                     required
+                    style={{ backgroundColor: "white", borderColor: "#E3DBC6" }}
                   />
                 </div>
               )}
@@ -730,8 +811,8 @@ export function OrderForm({
               {/* Grade — schools only */}
               {labels.showGrade && (
                 <div>
-                  <label className="text-[11px] text-slate-500 mb-1 block">{labels.grade}</label>
-                  <select className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2" value={grade} onChange={(e) => setGrade(e.target.value)} required>
+                  <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>{labels.grade}</label>
+                  <select className="w-full rounded-xl text-[13px] px-3 py-2" value={grade} onChange={(e) => setGrade(e.target.value)} required style={{ backgroundColor: "white", borderColor: "#E3DBC6", color: "#211D15" }}>
                     <option value="" disabled>Select {labels.grade.toLowerCase()}</option>
                     {gradeOptions.map((g) => (
                       <option key={g} value={g}>{g}</option>
@@ -741,15 +822,16 @@ export function OrderForm({
               )}
             </div>
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">
+              <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>
                 {isOffice ? "Allergies / dietary notes" : "Allergy notes"}
               </label>
               <textarea
-                className="w-full rounded-xl border-slate-200 text-[13px] px-3 py-2 resize-none"
+                className="w-full rounded-xl text-[13px] px-3 py-2 resize-none"
                 rows={2}
                 value={allergyNotes}
                 onChange={(e) => setAllergyNotes(e.target.value)}
                 placeholder={isOffice ? "e.g. vegan, gluten-free..." : "e.g. nut allergy, no dairy..."}
+                style={{ backgroundColor: "white", borderColor: "#E3DBC6" }}
               />
             </div>
           </div>
@@ -770,33 +852,34 @@ export function OrderForm({
             }
             if (isOffice && orderForSelf) setStudentName(parentName);
             setError("");
-            window.history.pushState({ orderStep: 3 }, "");
-            setStep(3);
+            window.history.pushState({ orderStep: 4 }, "");
+            setStep(4);
           }}
-            className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold">
-            Choose meals →
+            className="w-full py-3 rounded-xl text-white text-[14px] font-semibold"
+            style={{ backgroundColor: "#2C4031" }}>
+            Review & pay →
           </button>
-          {error && <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+          {error && <p className="text-[13px] rounded-xl px-3 py-2" style={{ color: "#C0673E", backgroundColor: "#F6F1E6" }}>{error}</p>}
         </div>
       )}
 
-      {/* STEP 3: Menu */}
-      {step === 3 && (
+      {/* STEP 2: Menu & Cart */}
+      {step === 2 && (
         <div ref={menuScrollRef}>
-          <button type="button" onClick={() => window.history.back()} className="text-[12px] text-slate-500 flex items-center gap-1 mb-3">← Back</button>
+          <button type="button" onClick={() => window.history.back()} className="text-[12px] flex items-center gap-1 mb-3" style={{ color: "#938B78" }}>← Back</button>
           {/* (Per-restaurant menu disclaimers — e.g. "Hand Slaughtered Halal" —
               previously hardcoded here for one tenant; removed so every
               restaurant's menu starts clean. If we ever need this back, drive
               it from a configurable field on the Restaurant model so each
               tenant controls their own copy.) */}
-          <div className="rounded-[14px] bg-brand-50 border border-brand-100 px-3 py-2.5 mb-4 text-[12px] text-brand-900 flex justify-between items-center">
-            <span>{studentName} &middot; {formatInTimeZone(selectedDelivery!.deliveryDate, selectedDelivery!.school.timezone, "EEE MMM d")}</span>
-            <span className="font-semibold">{selectedDelivery?.school.name}</span>
+          <div className="rounded-[14px] px-3 py-2.5 mb-4 text-[13px] flex justify-between items-center border" style={{ backgroundColor: "#F6F1E6", borderColor: "#E3DBC6", color: "#211D15" }}>
+            <span>{selectedDelivery?.school.name}</span>
+            <span className="font-semibold">{formatInTimeZone(selectedDelivery!.deliveryDate, selectedDelivery!.school.timezone, "EEE MMM d")}</span>
           </div>
 
           {Object.entries(groupedMenuItems).map(([category, items]) => (
             <div key={category} className="mb-4">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2 flex items-center gap-1.5">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-2 flex items-center gap-1.5" style={{ color: "#938B78" }}>
                 <span>{getCategoryIcon(category)}</span>{category}
               </p>
               <div className="space-y-2">
@@ -814,12 +897,14 @@ export function OrderForm({
                         if (isSoldOut) return;
                         setSelectedMenuItemId(item.id); setSelectedChoice(""); setSelectedAdditions([]); setSelectedRemovals([]); setError("");
                       }}
-                      className={cn(
-                        "w-full rounded-[14px] border p-3 text-left flex gap-2.5 items-start transition",
-                        isSoldOut ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed" :
-                        isSelected ? "border-brand-600 bg-brand-50 border-2" :
-                        inCart ? "border-green-200 bg-green-50/40 border" : "border-slate-100 bg-white"
-                      )}
+                      className="w-full rounded-[14px] border p-3 text-left flex gap-2.5 items-start transition"
+                      style={{
+                        borderColor: isSoldOut ? "#E3DBC6" : isSelected ? "#2C4031" : inCart ? "#2C4031" : "#E3DBC6",
+                        backgroundColor: isSoldOut ? "#F6F1E6" : isSelected ? "#F6F1E6" : inCart ? "#EFE8D7" : "#FCFAF3",
+                        opacity: isSoldOut ? 0.6 : 1,
+                        cursor: isSoldOut ? "not-allowed" : "pointer",
+                        borderWidth: isSelected ? "2px" : "1px",
+                      }}
                     >
                       {item.imageUrl ? (
                         <img
@@ -827,26 +912,27 @@ export function OrderForm({
                           alt={item.name}
                           width={36}
                           height={36}
-                          className="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-slate-100"
+                          className="w-9 h-9 rounded-xl object-cover flex-shrink-0 border"
+                          style={{ borderColor: "#E3DBC6" }}
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                         />
                       ) : (
-                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-lg flex-shrink-0">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ backgroundColor: "#DEE2CF" }}>
                           {getCategoryIcon(category)}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className={cn("text-[13px] font-semibold leading-snug", isSelected ? "text-brand-900" : isSoldOut ? "text-slate-400" : "text-ink")}>
+                          <p className="text-[14px] font-semibold leading-snug" style={{ color: isSoldOut ? "#938B78" : "#211D15" }}>
                             {item.name}
                             {!isSoldOut && getRequiredChoicesForMenuItem(item).length > 0 && (
-                              <span className="ml-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">choose style</span>
+                              <span className="ml-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "#DEE2CF", color: "#2C4031" }}>choose style</span>
                             )}
                             {isSoldOut && (
-                              <span className="ml-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-500">sold out</span>
+                              <span className="ml-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "#DEE2CF", color: "#938B78" }}>sold out</span>
                             )}
                           </p>
-                          <span className={cn("text-[13px] font-semibold flex-shrink-0", isSoldOut ? "text-slate-400 line-through" : isSelected ? "text-brand-700" : "text-ink")}>
+                          <span className="text-[14px] font-semibold flex-shrink-0" style={{ color: isSoldOut ? "#938B78" : "#211D15", textDecoration: isSoldOut ? "line-through" : "none" }}>
                             {(() => {
                               // Sized items: show a range "$4–$6". When only one
                               // size exists it reads as a single price (no dash).
@@ -861,9 +947,9 @@ export function OrderForm({
                             })()}
                           </span>
                         </div>
-                        {getDesc(item) && <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{getDesc(item)}</p>}
+                        {getDesc(item) && <p className="text-[12px] mt-0.5 leading-snug" style={{ color: "#938B78" }}>{getDesc(item)}</p>}
                         {inCart && !isSoldOut && (
-                          <p className="text-[10px] text-green-700 font-medium mt-1">
+                          <p className="text-[11px] font-medium mt-1" style={{ color: "#2C4031" }}>
                             ✓ In cart{cartQty > 1 ? ` (${cartQty})` : ""}
                           </p>
                         )}
@@ -877,15 +963,15 @@ export function OrderForm({
 
           {/* Customize panel */}
           {selectedMenuItem && (
-            <div ref={customizePanelRef} className="rounded-[18px] border-2 border-brand-200 bg-brand-50 p-4 mb-4 space-y-3">
-              <p className="text-[13px] font-semibold text-brand-900">Customize: {selectedMenuItem.name}</p>
+            <div ref={customizePanelRef} className="rounded-[18px] border-2 p-4 mb-4 space-y-3" style={{ backgroundColor: "#F6F1E6", borderColor: "#E3DBC6" }}>
+              <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>Customize: {selectedMenuItem.name}</p>
 
               {/* Size picker — radio chips with absolute prices. Renders
                   ABOVE required-choices so the customer commits to size
                   first (since size drives the total price). */}
               {(selectedMenuItem.sizes ?? []).length > 0 && (
                 <div>
-                  <p className="text-[11px] font-semibold text-ink mb-2">Size — choose one</p>
+                  <p className="text-[12px] font-semibold mb-2" style={{ color: "#211D15" }}>Size — choose one</p>
                   <div className="flex flex-wrap gap-1.5">
                     {(selectedMenuItem.sizes ?? []).map((size) => {
                       const active = selectedSize === size.name;
@@ -894,15 +980,15 @@ export function OrderForm({
                           key={size.id}
                           type="button"
                           onClick={() => setSelectedSize(size.name)}
-                          className={cn(
-                            "px-3 py-1.5 rounded-full border text-[12px] font-semibold transition",
-                            active
-                              ? "border-brand-600 bg-brand-50 text-brand-900"
-                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
-                          )}
+                          className="px-3 py-1.5 rounded-full border text-[12px] font-semibold transition"
+                          style={{
+                            backgroundColor: active ? "#F6F1E6" : "#FCFAF3",
+                            borderColor: active ? "#2C4031" : "#E3DBC6",
+                            color: active ? "#2C4031" : "#938B78",
+                          }}
                         >
                           {size.name}
-                          <span className={cn("ml-1.5 text-[11px] font-normal", active ? "text-brand-700" : "text-slate-500")}>
+                          <span className="ml-1.5 text-[11px] font-normal" style={{ color: active ? "#2C4031" : "#938B78" }}>
                             {fmt(size.priceCents)}
                           </span>
                         </button>
@@ -914,19 +1000,26 @@ export function OrderForm({
 
               {requiredChoices.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-semibold text-ink mb-2">Required — choose one</p>
+                  <p className="text-[12px] font-semibold mb-2" style={{ color: "#211D15" }}>Required — choose one</p>
                   <div className="space-y-1.5">
                     {requiredChoices.map((choice) => (
                       <button
                         key={choice}
                         type="button"
                         onClick={() => setSelectedChoice(choice)}
-                        className={cn("w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-[12px] text-left transition",
-                          selectedChoice === choice ? "border-brand-600 bg-white text-brand-900 font-semibold" : "border-slate-100 bg-white text-slate-700")}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-[12px] text-left transition"
+                        style={{
+                          borderColor: selectedChoice === choice ? "#2C4031" : "#E3DBC6",
+                          backgroundColor: "#FCFAF3",
+                          color: selectedChoice === choice ? "#2C4031" : "#938B78",
+                          fontWeight: selectedChoice === choice ? "600" : "400",
+                        }}
                       >
-                        <div className={cn("w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center",
-                          selectedChoice === choice ? "border-brand-600 bg-brand-600" : "border-slate-300")}>
-                          {selectedChoice === choice && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        <div className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center" style={{
+                          borderColor: selectedChoice === choice ? "#2C4031" : "#E3DBC6",
+                          backgroundColor: selectedChoice === choice ? "#2C4031" : "transparent",
+                        }}>
+                          {selectedChoice === choice && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#F6F1E6" }} />}
                         </div>
                         {choice}
                       </button>
@@ -937,44 +1030,56 @@ export function OrderForm({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold text-ink mb-2">Add-ons</p>
+                  <p className="text-[12px] font-semibold mb-2" style={{ color: "#211D15" }}>Add-ons</p>
                   <div className="space-y-1.5">
                     {selectedMenuItem.options.filter((o) => o.optionType === "ADD_ON" && !requiredChoices.includes(o.name)).map((option) => (
                       <button key={option.id} type="button" onClick={() => toggle(option.name, selectedAdditions, setSelectedAdditions)}
-                        className={cn("w-full px-2.5 py-1.5 rounded-full text-[11px] border text-left transition",
-                          selectedAdditions.includes(option.name) ? "bg-brand-100 border-brand-300 text-brand-900 font-medium" : "bg-white border-slate-200 text-slate-600")}>
+                        className="w-full px-2.5 py-1.5 rounded-full text-[11px] border text-left transition"
+                        style={{
+                          backgroundColor: selectedAdditions.includes(option.name) ? "#DEE2CF" : "#FCFAF3",
+                          borderColor: selectedAdditions.includes(option.name) ? "#2C4031" : "#E3DBC6",
+                          color: selectedAdditions.includes(option.name) ? "#2C4031" : "#938B78",
+                          fontWeight: selectedAdditions.includes(option.name) ? "600" : "400",
+                        }}>
                         + {option.name}{option.priceDeltaCents ? ` +${fmt(option.priceDeltaCents)}` : ""}
                       </button>
                     ))}
                     {selectedMenuItem.options.filter((o) => o.optionType === "ADD_ON" && !requiredChoices.includes(o.name)).length === 0 &&
-                      <p className="text-[11px] text-slate-400">None available</p>}
+                      <p className="text-[11px]" style={{ color: "#938B78" }}>None available</p>}
                   </div>
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold text-ink mb-2">Remove</p>
+                  <p className="text-[12px] font-semibold mb-2" style={{ color: "#211D15" }}>Remove</p>
                   <div className="space-y-1.5">
                     {selectedMenuItem.options.filter((o) => o.optionType === "REMOVAL").map((option) => (
                       <button key={option.id} type="button" onClick={() => toggle(option.name, selectedRemovals, setSelectedRemovals)}
-                        className={cn("w-full px-2.5 py-1.5 rounded-full text-[11px] border text-left transition",
-                          selectedRemovals.includes(option.name) ? "bg-red-100 border-red-300 text-red-900 font-medium" : "bg-white border-slate-200 text-slate-600")}>
+                        className="w-full px-2.5 py-1.5 rounded-full text-[11px] border text-left transition"
+                        style={{
+                          backgroundColor: selectedRemovals.includes(option.name) ? "#C0673E" : "#FCFAF3",
+                          borderColor: selectedRemovals.includes(option.name) ? "#C0673E" : "#E3DBC6",
+                          color: selectedRemovals.includes(option.name) ? "#F6F1E6" : "#938B78",
+                          fontWeight: selectedRemovals.includes(option.name) ? "600" : "400",
+                        }}>
                         No {option.name}
                       </button>
                     ))}
                     {selectedMenuItem.options.filter((o) => o.optionType === "REMOVAL").length === 0 &&
-                      <p className="text-[11px] text-slate-400">None available</p>}
+                      <p className="text-[11px]" style={{ color: "#938B78" }}>None available</p>}
                   </div>
                 </div>
               </div>
 
-              {error && <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+              {error && <p className="text-[13px] rounded-xl px-3 py-2" style={{ color: "#C0673E", backgroundColor: "#F6F1E6" }}>{error}</p>}
 
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={addToCart}
-                  className="flex-1 py-2.5 rounded-xl bg-brand-700 text-white text-[13px] font-semibold">
+                  className="flex-1 py-2.5 rounded-xl text-white text-[14px] font-semibold"
+                  style={{ backgroundColor: "#2C4031" }}>
                   Add to cart — {fmt(selectedItemTotalCents)}
                 </button>
                 <button type="button" onClick={() => setSelectedMenuItemId("")}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-[13px] text-slate-600">
+                  className="px-4 py-2.5 rounded-xl border text-[13px]"
+                  style={{ borderColor: "#E3DBC6", backgroundColor: "#FCFAF3", color: "#938B78" }}>
                   Cancel
                 </button>
               </div>
@@ -983,46 +1088,48 @@ export function OrderForm({
 
           {/* Cart */}
           {cartItems.length > 0 && (
-            <div className="rounded-[18px] border border-slate-100 bg-white p-4 mb-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-3">
+            <div className="rounded-[18px] border p-4 mb-4" style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-3" style={{ color: "#938B78" }}>
                 Your cart {totalUnits > 0 ? `· ${totalUnits} item${totalUnits === 1 ? "" : "s"}` : ""}
               </p>
-              <div className="divide-y divide-slate-50">
+              <div style={{ borderColor: "#E3DBC6", borderTopWidth: "1px" }}>
                 {cartItems.map((item) => {
                   const lineTotal = item.lineTotalCents * item.quantity;
                   return (
-                    <div key={item.id} className="py-2.5 flex gap-3 items-start justify-between">
+                    <div key={item.id} className="py-2.5 flex gap-3 items-start justify-between" style={{ borderBottomColor: "#E3DBC6", borderBottomWidth: "1px" }}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-ink">
+                        <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>
                           {item.itemName}
-                          {item.size && <span className="text-slate-500 font-normal"> · {item.size}</span>}
+                          {item.size && <span style={{ color: "#938B78", fontWeight: "normal" }}> · {item.size}</span>}
                         </p>
-                        <p className="text-[11px] text-slate-500 leading-snug">
+                        <p className="text-[12px] leading-snug" style={{ color: "#938B78" }}>
                           {[item.choice ? `${item.choice}` : "", item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ") || "No customizations"}
                         </p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
+                        <p className="text-[12px] mt-0.5" style={{ color: "#938B78" }}>
                           {fmt(lineTotal)}
-                          {item.quantity > 1 && <span className="text-slate-400"> · {fmt(item.lineTotalCents)} each</span>}
+                          {item.quantity > 1 && <span> · {fmt(item.lineTotalCents)} each</span>}
                         </p>
                       </div>
                       {/* Qty stepper */}
-                      <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-1 py-1 flex-shrink-0">
+                      <div className="flex items-center gap-1 rounded-full px-1 py-1 flex-shrink-0" style={{ borderColor: "#E3DBC6", borderWidth: "1px", backgroundColor: "#F6F1E6" }}>
                         <button
                           type="button"
                           onClick={() => decrementCartItem(item.id)}
                           aria-label={item.quantity > 1 ? `Decrease ${item.itemName}` : `Remove ${item.itemName}`}
-                          className="w-7 h-7 rounded-full bg-white border border-slate-200 text-slate-700 text-[14px] font-semibold flex items-center justify-center hover:bg-slate-100"
+                          className="w-7 h-7 rounded-full text-[14px] font-semibold flex items-center justify-center hover:opacity-75"
+                          style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6", color: "#938B78", borderWidth: "1px" }}
                         >
                           {item.quantity > 1 ? "−" : "×"}
                         </button>
-                        <span className="text-[12px] font-semibold text-ink min-w-[18px] text-center tabular-nums">
+                        <span className="text-[12px] font-semibold min-w-[18px] text-center tabular-nums" style={{ color: "#211D15" }}>
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => incrementCartItem(item.id)}
                           aria-label={`Add another ${item.itemName}`}
-                          className="w-7 h-7 rounded-full bg-white border border-slate-200 text-slate-700 text-[14px] font-semibold flex items-center justify-center hover:bg-slate-100"
+                          className="w-7 h-7 rounded-full text-[14px] font-semibold flex items-center justify-center hover:opacity-75"
+                          style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6", color: "#938B78", borderWidth: "1px" }}
                         >
                           +
                         </button>
@@ -1031,55 +1138,56 @@ export function OrderForm({
                   );
                 })}
               </div>
-              <div className="border-t border-slate-100 pt-3 mt-1 flex justify-between">
-                <span className="text-[13px] font-semibold text-ink">Total</span>
-                <span className="text-[16px] font-semibold text-ink">{fmt(totalCents)}</span>
+              <div className="pt-3 mt-1 flex justify-between" style={{ borderTopColor: "#E3DBC6", borderTopWidth: "1px" }}>
+                <span className="text-[14px] font-semibold" style={{ color: "#211D15" }}>Total</span>
+                <span className="text-[16px] font-semibold" style={{ color: "#211D15" }}>{fmt(totalCents)}</span>
               </div>
             </div>
           )}
 
-          <button type="button" onClick={() => { if (!cartItems.length) { setError("Add at least one item first."); return; } setError(""); window.history.pushState({ orderStep: 4 }, ""); setStep(4); }}
+          <button type="button" onClick={() => { if (!cartItems.length) { setError("Add at least one item first."); return; } setError(""); window.history.pushState({ orderStep: 3 }, ""); setStep(3); }}
             disabled={!cartItems.length}
-            className="w-full py-3 rounded-xl bg-ink text-white text-[13px] font-semibold disabled:opacity-30">
-            Review & pay →
+            className="w-full py-3 rounded-xl text-white text-[14px] font-semibold disabled:opacity-30"
+            style={{ backgroundColor: "#2C4031" }}>
+            Continue →
           </button>
-          {error && <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2 mt-2">{error}</p>}
+          {error && <p className="text-[13px] rounded-xl px-3 py-2 mt-2" style={{ color: "#C0673E", backgroundColor: "#F6F1E6" }}>{error}</p>}
         </div>
       )}
 
-      {/* STEP 4: Review */}
+      {/* STEP 4: Review & Pay */}
       {step === 4 && (
         <div className="space-y-4">
-          <button type="button" onClick={() => window.history.back()} className="text-[12px] text-slate-500 flex items-center gap-1 mb-2">← Back</button>
+          <button type="button" onClick={() => window.history.back()} className="text-[12px] flex items-center gap-1 mb-2" style={{ color: "#938B78" }}>← Back</button>
 
-          <div className="rounded-[18px] border border-slate-100 bg-white divide-y divide-slate-50 overflow-hidden">
-            <div className="p-4">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Delivery</p>
-              <p className="text-[13px] font-semibold text-ink">{selectedDelivery && formatInTimeZone(selectedDelivery.deliveryDate, selectedDelivery.school.timezone, "EEEE, MMMM d")}</p>
-              <p className="text-[12px] text-slate-500">{selectedDelivery?.school.name}</p>
+          <div className="rounded-[18px] border overflow-hidden" style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}>
+            <div className="p-4 border-b" style={{ borderColor: "#E3DBC6" }}>
+              <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: "#938B78" }}>Delivery</p>
+              <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{selectedDelivery && formatInTimeZone(selectedDelivery.deliveryDate, selectedDelivery.school.timezone, "EEEE, MMMM d")}</p>
+              <p className="text-[12px]" style={{ color: "#938B78" }}>{selectedDelivery?.school.name}</p>
             </div>
-            <div className="p-4">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{labels.unit}</p>
-              <p className="text-[13px] font-semibold text-ink">{studentName || (isOffice && orderForSelf ? parentName : "")}</p>
-              <p className="text-[12px] text-slate-500">
+            <div className="p-4 border-b" style={{ borderColor: "#E3DBC6" }}>
+              <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: "#938B78" }}>{labels.unit}</p>
+              <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{studentName || (isOffice && orderForSelf ? parentName : "")}</p>
+              <p className="text-[12px]" style={{ color: "#938B78" }}>
                 {labels.showGrade && grade ? `${labels.grade} ${grade}` : ""}
                 {labels.showGrade && grade && allergyNotes ? " · " : ""}
                 {allergyNotes ? `${isOffice ? "Notes" : "Allergy"}: ${allergyNotes}` : ""}
               </p>
             </div>
-            <div className="p-4">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Order</p>
+            <div className="p-4 border-b" style={{ borderColor: "#E3DBC6" }}>
+              <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: "#938B78" }}>Order</p>
               {cartItems.map((item) => (
                 <div key={item.id} className="flex justify-between mb-2">
                   <div>
-                    <p className="text-[13px] font-semibold text-ink">
-                      {item.quantity > 1 && <span className="text-slate-500">{item.quantity}× </span>}
+                    <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>
+                      {item.quantity > 1 && <span style={{ color: "#938B78" }}>{item.quantity}× </span>}
                       {item.itemName}
-                      {item.size && <span className="text-slate-500 font-normal"> · {item.size}</span>}
+                      {item.size && <span style={{ color: "#938B78", fontWeight: "normal" }}> · {item.size}</span>}
                     </p>
-                    <p className="text-[11px] text-slate-500">{[item.choice, item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ")}</p>
+                    <p className="text-[12px]" style={{ color: "#938B78" }}>{[item.choice, item.additions.length ? `+ ${item.additions.join(", ")}` : "", item.removals.length ? `No: ${item.removals.join(", ")}` : ""].filter(Boolean).join(" · ")}</p>
                   </div>
-                  <p className="text-[13px] font-semibold text-ink">{fmt(item.lineTotalCents * item.quantity)}</p>
+                  <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{fmt(item.lineTotalCents * item.quantity)}</p>
                 </div>
               ))}
 
@@ -1088,7 +1196,7 @@ export function OrderForm({
                   reads naturally. With no discount we keep the original
                   single "Order total" row to avoid visual noise. */}
               {totalDiscountCents > 0 && (
-                <div className="border-t border-slate-100 pt-3 mt-1 flex justify-between text-[12px] text-slate-500">
+                <div className="flex justify-between pt-3 mt-1 text-[12px]" style={{ borderTopColor: "#E3DBC6", borderTopWidth: "1px", color: "#938B78" }}>
                   <span>Subtotal</span>
                   <span>{fmt(totalCents)}</span>
                 </div>
@@ -1096,29 +1204,30 @@ export function OrderForm({
 
               {/* Auto-applied discount line */}
               {previewAuto && (
-                <div className="flex justify-between mt-1 text-[12px]">
-                  <span className="text-green-700 font-semibold">🎁 {previewAuto.name}</span>
-                  <span className="text-green-700 font-semibold">−{fmt(previewAuto.amountCents)}</span>
+                <div className="flex justify-between mt-1 text-[12px]" style={{ color: "#2C4031", fontWeight: "600" }}>
+                  <span>🎁 {previewAuto.name}</span>
+                  <span>−{fmt(previewAuto.amountCents)}</span>
                 </div>
               )}
 
               {/* Code discount line */}
               {previewCode && (
-                <div className="flex justify-between mt-1 text-[12px]">
-                  <span className="text-green-700 font-semibold">🏷️ {previewCode.name}{codeApplied ? ` (${codeApplied})` : ""}</span>
-                  <span className="text-green-700 font-semibold">−{fmt(previewCode.amountCents)}</span>
+                <div className="flex justify-between mt-1 text-[12px]" style={{ color: "#2C4031", fontWeight: "600" }}>
+                  <span>🏷️ {previewCode.name}{codeApplied ? ` (${codeApplied})` : ""}</span>
+                  <span>−{fmt(previewCode.amountCents)}</span>
                 </div>
               )}
 
               {/* Promo code section — collapsed by default. When applied,
                   we replace the input with a "Remove" affordance so the
                   customer can clear the code without retyping. */}
-              <div className="border-t border-slate-100 pt-3 mt-3">
+              <div className="pt-3 mt-3" style={{ borderTopColor: "#E3DBC6", borderTopWidth: "1px" }}>
                 {!previewCode && !codeInputOpen && (
                   <button
                     type="button"
                     onClick={() => setCodeInputOpen(true)}
-                    className="text-[12px] text-brand-700 font-semibold hover:underline"
+                    className="text-[12px] font-semibold hover:underline"
+                    style={{ color: "#2C4031" }}
                   >
                     Have a promo code?
                   </button>
@@ -1132,13 +1241,15 @@ export function OrderForm({
                       placeholder="Promo code"
                       aria-label="Promo code"
                       autoFocus
-                      className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-mono tracking-wider uppercase focus:outline-none focus:border-brand-400"
+                      className="flex-1 rounded-lg px-3 py-2 text-[13px] font-mono tracking-wider uppercase focus:outline-none"
+                      style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6", borderWidth: "1px", color: "#211D15" }}
                     />
                     <button
                       type="button"
                       onClick={handleApplyCode}
                       disabled={previewBusy}
-                      className="px-4 py-2 rounded-lg bg-ink text-white text-[12px] font-semibold disabled:opacity-50"
+                      className="px-4 py-2 rounded-lg text-white text-[12px] font-semibold disabled:opacity-50"
+                      style={{ backgroundColor: "#211D15" }}
                     >
                       {previewBusy ? "…" : "Apply"}
                     </button>
@@ -1146,43 +1257,45 @@ export function OrderForm({
                 )}
                 {previewCode && (
                   <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-slate-500">Code applied</span>
+                    <span style={{ color: "#938B78" }}>Code applied</span>
                     <button
                       type="button"
                       onClick={handleRemoveCode}
-                      className="text-red-600 hover:underline font-medium"
+                      className="hover:underline font-medium"
+                      style={{ color: "#C0673E" }}
                     >
                       Remove code
                     </button>
                   </div>
                 )}
                 {codeError && (
-                  <p className="text-[11px] text-red-600 mt-1.5">{codeError}</p>
+                  <p className="text-[11px] mt-1.5" style={{ color: "#C0673E" }}>{codeError}</p>
                 )}
               </div>
 
-              <div className="border-t border-slate-100 pt-3 mt-3 flex justify-between">
-                <span className="text-[13px] font-semibold">Order total</span>
-                <span className="text-[18px] font-semibold text-ink">{fmt(finalTotalCents)}</span>
+              <div className="flex justify-between pt-3 mt-3" style={{ borderTopColor: "#E3DBC6", borderTopWidth: "1px" }}>
+                <span className="text-[14px] font-semibold" style={{ color: "#211D15" }}>Order total</span>
+                <span className="text-[18px] font-semibold" style={{ color: "#211D15" }}>{fmt(finalTotalCents)}</span>
               </div>
             </div>
             <div className="p-4">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Contact</p>
-              <p className="text-[13px] font-semibold text-ink">{parentName}</p>
-              <p className="text-[12px] text-slate-500">{parentEmail}</p>
+              <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: "#938B78" }}>Contact</p>
+              <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{parentName}</p>
+              <p className="text-[12px]" style={{ color: "#938B78" }}>{parentEmail}</p>
             </div>
           </div>
 
-          <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-[12px] text-amber-900 flex gap-2">
+          <div className="rounded-xl px-3 py-2.5 text-[13px] flex gap-2" style={{ backgroundColor: "#F6F1E6", color: "#211D15" }}>
             <span>🔒</span>
             <span>You'll be redirected to <strong>Stripe</strong> for secure payment. Confirmation sent by email.</span>
           </div>
 
-          {error && <p className="text-[12px] text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+          {error && <p className="text-[13px] rounded-xl px-3 py-2" style={{ color: "#C0673E", backgroundColor: "#F6F1E6" }}>{error}</p>}
 
-          <button type="button" onClick={handleSubmit}
-            className="w-full py-3.5 rounded-xl bg-brand-700 text-white text-[14px] font-semibold">
-            Pay with Stripe →
+          <button type="button" onClick={handleSubmit} disabled={isSubmitting}
+            className="w-full py-3.5 rounded-xl text-white text-[14px] font-semibold disabled:opacity-50"
+            style={{ backgroundColor: "#2C4031" }}>
+            {isSubmitting ? "Processing..." : "Pay with Stripe →"}
           </button>
         </div>
       )}
