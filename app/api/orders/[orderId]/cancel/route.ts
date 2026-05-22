@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { assertParentApiRequest } from "@/lib/parent-auth";
 import { cancelOrderWithRefund } from "@/lib/orders";
 import { sendCancellationEmail } from "@/lib/email/service";
+import { logInfo, logWarn, logException } from "@/lib/log";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   const { orderId } = await params;
+
+  logInfo("order_cancellation_started", { orderId });
 
   // Try parent auth — but don't reject up front. Guests can also cancel
   // by passing a signed token in the body (issued on the success page).
@@ -35,6 +38,7 @@ export async function POST(
   }
 
   if (!parentUserId && !guestToken) {
+    logWarn("order_cancellation_unauthorized", { orderId });
     return NextResponse.json(
       { error: "Sign in or use the cancel link from your confirmation to cancel this order." },
       { status: 401 },
@@ -44,11 +48,18 @@ export async function POST(
   try {
     const order = await cancelOrderWithRefund({ orderId, parentUserId, guestToken });
 
+    logInfo("order_cancelled_successfully", {
+      orderId: order.id,
+      restaurantId: order.restaurantId,
+      parentUserId: parentUserId ? "authenticated" : "guest",
+    });
+
     // Best-effort cancellation email — don't let email failure block the response.
     sendCancellationEmail(order.id, order.restaurantId).catch(() => {});
 
     return NextResponse.json({ ok: true, orderId: order.id });
   } catch (error) {
+    logException(error, "order_cancellation_failed", { orderId });
     const message = error instanceof Error ? error.message : "Unable to cancel order.";
     return NextResponse.json({ error: message }, { status: 400 });
   }

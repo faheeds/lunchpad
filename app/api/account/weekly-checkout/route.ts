@@ -4,17 +4,30 @@ import { createWeeklyStripeCheckoutSession } from "@/lib/payments/checkout";
 import { createWeeklyCheckoutBatch } from "@/lib/weekly-checkout";
 import { assertParentApiRequest } from "@/lib/parent-auth";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
+import { logInfo, logWarn, logException } from "@/lib/log";
 
 export async function POST(request: Request) {
+  let parentUserId: string | undefined;
+
   try {
     const session = await assertParentApiRequest();
-    const parentUserId = session.user?.parentUserId;
+    parentUserId = session.user?.parentUserId;
+
+    logInfo("weekly_checkout_started", { parentUserId });
 
     if (!parentUserId) {
+      logWarn("weekly_checkout_unauthorized");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const batch = await createWeeklyCheckoutBatch(parentUserId);
+
+    logInfo("weekly_checkout_batch_created", {
+      parentUserId,
+      restaurantId: batch.restaurantId,
+      batchId: batch.id,
+      itemCount: batch.items.length,
+    });
 
     // Look up the restaurant's Stripe Connect account for payment routing
     const restaurantStripe = await prisma.restaurant.findUnique({
@@ -49,8 +62,16 @@ export async function POST(request: Request) {
       }
     });
 
+    logInfo("weekly_checkout_session_created", {
+      parentUserId,
+      restaurantId: batch.restaurantId,
+      batchId: batch.id,
+      sessionId: stripeSession.id,
+    });
+
     return NextResponse.json({ checkoutUrl: stripeSession.url });
   } catch (error) {
+    logException(error, "weekly_checkout_creation_failed", { parentUserId });
     const message = error instanceof Error ? error.message : "Unable to start weekly checkout.";
     return NextResponse.json({ error: message }, { status: 400 });
   }

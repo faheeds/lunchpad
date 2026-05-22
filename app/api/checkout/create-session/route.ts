@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
 import { auth } from "@/lib/auth";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
+import { logInfo, logWarn, logException } from "@/lib/log";
 
 export async function POST(request: Request) {
   try {
@@ -13,12 +14,19 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = orderFormSchema.parse(body);
 
+    logInfo("order_checkout_session_started", {
+      deliveryDateId: parsed.deliveryDateId,
+    });
+
     // Check if the restaurant has completed Stripe onboarding before allowing orders
     const deliveryDate = await prisma.deliveryDate.findUnique({
       where: { id: parsed.deliveryDateId },
       include: { school: { select: { restaurantId: true } } },
     });
     if (!deliveryDate) {
+      logWarn("order_delivery_date_not_found", {
+        deliveryDateId: parsed.deliveryDateId,
+      });
       return NextResponse.json(
         { error: "Delivery date not found." },
         { status: 400 }
@@ -30,6 +38,9 @@ export async function POST(request: Request) {
       select: { stripeOnboardingComplete: true },
     });
     if (!restaurant?.stripeOnboardingComplete) {
+      logWarn("order_restaurant_stripe_not_onboarded", {
+        restaurantId: deliveryDate.school.restaurantId,
+      });
       return NextResponse.json(
         { error: "This operator isn't accepting payments yet." },
         { status: 503 }
@@ -52,6 +63,11 @@ export async function POST(request: Request) {
         select: { id: true },
       });
       if (duplicate) {
+        logWarn("order_duplicate_pending", {
+          parentUserId,
+          deliveryDateId: parsed.deliveryDateId,
+          duplicateOrderId: duplicate.id,
+        });
         return NextResponse.json(
           { error: "You already have a pending order for this date. Complete or cancel it before placing another." },
           { status: 429 }
@@ -65,7 +81,18 @@ export async function POST(request: Request) {
       authSession?.user?.role === "PARENT" ? authSession.user.parentUserId : undefined
     );
 
+    logInfo("order_pending_created", {
+      restaurantId: provisionalOrder.restaurantId,
+      orderId: provisionalOrder.id,
+      orderNumber: provisionalOrder.orderNumber,
+      deliveryDateId: parsed.deliveryDateId,
+      amountCents: provisionalOrder.totalCents,
+    });
+
     if (!stripe) {
+      logWarn("order_stripe_not_configured", {
+        restaurantId: provisionalOrder.restaurantId,
+      });
       return NextResponse.json(
         { error: "Stripe is not configured. Add STRIPE_SECRET_KEY before testing checkout." },
         { status: 500 }
@@ -127,8 +154,15 @@ export async function POST(request: Request) {
       }
     });
 
+    logInfo("order_checkout_session_created", {
+      restaurantId: provisionalOrder.restaurantId,
+      orderId: provisionalOrder.id,
+      sessionId: session.id,
+    });
+
     return NextResponse.json({ checkoutUrl: session.url });
   } catch (error) {
+    logException(error, "order_checkout_session_creation_failed");
     const message = error instanceof Error ? error.message : "Unable to create checkout session.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
