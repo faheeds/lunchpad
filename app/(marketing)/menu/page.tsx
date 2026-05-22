@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { SiteHeaderServer } from "@/components/site-header-server";
+import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
 import { getCurrentRestaurant } from "@/lib/restaurant";
@@ -282,6 +283,8 @@ export default async function MenuPage() {
             </div>
           )}
         </div>
+
+        <SiteFooter />
       </main>
 
       <AppNav />

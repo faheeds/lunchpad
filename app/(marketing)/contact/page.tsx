@@ -1,4 +1,5 @@
 import { SiteHeaderServer } from "@/components/site-header-server";
+import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { ContactForm } from "./contact-form";
@@ -41,6 +42,8 @@ export default async function ContactPage() {
         </div>
 
         <ContactForm />
+
+        <SiteFooter />
       </main>
       <AppNav />
     </>
