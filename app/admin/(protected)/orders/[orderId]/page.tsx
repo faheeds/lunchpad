@@ -62,7 +62,6 @@ export default async function AdminOrderDetailPage({
     limit: 50,
   });
 
-  const item = order.items[0];
   const now = new Date();
   const cutoffPassed = now >= order.deliveryDate.cutoffAt;
   const cutoffStr = formatInTimeZone(order.deliveryDate.cutoffAt, order.school.timezone, "MMM d 'at' h:mm a zzz");
@@ -215,7 +214,13 @@ export default async function AdminOrderDetailPage({
                 orderId={orderId}
                 orderStatus={order.status}
                 orderNumber={order.orderNumber}
+                items={order.items.map((item) => ({
+                  id: item.id,
+                  itemNameSnapshot: item.itemNameSnapshot,
+                  lineTotalCents: item.lineTotalCents,
+                }))}
                 totalCents={order.totalCents}
+                discountCents={order.discountCents}
                 refundedAmountCents={order.refundAmountCents}
                 parentName={order.parentName}
                 studentName={order.student.studentName}
@@ -225,6 +230,34 @@ export default async function AdminOrderDetailPage({
           </div>
         </div>
       )}
+      {/* Line items display */}
+      <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+        <div className="px-4 py-3 border-b border-editorial-line">
+          <p className="text-sm font-semibold text-editorial-ink">Line items ({order.items.length})</p>
+        </div>
+        <div className="px-4 py-3 space-y-3">
+          {order.items.map((item) => (
+            <div key={item.id} className="rounded-lg bg-editorial-paper-2 px-3 py-2.5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-editorial-ink">
+                    {item.itemNameSnapshot}
+                    {item.sizeName && <span className="text-editorial-ink-soft font-normal"> · {item.sizeName}</span>}
+                  </p>
+                  <p className="text-[11px] text-editorial-ink-soft mt-0.5">
+                    {[
+                      item.additions.length ? `Add: ${item.additions.join(", ")}` : "",
+                      item.removals.length ? `No: ${item.removals.join(", ")}` : "",
+                    ].filter(Boolean).join(" · ") || "No customizations"}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold text-editorial-ink flex-shrink-0">{formatCurrency(item.lineTotalCents)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Edit form */}
       <form action={saveOrder} className="space-y-3">
         <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
@@ -256,58 +289,72 @@ export default async function AdminOrderDetailPage({
               </div>
             </div>
 
-            {/* Item customizations */}
-            {item && (
+            {/* Item customizations for first item */}
+            {order.items.length > 0 && (
               <>
-                <div className="rounded-lg bg-editorial-paper-2 px-3 py-2.5">
-                  <p className="text-sm font-semibold text-editorial-ink">{item.itemNameSnapshot}</p>
-                  <p className="text-[11px] text-editorial-ink-soft mt-0.5">
-                    {[
-                      item.additions.length ? `Add: ${item.additions.join(", ")}` : "",
-                      item.removals.length ? `No: ${item.removals.join(", ")}` : "",
-                    ].filter(Boolean).join(" · ") || "No customizations"}
-                  </p>
-                </div>
-
-                {(item.menuItem.options.filter((o) => o.optionType === "ADD_ON").length > 0 ||
-                  item.menuItem.options.filter((o) => o.optionType === "REMOVAL").length > 0) && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-[11px] font-semibold text-editorial-ink-soft mb-2">Add-ons</p>
-                      <div className="space-y-1.5">
-                        {item.menuItem.options.filter((o) => o.optionType === "ADD_ON").map((o) => (
-                          <label key={o.id} className="flex items-center gap-2 text-sm text-editorial-ink-soft cursor-pointer">
-                            <input type="checkbox" name="additions" value={o.name}
-                              defaultChecked={item.additions.includes(o.name)} className="rounded border-editorial-line accent-editorial-green" />
-                            {o.name}
-                            {o.priceDeltaCents > 0 && (
-                              <span className="text-editorial-ink-faint">+{formatCurrency(o.priceDeltaCents)}</span>
-                            )}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-editorial-ink-soft mb-2">Removals</p>
-                      <div className="space-y-1.5">
-                        {item.menuItem.options.filter((o) => o.optionType === "REMOVAL").map((o) => (
-                          <label key={o.id} className="flex items-center gap-2 text-sm text-editorial-ink-soft cursor-pointer">
-                            <input type="checkbox" name="removals" value={o.name}
-                              defaultChecked={item.removals.includes(o.name)} className="rounded border-editorial-line accent-editorial-green" />
-                            {o.name}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                {order.items.length > 1 && (
+                  <div className="rounded-lg bg-editorial-paper px-3 py-2 border border-editorial-line-soft">
+                    <p className="text-[11px] text-editorial-ink-soft">
+                      <strong>Note:</strong> Edit customizations below for the first item only. To edit other items, contact the customer.
+                    </p>
                   </div>
                 )}
+                {(() => {
+                  const item = order.items[0];
+                  return (
+                    <>
+                      <div className="rounded-lg bg-editorial-paper-2 px-3 py-2.5">
+                        <p className="text-sm font-semibold text-editorial-ink">{item.itemNameSnapshot}</p>
+                        <p className="text-[11px] text-editorial-ink-soft mt-0.5">
+                          {[
+                            item.additions.length ? `Add: ${item.additions.join(", ")}` : "",
+                            item.removals.length ? `No: ${item.removals.join(", ")}` : "",
+                          ].filter(Boolean).join(" · ") || "No customizations"}
+                        </p>
+                      </div>
+
+                      {(item.menuItem.options.filter((o) => o.optionType === "ADD_ON").length > 0 ||
+                        item.menuItem.options.filter((o) => o.optionType === "REMOVAL").length > 0) && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-[11px] font-semibold text-editorial-ink-soft mb-2">Add-ons</p>
+                            <div className="space-y-1.5">
+                              {item.menuItem.options.filter((o) => o.optionType === "ADD_ON").map((o) => (
+                                <label key={o.id} className="flex items-center gap-2 text-sm text-editorial-ink-soft cursor-pointer">
+                                  <input type="checkbox" name="additions" value={o.name}
+                                    defaultChecked={item.additions.includes(o.name)} className="rounded border-editorial-line accent-editorial-green" />
+                                  {o.name}
+                                  {o.priceDeltaCents > 0 && (
+                                    <span className="text-editorial-ink-faint">+{formatCurrency(o.priceDeltaCents)}</span>
+                                  )}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-semibold text-editorial-ink-soft mb-2">Removals</p>
+                            <div className="space-y-1.5">
+                              {item.menuItem.options.filter((o) => o.optionType === "REMOVAL").map((o) => (
+                                <label key={o.id} className="flex items-center gap-2 text-sm text-editorial-ink-soft cursor-pointer">
+                                  <input type="checkbox" name="removals" value={o.name}
+                                    defaultChecked={item.removals.includes(o.name)} className="rounded border-editorial-line accent-editorial-green" />
+                                  {o.name}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </>
             )}
 
             {/* Allergy notes */}
             <div>
               <label className="text-[11px] text-editorial-ink-soft mb-1 block">Allergy notes</label>
-              <textarea name="allergyNotes" rows={2} defaultValue={item?.allergyNotes ?? ""}
+              <textarea name="allergyNotes" rows={2} defaultValue={order.items[0]?.allergyNotes ?? ""}
                 className="w-full rounded-lg border border-editorial-line text-sm px-3 py-2 resize-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
             </div>
 

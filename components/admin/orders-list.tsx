@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { OrderStatusActions } from "@/components/admin/order-status-actions";
+import { OrderRefundAction } from "@/components/admin/order-refund-action";
 import { EmptyState } from "@/components/admin/empty-state";
 import { formatCurrency, formatList } from "@/lib/utils";
 
@@ -13,6 +14,8 @@ type OrderListItem = {
   archivedAt: string | Date | null;
   createdAt: string | Date;
   totalCents: number;
+  discountCents: number;
+  refundAmountCents: number;
   specialInstructions: string | null;
   parentName: string;
   parentEmail: string;
@@ -26,7 +29,9 @@ type OrderListItem = {
     allergyNotes: string | null;
   };
   items: {
+    id: string;
     itemNameSnapshot: string;
+    lineTotalCents: number;
     additions: string[];
     removals: string[];
     allergyNotes: string | null;
@@ -368,6 +373,21 @@ export function OrdersList({
                     className="text-sm text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
                     Edit order →
                   </Link>
+                  <OrderRefundAction
+                    orderId={order.id}
+                    orderStatus={order.status}
+                    items={order.items.map((item) => ({
+                      id: item.id,
+                      itemNameSnapshot: item.itemNameSnapshot,
+                      lineTotalCents: item.lineTotalCents,
+                    }))}
+                    totalCents={order.totalCents}
+                    discountCents={order.discountCents}
+                    refundedAmountCents={order.refundAmountCents}
+                    parentName={order.parentName}
+                    studentName={order.student.studentName}
+                    myRole={myRole}
+                  />
                   <OrderStatusActions orderId={order.id} isArchived={Boolean(order.archivedAt)} />
                 </div>
               </div>
