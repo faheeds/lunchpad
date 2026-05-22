@@ -156,7 +156,7 @@ export type DiscountIconName =
   | "CUSTOM";
 
 export const TEMPLATE_PALETTE: Record<DiscountIconName, { bg: string; fg: string }> = {
-  WELCOME:       { bg: "#fef2f2", fg: "#c41230" }, // brand red
+  WELCOME:       { bg: "#fef2f2", fg: "#2C4031" }, // editorial green
   PROMO_CODE:    { bg: "#faf5ff", fg: "#7c3aed" }, // violet
   SIBLING:       { bg: "#fffbeb", fg: "#d97706" }, // amber
   DAY_OF_WEEK:   { bg: "#eff6ff", fg: "#2563eb" }, // blue
