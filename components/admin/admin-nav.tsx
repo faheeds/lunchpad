@@ -6,7 +6,6 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { hasRole, type AdminRole } from "@/lib/roles";
 import { AdminSearch } from "@/components/admin/admin-search";
-import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 import { RecentPagesDropdown } from "@/components/admin/recent-pages-dropdown";
 
 function ClocheMark({ size = 22 }: { size?: number }) {

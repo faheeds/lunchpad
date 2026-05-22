@@ -21,7 +21,12 @@ export function RecentPagesDropdown() {
   useEffect(() => {
     // Load from localStorage
     const stored = localStorage.getItem(RECENT_PAGES_STORAGE_KEY);
-    const pages = stored ? JSON.parse(stored) : [];
+    let pages: Array<{ href: string; label: string }> = [];
+    try {
+      pages = stored ? JSON.parse(stored) : [];
+    } catch {
+      pages = [];
+    }
 
     // Add current page if it's a trackable admin page
     const label = getPageLabel(pathname);
@@ -61,6 +66,43 @@ export function RecentPagesDropdown() {
       document.addEventListener("mousedown", handleClickOutside);
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [isOpen]);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!isOpen) return;
+
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const links = menuRef.current?.querySelectorAll<HTMLAnchorElement>("[role='menuitem']");
+        if (!links || links.length === 0) return;
+
+        const activeElement = document.activeElement;
+        let currentIndex = Array.from(links).indexOf(activeElement as HTMLAnchorElement);
+
+        if (event.key === "ArrowDown") {
+          currentIndex = (currentIndex + 1) % links.length;
+        } else {
+          currentIndex = currentIndex - 1 < 0 ? links.length - 1 : currentIndex - 1;
+        }
+
+        links[currentIndex].focus();
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
       };
     }
   }, [isOpen]);

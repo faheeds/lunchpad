@@ -106,7 +106,10 @@ export function HelpDrawer() {
             background: "rgba(0, 0, 0, 0.4)",
             zIndex: 999,
           }}
-          onClick={() => setIsOpen(false)}
+          onClick={() => {
+            setIsOpen(false);
+            triggerRef.current?.focus();
+          }}
         />
       )}
 
