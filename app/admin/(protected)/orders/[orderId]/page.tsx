@@ -12,6 +12,9 @@ import { listActivity } from "@/lib/activity";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import { getLabels } from "@/lib/location-labels";
+import { issueOrderRefund } from "@/lib/refund";
+import { sendRefundEmail } from "@/lib/email/service";
+import { RefundModalClient } from "@/components/admin/refund-modal-client";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +96,37 @@ export default async function AdminOrderDetailPage({
     redirect("/admin/orders");
   }
 
+  async function performRefund(refundOrderId: string, amountCents: number) {
+    "use server";
+    await requireAdminRole("MANAGER");
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string })?.adminUserId;
+
+    if (!adminUserId) {
+      return { success: false, error: "Admin user not found" };
+    }
+
+    try {
+      await issueOrderRefund({
+        orderId: refundOrderId,
+        restaurantId: restaurant.id,
+        adminUserId,
+        amountCents,
+      });
+
+      // Send refund email (best-effort)
+      await sendRefundEmail(refundOrderId, restaurant.id, amountCents).catch(() => {});
+
+      revalidatePath(`/admin/orders/${orderId}`);
+      revalidatePath("/admin/orders");
+
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Refund failed";
+      return { success: false, error: message };
+    }
+  }
+
   const badge = statusStyle[order.status] ?? { bg: "#F4E3DB", color: "#7C3D24" };
 
   return (
@@ -157,6 +191,43 @@ export default async function AdminOrderDetailPage({
         </div>
       </div>
 
+
+      {/* Refund section */}
+      {(order.status === "PAID" || order.status === "PARTIALLY_REFUNDED") && (
+        <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <div className="px-4 py-3 border-b border-editorial-line">
+            <p className="text-sm font-semibold text-editorial-ink">Refund</p>
+          </div>
+          <div className="px-4 py-3 space-y-3">
+            {order.refundAmountCents > 0 && (
+              <div className="rounded-lg bg-editorial-paper-2 px-3 py-2.5">
+                <p className="text-[11px] text-editorial-ink-soft mb-1">Already refunded</p>
+                <p className="text-lg font-bold text-editorial-ink">{formatCurrency(order.refundAmountCents)}</p>
+                {order.status === "PARTIALLY_REFUNDED" && (
+                  <p className="text-[11px] text-editorial-ink-soft mt-1">
+                    Remaining refundable: {formatCurrency(order.totalCents - order.refundAmountCents)}
+                  </p>
+                )}
+              </div>
+            )}
+            {order.refundAmountCents < order.totalCents && (
+              <RefundModalClient
+                orderId={orderId}
+                orderStatus={order.status}
+                orderNumber={order.orderNumber}
+                totalCents={order.totalCents}
+                refundedAmountCents={order.refundAmountCents}
+                parentName={order.parentName}
+                studentName={order.student.studentName}
+                refundAction={performRefund}
+                onRefundSuccess={() => {
+                  // Page will revalidate and reload
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
       {/* Edit form */}
       <form action={saveOrder} className="space-y-3">
         <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">

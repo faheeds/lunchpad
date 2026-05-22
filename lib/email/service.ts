@@ -9,6 +9,7 @@ import {
   buildKitchenPrepEmail,
   buildWelcomeRestaurantEmail,
   buildOrderModifiedEmail,
+  buildRefundEmail,
 } from "@/lib/email/templates";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -390,6 +391,79 @@ export async function sendWelcomeRestaurantEmail(restaurantId: string) {
     });
   } catch (err) {
     console.error("[welcome-email] failed:", err);
+  }
+}
+
+export async function sendRefundEmail(
+  orderId: string,
+  restaurantId: string,
+  refundAmountCents: number,
+) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
+    include: { school: true, deliveryDate: true, student: true, items: true, restaurant: true },
+  });
+
+  if (!order) throw new Error("Order not found.");
+
+  const message = buildRefundEmail({
+    parentName: order.parentName,
+    studentName: order.student.studentName,
+    deliveryDate: order.deliveryDate.deliveryDate,
+    timezone: order.school.timezone,
+    items: order.items.map((i) => ({ itemName: i.itemNameSnapshot })),
+    amountCents: refundAmountCents,
+    orderNumber: order.orderNumber,
+    restaurantName: order.restaurant.name,
+    restaurantLogoUrl: order.restaurant.logoUrl,
+    restaurantPrimaryColor: order.restaurant.primaryColor,
+    restaurantContactEmail: order.restaurant.contactEmail,
+    restaurantContactPhone: order.restaurant.contactPhone,
+  });
+
+  try {
+    let providerId: string | undefined;
+
+    if (resend && env.EMAIL_FROM) {
+      const fromAddress = `${order.restaurant.name} <${env.EMAIL_FROM}>`;
+      const result = await resend.emails.send({
+        from: fromAddress,
+        to: order.parentEmail,
+        replyTo: order.restaurant.contactEmail || undefined,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+      });
+      if (result.error) throw new Error(result.error.message || "Resend email delivery failed.");
+      providerId = result.data?.id;
+    } else {
+      throw new Error("Email delivery is not configured.");
+    }
+
+    await prisma.emailLog.create({
+      data: {
+        orderId: order.id,
+        emailType: "ORDER_REFUND",
+        recipient: order.parentEmail,
+        providerId,
+        status: EmailStatus.SENT,
+        sentAt: new Date(),
+      },
+    });
+
+    return { ok: true };
+  } catch (error) {
+    const messageText = error instanceof Error ? error.message : "Unknown email error";
+    await prisma.emailLog.create({
+      data: {
+        orderId: order.id,
+        emailType: "ORDER_REFUND",
+        recipient: order.parentEmail,
+        status: EmailStatus.FAILED,
+        errorMessage: messageText,
+      },
+    });
+    throw error;
   }
 }
 
