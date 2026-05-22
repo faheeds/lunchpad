@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { SiteHeaderServer } from "@/components/site-header-server";
+import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 import { prisma } from "@/lib/db";
 import { getCurrentRestaurant } from "@/lib/restaurant";
@@ -240,6 +241,8 @@ export default async function HomePage() {
               ))}
             </div>
           </div>
+
+          <SiteFooter />
         </main>
         <AppNav />
       </>

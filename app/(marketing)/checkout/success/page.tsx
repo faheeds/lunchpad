@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 import { OrderStatus } from "@prisma/client";
 import { SiteHeaderServer } from "@/components/site-header-server";
+import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 import { OrderSelfService } from "@/components/order/order-self-service";
 import { signOrderCancelToken } from "@/lib/order-tokens";
@@ -389,6 +390,8 @@ export default async function CheckoutSuccessPage({
           </div>
 
         </div>
+
+        <SiteFooter />
       </main>
       <AppNav />
     </>

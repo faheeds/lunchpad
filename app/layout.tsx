@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { themeCssBlock } from "@/lib/color";
 import { getDisplayFont, getBodyFont } from "@/lib/fonts";
+import { CookieNotice } from "@/components/cookie-notice";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -121,6 +122,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="app-shell">
           {children}
         </div>
+        <CookieNotice />
       </body>
     </html>
   );

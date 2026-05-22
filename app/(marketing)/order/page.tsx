@@ -4,6 +4,7 @@ import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { getCurrentRestaurant, requireRestaurant } from "@/lib/restaurant";
 import { requireParentTenant } from "@/lib/parent-auth";
 import { SiteHeaderServer } from "@/components/site-header-server";
+import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 import { OrderForm } from "@/components/forms/order-form";
 
@@ -55,6 +56,8 @@ export default async function OrderPage({
               )}
             </div>
           </div>
+
+          <SiteFooter />
         </main>
         <AppNav />
       </>
@@ -313,6 +316,8 @@ export default async function OrderPage({
             </div>
           )}
         </div>
+
+        <SiteFooter />
       </main>
       <AppNav />
     </>
