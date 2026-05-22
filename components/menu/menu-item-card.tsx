@@ -22,8 +22,6 @@ type MenuItem = {
 
 type Props = {
   item: MenuItem;
-  categoryIcon: string;
-  categoryGradient: string;
 };
 
 function stripCategoryPrefix(description: string | null): string | null {
@@ -37,7 +35,7 @@ function fmt(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
+export function MenuItemCard({ item }: Props) {
   const [imgFailed, setImgFailed] = useState(false);
   const [addonsOpen, setAddonsOpen] = useState(false);
   // Use admin-uploaded URL from DB; fall back to nothing (shows placeholder)
@@ -50,11 +48,12 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
       background: "white",
       borderRadius: 18,
       overflow: "hidden",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)",
+      boxShadow: "0 1px 4px rgba(33,29,21,0.08)",
       display: "flex",
       flexDirection: "column",
+      border: "1px solid #E3DBC6",
     }}>
-      {/* Photo or gradient placeholder */}
+      {/* Photo or editorial placeholder */}
       <div style={{ position: "relative", height: 160, overflow: "hidden", flexShrink: 0 }}>
         {imageUrl && !imgFailed ? (
           <img
@@ -68,21 +67,25 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
         ) : (
           <div style={{
             width: "100%", height: "100%",
-            background: categoryGradient,
+            background: "#EFE8D7",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 48,
+            fontSize: 48, color: "#C0B8A0",
           }}>
-            {categoryIcon}
+            {/* subtle placeholder — no emoji */}
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
           </div>
         )}
         {/* Price badge */}
         <div style={{
           position: "absolute", bottom: 10, right: 10,
-          background: "rgba(var(--body-text-rgb), 0.82)",
-          backdropFilter: "blur(6px)",
+          background: "#211D15",
           borderRadius: 10, padding: "4px 10px",
-          fontSize: 13, fontWeight: 700, color: "var(--hero-accent)",
+          fontSize: 13, fontWeight: 700, color: "#F6F1E6",
           letterSpacing: "0.01em",
+          fontFamily: "Fraunces, Georgia, serif",
         }}>
           {fmt(item.basePriceCents)}
         </div>
@@ -90,19 +93,19 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
 
       {/* Content */}
       <div style={{ padding: "14px 16px 16px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--body-text)", lineHeight: 1.2, margin: 0 }}>
+        <p style={{ fontSize: 15, fontWeight: 700, color: "#211D15", lineHeight: 1.2, margin: 0, fontFamily: "Fraunces, Georgia, serif" }}>
           {item.name}
         </p>
 
         {description && (
-          <p style={{ fontSize: 12, color: "rgba(var(--body-text-rgb), 0.65)", lineHeight: 1.55, margin: 0 }}>
+          <p style={{ fontSize: 14, color: "#938B78", lineHeight: 1.55, margin: 0 }}>
             {description}
           </p>
         )}
 
         {/* Add-ons — collapsible */}
         {addons.length > 0 && (
-          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 8 }}>
+          <div style={{ borderTop: "1px solid #E3DBC6", paddingTop: 8 }}>
             <button
               onClick={() => setAddonsOpen((o) => !o)}
               style={{
@@ -111,12 +114,12 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
                 padding: 0, cursor: "pointer",
               }}
             >
-              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#C0673E", fontFamily: "Fraunces, Georgia, serif" }}>
                 + {addons.length} add-on{addons.length > 1 ? "s" : ""} available
               </span>
               <svg
                 width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke="rgba(var(--body-text-rgb), 0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                stroke="#938B78" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                 style={{ transform: addonsOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
               >
                 <path d="M6 9l6 6 6-6"/>
@@ -128,8 +131,8 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
                 {addons.map((o) => (
                   <span key={o.id} style={{
                     fontSize: 11, padding: "3px 8px", borderRadius: 20,
-                    background: "rgba(var(--accent-rgb), 0.15)", color: "var(--accent)",
-                    border: "1px solid rgba(var(--accent-rgb), 0.3)", fontWeight: 500,
+                    background: "#DEE2CF", color: "#2C4031",
+                    border: "1px solid #DEE2CF", fontWeight: 500,
                   }}>
                     + {o.name}{o.priceDeltaCents ? ` (${fmt(o.priceDeltaCents)})` : " (free)"}
                   </span>
@@ -144,10 +147,11 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
       <div style={{ padding: "0 16px 16px" }}>
         <Link href={`/order?item=${item.slug}`} style={{
           display: "block", textAlign: "center",
-          background: "var(--brand-on-white)", color: "white",
+          background: "#C0673E", color: "#F6F1E6",
           borderRadius: 10, padding: "10px 16px",
           fontSize: 13, fontWeight: 600, textDecoration: "none",
           letterSpacing: "0.01em",
+          fontFamily: "Fraunces, Georgia, serif",
         }}>
           Order this item →
         </Link>
