@@ -95,7 +95,7 @@ export default async function AdminOrderDetailPage({
     redirect("/admin/orders");
   }
 
-  async function performRefund(refundOrderId: string, amountCents: number) {
+  async function performRefund(refundOrderId: string, amountCents: number, itemIds: string[]) {
     "use server";
     await requireAdminRole("MANAGER");
     const session = await auth();
@@ -111,6 +111,7 @@ export default async function AdminOrderDetailPage({
         restaurantId: restaurant.id,
         adminUserId,
         amountCents,
+        refundedItemIds: itemIds,
       });
 
       // Send refund email (best-effort)
@@ -218,6 +219,7 @@ export default async function AdminOrderDetailPage({
                   id: item.id,
                   itemNameSnapshot: item.itemNameSnapshot,
                   lineTotalCents: item.lineTotalCents,
+                  refundedAt: item.refundedAt,
                 }))}
                 totalCents={order.totalCents}
                 discountCents={order.discountCents}
