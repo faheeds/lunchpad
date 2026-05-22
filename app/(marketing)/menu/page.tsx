@@ -8,63 +8,6 @@ import { getCurrentRestaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
 
-// ── Category helpers ─────────────────────────────────────────────────────────
-// Categories are read from `MenuItem.category` per item. Each restaurant
-// owns its own taxonomy via the admin Menu page (task #28 — custom
-// categories). We render whatever categories exist, in alphabetical
-// order, with an "Other" bucket for uncategorized items.
-//
-// Decorative icons + gradients are matched on common keywords so a brand
-// new operator's menu looks alive without them needing to configure
-// anything. Unknown categories fall back to a neutral icon.
-
-type CategoryMeta = { icon: string; gradient: string };
-
-const FALLBACK_META: CategoryMeta = {
-  icon: "🍽️",
-  gradient: "linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)",
-};
-
-// Keyword → meta heuristic. Picks a sensible visual style for typical
-// restaurant categories without forcing operators to configure them.
-function getCategoryMeta(category: string): CategoryMeta {
-  const c = category.toLowerCase();
-  if (c.match(/burger|sandwich|wrap|sub/)) {
-    return { icon: "🍔", gradient: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)" };
-  }
-  if (c.match(/salad|veg|green|bowl/)) {
-    return { icon: "🥗", gradient: "linear-gradient(135deg, #86efac 0%, #22c55e 100%)" };
-  }
-  if (c.match(/pizza|pasta|italian/)) {
-    return { icon: "🍕", gradient: "linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)" };
-  }
-  if (c.match(/chicken|wings|tender|nugget/)) {
-    return { icon: "🍗", gradient: "linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)" };
-  }
-  if (c.match(/taco|burrito|mexican|quesadilla/)) {
-    return { icon: "🌮", gradient: "linear-gradient(135deg, #fcd34d 0%, #ea580c 100%)" };
-  }
-  if (c.match(/asian|noodle|rice|sushi/)) {
-    return { icon: "🍜", gradient: "linear-gradient(135deg, #fda4af 0%, #e11d48 100%)" };
-  }
-  if (c.match(/breakfast|pancake|waffle|egg/)) {
-    return { icon: "🥞", gradient: "linear-gradient(135deg, #fde68a 0%, #fbbf24 100%)" };
-  }
-  if (c.match(/drink|beverage|juice|smoothie|milk|tea|coffee/)) {
-    return { icon: "🥤", gradient: "linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%)" };
-  }
-  if (c.match(/dessert|cookie|cake|ice cream|sweet/)) {
-    return { icon: "🍰", gradient: "linear-gradient(135deg, #f9a8d4 0%, #ec4899 100%)" };
-  }
-  if (c.match(/side|snack|fries|chips/)) {
-    return { icon: "🍟", gradient: "linear-gradient(135deg, #fed7aa 0%, #f97316 100%)" };
-  }
-  if (c.match(/comfort|favorite/)) {
-    return { icon: "🍗", gradient: "linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)" };
-  }
-  return FALLBACK_META;
-}
-
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default async function MenuPage() {
@@ -107,38 +50,31 @@ export default async function MenuPage() {
       <main className="app-content">
         {/* ── Hero strip ─────────────────────────────────────────────────── */}
         <div style={{
-          background: "linear-gradient(135deg, var(--dark-bg) 0%, color-mix(in srgb, var(--dark-bg) 80%, #000) 100%)",
+          background: "#F6F1E6",
           padding: "28px 20px 28px",
           position: "relative",
           overflow: "hidden",
-          // Clean break from content below — soft shadow instead of bleed.
-          boxShadow: "0 4px 16px -8px rgba(0,0,0,0.25)",
+          boxShadow: "0 2px 8px rgba(33,29,21,0.08)",
         }}>
-          {/* decorative ring */}
-          <div style={{
-            position: "absolute", top: -40, right: -40,
-            width: 160, height: 160, borderRadius: "50%",
-            background: "rgba(245,158,11,0.07)", pointerEvents: "none",
-          }} />
           <p style={{
             fontSize: 9, fontWeight: 700, letterSpacing: "0.22em",
-            textTransform: "uppercase", color: "var(--accent-on-dark)", marginBottom: 6,
+            textTransform: "uppercase", color: "#938B78", marginBottom: 6,
           }}>
             ★ {restaurantName} ★
           </p>
           <h1 style={{
-            fontSize: 28, fontWeight: 800, color: "var(--hero-title)",
+            fontSize: 28, fontWeight: 800, color: "#211D15",
             textTransform: "uppercase", letterSpacing: "0.02em",
-            lineHeight: 1.1, marginBottom: 8,
+            lineHeight: 1.1, marginBottom: 8, fontFamily: "Fraunces, Georgia, serif",
           }}>
             Our Menu
           </h1>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", marginBottom: 18, lineHeight: 1.55 }}>
+          <p style={{ fontSize: 13, color: "rgba(33,29,21,0.55)", marginBottom: 18, lineHeight: 1.55 }}>
             {totalItems} fresh items — made to order
           </p>
           <Link href="/order" style={{
             display: "inline-flex", alignItems: "center", gap: 6,
-            background: "var(--brand-on-dark)", color: "var(--hero-title)",
+            background: "#2C4031", color: "#F6F1E6",
             borderRadius: 12, padding: "11px 20px",
             fontSize: 13, fontWeight: 700, textDecoration: "none",
             letterSpacing: "0.02em",
@@ -153,27 +89,27 @@ export default async function MenuPage() {
         {/* ── Category quick-jump pills ───────────────────────────────────── */}
         <div style={{
           display: "flex", gap: 8, padding: "16px 16px 14px",
-          overflowX: "auto", background: "#fafafa",
-          borderTop: "1px solid rgba(0,0,0,0.04)",
-          borderBottom: "1px solid #f1f5f9",
+          overflowX: "auto", background: "#FCFAF3",
+          borderTop: "1px solid #E3DBC6",
+          borderBottom: "1px solid #E3DBC6",
+          position: "sticky", top: 0, zIndex: 10,
         }}>
           {categories.map((cat) => {
-            const meta = getCategoryMeta(cat);
             const count = grouped.get(cat)?.length ?? 0;
             if (!count) return null;
             return (
               <a key={cat} href={`#cat-${cat.replace(/[^a-z]/gi, "-").toLowerCase()}`} style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "7px 13px", borderRadius: 20, flexShrink: 0,
-                background: "white", border: "1.5px solid #e2e8f0",
-                fontSize: 12, fontWeight: 600, color: "#374151",
+                background: "white", border: "1.5px solid #E3DBC6",
+                fontSize: 12, fontWeight: 600, color: "#211D15",
                 textDecoration: "none",
+                fontFamily: "Fraunces, Georgia, serif",
               }}>
-                <span style={{ fontSize: 14 }}>{meta.icon}</span>
                 {cat}
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: "1px 5px",
-                  borderRadius: 10, background: "#f1f5f9", color: "#64748b",
+                  borderRadius: 10, background: "#DEE2CF", color: "#2C4031",
                 }}>
                   {count}
                 </span>
@@ -183,11 +119,10 @@ export default async function MenuPage() {
         </div>
 
         {/* ── Item grid by category ───────────────────────────────────────── */}
-        <div style={{ padding: "4px 0 100px", background: "#f8fafc" }}>
+        <div style={{ padding: "4px 0 100px", background: "#F6F1E6" }}>
           {categories.map((cat) => {
             const catItems = grouped.get(cat);
             if (!catItems?.length) return null;
-            const meta = getCategoryMeta(cat);
             return (
               <section
                 key={cat}
@@ -195,23 +130,13 @@ export default async function MenuPage() {
                 style={{ padding: "20px 16px 8px" }}
               >
                 {/* Category header */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 10,
-                    background: meta.gradient,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 18, flexShrink: 0,
-                  }}>
-                    {meta.icon}
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: "var(--body-text)", margin: 0 }}>
-                      {cat}
-                    </p>
-                    <p style={{ fontSize: 11, color: "rgba(var(--body-text-rgb), 0.65)", margin: 0 }}>
-                      {catItems.length} {catItems.length === 1 ? "item" : "items"}
-                    </p>
-                  </div>
+                <div style={{ marginBottom: 14 }}>
+                  <p style={{ fontSize: 18, fontWeight: 700, color: "#211D15", margin: 0, marginBottom: 4, fontFamily: "Fraunces, Georgia, serif" }}>
+                    {cat}
+                  </p>
+                  <p style={{ fontSize: 11, color: "#938B78", margin: 0 }}>
+                    {catItems.length} {catItems.length === 1 ? "item" : "items"}
+                  </p>
                 </div>
 
                 {/* 2-column grid */}
@@ -237,8 +162,6 @@ export default async function MenuPage() {
                           priceDeltaCents: o.priceDeltaCents,
                         })),
                       }}
-                      categoryIcon={meta.icon}
-                      categoryGradient={meta.gradient}
                     />
                   ))}
                 </div>
@@ -251,13 +174,13 @@ export default async function MenuPage() {
             <div style={{
               margin: "40px 20px", padding: 32, borderRadius: 18,
               background: "white", textAlign: "center",
-              border: "1px solid #e2e8f0",
+              border: "1px solid #E3DBC6",
+              boxShadow: "0 1px 3px rgba(33,29,21,0.08)",
             }}>
-              <p style={{ fontSize: 32, marginBottom: 12 }}>🍽️</p>
-              <p style={{ fontSize: 15, fontWeight: 600, color: "var(--body-text)", marginBottom: 6 }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: "#211D15", marginBottom: 6, fontFamily: "Fraunces, Georgia, serif" }}>
                 Menu coming soon
               </p>
-              <p style={{ fontSize: 13, color: "rgba(var(--body-text-rgb), 0.6)" }}>
+              <p style={{ fontSize: 13, color: "#938B78" }}>
                 Check back shortly — items will appear here once the menu is configured.
               </p>
             </div>
@@ -268,10 +191,10 @@ export default async function MenuPage() {
             <div style={{ padding: "16px 16px 8px" }}>
               <Link href="/order" style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                background: "linear-gradient(135deg, var(--brand-hex) 0%, color-mix(in srgb, var(--brand-hex) 80%, #000) 100%)",
-                color: "var(--hero-title)", borderRadius: 16, padding: "16px 24px",
+                background: "#C0673E",
+                color: "#F6F1E6", borderRadius: 16, padding: "16px 24px",
                 fontSize: 15, fontWeight: 700, textDecoration: "none",
-                letterSpacing: "0.02em", boxShadow: "0 4px 12px rgba(var(--brand-rgb),0.35)",
+                letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(192,103,62,0.25)",
               }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
