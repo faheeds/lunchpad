@@ -626,9 +626,11 @@ export default async function OnboardingPage({
 
               <div className="flex items-center justify-between pt-2">
                 <Link href="/admin/onboarding?step=2" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
-                <Link href="/admin/onboarding?step=4" className="text-[12px] text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
-                  {restaurant.stripeOnboardingComplete ? "Continue →" : "Skip for now →"}
-                </Link>
+                {status[3] !== "done" && (
+                  <Link href="/admin/onboarding?step=4" className="text-[12px] text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
+                    {restaurant.stripeOnboardingComplete ? "Continue →" : "Skip for now →"}
+                  </Link>
+                )}
               </div>
             </div>
           )}
