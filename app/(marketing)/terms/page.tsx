@@ -2,8 +2,6 @@ import { SiteHeaderServer } from "@/components/site-header-server";
 import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 
-export const dynamic = "force-dynamic";
-
 export default async function TermsPage() {
   return (
     <>
@@ -16,7 +14,7 @@ export default async function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-editorial-ink-soft">
-              Last updated: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+              Last updated: May 22, 2026
             </p>
           </div>
         </div>
