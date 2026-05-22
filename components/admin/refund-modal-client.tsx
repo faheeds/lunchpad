@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { RefundModal } from "@/components/admin/refund-modal";
 
 interface RefundModalClientProps {
@@ -11,7 +12,6 @@ interface RefundModalClientProps {
   refundedAmountCents: number;
   parentName: string;
   studentName: string;
-  onRefundSuccess?: () => void;
   refundAction: (
     orderId: string,
     amountCents: number,
@@ -26,11 +26,11 @@ export function RefundModalClient({
   refundedAmountCents,
   parentName,
   studentName,
-  onRefundSuccess,
   refundAction,
 }: RefundModalClientProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const isFullyRefunded = refundedAmountCents >= totalCents;
   const canRefund = orderStatus === "PAID" || orderStatus === "PARTIALLY_REFUNDED";
@@ -39,7 +39,8 @@ export function RefundModalClient({
     startTransition(async () => {
       const result = await refundAction(orderId, amountCents);
       if (result.success) {
-        onRefundSuccess?.();
+        setIsOpen(false);
+        router.refresh();
       }
     });
   }
