@@ -52,7 +52,8 @@ export type ActivityAction =
   | "REMOVED"
   | "PASSWORD_CHANGED"
   | "PASSWORD_RESET"
-  | "LOGGED_IN";
+  | "LOGGED_IN"
+  | "EXTENDED";
 
 export async function logActivity(args: {
   restaurantId: string;

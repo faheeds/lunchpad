@@ -53,6 +53,7 @@ function LabelCard({ order }: { order: LabelOrder }) {
     additions: item.additions.length ? item.additions.join(", ") : "None",
     removals: item.removals.length ? item.removals.join(", ") : "None"
   }));
+  const isLate = order.deliveryDate.originalCutoffAt && new Date(order.createdAt) > new Date(order.deliveryDate.originalCutoffAt);
 
   return (
     <View style={styles.label}>
@@ -72,6 +73,7 @@ function LabelCard({ order }: { order: LabelOrder }) {
           </View>
         ))}
         <Text>Order: {order.orderNumber}</Text>
+        {isLate ? <Text style={styles.alert}>LATE ORDER</Text> : null}
         {allergy ? <Text style={styles.alert}>Allergy / diet: {allergy}</Text> : null}
       </>
     </View>
@@ -103,6 +105,9 @@ export async function generateLabelsPdfBuffer(orders: LabelOrder[]) {
 
 export function mapOrderToLabelRows(orders: LabelOrder[]) {
   return orders.map((order) => {
+    const isLate = order.deliveryDate.originalCutoffAt && new Date(order.createdAt) > new Date(order.deliveryDate.originalCutoffAt);
+    const allergy = order.items.map((item) => item.allergyNotes).find(Boolean) ?? order.student.allergyNotes ?? "";
+    const alert = isLate ? "LATE ORDER" : allergy;
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -114,7 +119,7 @@ export function mapOrderToLabelRows(orders: LabelOrder[]) {
       itemName: order.items.map((item) => item.itemNameSnapshot).join(" | "),
       additions: order.items.flatMap((item) => item.additions),
       removals: order.items.flatMap((item) => item.removals),
-      alert: order.items.map((item) => item.allergyNotes).find(Boolean) ?? order.student.allergyNotes ?? ""
+      alert,
     };
   });
 }

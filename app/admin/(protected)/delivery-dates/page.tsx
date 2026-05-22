@@ -5,6 +5,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { logActivity } from "@/lib/activity";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { ScheduleTabs } from "@/components/admin/schedule-tabs";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -273,6 +274,53 @@ async function attachMenuItems(formData: FormData) {
     }),
   );
   revalidatePath("/admin/delivery-dates");
+}
+
+async function extendCutoff(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("OWNER");
+
+  const deliveryDateId = String(formData.get("deliveryDateId") || "");
+  const newCutoff = String(formData.get("newCutoff") || "");
+  if (!deliveryDateId || !newCutoff) return;
+
+  const date = await prisma.deliveryDate.findFirst({
+    where: { id: deliveryDateId, school: { restaurantId: restaurant.id } },
+    include: { school: { select: { timezone: true } } },
+  });
+  if (!date) return;
+
+  if (new Date() >= date.deliveryDate) return;
+
+  const newCutoffUtc = fromZonedTime(
+    newCutoff.replace("T", " ") + ":00",
+    date.school.timezone
+  );
+
+  const updateData: { originalCutoffAt?: Date; cutoffAt: Date } = {
+    cutoffAt: newCutoffUtc,
+  };
+
+  if (!date.originalCutoffAt) {
+    updateData.originalCutoffAt = date.cutoffAt;
+  }
+
+  await prisma.deliveryDate.update({
+    where: { id: deliveryDateId },
+    data: updateData,
+  });
+
+  await logActivity({
+    restaurantId: restaurant.id,
+    entityType: "DELIVERY_DATE",
+    entityId: deliveryDateId,
+    action: "EXTENDED",
+    summary: `Extended cutoff to ${formatInTimeZone(newCutoffUtc, date.school.timezone, "h:mm a zzz")}`,
+  });
+
+  revalidatePath("/admin/delivery-dates");
+  revalidatePath("/admin/orders");
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -586,7 +634,45 @@ export default async function DeliveryDatesPage() {
                       </div>
                       <div className="flex gap-2 flex-shrink-0 flex-wrap">
                         {cutoffPassed ? (
-                          <span style={{ fontSize: 11, color: "#938B78", fontStyle: "italic" }}>Cutoff passed</span>
+                          <details className="rounded-lg border border-editorial-line bg-editorial-paper-2 overflow-hidden">
+                            <summary className="px-3 py-1.5 text-[11px] font-semibold text-editorial-ink-soft cursor-pointer list-none hover:bg-editorial-paper transition">
+                              Extend ordering →
+                            </summary>
+                            <div className="border-t border-editorial-line px-3 py-2.5 space-y-2">
+                              <div className="flex gap-1.5 flex-wrap">
+                                {[60, 120].map((minutes) => (
+                                  <form key={minutes} action={extendCutoff} className="flex-1">
+                                    <input type="hidden" name="deliveryDateId" value={date.id} />
+                                    <input type="hidden" name="newCutoff"
+                                      value={formatInTimeZone(
+                                        new Date(date.cutoffAt.getTime() + minutes * 60000),
+                                        date.school.timezone,
+                                        "yyyy-MM-dd'T'HH:mm"
+                                      )}
+                                    />
+                                    <button type="submit" className="w-full px-2 py-1 rounded text-[11px] font-medium border border-editorial-line text-editorial-ink-soft hover:border-editorial-green hover:text-editorial-green bg-white transition">
+                                      +{minutes === 60 ? "1h" : "2h"}
+                                    </button>
+                                  </form>
+                                ))}
+                              </div>
+                              <details className="rounded border border-editorial-line bg-white overflow-hidden">
+                                <summary className="px-2 py-1 text-[10px] font-medium text-editorial-ink-faint cursor-pointer list-none hover:bg-editorial-paper-2 transition">
+                                  Custom time
+                                </summary>
+                                <form action={extendCutoff} className="px-2 pb-2 pt-1.5 space-y-1.5 border-t border-editorial-line">
+                                  <input type="hidden" name="deliveryDateId" value={date.id} />
+                                  <input type="datetime-local" name="newCutoff" required
+                                    defaultValue={formatInTimeZone(date.cutoffAt, date.school.timezone, "yyyy-MM-dd'T'HH:mm")}
+                                    className="w-full rounded border border-editorial-line text-[11px] px-2 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
+                                  />
+                                  <button type="submit" className="w-full px-2 py-1 rounded text-[11px] font-medium border border-editorial-line text-editorial-ink-soft hover:border-editorial-green hover:text-editorial-green bg-white transition">
+                                    Set time
+                                  </button>
+                                </form>
+                              </details>
+                            </div>
+                          </details>
                         ) : (
                           <form action={toggleDateOpen}>
                             <input type="hidden" name="id" value={date.id} />
