@@ -220,9 +220,6 @@ export default async function AdminOrderDetailPage({
                 parentName={order.parentName}
                 studentName={order.student.studentName}
                 refundAction={performRefund}
-                onRefundSuccess={() => {
-                  // Page will revalidate and reload
-                }}
               />
             )}
           </div>
