@@ -376,6 +376,8 @@ function ItemRow({
           <img
             src={item.imageUrl}
             alt=""
+            width={32}
+            height={32}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}

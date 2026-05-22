@@ -825,6 +825,8 @@ export function OrderForm({
                         <img
                           src={item.imageUrl}
                           alt={item.name}
+                          width={36}
+                          height={36}
                           className="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-slate-100"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                         />

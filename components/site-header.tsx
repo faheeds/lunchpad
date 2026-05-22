@@ -51,6 +51,8 @@ export function SiteHeader({
             <img
               src={logoUrl!}
               alt={`${restaurantName} logo`}
+              width={28}
+              height={28}
               onError={() => setLogoFailed(true)}
               style={{ width: 28, height: 28, borderRadius: 7, objectFit: "cover", flexShrink: 0 }}
             />

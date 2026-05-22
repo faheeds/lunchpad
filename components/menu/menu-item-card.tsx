@@ -60,6 +60,8 @@ export function MenuItemCard({ item, categoryIcon, categoryGradient }: Props) {
           <img
             src={imageUrl}
             alt={item.name}
+            width={300}
+            height={160}
             onError={() => setImgFailed(true)}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
