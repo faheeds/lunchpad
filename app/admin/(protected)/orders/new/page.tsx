@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 /**
  * Admin "+ New order" page. Lets a manager (or staff, with limited payment
  * options) place an order on behalf of a customer who didn't go through
@@ -16,6 +17,10 @@ import type { AdminRole } from "@/lib/roles";
 import { AdminOrderForm } from "@/components/admin/admin-order-form";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "New Order",
+};
 
 export default async function AdminNewOrderPage() {
   const [restaurant, session] = await Promise.all([requireRestaurant(), auth()]);

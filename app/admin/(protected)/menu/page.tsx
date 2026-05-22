@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { menuItemSchema, menuOptionSchema } from "@/lib/validation/order";
@@ -337,6 +338,10 @@ const CAT_ICONS: Record<string, string> = {
   "Sides & Snacks": "🍟",
 };
 
+
+export const metadata: Metadata = {
+  title: "Menu",
+};
 export default async function AdminMenuPage() {
   const [restaurant] = await Promise.all([requireRestaurant(), requireAdminRole("MANAGER")]);
   const [items, schools] = await Promise.all([

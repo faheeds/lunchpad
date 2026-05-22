@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getAdminReports } from "@/lib/admin";
@@ -14,6 +15,10 @@ function normalizeMultiValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value.filter(Boolean) : [value].filter(Boolean);
 }
 
+
+export const metadata: Metadata = {
+  title: "Reports",
+};
 export default async function AdminReportsPage({
   searchParams,
 }: {

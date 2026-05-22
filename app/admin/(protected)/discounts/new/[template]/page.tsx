@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 /**
  * New-discount entry page — dispatches into the live builder with
  * defaults seeded from the chosen template.
@@ -18,6 +19,10 @@ import { DiscountBuilder, type BuilderState } from "@/components/admin/discount-
 import { DiscountTemplateBadge, type DiscountIconName } from "@/components/admin/discount-icons";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "New Discount",
+};
 
 export default async function NewDiscountPage({
   params,

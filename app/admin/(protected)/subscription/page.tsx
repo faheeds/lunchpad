@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
@@ -23,6 +24,10 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
   PAUSED:    { label: "Paused",       color: "#938B78", bg: "#EFE8D7" },
 };
 
+
+export const metadata: Metadata = {
+  title: "Subscription",
+};
 export default async function SubscriptionPage({ searchParams }: { searchParams: Promise<{ success?: string }> }) {
   await requireAdmin();
   const restaurant = await requireRestaurant();

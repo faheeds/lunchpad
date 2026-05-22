@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -19,6 +20,10 @@ const statusStyle: Record<string, { bg: string; color: string }> = {
   PENDING:   { bg: "#F6EED9", color: "#6E5C2C" },
   REFUNDED:  { bg: "#F4E3DB", color: "#7C3D24" },
   CANCELLED: { bg: "#F4E3DB", color: "#7C3D24" },
+};
+
+export const metadata: Metadata = {
+  title: "Order",
 };
 
 export default async function AdminOrderDetailPage({

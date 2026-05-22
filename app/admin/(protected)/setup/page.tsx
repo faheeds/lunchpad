@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 /**
  * Legacy /admin/setup is replaced by the /admin/onboarding wizard.
  * Anyone hitting an old bookmark or link is forwarded transparently.
  */
+
+export const metadata: Metadata = {
+  title: "Setup",
+};
 export default async function LegacySetupRedirect({
   searchParams,
 }: {

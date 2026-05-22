@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 /**
  * Discount Center — landing page for the admin. Shows every discount
  * the operator has set up, grouped by status (Active / Scheduled /
@@ -27,6 +28,10 @@ import { DiscountTemplateBadge, type DiscountIconName } from "@/components/admin
 
 export const dynamic = "force-dynamic";
 
+
+export const metadata: Metadata = {
+  title: "Discounts",
+};
 export default async function AdminDiscountsPage() {
   const restaurant = await requireRestaurant();
   await requireAdminRole("MANAGER");

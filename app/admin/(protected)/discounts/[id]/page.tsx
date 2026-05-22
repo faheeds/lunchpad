@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 /**
  * Discount edit / detail page.
  *
@@ -20,6 +21,10 @@ import { DiscountBuilder, type BuilderState } from "@/components/admin/discount-
 import { toggleDiscountActive, deleteDiscount } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Edit Discount",
+};
 
 export default async function DiscountDetailPage({
   params,

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -302,6 +303,10 @@ const TIMEZONES = [
   { value: "Pacific/Honolulu",    label: "Hawaii (HT)"  },
 ];
 
+
+export const metadata: Metadata = {
+  title: "Onboarding",
+};
 export default async function OnboardingPage({
   searchParams,
 }: {
