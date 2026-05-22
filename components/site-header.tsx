@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { HelpDrawer } from "./help-drawer";
 
 export function SiteHeader({
   restaurantName = "LunchPad",
@@ -67,6 +68,7 @@ export function SiteHeader({
             </span>
           ) : (
             <>
+              <HelpDrawer />
               <Link href="/account" aria-label="Go to account" style={{
                 width: 32, height: 32, borderRadius: "50%",
                 background: "rgba(var(--brand-rgb),0.85)", display: "flex",
@@ -107,6 +109,7 @@ export function SiteHeader({
             { href: "/weekly",  label: "Weekly plan"   },
             { href: "/history", label: "Order history" },
             { href: "/account", label: "My account"    },
+            { href: "/faq",     label: "FAQ"           },
             { href: "/contact", label: "Contact us"    },
           ].map((item) => (
             <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{
