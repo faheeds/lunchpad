@@ -23,7 +23,7 @@ export default async function FAQPage() {
         >
           <p
             style={{
-              fontSize: 9,
+              fontSize: 14,
               fontWeight: 700,
               letterSpacing: "0.22em",
               textTransform: "uppercase",
@@ -46,7 +46,7 @@ export default async function FAQPage() {
           >
             Frequently Asked Questions
           </h1>
-          <p style={{ fontSize: 13, color: "rgba(246, 241, 230, 0.75)", lineHeight: 1.55 }}>
+          <p style={{ fontSize: 14, color: "rgba(246, 241, 230, 0.75)", lineHeight: 1.55 }}>
             Find answers to common questions about ordering, payments, and delivery.
           </p>
         </div>

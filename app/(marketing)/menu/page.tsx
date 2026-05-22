@@ -57,7 +57,7 @@ export default async function MenuPage() {
           boxShadow: "0 2px 8px rgba(33,29,21,0.08)",
         }}>
           <p style={{
-            fontSize: 9, fontWeight: 700, letterSpacing: "0.22em",
+            fontSize: 14, fontWeight: 700, letterSpacing: "0.22em",
             textTransform: "uppercase", color: "#938B78", marginBottom: 6,
           }}>
             ★ {restaurantName} ★
@@ -69,18 +69,18 @@ export default async function MenuPage() {
           }}>
             Our Menu
           </h1>
-          <p style={{ fontSize: 13, color: "rgba(33,29,21,0.55)", marginBottom: 18, lineHeight: 1.55 }}>
+          <p style={{ fontSize: 14, color: "rgba(33,29,21,0.55)", marginBottom: 18, lineHeight: 1.55 }}>
             {totalItems} fresh items — made to order
           </p>
           <Link href="/order" style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             background: "#2C4031", color: "#F6F1E6",
             borderRadius: 12, padding: "11px 20px",
-            fontSize: 13, fontWeight: 700, textDecoration: "none",
+            fontSize: 14, fontWeight: 700, textDecoration: "none",
             letterSpacing: "0.02em",
           }}>
             Order Lunch
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </Link>
@@ -102,13 +102,13 @@ export default async function MenuPage() {
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "7px 13px", borderRadius: 20, flexShrink: 0,
                 background: "white", border: "1.5px solid #E3DBC6",
-                fontSize: 12, fontWeight: 600, color: "#211D15",
+                fontSize: 14, fontWeight: 600, color: "#211D15",
                 textDecoration: "none",
                 fontFamily: "Fraunces, Georgia, serif",
               }}>
                 {cat}
                 <span style={{
-                  fontSize: 10, fontWeight: 700, padding: "1px 5px",
+                  fontSize: 14, fontWeight: 700, padding: "1px 5px",
                   borderRadius: 10, background: "#DEE2CF", color: "#2C4031",
                 }}>
                   {count}
@@ -134,7 +134,7 @@ export default async function MenuPage() {
                   <p style={{ fontSize: 18, fontWeight: 700, color: "#211D15", margin: 0, marginBottom: 4, fontFamily: "Fraunces, Georgia, serif" }}>
                     {cat}
                   </p>
-                  <p style={{ fontSize: 11, color: "#938B78", margin: 0 }}>
+                  <p style={{ fontSize: 14, color: "#938B78", margin: 0 }}>
                     {catItems.length} {catItems.length === 1 ? "item" : "items"}
                   </p>
                 </div>
@@ -177,10 +177,10 @@ export default async function MenuPage() {
               border: "1px solid #E3DBC6",
               boxShadow: "0 1px 3px rgba(33,29,21,0.08)",
             }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: "#211D15", marginBottom: 6, fontFamily: "Fraunces, Georgia, serif" }}>
+              <p style={{ fontSize: 18, fontWeight: 600, color: "#211D15", marginBottom: 6, fontFamily: "Fraunces, Georgia, serif" }}>
                 Menu coming soon
               </p>
-              <p style={{ fontSize: 13, color: "#938B78" }}>
+              <p style={{ fontSize: 14, color: "#938B78" }}>
                 Check back shortly — items will appear here once the menu is configured.
               </p>
             </div>
@@ -193,10 +193,10 @@ export default async function MenuPage() {
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 background: "#C0673E",
                 color: "#F6F1E6", borderRadius: 16, padding: "16px 24px",
-                fontSize: 15, fontWeight: 700, textDecoration: "none",
+                fontSize: 16, fontWeight: 700, textDecoration: "none",
                 letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(192,103,62,0.25)",
               }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
                   <line x1="3" y1="6" x2="21" y2="6"/>
                   <path d="M16 10a4 4 0 0 1-8 0"/>

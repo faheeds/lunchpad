@@ -51,7 +51,7 @@ export default async function HistoryPage() {
       <main className="app-content pb-4" id="main-content">
         <div className="px-4 py-4">
           <p style={{
-            fontSize: 9, fontWeight: 700, letterSpacing: "0.16em",
+            fontSize: 14, fontWeight: 700, letterSpacing: "0.16em",
             textTransform: "uppercase", color: "var(--brand-on-white)",
             marginBottom: 2,
           }}>
@@ -99,20 +99,20 @@ export default async function HistoryPage() {
                         <p style={{ fontSize: 14, fontWeight: 700, color: "#211D15", marginBottom: 2 }}>
                           {order.student.studentName}
                         </p>
-                        <p style={{ fontSize: 12, color: "#5B5446", lineHeight: 1.4 }}>
+                        <p style={{ fontSize: 14, color: "#5B5446", lineHeight: 1.4 }}>
                           {order.items.map((i) => i.itemNameSnapshot).join(", ")}
                         </p>
-                        <p style={{ fontSize: 12, color: "#938B78", marginTop: 2 }}>
+                        <p style={{ fontSize: 14, color: "#938B78", marginTop: 2 }}>
                           {order.school.name} &middot; {formatInTimeZone(order.deliveryDate.deliveryDate, order.school.timezone, "EEE, MMM d")}
                         </p>
-                        <p style={{ fontSize: 10, color: "#C0AFA0", marginTop: 1 }}>
+                        <p style={{ fontSize: 14, color: "#C0AFA0", marginTop: 1 }}>
                           {order.orderNumber}
                         </p>
                       </div>
 
                       <div style={{ textAlign: "right", flexShrink: 0 }}>
                         <span style={{
-                          fontSize: 10, fontWeight: 700,
+                          fontSize: 14, fontWeight: 700,
                           padding: "3px 9px", borderRadius: 20,
                           background: badge.bg, color: badge.color,
                           display: "inline-block",
@@ -133,7 +133,7 @@ export default async function HistoryPage() {
                     }}>
                       <div>
                         {canModify && (
-                          <p style={{ fontSize: 12, color: "#2C4031", marginBottom: 6, fontWeight: 600 }}>
+                          <p style={{ fontSize: 14, color: "#2C4031", marginBottom: 6, fontWeight: 600 }}>
                             ✓ You can edit or cancel until {cutoffStr}
                           </p>
                         )}
@@ -161,7 +161,7 @@ export default async function HistoryPage() {
                         <Link
                           href={`/order?reorder=${order.id}`}
                           style={{
-                            fontSize: 11, color: "var(--brand-on-white)",
+                            fontSize: 14, color: "var(--brand-on-white)",
                             fontWeight: 600, textDecoration: "none",
                           }}
                         >
@@ -181,7 +181,7 @@ export default async function HistoryPage() {
               <p style={{ fontSize: 14, color: "#938B78" }}>No orders yet.</p>
               <Link href="/order" style={{
                 marginTop: 12, display: "inline-block",
-                fontSize: 13, fontWeight: 600,
+                fontSize: 14, fontWeight: 600,
                 color: "var(--brand-on-white)", textDecoration: "none",
               }}>
                 Place your first order &rarr;

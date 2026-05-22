@@ -82,7 +82,7 @@ export default async function HomePage() {
             }} />
             <div className="absolute inset-0 flex flex-col justify-end" style={{ padding: "0 20px 0" }}>
               <p style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: "0.28em",
+                fontSize: 14, fontWeight: 700, letterSpacing: "0.28em",
                 textTransform: "uppercase", color: "var(--hero-accent)",
                 marginBottom: 6, fontFamily: "var(--font-display)"
               }}>
@@ -101,13 +101,13 @@ export default async function HomePage() {
               }}>
                 <span style={{ color: "var(--accent)" }}>{restaurantName}</span>
               </h1>
-              <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.72)", marginBottom: 20, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 16, color: "rgba(255,255,255,0.72)", marginBottom: 20, lineHeight: 1.5 }}>
                 Fresh food delivered to your {labels.type.toLowerCase()} &mdash; order for tomorrow or plan the whole week.
               </p>
               <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                 <Link href="/order" style={{
                   padding: "12px 22px", borderRadius: 100,
-                  fontSize: 13, fontWeight: 700, textDecoration: "none",
+                  fontSize: 14, fontWeight: 700, textDecoration: "none",
                   background: "var(--brand-on-dark)", color: "white",
                   fontFamily: "var(--font-display)",
                   textTransform: "uppercase", letterSpacing: "0.08em",
@@ -117,7 +117,7 @@ export default async function HomePage() {
                 </Link>
                 <Link href="/weekly" style={{
                   padding: "12px 20px", borderRadius: 100,
-                  fontSize: 13, fontWeight: 700, textDecoration: "none",
+                  fontSize: 14, fontWeight: 700, textDecoration: "none",
                   background: "var(--accent)", color: "var(--dark-bg)",
                   fontFamily: "var(--font-display)",
                   textTransform: "uppercase", letterSpacing: "0.08em",
@@ -126,7 +126,7 @@ export default async function HomePage() {
                   Plan The Week
                 </Link>
               </div>
-              <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.60)", letterSpacing: "0.06em", textTransform: "uppercase", paddingBottom: 14 }}>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.60)", letterSpacing: "0.06em", textTransform: "uppercase", paddingBottom: 14 }}>
                 {restaurantName}
               </p>
             </div>
@@ -136,7 +136,7 @@ export default async function HomePage() {
           {stripItems.length > 0 && (
             <div style={{ padding: "20px 20px 4px" }}>
               <p style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: "0.22em",
+                fontSize: 14, fontWeight: 700, letterSpacing: "0.22em",
                 textTransform: "uppercase", color: "var(--brand-on-white)", marginBottom: 13,
                 fontFamily: "var(--font-display)"
               }}>
@@ -174,13 +174,13 @@ export default async function HomePage() {
                       <FeatureIcon name={f.icon} />
                     </div>
                     <p style={{
-                      fontSize: 13, fontWeight: 700, color: "var(--dark-bg)",
+                      fontSize: 14, fontWeight: 700, color: "var(--dark-bg)",
                       marginBottom: 3, fontFamily: "var(--font-display)",
                       textTransform: "uppercase", letterSpacing: "0.03em"
                     }}>
                       {f.text}
                     </p>
-                    <p style={{ fontSize: 11, color: "var(--body-text,#78716c)", lineHeight: 1.4 }}>
+                    <p style={{ fontSize: 14, color: "var(--body-text,#78716c)", lineHeight: 1.4 }}>
                       {f.sub}
                     </p>
                   </div>
@@ -199,7 +199,7 @@ export default async function HomePage() {
           {/* How it works */}
           <div style={{ padding: "20px 20px 28px" }}>
             <p style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: "0.22em",
+              fontSize: 14, fontWeight: 700, letterSpacing: "0.22em",
               textTransform: "uppercase", color: "var(--brand-on-white)", marginBottom: 13,
               fontFamily: "var(--font-display)"
             }}>
@@ -233,7 +233,7 @@ export default async function HomePage() {
                     }}>
                       {step.title}
                     </p>
-                    <p style={{ fontSize: 12, color: "var(--body-text,#78716c)", lineHeight: 1.55 }}>
+                    <p style={{ fontSize: 14, color: "var(--body-text,#78716c)", lineHeight: 1.55 }}>
                       {step.body}
                     </p>
                   </div>
@@ -264,13 +264,13 @@ export default async function HomePage() {
 function FeatureIcon({ name }: { name: string }) {
   const icons: Record<string, React.ReactNode> = {
     location: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
         <circle cx="12" cy="9" r="2.5"/>
       </svg>
     ),
     menu: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="3" width="7" height="7" rx="1.5"/>
         <rect x="14" y="3" width="7" height="7" rx="1.5"/>
         <rect x="3" y="14" width="7" height="7" rx="1.5"/>
@@ -278,13 +278,13 @@ function FeatureIcon({ name }: { name: string }) {
       </svg>
     ),
     child: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="7" r="4"/>
         <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
       </svg>
     ),
     calendar: (
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-on-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="4" width="18" height="18" rx="2"/>
         <path d="M16 2v4M8 2v4M3 10h18"/>
         <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
