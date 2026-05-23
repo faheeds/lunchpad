@@ -4,7 +4,11 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { stripe } from "@/lib/payments/stripe";
 import { markOrderPaidByCheckoutSession } from "@/lib/orders";
-import { sendOrderConfirmationEmail, sendSubscriptionChangedEmail } from "@/lib/email/service";
+import {
+  sendOrderConfirmationEmail,
+  sendWeeklyOrderConfirmationEmail,
+  sendSubscriptionChangedEmail,
+} from "@/lib/email/service";
 import { isDuplicateWebhookEvent } from "@/lib/payments/webhook";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 
@@ -125,19 +129,22 @@ export async function POST(request: Request) {
             String(session.payment_intent || ""),
             session.amount_total ?? null
           );
-          // All orders in a weekly batch belong to the same restaurant — pull from one.
+          // A weekly batch becomes several Order rows (one per delivery
+          // date) but it is a SINGLE payment — send one combined weekly
+          // confirmation email covering every day, not one per order.
           if (result.createdOrderIds.length > 0) {
             const sample = await prisma.order.findUnique({
               where: { id: result.createdOrderIds[0] },
               select: { restaurantId: true },
             });
             if (sample) {
-              for (const orderId of result.createdOrderIds) {
-                try {
-                  await sendOrderConfirmationEmail(orderId, sample.restaurantId);
-                } catch {
-                  // Email failures are logged and can be retried in admin.
-                }
+              try {
+                await sendWeeklyOrderConfirmationEmail(
+                  result.createdOrderIds,
+                  sample.restaurantId
+                );
+              } catch {
+                // Email failures are logged and can be retried in admin.
               }
             }
           }

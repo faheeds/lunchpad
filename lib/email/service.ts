@@ -10,6 +10,7 @@ import {
   buildWelcomeRestaurantEmail,
   buildOrderModifiedEmail,
   buildRefundEmail,
+  buildWeeklyConfirmationEmail,
 } from "@/lib/email/templates";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -640,4 +641,121 @@ export async function sendAdminPasswordResetEmail(args: {
     text: message.text,
     html: message.html,
   });
+}
+
+/**
+ * Sends ONE combined confirmation email for a whole weekly checkout batch.
+ *
+ * A weekly batch becomes several Order rows (one per delivery date). The
+ * old flow emailed each order separately, so a 4-day weekly checkout sent
+ * the parent 4 emails. This loads every order created by the batch,
+ * renders a single multi-day summary, sends one email, and still logs +
+ * stamps each order so the admin order list and "resend" tooling stay
+ * consistent.
+ */
+export async function sendWeeklyOrderConfirmationEmail(
+  orderIds: string[],
+  restaurantId: string
+) {
+  if (orderIds.length === 0) {
+    return { ok: true, skipped: true };
+  }
+
+  const orders = await prisma.order.findMany({
+    where: { id: { in: orderIds }, restaurantId },
+    include: { school: true, deliveryDate: true, student: true, items: true, restaurant: true },
+  });
+
+  if (orders.length === 0) {
+    throw new Error("No orders found for weekly confirmation email.");
+  }
+
+  const restaurant = orders[0].restaurant;
+  const parentEmail = orders[0].parentEmail;
+  const parentName = orders[0].parentName;
+
+  const message = buildWeeklyConfirmationEmail({
+    parentName,
+    restaurantName: restaurant.name,
+    restaurantLogoUrl: restaurant.logoUrl,
+    restaurantPrimaryColor: restaurant.primaryColor,
+    restaurantContactEmail: restaurant.contactEmail,
+    restaurantContactPhone: restaurant.contactPhone,
+    days: orders.map((order) => ({
+      deliveryDate: order.deliveryDate.deliveryDate,
+      timezone: order.school.timezone,
+      studentName: order.student.studentName,
+      orderNumber: order.orderNumber,
+      items: order.items.map((item) => ({
+        itemName: item.itemNameSnapshot,
+        additions: item.additions,
+        removals: item.removals,
+      })),
+      allergyNotes:
+        order.items.map((item) => item.allergyNotes).find(Boolean) ??
+        order.student.allergyNotes,
+      amountCents: order.totalCents,
+    })),
+    totalCents: orders.reduce((sum, o) => sum + o.totalCents, 0),
+  });
+
+  try {
+    let providerId: string | undefined;
+
+    if (resend && env.EMAIL_FROM) {
+      const fromAddress = `${restaurant.name} <${env.EMAIL_FROM}>`;
+      const result = await resend.emails.send({
+        from: fromAddress,
+        to: parentEmail,
+        replyTo: restaurant.contactEmail || undefined,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+      });
+      if (result.error) {
+        throw new Error(result.error.message || "Resend email delivery failed.");
+      }
+      providerId = result.data?.id;
+    } else {
+      throw new Error("Email delivery is not configured. Add a valid RESEND_API_KEY and EMAIL_FROM.");
+    }
+
+    // One email sent — but log + stamp every order in the batch so the
+    // admin order list shows each as confirmed.
+    const now = new Date();
+    await prisma.$transaction([
+      ...orders.map((order) =>
+        prisma.emailLog.create({
+          data: {
+            orderId: order.id,
+            emailType: "ORDER_CONFIRMATION",
+            recipient: parentEmail,
+            providerId,
+            status: EmailStatus.SENT,
+            sentAt: now,
+          },
+        })
+      ),
+      ...orders.map((order) =>
+        prisma.order.update({
+          where: { id: order.id },
+          data: { confirmationSentAt: now },
+        })
+      ),
+    ]);
+
+    return { ok: true };
+  } catch (error) {
+    const messageText = error instanceof Error ? error.message : "Unknown email error";
+    await prisma.emailLog.createMany({
+      data: orders.map((order) => ({
+        orderId: order.id,
+        emailType: "ORDER_CONFIRMATION" as const,
+        recipient: parentEmail,
+        status: EmailStatus.FAILED,
+        errorMessage: messageText,
+      })),
+    });
+    throw error;
+  }
 }
