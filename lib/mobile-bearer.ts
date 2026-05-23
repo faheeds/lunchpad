@@ -42,7 +42,10 @@ export async function getMobileAuth(
       return null;
     }
   }
-  if (!payload) return null;
+  if (!payload) {
+    console.warn("[mobileauth] FAIL: token verification failed (native + mobile verify both threw)");
+    return null;
+  }
 
   // Tenant check: the JWT must match the host the request is hitting.
   // If we can't resolve a tenant (apex / unknown host), let the call
@@ -60,6 +63,13 @@ export async function getMobileAuth(
   }
 
   if (!payloadRestaurantId || payloadRestaurantId !== tenant.id) {
+    console.warn("[mobileauth] FAIL: tenant mismatch " + JSON.stringify({
+      tokenRestaurantId: payload.restaurantId ?? null,
+      resolvedFromDb: !payload.restaurantId,
+      payloadRestaurantId: payloadRestaurantId ?? null,
+      tenantId: tenant.id,
+      parentUserId: payload.parentUserId,
+    }));
     return null;
   }
   return payload;
