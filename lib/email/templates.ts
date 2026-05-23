@@ -843,3 +843,116 @@ If you didn't request this, you can safely ignore the email — your current pas
 
   return { subject, text, html };
 }
+
+type WeeklyConfirmationTemplateArgs = {
+  parentName: string;
+  restaurantName: string;
+  restaurantLogoUrl?: string | null;
+  restaurantPrimaryColor?: string | null;
+  restaurantContactEmail?: string | null;
+  restaurantContactPhone?: string | null;
+  /** One entry per delivery date in the weekly batch. */
+  days: {
+    deliveryDate: Date;
+    timezone: string;
+    studentName: string;
+    orderNumber: string;
+    items: { itemName: string; additions: string[]; removals: string[] }[];
+    allergyNotes?: string | null;
+    amountCents: number;
+  }[];
+  totalCents: number;
+};
+
+/**
+ * One combined confirmation email for a whole weekly checkout batch.
+ * A weekly batch becomes several Order rows (one per delivery date) — this
+ * renders a single multi-day summary so the parent gets ONE email, not one
+ * per day.
+ */
+export function buildWeeklyConfirmationEmail(args: WeeklyConfirmationTemplateArgs) {
+  const help = helpBlock({
+    restaurantName: args.restaurantName,
+    contactEmail: args.restaurantContactEmail,
+    contactPhone: args.restaurantContactPhone,
+  });
+
+  const sortedDays = [...args.days].sort(
+    (a, b) => a.deliveryDate.getTime() - b.deliveryDate.getTime()
+  );
+  const dayCount = sortedDays.length;
+  const dayWord = dayCount === 1 ? "day" : "days";
+
+  const textDays = sortedDays.map((d) => {
+    const label = formatInTimeZone(d.deliveryDate, d.timezone, "EEEE, MMMM d");
+    const lines = [`${label} — ${d.studentName} (${d.orderNumber})`];
+    for (const item of d.items) {
+      const mods: string[] = [];
+      if (item.additions.length) mods.push(`add ${formatList(item.additions)}`);
+      if (item.removals.length) mods.push(`no ${formatList(item.removals)}`);
+      lines.push(`  - ${item.itemName}${mods.length ? ` (${mods.join(", ")})` : ""}`);
+    }
+    if (d.allergyNotes) lines.push(`  Allergy note: ${d.allergyNotes}`);
+    return lines.join("\n");
+  });
+
+  const htmlDays = sortedDays.map((d) => {
+    const label = formatInTimeZone(d.deliveryDate, d.timezone, "EEEE, MMMM d");
+    const itemRows = d.items
+      .map((item) => {
+        const mods: string[] = [];
+        if (item.additions.length) mods.push(`add ${formatList(item.additions)}`);
+        if (item.removals.length) mods.push(`no ${formatList(item.removals)}`);
+        const modText = mods.length
+          ? `<span style="color:#64748b"> — ${mods.join(", ")}</span>`
+          : "";
+        return `<p style="margin:2px 0;font-size:13px;color:#1c2a35">${item.itemName}${modText}</p>`;
+      })
+      .join("");
+    const allergy = d.allergyNotes
+      ? `<p style="margin:6px 0 0;font-size:12px;color:#b45309">Allergy note: ${d.allergyNotes}</p>`
+      : "";
+    return `
+      <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin:10px 0;">
+        <p style="margin:0 0 2px;font-size:15px;font-weight:700;color:#1c2a35">${label}</p>
+        <p style="margin:0 0 8px;font-size:12px;color:#64748b">${d.studentName} &middot; ${d.orderNumber} &middot; ${formatCurrency(d.amountCents)}</p>
+        ${itemRows}
+        ${allergy}
+      </div>`;
+  });
+
+  return {
+    subject: `${args.restaurantName} — weekly order confirmed (${dayCount} ${dayWord})`,
+    text: [
+      `Hi ${args.parentName},`,
+      "",
+      `Your weekly lunch order from ${args.restaurantName} is confirmed — ${dayCount} ${dayWord} in all.`,
+      "",
+      ...textDays,
+      "",
+      `Total paid: ${formatCurrency(args.totalCents)}`,
+      "",
+      help.text,
+      "",
+      `Thanks for ordering with ${args.restaurantName}.`,
+      `— The ${args.restaurantName} team`,
+    ].join("\n"),
+    html: `
+      <div style="${base}">
+        ${brandHeader(args.restaurantName, args.restaurantLogoUrl, args.restaurantPrimaryColor)}
+        <div style="${card};border-top:none;border-radius:0 0 10px 10px;margin-top:0">
+          <h2 style="margin:0 0 12px;font-size:20px;color:#1c2a35">Weekly order confirmed</h2>
+          <p style="margin:0 0 8px">Hi ${args.parentName},</p>
+          <p style="margin:0 0 12px">Your weekly lunch order is confirmed — <strong>${dayCount} ${dayWord}</strong> in all.</p>
+          ${htmlDays.join("")}
+          <table style="border-collapse:collapse;width:100%;margin:16px 0">
+            <tr><td style="padding:6px 0;"><strong>Total paid</strong></td><td style="text-align:right">${formatCurrency(args.totalCents)}</td></tr>
+          </table>
+          ${help.html}
+          <p style="margin:16px 0 4px">Thanks for ordering with <strong>${args.restaurantName}</strong>.</p>
+          <p style="margin:0;color:#64748b;font-size:13px">— The ${args.restaurantName} team</p>
+        </div>
+      </div>
+    `,
+  };
+}
