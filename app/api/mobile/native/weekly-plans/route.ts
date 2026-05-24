@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
           id: c.id,
           schoolId: c.schoolId,
           schoolName: c.school.name,
-          locationType: c.school.locationType,
+	  locationType: c.school.locationType,
           studentName: c.studentName,
           grade: c.grade,
         })),
@@ -223,4 +223,8 @@ export async function POST(request: NextRequest) {
       { headers: CORS_HEADERS }
     );
   } catch (err: unknown) {
-    const 
+    const status = (err as { status?: number }).status ?? 500;
+    const message = err instanceof Error ? err.message : "Failed to save plan";
+    return NextResponse.json({ error: message }, { status, headers: CORS_HEADERS });
+  }
+}
