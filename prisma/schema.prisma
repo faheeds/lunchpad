@@ -420,6 +420,7 @@ model WeeklyLunchPlan {
   weekday       Int
   menuItemId    String
   choice        String?
+  size          String?
   additions     String[]
   removals      String[]
   sortOrder     Int        @default(0)
@@ -459,6 +460,7 @@ model WeeklyCheckoutBatchItem {
   deliveryDateId        String
   menuItemId            String
   choice                String?
+  size                  String?
   additions             String[]
   removals              String[]
   itemNameSnapshot      String
