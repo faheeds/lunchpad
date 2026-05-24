@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         children: {
           where: { archivedAt: null },
           orderBy: { studentName: "asc" },
-          include: { school: { select: { id: true, name: true } } },
+          include: { school: { select: { id: true, name: true, locationType: true } } },
         },
       },
     });
@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
           id: c.id,
           schoolId: c.schoolId,
           schoolName: c.school.name,
+          locationType: c.school.locationType,
           studentName: c.studentName,
           grade: c.grade,
           allergyNotes: c.allergyNotes ?? "",

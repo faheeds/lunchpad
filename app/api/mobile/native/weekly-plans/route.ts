@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
             school: { isActive: true },
           },
           include: {
-            school: { select: { id: true, name: true, timezone: true } },
+            school: { select: { id: true, name: true, timezone: true, locationType: true } },
             menuAvailability: {
               where: { isAvailable: true, menuItem: { is: { isActive: true } } },
               include: {
@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
           id: c.id,
           schoolId: c.schoolId,
           schoolName: c.school.name,
+          locationType: c.school.locationType,
           studentName: c.studentName,
           grade: c.grade,
         })),
@@ -222,8 +223,4 @@ export async function POST(request: NextRequest) {
       { headers: CORS_HEADERS }
     );
   } catch (err: unknown) {
-    const status = (err as { status?: number }).status ?? 500;
-    const message = err instanceof Error ? err.message : "Failed to save plan";
-    return NextResponse.json({ error: message }, { status, headers: CORS_HEADERS });
-  }
-}
+    const 
