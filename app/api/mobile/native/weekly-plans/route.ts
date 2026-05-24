@@ -71,7 +71,10 @@ export async function GET(request: NextRequest) {
               where: { isAvailable: true, menuItem: { is: { isActive: true } } },
               include: {
                 menuItem: {
-                  include: { options: { orderBy: { sortOrder: "asc" } } },
+                  include: {
+                    options: { orderBy: { sortOrder: "asc" } },
+                    sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+                  },
                 },
               },
             },
@@ -111,6 +114,13 @@ export async function GET(request: NextRequest) {
               optionType: o.optionType,
               priceDeltaCents: o.priceDeltaCents,
             })),
+            // Size variants — surfaced so the iOS weekly planner can
+            // render a size picker on sized items (e.g. pizza S/M/L).
+            sizes: entry.menuItem.sizes.map((sz) => ({
+              id: sz.id,
+              name: sz.name,
+              priceCents: sz.priceCents,
+            })),
           })),
         })),
         plans: parent.weeklyPlans.map((p) => ({
@@ -120,6 +130,7 @@ export async function GET(request: NextRequest) {
           menuItemId: p.menuItemId,
           menuItemName: p.menuItem.name,
           choice: p.choice,
+          size: p.size,
           additions: p.additions,
           removals: p.removals,
           isActive: p.isActive,
@@ -143,6 +154,7 @@ export async function POST(request: NextRequest) {
     const weekday = Number(body.weekday);
     const menuItemId = String(body.menuItemId ?? "");
     const choice = body.choice ? String(body.choice) : undefined;
+    const size = body.size ? String(body.size) : undefined;
     const additions: string[] = Array.isArray(body.additions) ? body.additions.map(String) : [];
     const removals: string[] = Array.isArray(body.removals) ? body.removals.map(String) : [];
 
@@ -176,30 +188,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert — one plan per (parentChild, weekday). Replace if exists.
-    const existing = await prisma.weeklyLunchPlan.findFirst({
-      where: { parentChildId, weekday },
+    // Multiple meals per (parentChild, weekday) are allowed — each POST
+    // adds a new plan row. To change a meal the client removes the old
+    // row via DELETE and adds a new one.
+    const plan = await prisma.weeklyLunchPlan.create({
+      data: {
+        parentUserId: auth.parentUserId,
+        parentChildId,
+        schoolId: child.schoolId,
+        weekday,
+        menuItemId,
+        choice,
+        size,
+        additions,
+        removals,
+      },
+      include: { menuItem: true },
     });
-
-    const plan = existing
-      ? await prisma.weeklyLunchPlan.update({
-          where: { id: existing.id },
-          data: { menuItemId, choice, additions, removals, isActive: true },
-          include: { menuItem: true },
-        })
-      : await prisma.weeklyLunchPlan.create({
-          data: {
-            parentUserId: auth.parentUserId,
-            parentChildId,
-            schoolId: child.schoolId,
-            weekday,
-            menuItemId,
-            choice,
-            additions,
-            removals,
-          },
-          include: { menuItem: true },
-        });
 
     return NextResponse.json(
       {
@@ -209,6 +214,7 @@ export async function POST(request: NextRequest) {
         menuItemId: plan.menuItemId,
         menuItemName: plan.menuItem.name,
         choice: plan.choice,
+        size: plan.size,
         additions: plan.additions,
         removals: plan.removals,
         isActive: plan.isActive,

@@ -54,7 +54,8 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
           school: true,
           menuItem: {
             include: {
-              options: true
+              options: true,
+              sizes: true
             }
           }
         },
@@ -151,6 +152,25 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
       return [];
     }
 
+    // Resolve the size-variant price. When the menu item has sizes the
+    // plan must carry a valid one, otherwise the line would silently
+    // fall back to basePriceCents (often 0 for sized items) — so skip
+    // with an error, mirroring the requiredChoice guard above.
+    const itemSizes = plan.menuItem.sizes;
+    let resolvedBaseCents = plan.menuItem.basePriceCents;
+    if (itemSizes.length) {
+      const matchedSize = plan.size
+        ? itemSizes.find((size) => size.name === plan.size)
+        : undefined;
+      if (!matchedSize) {
+        skippedItems.push(
+          `${weekdayLabel}: ${plan.parentChild.studentName} - ${plan.menuItem.name} is missing a size selection.`
+        );
+        return [];
+      }
+      resolvedBaseCents = matchedSize.priceCents;
+    }
+
     const addOnCost = plan.menuItem.options
       .filter((option) => option.optionType === "ADD_ON" && plan.additions.includes(option.name))
       .reduce((sum, option) => sum + option.priceDeltaCents, 0);
@@ -162,11 +182,12 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
         deliveryDateId: matchingDeliveryDate.id,
         menuItemId: plan.menuItemId,
         choice: plan.choice,
+        size: plan.size,
         additions: plan.additions,
         removals: plan.removals,
         itemNameSnapshot: plan.menuItem.name,
-        basePriceCents: plan.menuItem.basePriceCents,
-        lineTotalCents: plan.menuItem.basePriceCents + addOnCost
+        basePriceCents: resolvedBaseCents,
+        lineTotalCents: resolvedBaseCents + addOnCost
       }
     ];
   });
@@ -281,6 +302,7 @@ export async function markWeeklyBatchPaidByCheckoutSession(
             create: {
               menuItemId: item.menuItemId,
               itemNameSnapshot: item.itemNameSnapshot,
+              sizeName: item.size,
               basePriceCents: item.basePriceCents,
               additions: item.choice ? [item.choice, ...item.additions] : item.additions,
               removals: item.removals,
