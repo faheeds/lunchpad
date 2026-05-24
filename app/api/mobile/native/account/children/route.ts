@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
     const auth = await requireMobileAuth(request);
     const body = await request.json();
 
-    if (!body.schoolId || !body.studentName || !body.grade) {
+    if (!body.schoolId || !body.studentName) {
       return NextResponse.json(
-        { error: "schoolId, studentName, and grade are required" },
+        { error: "schoolId and studentName are required" },
         { status: 400, headers: CORS_HEADERS }
       );
     }
@@ -30,10 +30,10 @@ export async function POST(request: NextRequest) {
         parentUserId: auth.parentUserId,
         schoolId: body.schoolId,
         studentName: body.studentName.trim(),
-        grade: body.grade.trim(),
+        grade: (body.grade ?? "").trim() || "\u2014",
         allergyNotes: body.allergyNotes?.trim() ?? null,
       },
-      include: { school: { select: { id: true, name: true } } },
+      include: { school: { select: { id: true, name: true, locationType: true } } },
     });
 
     return NextResponse.json(
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
         id: child.id,
         schoolId: child.schoolId,
         schoolName: child.school.name,
+        locationType: child.school.locationType,
         studentName: child.studentName,
         grade: child.grade,
         allergyNotes: child.allergyNotes ?? "",

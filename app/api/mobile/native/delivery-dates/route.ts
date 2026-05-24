@@ -25,7 +25,7 @@ export async function GET() {
         school: { isActive: true, restaurantId: restaurant.id },
       },
       include: {
-        school: { select: { id: true, name: true, timezone: true } },
+        school: { select: { id: true, name: true, timezone: true, locationType: true } },
         menuAvailability: {
           where: {
             isAvailable: true,
