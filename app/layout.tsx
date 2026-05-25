@@ -100,10 +100,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const pathname = headerList.get("x-pathname") ?? "";
   const isAdminPath = pathname.startsWith("/admin");
   let shellMode: "is-platform" | "is-tenant" | "is-admin";
-  if (!restaurant) {
-    shellMode = "is-platform";
-  } else if (isAdminPath) {
+  if (isAdminPath) {
     shellMode = "is-admin";
+  } else if (!restaurant) {
+    shellMode = "is-platform";
   } else {
     shellMode = "is-tenant";
   }
