@@ -80,7 +80,7 @@ export default async function AdminProtectedLayout({
 
     if (isCancelled || isExpiredTrial) {
       return (
-        <div className="min-h-screen bg-editorial-paper flex items-center justify-center px-4">
+        <div className="admin-shell min-h-screen bg-editorial-paper flex items-center justify-center px-4">
           <div style={{
             background: "white", borderRadius: 20, padding: "40px 32px",
             maxWidth: 420, width: "100%", textAlign: "center",
@@ -139,7 +139,7 @@ export default async function AdminProtectedLayout({
     : null;
 
   return (
-    <div className="min-h-screen bg-editorial-paper">
+    <div className="admin-shell min-h-screen bg-editorial-paper">
       {/* Past-due warning */}
       {full?.subscriptionStatus === "PAST_DUE" && (
         <div style={{

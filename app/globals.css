@@ -140,3 +140,18 @@ body {
 .container-app {
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
+
+/* Admin (protected) pages are never phone-card constrained. The admin
+ * layout renders an `.admin-shell` wrapper; whenever it sits inside
+ * `.app-shell`, drop the phone-card so dashboards, tables, and reports
+ * get full desktop width. Keyed off the DOM (not the <html> shell class)
+ * so it holds regardless of how shell mode resolved or client-side nav. */
+body .app-shell:has(.admin-shell) {
+  max-width: none;
+  margin: 0;
+  min-height: 100dvh;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  background: transparent;
+}
