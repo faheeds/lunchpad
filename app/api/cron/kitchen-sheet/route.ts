@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   const errors: string[] = [];
 
   try {
-    // For each restaurant, find all active restaurants with delivery dates today
+    // Find all active restaurants with delivery dates matching today in their local timezone
     const restaurants = await prisma.restaurant.findMany({
       where: { isActive: true },
       select: { id: true, slug: true, name: true },
@@ -64,12 +64,6 @@ export async function GET(request: NextRequest) {
           try {
             const now = new Date();
             const schoolDate = formatInTimeZone(now, school.timezone, "yyyy-MM-dd");
-            const schoolHour = parseInt(formatInTimeZone(now, school.timezone, "H"), 10);
-
-            // Only send at 6 AM in the school's timezone
-            if (schoolHour !== 6) {
-              continue;
-            }
 
             // Find delivery dates for today with at least 1 PAID order
             const deliveryDates = await prisma.deliveryDate.findMany({

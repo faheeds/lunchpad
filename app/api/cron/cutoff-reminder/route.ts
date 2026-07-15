@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { sendWeeklyPlanCutoffReminderEmail } from "@/lib/email/service";
 import { formatInTimeZone } from "date-fns-tz";
-import { addMinutes } from "date-fns";
+import { addHours } from "date-fns";
 
 export const runtime = "nodejs";
 
@@ -49,9 +49,11 @@ export async function GET(request: NextRequest) {
   const now = new Date();
 
   try {
-    // Find all delivery dates where cutoff is 3-4 hours away (or more precisely, 3h to 4h from now)
-    const minCutoff = addMinutes(now, 3 * 60);
-    const maxCutoff = addMinutes(now, 4 * 60);
+    // Find all delivery dates where cutoff falls within the next 24 hours (day-before reminder window).
+    // Running daily at a fixed UTC time, this window is contiguous and non-overlapping across runs,
+    // so each cutoff timestamp is caught by exactly one run.
+    const minCutoff = now;
+    const maxCutoff = addHours(now, 24);
 
     const upcomingDeliveryDates = await prisma.deliveryDate.findMany({
       where: {
@@ -110,6 +112,7 @@ export async function GET(request: NextRequest) {
               where: {
                 parentUserId: plan.parentUserId,
                 deliveryDateId: deliveryDate.id,
+                restaurantId: restaurant.id,
                 status: "PAID",
                 archivedAt: null,
               },
