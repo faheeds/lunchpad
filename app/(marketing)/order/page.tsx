@@ -118,7 +118,15 @@ export default async function OrderPage({
     session?.user?.role === "PARENT" && session.user.parentUserId
       ? await prisma.parentUser.findUnique({
           where: { id: session.user.parentUserId },
-          include: { children: { where: { archivedAt: null }, orderBy: { studentName: "asc" } } }
+          include: {
+            children: {
+              where: {
+                archivedAt: null,
+                school: { restaurantId: restaurant.id }
+              },
+              orderBy: { studentName: "asc" }
+            }
+          }
         })
       : null;
 

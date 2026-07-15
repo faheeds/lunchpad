@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { SiteHeaderServer } from "@/components/site-header-server";
 import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 
@@ -14,7 +13,11 @@ export default function Error({
 }) {
   return (
     <>
-      <SiteHeaderServer />
+      <header className="border-b border-editorial-line bg-editorial-paper">
+        <div className="mx-auto max-w-full px-4 py-3 flex items-center justify-between">
+          <h1 className="font-semibold text-editorial-ink">LunchPad</h1>
+        </div>
+      </header>
       <main className="app-content" id="main-content">
         <div className="px-4 py-4">
           <div className="rounded-[16px] border border-editorial-line bg-editorial-card p-6 text-center shadow-card">

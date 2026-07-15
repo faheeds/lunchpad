@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <div className="space-y-6 animate-pulse">
+    <div className="space-y-6 animate-pulse" aria-hidden="true">
       <div className="h-8 bg-gray-200 rounded w-48" />
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
