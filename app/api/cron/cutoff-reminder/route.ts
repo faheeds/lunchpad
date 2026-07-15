@@ -75,8 +75,9 @@ export async function GET(request: NextRequest) {
       const restaurant = school.restaurant;
 
       try {
-        // Get the weekday (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-        const deliveryWeekday = deliveryDate.deliveryDate.getDay();
+        // Get the weekday (0 = Sunday, 1 = Monday, ..., 6 = Saturday) in the school's local timezone
+        const deliveryDateStr = formatInTimeZone(deliveryDate.deliveryDate, school.timezone, "yyyy-MM-dd");
+        const deliveryWeekday = new Date(`${deliveryDateStr}T00:00:00`).getDay();
 
         // Find all ACTIVE weekly lunch plans for this weekday/school
         const weeklyPlans = await prisma.weeklyLunchPlan.findMany({
