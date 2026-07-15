@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { sendKitchenPrepEmail } from "@/lib/email/service";
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 export const runtime = "nodejs";
 
@@ -66,12 +66,14 @@ export async function GET(request: NextRequest) {
             const schoolDate = formatInTimeZone(now, school.timezone, "yyyy-MM-dd");
 
             // Find delivery dates for today with at least 1 PAID order
+            const startOfDay = fromZonedTime(`${schoolDate}T00:00:00`, school.timezone);
+            const endOfDay = fromZonedTime(`${schoolDate}T23:59:59`, school.timezone);
             const deliveryDates = await prisma.deliveryDate.findMany({
               where: {
                 schoolId: school.id,
                 deliveryDate: {
-                  gte: new Date(`${schoolDate}T00:00:00Z`),
-                  lt: new Date(`${schoolDate}T23:59:59Z`),
+                  gte: startOfDay,
+                  lt: endOfDay,
                 },
               },
               include: {
