@@ -23,6 +23,7 @@ const envSchema = z.object({
   STRIPE_PRICE_SCALE: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(100).default(2.9), // LunchPad's cut %
+  CRON_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -48,4 +49,5 @@ export const env = envSchema.parse({
   STRIPE_PRICE_SCALE: process.env.STRIPE_PRICE_SCALE,
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   PLATFORM_FEE_PERCENT: process.env.PLATFORM_FEE_PERCENT,
+  CRON_SECRET: process.env.CRON_SECRET,
 });

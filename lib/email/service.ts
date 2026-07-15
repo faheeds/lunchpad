@@ -11,6 +11,7 @@ import {
   buildOrderModifiedEmail,
   buildRefundEmail,
   buildWeeklyConfirmationEmail,
+  buildWeeklyPlanCutoffReminderEmail,
 } from "@/lib/email/templates";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -641,6 +642,55 @@ export async function sendAdminPasswordResetEmail(args: {
     text: message.text,
     html: message.html,
   });
+}
+
+/**
+ * Sends a cutoff reminder email to a weekly plan holder who hasn't yet ordered
+ * for an upcoming delivery date. Reuses existing template styling.
+ * Best-effort — catches errors but doesn't throw so one recipient failure
+ * doesn't block the rest of the cron run.
+ */
+export async function sendWeeklyPlanCutoffReminderEmail(args: {
+  parentEmail: string;
+  parentName: string;
+  childName: string;
+  deliveryDate: Date;
+  cutoffAt: Date;
+  timezone: string;
+  schoolName: string;
+  items: { itemName: string; choice?: string }[];
+  orderUrl: string;
+  restaurantName: string;
+}) {
+  if (!resend || !env.EMAIL_FROM) {
+    throw new Error("Email delivery is not configured.");
+  }
+
+  const message = buildWeeklyPlanCutoffReminderEmail({
+    parentName: args.parentName,
+    childName: args.childName,
+    deliveryDate: args.deliveryDate,
+    cutoffAt: args.cutoffAt,
+    timezone: args.timezone,
+    schoolName: args.schoolName,
+    items: args.items,
+    orderUrl: args.orderUrl,
+  });
+
+  const fromAddress = `${args.restaurantName} <${env.EMAIL_FROM}>`;
+  const result = await resend.emails.send({
+    from: fromAddress,
+    to: args.parentEmail,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message || "Resend email delivery failed.");
+  }
+
+  return { ok: true, providerId: result.data?.id };
 }
 
 /**

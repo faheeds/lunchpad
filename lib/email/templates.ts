@@ -312,6 +312,62 @@ export function buildCutoffReminderEmail(args: CutoffReminderTemplateArgs) {
   };
 }
 
+type WeeklyPlanCutoffReminderArgs = {
+  parentName: string;
+  childName: string;
+  deliveryDate: Date;
+  cutoffAt: Date;
+  timezone: string;
+  schoolName: string;
+  items: { itemName: string; choice?: string }[];
+  orderUrl: string;
+};
+
+export function buildWeeklyPlanCutoffReminderEmail(args: WeeklyPlanCutoffReminderArgs) {
+  const deliveryDateStr = formatInTimeZone(args.deliveryDate, args.timezone, "EEEE, MMMM d");
+  const cutoffStr = formatInTimeZone(args.cutoffAt, args.timezone, "MMMM d 'at' h:mm a zzz");
+
+  const itemList = args.items
+    .map((item) => `${item.itemName}${item.choice ? ` (${item.choice})` : ""}`)
+    .join(", ");
+
+  return {
+    subject: `Quick reminder: order for ${args.childName} before ${cutoffStr}`,
+    text: [
+      `Hi ${args.parentName},`,
+      "",
+      `This is a quick reminder that your usual order for ${args.childName} — ${itemList} — for ${args.schoolName} on ${deliveryDateStr} closes ${cutoffStr}.`,
+      "",
+      `Order now: ${args.orderUrl}`,
+      "",
+      "If you already placed an order or don't need lunch that day, you can ignore this message.",
+    ].join("\n"),
+    html: `
+      <div style="${base}">
+        <div style="${card}">
+          <p style="margin:0 0 12px;font-size:14px">Hi ${args.parentName},</p>
+          <p style="margin:0 0 12px;font-size:13px;color:#4b5563;line-height:1.65">
+            This is a quick reminder that your usual order for <strong>${args.childName}</strong> closes <strong>${cutoffStr}</strong>.
+          </p>
+          <div style="background:#f8fafc;border-left:3px solid #c41230;padding:12px 14px;margin:16px 0;border-radius:4px">
+            <p style="margin:0;font-size:13px;font-weight:600;color:#1c2a35">${itemList}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#6b7280">${args.schoolName} &middot; ${deliveryDateStr}</p>
+          </div>
+          <p style="margin:16px 0 0;text-align:center">
+            <a href="${args.orderUrl}"
+               style="display:inline-block;background:#c41230;color:white;padding:11px 28px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;">
+              Place Order
+            </a>
+          </p>
+          <p style="margin:12px 0 0;font-size:12px;color:#78716c;text-align:center">
+            Already ordered? You can ignore this message.
+          </p>
+        </div>
+      </div>
+    `,
+  };
+}
+
 // ─── Kitchen prep summary ────────────────────────────────────────────────────
 
 type KitchenPrepOrder = {
