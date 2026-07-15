@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { sendWeeklyPlanCutoffReminderEmail } from "@/lib/email/service";
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { addHours } from "date-fns";
 
 export const runtime = "nodejs";
@@ -77,11 +77,12 @@ export async function GET(request: NextRequest) {
       try {
         // Get the weekday (0 = Sunday, 1 = Monday, ..., 6 = Saturday) in the school's local timezone
         const deliveryDateStr = formatInTimeZone(deliveryDate.deliveryDate, school.timezone, "yyyy-MM-dd");
-        const deliveryWeekday = new Date(`${deliveryDateStr}T00:00:00`).getDay();
+        const deliveryWeekday = fromZonedTime(`${deliveryDateStr}T00:00:00`, school.timezone).getDay();
 
         // Find all ACTIVE weekly lunch plans for this weekday/school
         const weeklyPlans = await prisma.weeklyLunchPlan.findMany({
           where: {
+            school: { restaurantId: restaurant.id },
             schoolId: school.id,
             weekday: deliveryWeekday,
             isActive: true,
