@@ -94,25 +94,26 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        // Track which (parentEmail, deliveryDateId) pairs we've already emailed
-        // in this run to avoid duplicates
-        const sentKey = (email: string, dateId: string) => `${email}:${dateId}`;
-        const alreadySent = new Set<string>();
-
+        // Group plans by parent to send one email per parent per delivery date
+        // with all their children's items combined
+        const plansByParent = new Map<string, typeof weeklyPlans>();
         for (const plan of weeklyPlans) {
-          try {
-            const parentEmail = plan.parentUser.email;
-            const childName = plan.parentChild.studentName;
-            const key = sentKey(parentEmail, deliveryDate.id);
+          const parentId = plan.parentUserId;
+          if (!plansByParent.has(parentId)) {
+            plansByParent.set(parentId, []);
+          }
+          plansByParent.get(parentId)!.push(plan);
+        }
 
-            if (alreadySent.has(key)) {
-              continue;
-            }
+        for (const [parentId, parentPlans] of plansByParent) {
+          try {
+            const parentUser = parentPlans[0].parentUser;
+            const parentEmail = parentUser.email;
 
             // Check if this parent already has a PAID order for this delivery date
             const existingOrder = await prisma.order.findFirst({
               where: {
-                parentUserId: plan.parentUserId,
+                parentUserId: parentId,
                 deliveryDateId: deliveryDate.id,
                 restaurantId: restaurant.id,
                 status: "PAID",
@@ -126,46 +127,49 @@ export async function GET(request: NextRequest) {
               continue;
             }
 
-            // Build item list from weekly plans for this child
-            const planItems = await prisma.weeklyLunchPlan.findMany({
-              where: {
-                parentUserId: plan.parentUserId,
-                parentChildId: plan.parentChildId,
-                schoolId: school.id,
-                weekday: deliveryWeekday,
-                isActive: true,
-              },
-              include: {
-                menuItem: true,
-              },
-            });
+            // Aggregate all items from all children's weekly plans for this parent
+            const allItems: { itemName: string; choice?: string }[] = [];
+            for (const plan of parentPlans) {
+              const planItems = await prisma.weeklyLunchPlan.findMany({
+                where: {
+                  parentUserId: parentId,
+                  parentChildId: plan.parentChildId,
+                  schoolId: school.id,
+                  weekday: deliveryWeekday,
+                  isActive: true,
+                },
+                include: {
+                  menuItem: true,
+                },
+              });
 
-            const items = planItems.map((p) => {
-              const item: { itemName: string; choice?: string } = {
-                itemName: p.menuItem.name,
-              };
-              if (p.choice) item.choice = p.choice;
-              return item;
-            });
+              for (const p of planItems) {
+                const item: { itemName: string; choice?: string } = {
+                  itemName: p.menuItem.name,
+                };
+                if (p.choice) item.choice = p.choice;
+                allItems.push(item);
+              }
+            }
 
             const orderUrl = `https://${restaurant.slug}.${env.ROOT_DOMAIN}`;
 
             if (!dryRun) {
               await sendWeeklyPlanCutoffReminderEmail({
                 parentEmail,
-                parentName: plan.parentUser.name || "there",
-                childName,
+                parentName: parentUser.name || "there",
+                childName: parentPlans.length === 1
+                  ? parentPlans[0].parentChild.studentName
+                  : `${parentPlans.length} children`,
                 deliveryDate: deliveryDate.deliveryDate,
                 cutoffAt: deliveryDate.cutoffAt,
                 timezone: school.timezone,
                 schoolName: school.name,
-                items,
+                items: allItems,
                 orderUrl,
                 restaurantName: restaurant.name,
               });
             }
-
-            alreadySent.add(key);
 
             results.push({
               restaurant: {
@@ -179,14 +183,16 @@ export async function GET(request: NextRequest) {
               },
               deliveryDate: deliveryDate.deliveryDate.toISOString(),
               parentEmail,
-              childName,
+              childName: parentPlans.length === 1
+                ? parentPlans[0].parentChild.studentName
+                : `${parentPlans.length} children`,
               sent: !dryRun,
             });
           } catch (err) {
             const errMsg =
               err instanceof Error ? err.message : "Unknown error sending cutoff reminder";
             errors.push(
-              `[${restaurant.slug}/${school.id}/${deliveryDate.id}/${plan.parentUserId}] ${errMsg}`
+              `[${restaurant.slug}/${school.id}/${deliveryDate.id}/${parentId}] ${errMsg}`
             );
             results.push({
               restaurant: {
@@ -199,8 +205,10 @@ export async function GET(request: NextRequest) {
                 name: school.name,
               },
               deliveryDate: deliveryDate.deliveryDate.toISOString(),
-              parentEmail: plan.parentUser.email,
-              childName: plan.parentChild.studentName,
+              parentEmail: parentPlans[0].parentUser.email,
+              childName: parentPlans.length === 1
+                ? parentPlans[0].parentChild.studentName
+                : `${parentPlans.length} children`,
               sent: false,
               error: errMsg,
             });

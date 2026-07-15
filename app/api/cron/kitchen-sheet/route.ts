@@ -73,14 +73,14 @@ export async function GET(request: NextRequest) {
                 schoolId: school.id,
                 deliveryDate: {
                   gte: startOfDay,
-                  lt: endOfDay,
+                  lte: endOfDay,
                 },
               },
               include: {
                 _count: {
                   select: {
                     orders: {
-                      where: { status: "PAID", archivedAt: null },
+                      where: { restaurantId: restaurant.id, status: "PAID", archivedAt: null },
                     },
                   },
                 },
