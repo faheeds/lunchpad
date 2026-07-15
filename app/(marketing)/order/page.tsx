@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
@@ -64,11 +66,13 @@ export default async function OrderPage({
     );
   }
 
+  const now = new Date();
+
   const allDeliveryDates = await prisma.deliveryDate.findMany({
     where: {
       orderingOpen: true,
       cancelledAt: null,
-      cutoffAt: { gt: new Date() },
+      cutoffAt: { gt: now },
       school: { isActive: true, restaurantId: restaurant.id }
     },
     include: {
@@ -96,6 +100,19 @@ export default async function OrderPage({
   // All weekdays accepted — restaurants control which days they schedule deliveries for
   // by which DeliveryDate rows they create in admin.
   const deliveryDates = allDeliveryDates;
+
+  // For closed-ordering state: fetch the next future delivery date (ordering window passed or not yet open)
+  const nextFutureDeliveryDate = !deliveryDates.length
+    ? await prisma.deliveryDate.findFirst({
+        where: {
+          cancelledAt: null,
+          deliveryDate: { gt: now },
+          school: { isActive: true, restaurantId: restaurant.id }
+        },
+        include: { school: true },
+        orderBy: { deliveryDate: "asc" }
+      })
+    : null;
 
   const parent =
     session?.user?.role === "PARENT" && session.user.parentUserId
@@ -311,8 +328,71 @@ export default async function OrderPage({
               initialItemSlug={params.item}
             />
           ) : (
-            <div className="rounded-[18px] border border-amber-200 bg-amber-50 p-5 text-[14px] text-amber-900">
-              Ordering is currently closed. Check back before the next delivery window opens.
+            <div className="space-y-4">
+              {nextFutureDeliveryDate ? (
+                <>
+                  <div className="rounded-[16px] border border-editorial-line bg-editorial-card p-4 shadow-card">
+                    <p className="text-sm font-medium text-editorial-ink mb-2">Next delivery</p>
+                    <p className="text-lg font-editorial text-editorial-ink mb-3">
+                      {formatInTimeZone(nextFutureDeliveryDate.deliveryDate, nextFutureDeliveryDate.school.timezone, "EEE, MMM d")}
+                    </p>
+                    <p className="text-sm text-editorial-ink-soft mb-4">
+                      Ordering opens until{" "}
+                      <span className="font-semibold">
+                        {formatInTimeZone(nextFutureDeliveryDate.cutoffAt, nextFutureDeliveryDate.school.timezone, "EEE p")}
+                      </span>
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <Link
+                        href="/menu"
+                        className="inline-flex items-center justify-center rounded-full bg-editorial-green text-editorial-paper px-4 py-2.5 text-sm font-semibold hover:bg-editorial-green-deep transition"
+                      >
+                        Browse the menu
+                      </Link>
+                    </div>
+                  </div>
+                  {session?.user?.role === "PARENT" && (
+                    <div className="rounded-[16px] border border-editorial-line bg-editorial-card p-4 shadow-card">
+                      <p className="text-sm font-medium text-editorial-ink mb-2">Plan ahead</p>
+                      <p className="text-sm text-editorial-ink-soft mb-4">
+                        Build weekly meal plans for your children and save time during ordering windows.
+                      </p>
+                      <Link
+                        href="/weekly"
+                        className="inline-flex items-center justify-center rounded-full bg-editorial-sage text-editorial-ink px-4 py-2.5 text-sm font-semibold hover:opacity-80 transition"
+                      >
+                        Open weekly planner
+                      </Link>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="rounded-[16px] border border-editorial-line bg-editorial-card p-6 text-center shadow-card">
+                  <p className="text-sm font-medium text-editorial-ink mb-2">Ordering is closed</p>
+                  <p className="text-sm text-editorial-ink-soft mb-6">
+                    There are no upcoming delivery dates at the moment.
+                  </p>
+                  {(restaurant.contactEmail || restaurant.contactPhone) && (
+                    <div className="border-t border-editorial-line pt-4 mt-4 text-sm text-editorial-ink-soft">
+                      <p className="font-medium mb-2">Questions?</p>
+                      {restaurant.contactEmail && (
+                        <p>
+                          <a href={`mailto:${restaurant.contactEmail}`} className="text-editorial-green hover:text-editorial-green-deep">
+                            {restaurant.contactEmail}
+                          </a>
+                        </p>
+                      )}
+                      {restaurant.contactPhone && (
+                        <p>
+                          <a href={`tel:${restaurant.contactPhone}`} className="text-editorial-green hover:text-editorial-green-deep">
+                            {restaurant.contactPhone}
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
