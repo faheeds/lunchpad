@@ -72,14 +72,14 @@ export default async function WeeklyPage() {
     <>
       <SiteHeaderServer />
       <main className="app-content pb-32" id="main-content">
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 lg:px-8 lg:py-6 lg:max-w-2xl lg:mx-auto">
           <p style={{ fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.16em", color: "var(--brand-on-white)", marginBottom: 4 }}>Meal planning</p>
           <h1 style={{ fontSize: 20, fontWeight: 600, color: "#211D15", marginBottom: 4, fontFamily: "Fraunces, Georgia, serif" }}>Weekly lunch plan</h1>
           <p style={{ fontSize: 14, color: "#938B78", lineHeight: 1.5, marginBottom: 16 }}>
             Plan a meal for each upcoming day — we&apos;ll bundle it into one checkout for the whole week.
           </p>
 
-          <div style={{ borderRadius: 18, border: "1px solid #E3DBC6", background: "#FCFAF3", padding: 16 }}>
+          <div style={{ borderRadius: 18, border: "1px solid #E3DBC6", background: "#FCFAF3", padding: 16 }} className="lg:rounded-2xl">
             <WeeklyPlanPlanner
               children={parent.children.map((c) => ({
                 id: c.id,
@@ -130,8 +130,8 @@ export default async function WeeklyPage() {
         </div>
       </main>
 
-      {/* Sticky checkout bar */}
-      <div className="fixed inset-x-0 bottom-[52px] z-20 px-4 pb-2" style={{ maxWidth: 480, margin: "0 auto", left: 0, right: 0 }}>
+      {/* Sticky checkout bar — sticky at mobile, integrated at desktop */}
+      <div className="fixed inset-x-0 bottom-[52px] z-20 px-4 pb-2 lg:static lg:px-0 lg:py-6" style={{ maxWidth: 480, margin: "0 auto", left: 0, right: 0 }}>
         <div style={{ borderRadius: 18, border: "1px solid #E3DBC6", background: "rgba(252,250,243,0.97)", backdropFilter: "blur(12px)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-on-white)" }}>Upcoming week</p>

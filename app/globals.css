@@ -73,8 +73,17 @@ body {
 }
 
 @media (min-width: 1024px) {
+  /* Tenant pages break out of phone-card aesthetic at 1024px and into a
+   * desktop-adaptive layout: ~960px max-width, flat paper background,
+   * responsive grids, inline nav in header. Mobile/tablet behavior
+   * (phone-card at 640-1023px) is unchanged. */
   .is-tenant .app-shell {
-    max-width: 560px;
+    max-width: 960px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--paper, #fffbf7);
   }
 
   /* Platform landing drops the phone constraint at desktop and fills
@@ -122,9 +131,33 @@ body {
   flex-shrink: 0;
 }
 
+/* Hide bottom nav at desktop (≥1024px) where inline nav appears in header */
+@media (min-width: 1024px) {
+  .is-tenant .app-bnav {
+    display: none;
+  }
+}
+
 /* Hide scrollbar for food strip */
 .food-strip::-webkit-scrollbar { display: none; }
 .food-strip { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* How it works: switch from horizontal borders (mobile) to vertical (desktop) */
+.how-it-works-step {
+  flex-direction: row;
+}
+
+@media (min-width: 1024px) {
+  .how-it-works-step {
+    flex-direction: column;
+    border-right: 1px solid rgba(var(--dark-rgb),0.05);
+    border-bottom: none !important;
+  }
+
+  .how-it-works-step:last-child {
+    border-right: none;
+  }
+}
 
 @keyframes slideDown {
   from {

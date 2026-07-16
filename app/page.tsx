@@ -216,9 +216,9 @@ export default async function HomePage() {
             </div>
           )}
 
-          {/* Feature cards */}
+          {/* Feature cards — 2-column on mobile, responsive at desktop */}
           <div style={{ padding: "20px 20px 0" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 lg:gap-4" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
               {features.map((f) => {
                 const card = (
                   <div style={{
@@ -256,7 +256,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* How it works */}
+          {/* How it works — stacked on mobile, 3-across at desktop */}
           <div style={{ padding: "20px 20px 28px" }}>
             <p style={{
               fontSize: 14, fontWeight: 700, letterSpacing: "0.22em",
@@ -265,15 +265,15 @@ export default async function HomePage() {
             }}>
               How it works
             </p>
-            <div style={{
+            <div className="grid grid-cols-1 lg:grid-cols-3" style={{
               background: "white", borderRadius: 18, overflow: "hidden",
               boxShadow: "0 1px 4px rgba(var(--dark-rgb),0.08)",
-              border: "1px solid rgba(var(--brand-rgb),0.07)"
+              border: "1px solid rgba(var(--brand-rgb),0.07)",
             }}>
               {orderSteps.map((step, i) => (
-                <div key={step.n} style={{
+                <div key={step.n} className="how-it-works-step" style={{
                   display: "flex", gap: 14, padding: "16px 18px", alignItems: "flex-start",
-                  borderBottom: i < orderSteps.length - 1 ? "1px solid rgba(var(--dark-rgb),0.05)" : "none"
+                  borderBottom: i < orderSteps.length - 1 ? "1px solid rgba(var(--dark-rgb),0.05)" : "none",
                 }}>
                   <div style={{
                     width: 30, height: 30, borderRadius: "50%",

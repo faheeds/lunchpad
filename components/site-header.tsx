@@ -78,6 +78,33 @@ export function SiteHeader({
             {restaurantName}
           </p>
         </Link>
+
+        {/* Desktop nav: inline links at ≥1024px */}
+        {!isAdmin && (
+          <nav className="hidden lg:flex lg:gap-8 lg:mx-auto">
+            <Link href="/menu" style={{
+              fontSize: 14, fontWeight: 600, color: "#211D15",
+              textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
+              letterSpacing: "0.01em", textTransform: "uppercase"
+            }}>Menu</Link>
+            <Link href="/order" style={{
+              fontSize: 14, fontWeight: 600, color: "#211D15",
+              textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
+              letterSpacing: "0.01em", textTransform: "uppercase"
+            }}>Order</Link>
+            <Link href="/weekly" style={{
+              fontSize: 14, fontWeight: 600, color: "#211D15",
+              textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
+              letterSpacing: "0.01em", textTransform: "uppercase"
+            }}>Weekly</Link>
+            <Link href="/history" style={{
+              fontSize: 14, fontWeight: 600, color: "#211D15",
+              textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
+              letterSpacing: "0.01em", textTransform: "uppercase"
+            }}>History</Link>
+          </nav>
+        )}
+
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isAdmin ? (
             <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "#2C4031", color: "#F6F1E6", fontFamily: "Fraunces, Georgia, serif", textTransform: "uppercase", letterSpacing: "0.05em" }}>

@@ -49,7 +49,7 @@ export default async function HistoryPage() {
     <>
       <SiteHeaderServer />
       <main className="app-content pb-4" id="main-content">
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 lg:px-8 lg:py-6 lg:max-w-2xl lg:mx-auto">
           <p style={{
             fontSize: 14, fontWeight: 700, letterSpacing: "0.16em",
             textTransform: "uppercase", color: "var(--brand-on-white)",
