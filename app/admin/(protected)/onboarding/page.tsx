@@ -171,7 +171,7 @@ async function generateRecurringForWizard(formData: FormData) {
   }
 
   revalidatePath("/admin/onboarding");
-  redirect("/admin/onboarding?step=7");
+  redirect("/admin/onboarding?step=8");
 }
 
 async function saveNotifications(formData: FormData) {
@@ -366,7 +366,6 @@ export default async function OnboardingPage({
     4: locationCount > 0 ? "done" : "todo",
     5: menuItemCount >= 3 ? "done" : "todo",
     6: deliveryDateCount > 0 ? "done" : "todo",
-    7: teamCount > 1 ? "done" : "todo",
     8: restaurant.testOrderPlacedAt ? "done" : "todo",
     9: restaurant.kitchenSheetSendHour !== null && restaurant.kitchenSheetSendHour !== undefined ? "done" : "todo",
     10: restaurant.onboardingComplete ? "done" : "todo",
@@ -410,7 +409,7 @@ export default async function OnboardingPage({
     { id: 3,  title: "Connect Stripe",     blurb: "Get paid by customers",          status: groupStatus([3]) },
     { id: 4,  title: "Menu & locations",   blurb: "What you sell, where",           status: groupStatus([4, 5]) },
     { id: 6,  title: "Delivery schedule",  blurb: "When you deliver",               status: groupStatus([6]) },
-    { id: 7,  title: "Go live",            blurb: "Team, test order, share — finish at your pace", status: groupStatus([7, 8, 9, 10]) },
+    { id: 7,  title: "Go live",            blurb: "Test order, share — finish at your pace", status: groupStatus([8, 9, 10]) },
   ];
 
   // Map the actual activeStep (1-10) to its group head so the stepper
@@ -842,7 +841,7 @@ export default async function OnboardingPage({
               <div className="flex items-center justify-between pt-2">
                 <Link href="/admin/onboarding?step=5" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
                 <div className="flex gap-2">
-                  <Link href="/admin/onboarding?step=7" className="px-4 py-2 rounded-full border border-editorial-line text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
+                  <Link href="/admin/onboarding?step=8" className="px-4 py-2 rounded-full border border-editorial-line text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
                     Skip →
                   </Link>
                   {schools.length > 0 && status[6] !== "done" && (
@@ -853,33 +852,6 @@ export default async function OnboardingPage({
                 </div>
               </div>
             </form>
-          )}
-
-          {/* ── STEP 7: Invite team ──────────────────────────────── */}
-          {(activeStep >= 7 && activeStep <= 10) && (
-            <div className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 5 of 5 · Go live · Invite team (optional)</p>
-                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Invite your team</h2>
-                <p className="text-[12px] text-editorial-ink-soft mt-1">
-                  You currently have <strong>{teamCount}</strong> team member{teamCount === 1 ? "" : "s"}.
-                  Add co-owners or staff so they can help manage orders.
-                </p>
-              </div>
-
-              <Link href="/admin/team" className="inline-block px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold no-underline hover:bg-editorial-green-deep transition">
-                Open Team page →
-              </Link>
-
-              <div className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=6" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
-                {status[7] !== "done" && (
-                  <Link href="/admin/onboarding?step=8" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold no-underline hover:bg-editorial-green-deep transition">
-                    Continue →
-                  </Link>
-                )}
-              </div>
-            </div>
           )}
 
           {/* ── STEP 8: Test order ───────────────────────────────── */}
@@ -914,7 +886,7 @@ export default async function OnboardingPage({
               </div>
 
               <form action={markTestOrderPlaced} className="flex items-center justify-between pt-2">
-                <Link href="/admin/onboarding?step=7" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
+                <Link href="/admin/onboarding?step=6" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
                 {status[8] !== "done" && (
                   <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
                     I placed a test order — continue →
@@ -983,6 +955,13 @@ export default async function OnboardingPage({
                 <p className="text-[13px] font-mono text-editorial-ink flex-1 min-w-0 truncate font-semibold">{orderingUrl}</p>
                 <CopyUrlButton url={orderingUrl} />
               </div>
+
+              <p className="text-[12px] text-editorial-ink-soft">
+                Want to add co-owners or staff?{" "}
+                <Link href="/admin/team" className="text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
+                  Invite your team →
+                </Link>
+              </p>
 
               <div className="space-y-2">
                 <details className="rounded-lg border border-editorial-line bg-white">
