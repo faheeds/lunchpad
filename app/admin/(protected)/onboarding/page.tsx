@@ -721,25 +721,12 @@ export default async function OnboardingPage({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition">
-                  <p className="text-[13px] font-editorial font-[500] text-editorial-ink">Add manually</p>
-                  <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">Add items one by one with photos, prices, and dietary tags.</p>
-                </Link>
-                <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition">
-                  <p className="text-[13px] font-editorial font-[500] text-editorial-ink">Bulk upload Excel</p>
-                  <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">Download our template, fill it in, drop it back. Fast for 20+ items.</p>
-                </Link>
-                <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition">
-                  <p className="text-[13px] font-editorial font-[500] text-editorial-ink">AI categorize</p>
-                  <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">Paste a list, we&apos;ll suggest categories, prices, and tags.</p>
-                </Link>
-                <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition" style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: "#DEE2CF", color: "#2C4031", border: "1px solid #C0673E" }}>Fastest</span>
-                  <p className="text-[13px] font-editorial font-[500] text-editorial-ink">Import from URL</p>
-                  <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">Paste your existing menu page URL. We&apos;ll extract items, prices, photos, and add-ons automatically.</p>
-                </Link>
-              </div>
+              <Link href="/admin/menu" className="block rounded-[16px] border border-editorial-line p-4 no-underline hover:border-editorial-green hover:bg-editorial-paper-2 transition">
+                <p className="text-[13px] font-editorial font-[500] text-editorial-ink">Build your menu →</p>
+                <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">
+                  Add items manually with photos and prices, bulk upload an Excel template, use AI to categorize a list, or import from an existing menu URL — choose the method that works best for you.
+                </p>
+              </Link>
 
               <div className="flex items-center justify-between pt-2">
                 <Link href="/admin/onboarding?step=4" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
