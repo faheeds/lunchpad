@@ -340,8 +340,8 @@ export default async function OnboardingPage({
   await requireAdminRole("OWNER");
 
   const today = new Date();
-  const ninetyDaysFromNow = new Date(today);
-  ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
+  const twoWeeksFromNow = new Date(today);
+  twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
   const [locationCount, menuItemCount, deliveryDateCount, teamCount, schools] = await Promise.all([
     prisma.school.count({ where: { restaurantId: restaurant.id, isActive: true } }),
@@ -374,7 +374,7 @@ export default async function OnboardingPage({
 
   const orderingUrl = `https://${restaurant.slug}.lunchpad.us`;
   const todayStr = today.toISOString().slice(0, 10);
-  const ninetyDaysStr = ninetyDaysFromNow.toISOString().slice(0, 10);
+  const twoWeeksStr = twoWeeksFromNow.toISOString().slice(0, 10);
 
   // Determine active step: explicit ?step=, else first non-done step.
   const requestedStep = params.step ? parseInt(params.step, 10) : NaN;
@@ -790,7 +790,7 @@ export default async function OnboardingPage({
                     <div>
                       <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Through</label>
                       <input type="date" name="endDate" required
-                        defaultValue={ninetyDaysStr}
+                        defaultValue={twoWeeksStr}
                         className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                     </div>
                   </div>
