@@ -1,6 +1,5 @@
 "use client";
 
-import { THEMES } from "@/lib/themes";
 import { DISPLAY_FONTS, BODY_FONTS } from "@/lib/fonts";
 import { useState } from "react";
 
@@ -272,24 +271,23 @@ export function ThemePicker({
         </div>
       </div>
 
-      {/* ── Preset swatches ──────────────────────────────── */}
+      {/* ── Reset to LunchPad default ──────────────────────── */}
       <div>
-        <p className="text-[11px] text-slate-500 font-medium mb-2">Preset themes</p>
-        <div className="grid grid-cols-4 gap-2">
-          {THEMES.map((theme) => (
-            <button key={theme.id} type="button"
-              onClick={() => applyColors({ darkColor: theme.dark, primaryColor: theme.primary, accentColor: theme.accent })}
-              title={theme.name}
-              className="flex flex-col items-center gap-1.5 group">
-              <div className="w-full h-10 rounded-lg overflow-hidden flex flex-col border border-slate-200 group-hover:ring-2 group-hover:ring-offset-1 group-hover:ring-brand-700/50 transition">
-                <div className="flex-1" style={{ background: theme.dark }} />
-                <div className="flex-1" style={{ background: theme.primary }} />
-                <div className="h-2"   style={{ background: theme.accent }} />
-              </div>
-              <span className="text-[9px] text-slate-500 text-center leading-tight">{theme.name}</span>
-            </button>
-          ))}
-        </div>
+        <button type="button"
+          onClick={() => applyColors({
+            primaryColor:    "#2C4031",
+            accentColor:     "#C0673E",
+            darkColor:       "#1E2C22",
+            heroTitleColor:  "#ffffff",
+            heroAccentColor: "#fbbf24",
+            bodyTextColor:   "#211D15",
+            displayFont:     "Fraunces",
+            bodyFont:        "Inter",
+          })}
+          className="w-full py-2.5 rounded-lg text-[12px] font-semibold text-white transition"
+          style={{ background: "#2C4031" }}>
+          ↺ Reset to LunchPad default
+        </button>
       </div>
 
       {/* ── Color pickers ────────────────────────────────── */}
