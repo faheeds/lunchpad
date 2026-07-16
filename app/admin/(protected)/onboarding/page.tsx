@@ -855,7 +855,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 8: Test order ───────────────────────────────── */}
-          {(activeStep >= 7 && activeStep <= 10) && (
+          {(activeStep >= 8 && activeStep <= 10) && (
             <div className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 5 of 5 · Go live · Place a test order</p>
@@ -897,7 +897,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 9: Notifications ────────────────────────────── */}
-          {(activeStep >= 7 && activeStep <= 10) && (
+          {(activeStep >= 9 && activeStep <= 10) && (
             <form action={saveNotifications} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 5 of 5 · Go live · Notifications (optional)</p>
@@ -937,7 +937,7 @@ export default async function OnboardingPage({
           )}
 
           {/* ── STEP 10 (FINAL): Share & launch ────────────────── */}
-          {(activeStep >= 7 && activeStep <= 10) && (
+          {(activeStep >= 10 && activeStep <= 10) && (
             <div className="rounded-[16px] border border-editorial-sage bg-gradient-to-br from-editorial-sage/30 to-editorial-paper p-6 space-y-5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
                 <div className="w-12 h-12 rounded-full bg-editorial-green flex items-center justify-center mb-3">
