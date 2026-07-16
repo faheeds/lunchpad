@@ -145,7 +145,7 @@ export default async function ParentAccountPage() {
     <>
       <SiteHeaderServer />
       <main className="app-content pb-36" id="main-content">
-        <div className="px-4 py-4 space-y-5">
+        <div className="px-4 py-4 space-y-5" style={{ maxWidth: 720, margin: "0 auto" }}>
 
           {/* ── Profile header ─────────────────────────────────────── */}
           <div style={{
@@ -402,11 +402,12 @@ export default async function ParentAccountPage() {
       {/* Sticky weekly checkout */}
       {activeWeeklyPlanCount > 0 && (
         <div className="fixed inset-x-0 bottom-[52px] z-20 px-4 pb-2 pointer-events-none"
-          style={{ maxWidth: 480, margin: "0 auto", left: 0, right: 0 }}>
+          style={{ maxWidth: 960, margin: "0 auto", left: 0, right: 0 }}>
           <div style={{
             borderRadius: 18, border: "1px solid #E3DBC6",
             background: "rgba(252,250,243,0.97)", backdropFilter: "blur(12px)",
             padding: "12px 16px", boxShadow: "0 4px 20px rgba(33,29,21,0.12)",
+            maxWidth: 720, margin: "0 auto",
           }} className="pointer-events-auto flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-on-white)" }}>

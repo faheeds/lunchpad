@@ -139,8 +139,8 @@ export default async function MenuPage() {
                   </p>
                 </div>
 
-                {/* 2-column grid */}
-                <div style={{
+                {/* Responsive grid: 2 columns below 1280px, 3 at 1280px+ */}
+                <div className="menu-grid" style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(2, 1fr)",
                   gap: 12,

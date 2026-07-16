@@ -218,7 +218,7 @@ export default async function HomePage() {
 
           {/* Feature cards */}
           <div style={{ padding: "20px 20px 0" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
               {features.map((f) => {
                 const card = (
                   <div style={{
@@ -265,13 +265,15 @@ export default async function HomePage() {
             }}>
               How it works
             </p>
-            <div style={{
+            <div className="how-it-works-grid" style={{
               background: "white", borderRadius: 18, overflow: "hidden",
               boxShadow: "0 1px 4px rgba(var(--dark-rgb),0.08)",
-              border: "1px solid rgba(var(--brand-rgb),0.07)"
+              border: "1px solid rgba(var(--brand-rgb),0.07)",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
             }}>
               {orderSteps.map((step, i) => (
-                <div key={step.n} style={{
+                <div key={step.n} className="how-it-works-step" style={{
                   display: "flex", gap: 14, padding: "16px 18px", alignItems: "flex-start",
                   borderBottom: i < orderSteps.length - 1 ? "1px solid rgba(var(--dark-rgb),0.05)" : "none"
                 }}>

@@ -73,8 +73,16 @@ body {
 }
 
 @media (min-width: 1024px) {
+  /* Tenant pages break out of the phone-card aesthetic at desktop width.
+   * The shell widens to ~960px with flat styling (no border-radius/shadow),
+   * same editorial paper background as admin. */
   .is-tenant .app-shell {
-    max-width: 560px;
+    max-width: 960px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    background: #fffbf7;
   }
 
   /* Platform landing drops the phone constraint at desktop and fills
@@ -120,6 +128,38 @@ body {
   bottom: 0;
   z-index: 20;
   flex-shrink: 0;
+}
+
+/* Desktop layout: break out of phone-card, hide bottom nav, show inline nav. */
+@media (min-width: 1024px) {
+  .is-tenant .app-bnav {
+    display: none;
+  }
+
+  .desktop-nav {
+    display: flex !important;
+  }
+
+  /* How it works: 3 columns with right borders instead of bottom borders. */
+  .how-it-works-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .how-it-works-step {
+    border-bottom: none !important;
+    border-right: 1px solid rgba(var(--dark-rgb),0.05);
+  }
+
+  .how-it-works-step:nth-child(3n) {
+    border-right: none;
+  }
+}
+
+/* Wide desktop: menu grid shifts to 3 columns. */
+@media (min-width: 1280px) {
+  .menu-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
 }
 
 /* Hide scrollbar for food strip */
