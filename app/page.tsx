@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { formatInTimeZone } from "date-fns-tz";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
@@ -10,20 +11,48 @@ import { PlatformLanding } from "@/components/platform-landing";
 
 export const dynamic = "force-dynamic";
 
-// ─── Restaurant ordering page steps ──────────────────────────────────────────
-//
-// The platform-marketing landing page (apex domain) was redesigned in
-// the v10 mockup — see _archive/landing-page-v9.tsx.bak for the previous
-// version if you ever want to compare or revert. The restaurant-subdomain
-// branch below is untouched.
-
-const orderSteps = [
-  { n: "1", title: "Pick location & date", body: "Select a location and an available delivery date. Ordering closes at 9 PM the night before." },
-  { n: "2", title: "Build your order",   body: "Choose from our full menu — burgers, chicken, salads, sides & more. Full customization available." },
-  { n: "3", title: "Pay & confirm",      body: "Secure Stripe checkout. Confirmation email sent right away." },
-];
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
+
+function buildMenuSummary(categories: string[]): string {
+  if (categories.length === 0) {
+    return "Choose from the full menu — fully customizable";
+  }
+
+  // Take up to 3 distinct categories and join with commas + "& more"
+  const displayed = categories.slice(0, 3);
+  if (displayed.length === 1) {
+    return `${displayed[0]} & more`;
+  }
+  return `${displayed.slice(0, -1).join(", ")} & ${displayed[displayed.length - 1]}`;
+}
+
+function buildCutoffCopy(nextDeliveryDate: any): string {
+  if (!nextDeliveryDate) {
+    return "Each delivery date shows its own ordering deadline";
+  }
+
+  const cutoffDayName = formatInTimeZone(
+    new Date(nextDeliveryDate.cutoffAt),
+    nextDeliveryDate.school.timezone,
+    "EEEE"
+  );
+  const cutoffTime = formatInTimeZone(
+    nextDeliveryDate.cutoffAt,
+    nextDeliveryDate.school.timezone,
+    "h:mm a"
+  );
+
+  // Calculate the day of delivery (assuming cutoff is the day before)
+  const cutoffDate = new Date(nextDeliveryDate.cutoffAt);
+  const deliveryDate = new Date(nextDeliveryDate.deliveryDate);
+  const daysBefore = Math.round((deliveryDate.getTime() - cutoffDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (daysBefore === 1) {
+    return `Ordering closes ${cutoffDayName} ${cutoffTime} for next-day delivery`;
+  } else {
+    return `Each delivery date shows its own ordering deadline`;
+  }
+}
 
 export default async function HomePage() {
   const restaurant = await getCurrentRestaurant();
@@ -36,11 +65,42 @@ export default async function HomePage() {
     // neutral (hybrid) copy across the tenant landing page.
     const labels = getLabelsForOperator(restaurant.operatorType);
 
+    // Fetch distinct menu categories for summary copy
+    const menuItems = await prisma.menuItem.findMany({
+      where: { restaurantId: restaurant.id, isActive: true },
+      select: { category: true },
+      distinct: ["category"],
+      orderBy: { category: "asc" },
+    });
+    const categories = menuItems
+      .map((m) => m.category?.trim())
+      .filter(Boolean) as string[];
+    const menuSummary = buildMenuSummary(categories);
+
+    // Fetch the next open delivery date for cutoff copy
+    const nextDeliveryDate = await prisma.deliveryDate.findFirst({
+      where: {
+        orderingOpen: true,
+        cancelledAt: null,
+        cutoffAt: { gt: new Date() },
+        school: { isActive: true, restaurantId: restaurant.id }
+      },
+      include: { school: { select: { timezone: true } } },
+      orderBy: { deliveryDate: "asc" }
+    });
+    const cutoffCopy = buildCutoffCopy(nextDeliveryDate);
+
     const features = [
       { text: schoolCount === 1 ? `1 ${labels.type.toLowerCase()}` : `${schoolCount} ${labels.typePlural.toLowerCase()}`, sub: `Fresh lunch delivered on-site`, icon: "location", href: null },
-      { text: "Full menu",      sub: "Burgers, salads, chicken & more",  icon: "menu",     href: "/menu"    },
+      { text: "Full menu",      sub: menuSummary,  icon: "menu",     href: "/menu"    },
       { text: labels.unit === "Student" ? "Add Your Kids" : `Save ${labels.unitPlural}`,  sub: "Faster checkout every time",       icon: "child",    href: "/account" },
       { text: "Weekly planner", sub: "One checkout for the week",        icon: "calendar", href: "/weekly"  },
+    ];
+
+    const orderSteps = [
+      { n: "1", title: "Pick location & date", body: `Select a location and an available delivery date. ${cutoffCopy}` },
+      { n: "2", title: "Build your order",   body: `Choose from our full menu — ${menuSummary.toLowerCase()}. Full customization available.` },
+      { n: "3", title: "Pay & confirm",      body: "Secure Stripe checkout. Confirmation email sent right away." },
     ];
 
     const itemsWithPhotos = await prisma.menuItem.findMany({
