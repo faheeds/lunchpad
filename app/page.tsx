@@ -216,9 +216,9 @@ export default async function HomePage() {
             </div>
           )}
 
-          {/* Feature cards */}
+          {/* Feature cards — 2-up mobile, 4-up desktop */}
           <div style={{ padding: "20px 20px 0" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="lg:grid-cols-4">
               {features.map((f) => {
                 const card = (
                   <div style={{
@@ -256,7 +256,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* How it works */}
+          {/* How it works — vertical on mobile, horizontal 3-across at desktop */}
           <div style={{ padding: "20px 20px 28px" }}>
             <p style={{
               fontSize: 14, fontWeight: 700, letterSpacing: "0.22em",
@@ -269,12 +269,12 @@ export default async function HomePage() {
               background: "white", borderRadius: 18, overflow: "hidden",
               boxShadow: "0 1px 4px rgba(var(--dark-rgb),0.08)",
               border: "1px solid rgba(var(--brand-rgb),0.07)"
-            }}>
+            }} className="lg:flex lg:flex-row">
               {orderSteps.map((step, i) => (
                 <div key={step.n} style={{
                   display: "flex", gap: 14, padding: "16px 18px", alignItems: "flex-start",
                   borderBottom: i < orderSteps.length - 1 ? "1px solid rgba(var(--dark-rgb),0.05)" : "none"
-                }}>
+                }} className="lg:flex-1 lg:flex-col lg:border-0 lg:border-l lg:first:border-l-0">
                   <div style={{
                     width: 30, height: 30, borderRadius: "50%",
                     background: "var(--brand-on-white)", display: "flex",

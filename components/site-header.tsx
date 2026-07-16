@@ -78,6 +78,27 @@ export function SiteHeader({
             {restaurantName}
           </p>
         </Link>
+        {/* Desktop nav — visible at >=1024px */}
+        {!isAdmin && (
+          <nav className="hidden lg:flex items-center gap-6">
+            {[
+              { href: "/", label: "Home" },
+              { href: "/menu", label: "Menu" },
+              { href: "/order", label: "Order" },
+              { href: "/weekly", label: "Weekly" },
+              { href: "/history", label: "History" },
+              { href: "/account", label: "Account" },
+            ].map((item) => (
+              <Link key={item.href} href={item.href} style={{
+                fontSize: 14, fontWeight: 600, color: "#211D15",
+                textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
+                textTransform: "uppercase", letterSpacing: "0.02em",
+              }}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isAdmin ? (
             <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "#2C4031", color: "#F6F1E6", fontFamily: "Fraunces, Georgia, serif", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -110,6 +131,7 @@ export function SiteHeader({
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
+                className="lg:hidden"
                 style={{
                   width: 32, height: 32, borderRadius: 8,
                   border: "1px solid #E3DBC6",
