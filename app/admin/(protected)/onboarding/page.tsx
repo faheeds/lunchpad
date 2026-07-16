@@ -798,21 +798,24 @@ export default async function OnboardingPage({
                   <div>
                     <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">On these weekdays</label>
                     <div className="grid grid-cols-7 gap-1.5">
-                      {[
-                        { v: 1, l: "Mon", on: true  },
-                        { v: 2, l: "Tue", on: false },
-                        { v: 3, l: "Wed", on: true  },
-                        { v: 4, l: "Thu", on: false },
-                        { v: 5, l: "Fri", on: true  },
-                        { v: 6, l: "Sat", on: false },
-                        { v: 0, l: "Sun", on: false },
-                      ].map((d) => (
-                        <label key={d.v}
-                          className="flex flex-col items-center justify-center cursor-pointer rounded-lg border border-editorial-line py-2 has-[:checked]:bg-editorial-green has-[:checked]:text-editorial-paper has-[:checked]:border-editorial-green transition">
-                          <input type="checkbox" name="weekdays" value={d.v} defaultChecked={d.on} className="sr-only" />
-                          <span className="text-[11px] font-semibold">{d.l}</span>
-                        </label>
-                      ))}
+                      {(() => {
+                        const isOffice = restaurant.operatorType === "office";
+                        return [
+                          { v: 1, l: "Mon", on: true  },
+                          { v: 2, l: "Tue", on: isOffice },
+                          { v: 3, l: "Wed", on: true  },
+                          { v: 4, l: "Thu", on: isOffice },
+                          { v: 5, l: "Fri", on: true  },
+                          { v: 6, l: "Sat", on: false },
+                          { v: 0, l: "Sun", on: false },
+                        ].map((d) => (
+                          <label key={d.v}
+                            className="flex flex-col items-center justify-center cursor-pointer rounded-lg border border-editorial-line py-2 has-[:checked]:bg-editorial-green has-[:checked]:text-editorial-paper has-[:checked]:border-editorial-green transition">
+                            <input type="checkbox" name="weekdays" value={d.v} defaultChecked={d.on} className="sr-only" />
+                            <span className="text-[11px] font-semibold">{d.l}</span>
+                          </label>
+                        ));
+                      })()}
                     </div>
                   </div>
 
