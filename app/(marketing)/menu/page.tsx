@@ -55,7 +55,7 @@ export default async function MenuPage() {
           position: "relative",
           overflow: "hidden",
           boxShadow: "0 2px 8px rgba(33,29,21,0.08)",
-        }}>
+        }} className="lg:mx-auto lg:max-w-2xl lg:px-8">
           <p style={{
             fontSize: 14, fontWeight: 700, letterSpacing: "0.22em",
             textTransform: "uppercase", color: "#938B78", marginBottom: 6,
@@ -93,7 +93,7 @@ export default async function MenuPage() {
           borderTop: "1px solid #E3DBC6",
           borderBottom: "1px solid #E3DBC6",
           position: "sticky", top: 0, zIndex: 10,
-        }}>
+        }} className="lg:mx-auto lg:max-w-2xl lg:px-8">
           {categories.map((cat) => {
             const count = grouped.get(cat)?.length ?? 0;
             if (!count) return null;
@@ -119,7 +119,7 @@ export default async function MenuPage() {
         </div>
 
         {/* ── Item grid by category ───────────────────────────────────────── */}
-        <div style={{ padding: "4px 0 100px", background: "#F6F1E6" }}>
+        <div style={{ padding: "4px 0 100px", background: "#F6F1E6" }} className="lg:mx-auto lg:max-w-2xl">
           {categories.map((cat) => {
             const catItems = grouped.get(cat);
             if (!catItems?.length) return null;
@@ -139,12 +139,12 @@ export default async function MenuPage() {
                   </p>
                 </div>
 
-                {/* 2-column grid */}
+                {/* 2-column grid (mobile), 3-column at >=1280px */}
                 <div style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(2, 1fr)",
                   gap: 12,
-                }}>
+                }} className="lg:grid-cols-2 xl:grid-cols-3">
                   {catItems.map((item) => (
                     <MenuItemCard
                       key={item.id}

@@ -29,9 +29,10 @@ body {
 
 /* Tablet & up: phone-card aesthetic — centered column with shadow.
  *
- * Tenant ordering pages (shake-shack.lunchpad.us, etc.) are mobile-first,
- * so we keep them constrained as a phone-card on wider screens rather than
- * stretching the order rows across 1900px of empty space.
+ * Tenant ordering pages (shake-shack.lunchpad.us, etc.) are mobile-first
+ * on mobile (480px) and tablet (560px at >=1024px old breakpoint). At
+ * the new >=1024px desktop breakpoint, tenant pages break out into a full
+ * editorial layout (960px → 1024px at >=1280px).
  *
  * Admin pages on the same subdomain (/admin/*) are NOT mobile-first — they
  * have tables, charts, multi-column forms, etc. that need full width even
@@ -40,10 +41,6 @@ body {
  * The platform marketing page (lunchpad.us) is also fine in the phone-card
  * at tablet width (single-column hero design), but breaks free at desktop
  * via the .is-platform rule below.
- *
- * Base width stays at 480px on tablet; tenant bumps to 560px on real
- * desktop so the column feels a touch roomier without becoming a full
- * desktop layout (which would require redesigning every screen).
  */
 @media (min-width: 640px) {
   .is-tenant .app-shell,
@@ -73,8 +70,17 @@ body {
 }
 
 @media (min-width: 1024px) {
+  /* Tenant pages break out of phone-card at >=1024px. Shell widens to ~960px,
+   * flat editorial layout, same background as admin. Navigation moves to
+   * header, bottom nav hidden. */
   .is-tenant .app-shell {
-    max-width: 560px;
+    max-width: 960px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    background: #fffbf7;
   }
 
   /* Platform landing drops the phone constraint at desktop and fills
@@ -88,6 +94,13 @@ body {
     box-shadow: none;
     overflow: visible;
     background: transparent;
+  }
+}
+
+@media (min-width: 1280px) {
+  /* At 1280px+, tenant shell can comfortably reach wider layouts */
+  .is-tenant .app-shell {
+    max-width: 1024px;
   }
 }
 
@@ -111,6 +124,12 @@ body {
   background: #ffffff;
 }
 
+@media (min-width: 1024px) {
+  .is-tenant .app-content {
+    background: #fffbf7;
+  }
+}
+
 .app-bnav {
   background: var(--dark-bg, #1c0505);
   border-top: none;
@@ -120,6 +139,12 @@ body {
   bottom: 0;
   z-index: 20;
   flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .app-bnav {
+    display: none;
+  }
 }
 
 /* Hide scrollbar for food strip */
