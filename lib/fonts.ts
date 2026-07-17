@@ -124,7 +124,7 @@ export const BODY_FONTS: FontOption[] = [
 ];
 
 export function getDisplayFont(id?: string | null): FontOption {
-  return DISPLAY_FONTS.find((f) => f.id === id) ?? DISPLAY_FONTS[0];
+  return DISPLAY_FONTS.find((f) => f.id === id) ?? DISPLAY_FONTS.find((f) => f.id === "Fraunces")!;
 }
 
 export function getBodyFont(id?: string | null): FontOption {
