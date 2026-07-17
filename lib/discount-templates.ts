@@ -154,7 +154,7 @@ export const TEMPLATES: TemplateMeta[] = [
     title: "Spend & save",
     description: "Order over a threshold, save on everything.",
     example: "$30 → 10% off",
-    available: false,
+    available: true,
     defaults: { ...COMMON_DEFAULTS, minOrderCents: 3000 },
   },
   {
