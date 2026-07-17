@@ -53,13 +53,13 @@ async function saveBranding(formData: FormData) {
     data: {
       logoUrl:         (String(formData.get("logoUrl") || "").trim() || null),
       heroImageUrl:    (String(formData.get("heroImageUrl") || "").trim() || null),
-      primaryColor:    String(formData.get("primaryColor") || "#c41230").trim(),
-      accentColor:     String(formData.get("accentColor") || "#f59e0b").trim(),
-      darkColor:       String(formData.get("darkColor") || "#1c0505").trim(),
+      primaryColor:    String(formData.get("primaryColor") || "#2C4031").trim(),
+      accentColor:     String(formData.get("accentColor") || "#C0673E").trim(),
+      darkColor:       String(formData.get("darkColor") || "#1E2C22").trim(),
       heroTitleColor:  String(formData.get("heroTitleColor") || "#ffffff").trim(),
       heroAccentColor: String(formData.get("heroAccentColor") || "#fbbf24").trim(),
-      bodyTextColor:   String(formData.get("bodyTextColor") || "#1c0505").trim(),
-      displayFont:     String(formData.get("displayFont") || "Oswald").trim(),
+      bodyTextColor:   String(formData.get("bodyTextColor") || "#211D15").trim(),
+      displayFont:     String(formData.get("displayFont") || "Fraunces").trim(),
       bodyFont:        String(formData.get("bodyFont") || "Inter").trim(),
     },
   });
@@ -551,13 +551,13 @@ export default async function OnboardingPage({
                 <div className="border-t border-editorial-line pt-4">
                   <p className="text-[12px] font-editorial font-[500] text-editorial-ink mb-3">Theme</p>
                   <ThemePicker
-                    currentPrimary={restaurant.primaryColor     ?? "#c41230"}
-                    currentAccent={restaurant.accentColor       ?? "#f59e0b"}
-                    currentDark={restaurant.darkColor           ?? "#1c0505"}
+                    currentPrimary={restaurant.primaryColor     ?? "#2C4031"}
+                    currentAccent={restaurant.accentColor       ?? "#C0673E"}
+                    currentDark={restaurant.darkColor           ?? "#1E2C22"}
                     currentHeroTitle={restaurant.heroTitleColor  ?? "#ffffff"}
                     currentHeroAccent={restaurant.heroAccentColor ?? "#fbbf24"}
-                    currentBodyText={restaurant.bodyTextColor    ?? "#1c0505"}
-                    currentDisplayFont={restaurant.displayFont   ?? "Oswald"}
+                    currentBodyText={restaurant.bodyTextColor    ?? "#211D15"}
+                    currentDisplayFont={restaurant.displayFont   ?? "Fraunces"}
                     currentBodyFont={restaurant.bodyFont         ?? "Inter"}
                   />
                 </div>
@@ -580,13 +580,13 @@ export default async function OnboardingPage({
                     name: restaurant.name,
                     logoUrl: restaurant.logoUrl ?? "",
                     heroImageUrl: restaurant.heroImageUrl ?? "",
-                    primaryColor: restaurant.primaryColor ?? "#c41230",
-                    accentColor: restaurant.accentColor ?? "#f59e0b",
-                    darkColor: restaurant.darkColor ?? "#1c0505",
+                    primaryColor: restaurant.primaryColor ?? "#2C4031",
+                    accentColor: restaurant.accentColor ?? "#C0673E",
+                    darkColor: restaurant.darkColor ?? "#1E2C22",
                     heroTitleColor: restaurant.heroTitleColor ?? "#ffffff",
                     heroAccentColor: restaurant.heroAccentColor ?? "#fbbf24",
-                    bodyTextColor: restaurant.bodyTextColor ?? "#1c0505",
-                    displayFont: restaurant.displayFont ?? "Oswald",
+                    bodyTextColor: restaurant.bodyTextColor ?? "#211D15",
+                    displayFont: restaurant.displayFont ?? "Fraunces",
                     bodyFont: restaurant.bodyFont ?? "Inter",
                   }}
                 />
