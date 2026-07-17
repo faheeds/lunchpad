@@ -805,7 +805,7 @@ export function OrderForm({
                     className="w-full rounded-xl text-[13px] px-3 py-2"
                     value={studentName}
                     onChange={(e) => setStudentName(e.target.value)}
-                    placeholder={isOffice ? "Coworker's name" : "Student name"}
+                    placeholder={labels.unitName}
                     required
                     style={{ backgroundColor: "white", borderColor: "#E3DBC6" }}
                   />
