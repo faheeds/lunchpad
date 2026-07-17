@@ -5,12 +5,11 @@ import { menuItemSchema, menuOptionSchema } from "@/lib/validation/order";
 import { slugify } from "@/lib/utils";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
-import { BulkMenuUpload } from "@/components/admin/bulk-menu-upload";
-import { MenuUrlImport } from "@/components/admin/menu-url-import";
 import { ConfirmButton } from "@/components/admin/confirm-button";
+import { EmptyState } from "@/components/admin/empty-state";
+import { MenuAddTabs } from "@/components/admin/menu-add-tabs";
 import { ImageUpload } from "@/components/admin/image-upload";
 import { DietaryTagsPicker } from "@/components/admin/dietary-tags-picker";
-import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +39,7 @@ async function createMenuOption(formData: FormData) {
   "use server";
   await requireRestaurant();
   await requireAdminRole("MANAGER");
-  const priceDollars = parseFloat(String(formData.get("priceDollars") || "0"));
-  const priceDeltaCents = isNaN(priceDollars) ? 0 : Math.round(priceDollars * 100);
+  const priceDeltaCents = parseInt(String(formData.get("priceDeltaCents") || "0"), 10) || 0;
   const parsed = menuOptionSchema.parse({
     menuItemId: formData.get("menuItemId"),
     name: formData.get("name"),
@@ -374,139 +372,7 @@ export default async function AdminMenuPage() {
     <div className="bg-editorial-paper min-h-screen space-y-5 pb-10">
       <h1 className="text-[32px] font-editorial font-medium text-editorial-ink">Menu</h1>
 
-      {/* Add item */}
-      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
-        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[14px] font-editorial font-medium text-editorial-ink">+ Add menu item</span>
-          <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
-        </summary>
-        <form action={createMenuItem} className="px-4 pb-4 border-t border-editorial-line pt-3 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
-            <div>
-              <ImageUpload name="imageUrl" label="Photo" aspect="square" />
-            </div>
-            <div className="space-y-2">
-              <div>
-                <label className="text-[12px] text-editorial-ink-soft mb-1 block">Item name</label>
-                <input name="name" placeholder="e.g. Crispy Chicken Sandwich" required
-                  className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
-              </div>
-              <div>
-                <label className="text-[12px] text-editorial-ink-soft mb-1 block">Price</label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-editorial-ink-faint pointer-events-none">$</span>
-                  <input name="price" type="number" step="0.01" min="0" placeholder="12.99" required
-                    className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] pl-6 pr-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="text-[12px] text-editorial-ink-soft mb-1 block">Description</label>
-            <input name="description" placeholder="A short, mouth-watering description"
-              className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
-          </div>
-          <div>
-            <label className="text-[12px] text-editorial-ink-soft mb-1 block">Category <span className="text-editorial-ink-faint font-normal">(optional)</span></label>
-            <input name="category" placeholder="e.g. Sandwiches, Salads, Pizza"
-              className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
-          </div>
-          <div>
-            <label className="text-[12px] text-editorial-ink-soft mb-1 block">Dietary tags</label>
-            <DietaryTagsPicker />
-          </div>
-          <div>
-            <label className="text-[12px] text-editorial-ink-soft mb-1 block">
-              Required choices <span className="text-editorial-ink-faint font-normal">(optional — pick-one)</span>
-            </label>
-            <textarea name="requiredChoices" rows={3}
-              placeholder={"One per line, e.g.\nBeef\nCrispy Chicken\nVegan"}
-              className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 leading-snug resize-y font-mono focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
-            <p className="text-[11px] text-editorial-ink-faint mt-1">
-              Customers must pick exactly one to add this item to their cart. Leave blank if not needed.
-            </p>
-          </div>
-          <label className="flex items-center gap-2 text-[12px] text-editorial-ink-soft cursor-pointer">
-            <input type="checkbox" name="isActive" defaultChecked className="rounded border-editorial-line text-editorial-green focus:ring-editorial-green" />
-            Active (visible to customers)
-          </label>
-          <button type="submit"
-            className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-            Create item
-          </button>
-        </form>
-      </details>
-
-      {/* Import from URL — AI-driven menu extraction. Slotted before
-          the Excel upload because operators with an existing online menu
-          will reach for this first; Excel is the fallback for those
-          starting from scratch. */}
-      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
-        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[14px] font-editorial font-medium text-editorial-ink">🪄 Import menu from a URL</span>
-          <span className="text-[11px] text-editorial-ink-faint">AI-powered · review before saving</span>
-        </summary>
-        <div className="px-4 pb-4 border-t border-editorial-line pt-3">
-          <MenuUrlImport />
-        </div>
-      </details>
-
-      {/* Bulk upload */}
-      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
-        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[14px] font-editorial font-medium text-editorial-ink">⬆ Bulk upload menu</span>
-          <span className="text-[11px] text-editorial-ink-faint">Upload Excel file</span>
-        </summary>
-        <div className="px-4 pb-4 border-t border-editorial-line pt-3">
-          <BulkMenuUpload />
-        </div>
-      </details>
-
-      {/* Add option */}
-      <details className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
-        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-          <span className="text-[14px] font-editorial font-medium text-editorial-ink">+ Add option to existing item</span>
-          <span className="text-[11px] text-editorial-ink-faint">tap to expand</span>
-        </summary>
-        <form action={createMenuOption} className="px-4 pb-4 border-t border-editorial-line pt-3 space-y-2">
-          <div>
-            <label className="text-[12px] text-editorial-ink-soft mb-1 block">Menu item</label>
-            <select name="menuItemId" className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[12px] text-editorial-ink-soft mb-1 block">Option name</label>
-              <input name="name" placeholder="e.g. Extra cheese" required
-                className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
-            </div>
-            <div>
-              <label className="text-[12px] text-editorial-ink-soft mb-1 block">Type</label>
-              <select name="optionType" className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
-                <option value="ADD_ON">Add-on</option>
-                <option value="REMOVAL">Removal</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[12px] text-editorial-ink-soft mb-1 block">Price delta (cents, 0 = free)</label>
-              <input name="priceDeltaCents" defaultValue="0" required
-                className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
-            </div>
-            <div>
-              <label className="text-[12px] text-editorial-ink-soft mb-1 block">Sort order</label>
-              <input name="sortOrder" defaultValue="0" required
-                className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
-            </div>
-          </div>
-          <button type="submit"
-            className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-            Add option
-          </button>
-        </form>
-      </details>
+      <MenuAddTabs items={items} createMenuItem={createMenuItem} createMenuOption={createMenuOption} />
 
       {items.length === 0 && (
         <EmptyState
