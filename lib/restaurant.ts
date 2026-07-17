@@ -28,7 +28,7 @@ export const getCurrentRestaurant = cache(async (): Promise<Restaurant | null> =
                "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
                "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
                "isActive", "stripeAccountId", "stripeOnboardingComplete",
-               plan, "subscriptionStatus", "trialEndsAt", "createdAt", "updatedAt"
+               plan, "trialEndsAt", "createdAt", "updatedAt"
         FROM "Restaurant"
         WHERE slug = ${slug} AND "isActive" = true
         LIMIT 1
@@ -79,7 +79,7 @@ export async function requireRestaurant(): Promise<Restaurant> {
                  "darkColor", "heroImageUrl", "heroTitleColor", "heroAccentColor",
                  "bodyTextColor", "displayFont", "bodyFont", "contactEmail", "contactPhone",
                  "isActive", "stripeAccountId", "stripeOnboardingComplete",
-                 plan, "subscriptionStatus", "trialEndsAt", "createdAt", "updatedAt"
+                 plan, "trialEndsAt", "createdAt", "updatedAt"
           FROM "Restaurant"
           WHERE id = ${restaurantId} AND "isActive" = true
           LIMIT 1
