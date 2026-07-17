@@ -170,6 +170,15 @@ export const discountInputSchema = z.object({
     });
   }
 
+  // ITEM_DISCOUNT needs at least one item or category selected.
+  if (data.templateKind === "ITEM_DISCOUNT" && data.itemIds.length === 0 && data.categories.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["itemIds"],
+      message: "Pick at least one item or category.",
+    });
+  }
+
   // Window sanity: end after start.
   if (data.startsAt && data.endsAt && data.endsAt < data.startsAt) {
     ctx.addIssue({

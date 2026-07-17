@@ -73,13 +73,14 @@ export interface DiscountBuilderProps {
   template: TemplateMeta;
   initial: BuilderState;
   schools: { id: string; name: string }[];
+  menuItems: { id: string; name: string; category: string | null }[];
   /** When set, the builder operates in edit mode. */
   discountId?: string;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function DiscountBuilder({ template, initial, schools, discountId }: DiscountBuilderProps) {
+export function DiscountBuilder({ template, initial, schools, menuItems, discountId }: DiscountBuilderProps) {
   const router = useRouter();
   const [state, setState] = useState<BuilderState>(initial);
   const [openPillId, setOpenPillId] = useState<string | null>(null);
@@ -197,6 +198,11 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
         ) : template.kind === "DAY_OF_WEEK" ? (
           <>
             <WeekdayPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+            {"."}
+          </>
+        ) : template.kind === "ITEM_DISCOUNT" ? (
+          <>
+            <ItemPill state={state} update={update} menuItems={menuItems} openPillId={openPillId} setOpenPillId={setOpenPillId} />
             {"."}
           </>
         ) : (
@@ -595,6 +601,81 @@ function WeekdayPill({ state, update, openPillId, setOpenPillId }: PillSharedPro
           );
         })}
       </div>
+    </DiscountPill>
+  );
+}
+
+function ItemPill({ state, update, menuItems, openPillId, setOpenPillId }: PillSharedProps & { menuItems: { id: string; name: string; category: string | null }[] }) {
+  const isDefault = state.itemIds.length === 0 && state.categories.length === 0;
+  const label = isDefault
+    ? "any items"
+    : state.itemIds.length === 1 && state.categories.length === 0
+    ? menuItems.find((m) => m.id === state.itemIds[0])?.name ?? "selected"
+    : state.categories.length === 1 && state.itemIds.length === 0
+    ? `${state.categories[0]}`
+    : `${(state.itemIds.length || 0) + (state.categories.length || 0)} selections`;
+
+  // Group items by category for display
+  const categories = new Map<string | null, typeof menuItems>();
+  for (const item of menuItems) {
+    const cat = item.category ?? "(Uncategorized)";
+    if (!categories.has(cat)) categories.set(cat, []);
+    categories.get(cat)!.push(item);
+  }
+
+  function toggleItem(itemId: string) {
+    update({
+      itemIds: state.itemIds.includes(itemId)
+        ? state.itemIds.filter((x) => x !== itemId)
+        : [...state.itemIds, itemId],
+    });
+  }
+
+  function toggleCategory(cat: string) {
+    update({
+      categories: state.categories.includes(cat)
+        ? state.categories.filter((x) => x !== cat)
+        : [...state.categories, cat],
+    });
+  }
+
+  return (
+    <DiscountPill id="items" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
+        Which items?
+      </p>
+      {menuItems.length === 0 ? (
+        <p className="text-[12px] text-editorial-ink-soft italic">No active menu items yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {Array.from(categories.entries()).map(([catName, items]) => (
+            <div key={catName}>
+              <label className="flex items-center gap-2 cursor-pointer text-[12px] font-semibold text-editorial-ink mb-1">
+                <input
+                  type="checkbox"
+                  checked={state.categories.includes(catName!)}
+                  onChange={() => toggleCategory(catName!)}
+                  className="rounded"
+                />
+                {catName}
+              </label>
+              <div className="ml-5 space-y-1">
+                {items.map((item) => (
+                  <label key={item.id} className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
+                    <input
+                      type="checkbox"
+                      checked={state.itemIds.includes(item.id)}
+                      onChange={() => toggleItem(item.id)}
+                      className="rounded"
+                    />
+                    {item.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </DiscountPill>
   );
 }
