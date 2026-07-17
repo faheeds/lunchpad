@@ -105,6 +105,10 @@ function fmt(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 // Category resolution now reads from MenuItem.category (operator-set via
 // admin Menu page). Items without a category land in "Other" so they
 // still render. Previously hardcoded to FS's Kitchen's four buckets;
@@ -840,6 +844,10 @@ export function OrderForm({
             const effectiveStudentName = isOffice && orderForSelf ? parentName : studentName;
             if (!parentName || !parentEmail) {
               setError("Fill in your name and email.");
+              return;
+            }
+            if (!isValidEmail(parentEmail)) {
+              setError("Enter a valid email address.");
               return;
             }
             if (!effectiveStudentName) {

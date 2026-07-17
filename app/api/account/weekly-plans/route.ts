@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { assertParentApiRequest } from "@/lib/parent-auth";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { getUpcomingOrderingWindowRange, getWeekdayNumber } from "@/lib/weekly-week";
+import { formatApiError } from "@/lib/format-api-error";
 
 const WEEKDAY_LABELS: Record<number, string> = {
   1: "Monday",
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ id: plan.id });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to save weekly plan.";
+    const message = formatApiError(error, "Unable to save weekly plan.");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
@@ -162,7 +163,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update weekly plan.";
+    const message = formatApiError(error, "Unable to update weekly plan.");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
@@ -193,7 +194,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to delete weekly plan.";
+    const message = formatApiError(error, "Unable to delete weekly plan.");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

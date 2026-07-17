@@ -3,6 +3,7 @@ import { assertParentApiRequest } from "@/lib/parent-auth";
 import { cancelOrderWithRefund } from "@/lib/orders";
 import { sendCancellationEmail } from "@/lib/email/service";
 import { logInfo, logWarn, logException } from "@/lib/log";
+import { formatApiError } from "@/lib/format-api-error";
 
 export async function POST(
   request: Request,
@@ -60,7 +61,7 @@ export async function POST(
     return NextResponse.json({ ok: true, orderId: order.id });
   } catch (error) {
     logException(error, "order_cancellation_failed", { orderId });
-    const message = error instanceof Error ? error.message : "Unable to cancel order.";
+    const message = formatApiError(error, "Unable to cancel order.");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

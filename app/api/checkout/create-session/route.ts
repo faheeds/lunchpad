@@ -7,6 +7,7 @@ import { stripe } from "@/lib/payments/stripe";
 import { auth } from "@/lib/auth";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
 import { logInfo, logWarn, logException } from "@/lib/log";
+import { formatApiError } from "@/lib/format-api-error";
 
 export async function POST(request: Request) {
   try {
@@ -163,7 +164,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ checkoutUrl: session.url });
   } catch (error) {
     logException(error, "order_checkout_session_creation_failed");
-    const message = error instanceof Error ? error.message : "Unable to create checkout session.";
+    const message = formatApiError(error, "Unable to create checkout session.");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
