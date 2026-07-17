@@ -152,6 +152,15 @@ export const discountInputSchema = z.object({
     });
   }
 
+  // VOLUME discount needs minOrderCents > 0.
+  if (data.templateKind === "VOLUME" && (data.minOrderCents ?? 0) <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["minOrderCents"],
+      message: "Spend & save discounts need a minimum order amount.",
+    });
+  }
+
   // DAY_OF_WEEK needs at least one weekday selected.
   if (data.templateKind === "DAY_OF_WEEK" && data.weekdays.length === 0) {
     ctx.addIssue({

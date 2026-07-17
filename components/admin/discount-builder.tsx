@@ -188,6 +188,12 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
             <SchoolPill state={state} update={update} schools={schools} openPillId={openPillId} setOpenPillId={setOpenPillId} />
             {"."}
           </>
+        ) : template.kind === "VOLUME" ? (
+          <>
+            {"on orders over "}
+            <MinOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+            {"."}
+          </>
         ) : (
           // Fallback for templates whose builders aren't ready yet
           <>{" off any order."}</>
