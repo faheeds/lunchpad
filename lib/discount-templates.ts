@@ -136,7 +136,7 @@ export const TEMPLATES: TemplateMeta[] = [
     title: "Buy one, get one",
     description: "Free or discounted item with another item.",
     example: "Burger + fries free",
-    available: false,
+    available: true,
     defaults: { ...COMMON_DEFAULTS },
   },
   {

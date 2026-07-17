@@ -81,6 +81,8 @@ function seedState(t: TemplateMeta): BuilderState {
     maxRedemptionsTotal: "",
     maxRedemptionsPerUser: d.maxRedemptionsPerUser ? String(d.maxRedemptionsPerUser) : "",
     allowStackingWithCode: false,
+    bogoBuyItemIds: [],
+    bogoGetItemIds: [],
     isActive: true,
   };
 }

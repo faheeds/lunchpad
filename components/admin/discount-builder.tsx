@@ -66,6 +66,8 @@ export interface BuilderState {
   maxRedemptionsTotal: string;
   maxRedemptionsPerUser: string;
   allowStackingWithCode: boolean;
+  bogoBuyItemIds: string[];
+  bogoGetItemIds: string[];
   isActive: boolean;
 }
 
@@ -232,6 +234,13 @@ export function DiscountBuilder({ template, initial, schools, menuItems, discoun
         ) : template.kind === "ITEM_DISCOUNT" ? (
           <>
             <ItemPill state={state} update={update} menuItems={menuItems} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+            {"."}
+          </>
+        ) : template.kind === "BOGO" ? (
+          <>
+            <BogoGetPill state={state} update={update} menuItems={menuItems} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+            {" when you buy "}
+            <BogoBuyPill state={state} update={update} menuItems={menuItems} openPillId={openPillId} setOpenPillId={setOpenPillId} />
             {"."}
           </>
         ) : template.kind === "CUSTOM" ? (
@@ -744,6 +753,120 @@ function ItemPill({ state, update, menuItems, openPillId, setOpenPillId }: PillS
   );
 }
 
+function BogoBuyPill({ state, update, menuItems, openPillId, setOpenPillId }: PillSharedProps & { menuItems: { id: string; name: string; category: string | null }[] }) {
+  const isDefault = state.bogoBuyItemIds.length === 0;
+  const label = isDefault
+    ? "any item"
+    : state.bogoBuyItemIds.length === 1
+    ? menuItems.find((m) => m.id === state.bogoBuyItemIds[0])?.name ?? "selected"
+    : `${state.bogoBuyItemIds.length} items`;
+
+  // Group items by category for display
+  const categories = new Map<string | null, typeof menuItems>();
+  for (const item of menuItems) {
+    const cat = item.category ?? null;
+    if (!categories.has(cat)) categories.set(cat, []);
+    categories.get(cat)!.push(item);
+  }
+
+  function toggleItem(itemId: string) {
+    update({
+      bogoBuyItemIds: state.bogoBuyItemIds.includes(itemId)
+        ? state.bogoBuyItemIds.filter((x) => x !== itemId)
+        : [...state.bogoBuyItemIds, itemId],
+    });
+  }
+
+  return (
+    <DiscountPill id="bogoBuyItems" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
+        Which items to buy?
+      </p>
+      {menuItems.length === 0 ? (
+        <p className="text-[12px] text-editorial-ink-soft italic">No active menu items yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {Array.from(categories.entries()).map(([catName, items]) => (
+            <div key={catName ?? "uncategorized"}>
+              <p className="text-[12px] font-semibold text-editorial-ink mb-1">{catName ?? "(Uncategorized)"}</p>
+              <div className="ml-0 space-y-1">
+                {items.map((item) => (
+                  <label key={item.id} className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
+                    <input
+                      type="checkbox"
+                      checked={state.bogoBuyItemIds.includes(item.id)}
+                      onChange={() => toggleItem(item.id)}
+                      className="rounded"
+                    />
+                    {item.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </DiscountPill>
+  );
+}
+
+function BogoGetPill({ state, update, menuItems, openPillId, setOpenPillId }: PillSharedProps & { menuItems: { id: string; name: string; category: string | null }[] }) {
+  const isDefault = state.bogoGetItemIds.length === 0;
+  const label = isDefault
+    ? "any item"
+    : state.bogoGetItemIds.length === 1
+    ? menuItems.find((m) => m.id === state.bogoGetItemIds[0])?.name ?? "selected"
+    : `${state.bogoGetItemIds.length} items`;
+
+  // Group items by category for display
+  const categories = new Map<string | null, typeof menuItems>();
+  for (const item of menuItems) {
+    const cat = item.category ?? null;
+    if (!categories.has(cat)) categories.set(cat, []);
+    categories.get(cat)!.push(item);
+  }
+
+  function toggleItem(itemId: string) {
+    update({
+      bogoGetItemIds: state.bogoGetItemIds.includes(itemId)
+        ? state.bogoGetItemIds.filter((x) => x !== itemId)
+        : [...state.bogoGetItemIds, itemId],
+    });
+  }
+
+  return (
+    <DiscountPill id="bogoGetItems" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
+        Which items to get free?
+      </p>
+      {menuItems.length === 0 ? (
+        <p className="text-[12px] text-editorial-ink-soft italic">No active menu items yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {Array.from(categories.entries()).map(([catName, items]) => (
+            <div key={catName ?? "uncategorized"}>
+              <p className="text-[12px] font-semibold text-editorial-ink mb-1">{catName ?? "(Uncategorized)"}</p>
+              <div className="ml-0 space-y-1">
+                {items.map((item) => (
+                  <label key={item.id} className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
+                    <input
+                      type="checkbox"
+                      checked={state.bogoGetItemIds.includes(item.id)}
+                      onChange={() => toggleItem(item.id)}
+                      className="rounded"
+                    />
+                    {item.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </DiscountPill>
+  );
+}
+
 function ScopePill({ state, update, menuItems, openPillId, setOpenPillId }: PillSharedProps & { menuItems: { id: string; name: string; category: string | null }[] }) {
   const isDefault = state.scope === "ORDER";
   const label = isDefault ? "order-wide" : "specific items";
@@ -907,6 +1030,8 @@ function serialize(s: BuilderState): string {
     maxRedemptionsTotal: s.maxRedemptionsTotal ? parseInt(s.maxRedemptionsTotal, 10) : undefined,
     maxRedemptionsPerUser: s.maxRedemptionsPerUser ? parseInt(s.maxRedemptionsPerUser, 10) : undefined,
     allowStackingWithCode: s.allowStackingWithCode,
+    bogoBuyItemIds: s.bogoBuyItemIds,
+    bogoGetItemIds: s.bogoGetItemIds,
     isActive: s.isActive,
   });
 }
