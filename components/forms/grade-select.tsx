@@ -38,7 +38,7 @@ export function GradeSelect({
         name="schoolId"
         value={schoolId}
         onChange={(e) => setSchoolId(e.target.value)}
-        className="w-full rounded-xl border-slate-200 text-[13px]"
+        className="w-full rounded-xl border border-slate-200 text-[13px]"
         required
       >
         {schools.map((s) => (
@@ -50,7 +50,7 @@ export function GradeSelect({
         <select
           name="grade"
           defaultValue={defaultGrade ?? ""}
-          className="w-full rounded-xl border-slate-200 text-[13px]"
+          className="w-full rounded-xl border border-slate-200 text-[13px]"
           required
         >
           <option value="" disabled>Select grade</option>
@@ -64,8 +64,7 @@ export function GradeSelect({
           type="text"
           defaultValue={defaultGrade ?? ""}
           placeholder={labels.gradePlaceholder}
-          className="w-full rounded-xl border-slate-200 text-[13px]"
-          style={{ borderRadius: 12, border: "1px solid #E3DBC6", fontSize: 14, padding: "8px 12px" }}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
           required
         />
       )}
