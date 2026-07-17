@@ -5,6 +5,7 @@ import { getCurrentRestaurant } from "@/lib/restaurant";
 import { themeCssBlock } from "@/lib/color";
 import { getDisplayFont, getBodyFont } from "@/lib/fonts";
 import { CookieNotice } from "@/components/cookie-notice";
+import { SiteHeaderServer } from "@/components/site-header-server";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -107,6 +108,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   } else {
     shellMode = "is-tenant";
   }
+
+  // Check if tenant is locked (same conditions as admin-side lock)
+  let isLockedTenant = false;
+  if (shellMode === "is-tenant" && restaurant) {
+    const isCancelled = restaurant.subscriptionStatus === "CANCELLED";
+    const isExpiredTrial =
+      restaurant.subscriptionStatus === "TRIAL" &&
+      restaurant.trialEndsAt !== null &&
+      new Date() > restaurant.trialEndsAt;
+    isLockedTenant = isCancelled || isExpiredTrial;
+  }
+
   return (
     <html lang="en" className={`${oswald.variable} ${inter.variable} ${shellMode}`}>
       <head>
@@ -120,7 +133,63 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <div className="app-shell">
-          {children}
+          {isLockedTenant ? (
+            <>
+              <SiteHeaderServer />
+              <div className="min-h-screen bg-editorial-paper flex items-center justify-center px-4 py-8">
+                <div style={{
+                  background: "white",
+                  borderRadius: 20,
+                  padding: "40px 32px",
+                  maxWidth: 420,
+                  width: "100%",
+                  textAlign: "center",
+                  border: "1px solid #E3DBC6",
+                  boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
+                }}>
+                  <p style={{ fontSize: 32, marginBottom: 16 }}>🔒</p>
+                  <h1 style={{
+                    fontFamily: "'Fraunces', Georgia, serif",
+                    fontSize: 24,
+                    fontWeight: 500,
+                    color: "#211D15",
+                    marginBottom: 8,
+                  }}>
+                    Coming soon
+                  </h1>
+                  <p style={{
+                    fontSize: 14,
+                    color: "#5B5446",
+                    lineHeight: 1.6,
+                    marginBottom: restaurant?.contactEmail || restaurant?.contactPhone ? 20 : 0,
+                  }}>
+                    {restaurant?.name} isn't accepting online orders right now. Please check back soon.
+                  </p>
+                  {(restaurant?.contactEmail || restaurant?.contactPhone) && (
+                    <div style={{ fontSize: 13, color: "#5B5446", lineHeight: 1.6 }}>
+                      <p style={{ marginBottom: 8, fontWeight: 500 }}>Questions? Get in touch:</p>
+                      {restaurant?.contactEmail && (
+                        <p style={{ marginBottom: 4 }}>
+                          <a href={`mailto:${restaurant.contactEmail}`} style={{ color: "#2C4031", textDecoration: "none", fontWeight: 500 }}>
+                            {restaurant.contactEmail}
+                          </a>
+                        </p>
+                      )}
+                      {restaurant?.contactPhone && (
+                        <p>
+                          <a href={`tel:${restaurant.contactPhone}`} style={{ color: "#2C4031", textDecoration: "none", fontWeight: 500 }}>
+                            {restaurant.contactPhone}
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            children
+          )}
         </div>
         <CookieNotice />
       </body>
