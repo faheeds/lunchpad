@@ -163,7 +163,7 @@ export const TEMPLATES: TemplateMeta[] = [
     title: "Specific items",
     description: "Percent off one or more chosen items or categories.",
     example: "Salads · 15% off",
-    available: false,
+    available: true,
     defaults: { ...COMMON_DEFAULTS, scope: "ITEMS", value: 15 },
   },
   {

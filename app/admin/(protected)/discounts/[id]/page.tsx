@@ -51,6 +51,12 @@ export default async function DiscountDetailPage({
     orderBy: { name: "asc" },
   });
 
+  const menuItems = await prisma.menuItem.findMany({
+    where: { restaurantId: restaurant.id, isActive: true },
+    select: { id: true, name: true, category: true },
+    orderBy: { name: "asc" },
+  });
+
   const recentRedemptions = await prisma.discountRedemption.findMany({
     where: { discountId: id },
     include: {
@@ -77,7 +83,7 @@ export default async function DiscountDetailPage({
       : (discount.value / 100).toFixed(discount.value % 100 === 0 ? 0 : 2),
     scope: discount.scope,
     itemIds: discount.itemIds,
-    categories: discount.categories,
+    categories: discount.categories as (string | null)[],
     minOrderDollars: discount.minOrderCents ? String(discount.minOrderCents / 100) : "",
     minItemCount: discount.minItemCount ? String(discount.minItemCount) : "",
     firstOrderOnly: discount.firstOrderOnly,
@@ -109,6 +115,7 @@ export default async function DiscountDetailPage({
         template={template}
         initial={initial}
         schools={schools}
+        menuItems={menuItems}
         discountId={id}
       />
 

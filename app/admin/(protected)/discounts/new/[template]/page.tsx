@@ -46,9 +46,15 @@ export default async function NewDiscountPage({
     orderBy: { name: "asc" },
   });
 
+  const menuItems = await prisma.menuItem.findMany({
+    where: { restaurantId: restaurant.id, isActive: true },
+    select: { id: true, name: true, category: true },
+    orderBy: { name: "asc" },
+  });
+
   const initial = seedState(template);
 
-  return <DiscountBuilder template={template} initial={initial} schools={schools} />;
+  return <DiscountBuilder template={template} initial={initial} schools={schools} menuItems={menuItems} />;
 }
 
 function seedState(t: TemplateMeta): BuilderState {
