@@ -94,6 +94,8 @@ export default async function DiscountDetailPage({
     maxRedemptionsTotal: discount.maxRedemptionsTotal ? String(discount.maxRedemptionsTotal) : "",
     maxRedemptionsPerUser: discount.maxRedemptionsPerUser ? String(discount.maxRedemptionsPerUser) : "",
     allowStackingWithCode: discount.allowStackingWithCode,
+    bogoBuyItemIds: discount.bogoBuyItemIds,
+    bogoGetItemIds: discount.bogoGetItemIds,
     isActive: discount.isActive,
   };
 
