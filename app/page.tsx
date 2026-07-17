@@ -140,10 +140,12 @@ export default async function HomePage() {
               />
             ) : (
               <div
+                aria-label={`${restaurantName} hero`}
+                role="img"
                 style={{
                   position: "absolute",
                   inset: 0,
-                  background: `linear-gradient(135deg, ${restaurant.darkColor}, ${restaurant.primaryColor})`,
+                  background: `linear-gradient(135deg, ${restaurant.darkColor ?? "#1E2C22"}, ${restaurant.primaryColor ?? "#2C4031"})`,
                 }}
               />
             )}
