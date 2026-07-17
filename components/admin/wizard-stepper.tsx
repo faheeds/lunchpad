@@ -43,9 +43,10 @@ export function WizardStepper({
       </div>
 
       <ol className="space-y-0.5">
-        {steps.map((step) => {
+        {steps.map((step, index) => {
           const isActive = step.id === activeStepId;
           const href = `${pathname}?step=${step.id}`;
+          const stepNumber = index + 1;
 
           const dotBg =
             step.status === "done" ? "#2C4031" :
@@ -76,7 +77,7 @@ export function WizardStepper({
                   ) : step.status === "skipped" ? (
                     "—"
                   ) : (
-                    step.id
+                    stepNumber
                   )}
                 </div>
                 <div className="flex-1 min-w-0">

@@ -409,13 +409,13 @@ export default async function OnboardingPage({
     { id: 3,  title: "Connect Stripe",     blurb: "Get paid by customers",          status: groupStatus([3]) },
     { id: 4,  title: "Menu & locations",   blurb: "What you sell, where",           status: groupStatus([4, 5]) },
     { id: 6,  title: "Delivery schedule",  blurb: "When you deliver",               status: groupStatus([6]) },
-    { id: 7,  title: "Go live",            blurb: "Test order, share — finish at your pace", status: groupStatus([8, 9, 10]) },
+    { id: 8,  title: "Go live",            blurb: "Test order, share — finish at your pace", status: groupStatus([8, 9, 10]) },
   ];
 
   // Map the actual activeStep (1-10) to its group head so the stepper
   // highlights the right row when the user is on a sub-step.
   const groupHeadFor = (n: number) =>
-    n <= 2 ? 1 : n === 3 ? 3 : n <= 5 ? 4 : n === 6 ? 6 : 7;
+    n <= 2 ? 1 : n === 3 ? 3 : n <= 5 ? 4 : n === 6 ? 6 : 8;
   const displayActiveStep = groupHeadFor(activeStep);
 
   return (
