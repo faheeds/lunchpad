@@ -147,7 +147,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   border: "1px solid #E3DBC6",
                   boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
                 }}>
-                  <p style={{ fontSize: 32, marginBottom: 16 }}>🔒</p>
+                  <p style={{ fontSize: 32, marginBottom: 16 }} role="img" aria-label="Locked">🔒</p>
                   <h1 style={{
                     fontFamily: "'Fraunces', Georgia, serif",
                     fontSize: 24,
