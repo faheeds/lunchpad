@@ -39,8 +39,7 @@ async function createMenuOption(formData: FormData) {
   "use server";
   await requireRestaurant();
   await requireAdminRole("MANAGER");
-  const priceDollars = parseFloat(String(formData.get("priceDollars") || "0"));
-  const priceDeltaCents = isNaN(priceDollars) ? 0 : Math.round(priceDollars * 100);
+  const priceDeltaCents = parseInt(String(formData.get("priceDeltaCents") || "0"), 10) || 0;
   const parsed = menuOptionSchema.parse({
     menuItemId: formData.get("menuItemId"),
     name: formData.get("name"),
