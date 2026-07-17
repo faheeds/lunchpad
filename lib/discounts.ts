@@ -255,7 +255,7 @@ export async function recordDiscountRedemption(args: {
 
 // ─── Internals ───────────────────────────────────────────────────────────────
 
-interface EvalContext {
+export interface EvalContext {
   cart: CartContext;
   priorOrderCount: number;
   perUserCounts: Map<string, number>;
@@ -265,7 +265,7 @@ interface EvalContext {
  *  would deduct. Returns 0 + a reason string on rejection — callers can
  *  show that reason to the operator on the admin discount preview but
  *  customers never see it (they just see no discount applied). */
-function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
+export function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
   const subtotal = ctx.cart.lines.reduce((s, l) => s + l.lineTotalCents, 0);
   const lineCount = ctx.cart.lines.length;
 
@@ -324,7 +324,8 @@ function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
   }
 
   // BOGO branch — separate code path for buy-one-get-one logic.
-  const isBogo = d.bogoBuyItemIds.length > 0 || d.bogoGetItemIds.length > 0;
+  // Requires both buy and get sets to be populated.
+  const isBogo = d.bogoBuyItemIds.length > 0 && d.bogoGetItemIds.length > 0;
   if (isBogo) {
     return evaluateBogo(d, ctx);
   }
@@ -359,7 +360,7 @@ function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
  *  we discount exactly one matched item, not a subtotal. Returns early with
  *  a rejection reason if buy/get matching fails, or the computed discount
  *  amount if a target line is found. */
-function evaluateBogo(d: Discount, ctx: EvalContext): DiscountEvaluation {
+export function evaluateBogo(d: Discount, ctx: EvalContext): DiscountEvaluation {
   // buyMatches: lines whose menuItemId is in bogoBuyItemIds (or all lines if empty).
   const buyMatchIndices = findMatchingLineIndices(ctx.cart.lines, d.bogoBuyItemIds);
   if (buyMatchIndices.length === 0) {
