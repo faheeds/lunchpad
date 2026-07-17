@@ -447,7 +447,7 @@ function SchoolPill({ state, update, schools, openPillId, setOpenPillId }: PillS
               onChange={() => update({ schoolIds: [] })}
               className="rounded"
             />
-            All schools
+            All locations
           </label>
           {schools.map((s) => (
             <label key={s.id} className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
