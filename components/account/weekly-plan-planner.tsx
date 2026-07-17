@@ -252,8 +252,7 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
 
   function handleAdd() {
     if (!selectedChild) {
-      const firstChildLocationType = children[0]?.locationType ?? "SCHOOL";
-      const labels = getLabels(firstChildLocationType);
+      const labels = getMergedLabels(children.map((c) => c.locationType));
       setError(`Choose a ${labels.unit.toLowerCase()} first.`);
       return;
     }
@@ -289,7 +288,7 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
   }
 
   if (!children.length) {
-    const labels = getLabels("SCHOOL");
+    const labels = getMergedLabels(["SCHOOL", "OFFICE"]);
     return (
       <p className="text-[12px] text-slate-500 bg-slate-50 rounded-xl px-4 py-3">
         Add a saved {labels.unit.toLowerCase()} first to build a weekly lunch plan.
