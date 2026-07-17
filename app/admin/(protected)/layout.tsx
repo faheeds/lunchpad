@@ -29,13 +29,12 @@ async function computeOnboardingPill(full: {
   if (!full) return null;
   if (full.onboardingComplete) return null;
 
-  const [locationCount, menuItemCount, deliveryDateCount, teamCount] = await Promise.all([
+  const [locationCount, menuItemCount, deliveryDateCount] = await Promise.all([
     prisma.school.count({ where: { restaurantId: full.id, isActive: true } }),
     prisma.menuItem.count({ where: { restaurantId: full.id, isActive: true } }),
     prisma.deliveryDate.count({
       where: { school: { restaurantId: full.id }, deliveryDate: { gte: new Date() } },
     }),
-    prisma.adminUser.count({ where: { restaurantId: full.id } }),
   ]);
 
   const checks = [
@@ -45,7 +44,6 @@ async function computeOnboardingPill(full: {
     locationCount > 0,
     menuItemCount >= 3,
     deliveryDateCount > 0,
-    teamCount > 1,
     Boolean(full.testOrderPlacedAt),
     full.kitchenSheetSendHour !== null && full.kitchenSheetSendHour !== undefined,
     full.onboardingShareAcked,
