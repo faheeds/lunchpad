@@ -44,6 +44,14 @@ const csvList = z.preprocess((v) => {
   return out;
 }, z.array(z.string()));
 
+/** Categories list — can include null for uncategorized items.
+ *  Sent as JSON array from the discount builder, where null represents
+ *  the uncategorized category in the database. */
+const categoryList = z.preprocess((v) => {
+  if (Array.isArray(v)) return v;
+  return [];
+}, z.array(z.union([z.string(), z.null()])));
+
 /** "10.50" (dollars from a form input) → 1050 (integer cents). */
 const dollarsToCents = z.preprocess((v) => {
   if (v === null || v === undefined || v === "") return undefined;
@@ -93,7 +101,7 @@ export const discountInputSchema = z.object({
   // Scope
   scope: z.enum(["ORDER", "ITEMS"]).default("ORDER"),
   itemIds: z.array(z.string()).default([]),
-  categories: csvList.default([]),
+  categories: categoryList.default([]),
 
   // Eligibility
   minOrderCents: dollarsToCents,

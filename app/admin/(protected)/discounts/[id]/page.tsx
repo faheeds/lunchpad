@@ -83,7 +83,7 @@ export default async function DiscountDetailPage({
       : (discount.value / 100).toFixed(discount.value % 100 === 0 ? 0 : 2),
     scope: discount.scope,
     itemIds: discount.itemIds,
-    categories: discount.categories,
+    categories: discount.categories as (string | null)[],
     minOrderDollars: discount.minOrderCents ? String(discount.minOrderCents / 100) : "",
     minItemCount: discount.minItemCount ? String(discount.minItemCount) : "",
     firstOrderOnly: discount.firstOrderOnly,

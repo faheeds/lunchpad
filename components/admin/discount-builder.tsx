@@ -54,7 +54,7 @@ export interface BuilderState {
   valueDisplay: string;
   scope: "ORDER" | "ITEMS";
   itemIds: string[];
-  categories: string[];
+  categories: (string | null)[];
   /** Stored in dollars for display; converted to cents on save. */
   minOrderDollars: string;
   minItemCount: string;
@@ -618,7 +618,7 @@ function ItemPill({ state, update, menuItems, openPillId, setOpenPillId }: PillS
   // Group items by category for display
   const categories = new Map<string | null, typeof menuItems>();
   for (const item of menuItems) {
-    const cat = item.category ?? "(Uncategorized)";
+    const cat = item.category ?? null;
     if (!categories.has(cat)) categories.set(cat, []);
     categories.get(cat)!.push(item);
   }
@@ -631,7 +631,7 @@ function ItemPill({ state, update, menuItems, openPillId, setOpenPillId }: PillS
     });
   }
 
-  function toggleCategory(cat: string) {
+  function toggleCategory(cat: string | null) {
     update({
       categories: state.categories.includes(cat)
         ? state.categories.filter((x) => x !== cat)
@@ -649,15 +649,15 @@ function ItemPill({ state, update, menuItems, openPillId, setOpenPillId }: PillS
       ) : (
         <div className="space-y-3">
           {Array.from(categories.entries()).map(([catName, items]) => (
-            <div key={catName}>
+            <div key={catName ?? "uncategorized"}>
               <label className="flex items-center gap-2 cursor-pointer text-[12px] font-semibold text-editorial-ink mb-1">
                 <input
                   type="checkbox"
-                  checked={state.categories.includes(catName!)}
-                  onChange={() => toggleCategory(catName!)}
+                  checked={state.categories.includes(catName)}
+                  onChange={() => toggleCategory(catName)}
                   className="rounded"
                 />
-                {catName}
+                {catName ?? "(Uncategorized)"}
               </label>
               <div className="ml-5 space-y-1">
                 {items.map((item) => (
