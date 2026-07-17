@@ -187,6 +187,24 @@ export const discountInputSchema = z.object({
     });
   }
 
+  // BOGO needs both buy and get sets populated.
+  if (data.templateKind === "BOGO") {
+    if (data.bogoBuyItemIds.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["bogoBuyItemIds"],
+        message: "Pick at least one item to buy.",
+      });
+    }
+    if (data.bogoGetItemIds.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["bogoGetItemIds"],
+        message: "Pick at least one item to get free.",
+      });
+    }
+  }
+
   // Window sanity: end after start.
   if (data.startsAt && data.endsAt && data.endsAt < data.startsAt) {
     ctx.addIssue({
