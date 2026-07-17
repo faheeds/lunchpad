@@ -5,6 +5,7 @@ import { createWeeklyCheckoutBatch } from "@/lib/weekly-checkout";
 import { assertParentApiRequest } from "@/lib/parent-auth";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
 import { logInfo, logWarn, logException } from "@/lib/log";
+import { formatApiError } from "@/lib/format-api-error";
 
 export async function POST(request: Request) {
   let parentUserId: string | undefined;
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ checkoutUrl: stripeSession.url });
   } catch (error) {
     logException(error, "weekly_checkout_creation_failed", { parentUserId });
-    const message = error instanceof Error ? error.message : "Unable to start weekly checkout.";
+    const message = formatApiError(error, "Unable to start weekly checkout.");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireParent } from "@/lib/parent-auth";
 import { updateOrderBeforeCutoff } from "@/lib/orders";
 import { logInfo, logWarn, logException } from "@/lib/log";
+import { formatApiError } from "@/lib/format-api-error";
 
 export async function POST(
   request: Request,
@@ -52,7 +53,7 @@ export async function POST(
     return NextResponse.json({ ok: true, orderId: order.id });
   } catch (error) {
     logException(error, "order_modify_failed", { orderId, parentUserId });
-    const message = error instanceof Error ? error.message : "Failed to update order.";
+    const message = formatApiError(error, "Failed to update order.");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
