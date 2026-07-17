@@ -437,7 +437,7 @@ function SchoolPill({ state, update, schools, openPillId, setOpenPillId }: PillS
         Which locations?
       </p>
       {schools.length === 0 ? (
-        <p className="text-[12px] text-editorial-ink-soft italic">No active schools yet.</p>
+        <p className="text-[12px] text-editorial-ink-soft italic">No active locations yet.</p>
       ) : (
         <div className="space-y-1">
           <label className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
