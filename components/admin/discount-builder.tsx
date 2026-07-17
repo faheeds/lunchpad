@@ -236,7 +236,6 @@ export function DiscountBuilder({ template, initial, schools, menuItems, discoun
           </>
         ) : template.kind === "CUSTOM" ? (
           <>
-            <AmountPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
             {" · scope: "}
             <ScopePill state={state} update={update} menuItems={menuItems} openPillId={openPillId} setOpenPillId={setOpenPillId} />
           </>
@@ -421,10 +420,10 @@ function AmountPill({ state, update, openPillId, setOpenPillId }: PillSharedProp
 function SchoolPill({ state, update, schools, openPillId, setOpenPillId }: PillSharedProps & { schools: { id: string; name: string }[] }) {
   const isDefault = state.schoolIds.length === 0;
   const label = isDefault
-    ? "at any school"
+    ? "at any location"
     : state.schoolIds.length === 1
     ? `at ${schools.find((s) => s.id === state.schoolIds[0])?.name ?? "selected"}`
-    : `at ${state.schoolIds.length} schools`;
+    : `at ${state.schoolIds.length} locations`;
   function toggle(id: string) {
     update({
       schoolIds: state.schoolIds.includes(id)
@@ -435,10 +434,10 @@ function SchoolPill({ state, update, schools, openPillId, setOpenPillId }: PillS
   return (
     <DiscountPill id="schools" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
-        Which schools?
+        Which locations?
       </p>
       {schools.length === 0 ? (
-        <p className="text-[12px] text-editorial-ink-soft italic">No active schools yet.</p>
+        <p className="text-[12px] text-editorial-ink-soft italic">No active locations yet.</p>
       ) : (
         <div className="space-y-1">
           <label className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
@@ -448,7 +447,7 @@ function SchoolPill({ state, update, schools, openPillId, setOpenPillId }: PillS
               onChange={() => update({ schoolIds: [] })}
               className="rounded"
             />
-            All schools
+            All locations
           </label>
           {schools.map((s) => (
             <label key={s.id} className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
