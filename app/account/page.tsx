@@ -303,6 +303,7 @@ export default async function ParentAccountPage() {
                     timezone: c.school.timezone,
                     studentName: c.studentName,
                     grade: c.grade,
+                    locationType: c.school.locationType,
                   }))}
                   deliveryDates={deliveryDates.map((date) => ({
                     id: date.id,

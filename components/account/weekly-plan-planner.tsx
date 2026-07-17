@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
+import type { LocationType } from "@prisma/client";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { getWeekdayNumber } from "@/lib/weekly-week";
+import { getLabels, getMergedLabels } from "@/lib/location-labels";
 import { cn } from "@/lib/utils";
 
 type ChildSummary = {
@@ -14,6 +16,7 @@ type ChildSummary = {
   timezone: string;
   studentName: string;
   grade: string;
+  locationType: LocationType;
 };
 
 type MenuOption = {
@@ -249,7 +252,8 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
 
   function handleAdd() {
     if (!selectedChild) {
-      setError("Choose a child first.");
+      const labels = getMergedLabels(children.map((c) => c.locationType));
+      setError(`Choose a ${labels.unit.toLowerCase()} first.`);
       return;
     }
     if (!selectedWeekday) {
@@ -284,9 +288,10 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
   }
 
   if (!children.length) {
+    const labels = getMergedLabels(["SCHOOL", "OFFICE"]);
     return (
       <p className="text-[12px] text-slate-500 bg-slate-50 rounded-xl px-4 py-3">
-        Add a saved child first to build a weekly lunch plan.
+        Add a saved {labels.unit.toLowerCase()} first to build a weekly lunch plan.
       </p>
     );
   }
@@ -295,23 +300,26 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
     <div className="space-y-4 border-t border-slate-100 pt-4">
       {/* Child selector */}
       <div>
-        <p className="text-[11px] font-semibold text-ink mb-2">1. Pick a child</p>
+        <p className="text-[11px] font-semibold text-ink mb-2">1. Pick a {getMergedLabels(children.map((c) => c.locationType)).unit.toLowerCase()}</p>
         <div className="flex gap-2 flex-wrap">
-          {children.map((child) => (
-            <button
-              key={child.id}
-              type="button"
-              onClick={() => handleSelectChild(child.id)}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-[12px] font-medium border transition",
-                child.id === selectedChildId
-                  ? "bg-ink text-white border-ink"
-                  : "bg-white text-slate-600 border-slate-200"
-              )}
-            >
-              {child.studentName}, Gr {child.grade}
-            </button>
-          ))}
+          {children.map((child) => {
+            const labels = getLabels(child.locationType);
+            return (
+              <button
+                key={child.id}
+                type="button"
+                onClick={() => handleSelectChild(child.id)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-[12px] font-medium border transition",
+                  child.id === selectedChildId
+                    ? "bg-ink text-white border-ink"
+                    : "bg-white text-slate-600 border-slate-200"
+                )}
+              >
+                {child.studentName}{labels.showGrade ? `, ${labels.grade} ${child.grade}` : ""}
+              </button>
+            );
+          })}
         </div>
       </div>
 
