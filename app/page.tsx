@@ -130,13 +130,23 @@ export default async function HomePage() {
 
           {/* Hero */}
           <div className="relative overflow-hidden" style={{ height: 290 }}>
-            <Image
-              src={restaurant.heroImageUrl ?? "/food/hero.jpeg"}
-              alt={`${restaurantName} hero`}
-              fill
-              style={{ objectFit: "cover", objectPosition: "center top" }}
-              priority
-            />
+            {restaurant.heroImageUrl ? (
+              <Image
+                src={restaurant.heroImageUrl}
+                alt={`${restaurantName} hero`}
+                fill
+                style={{ objectFit: "cover", objectPosition: "center top" }}
+                priority
+              />
+            ) : (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: `linear-gradient(135deg, ${restaurant.darkColor}, ${restaurant.primaryColor})`,
+                }}
+              />
+            )}
             <div className="absolute inset-0" style={{
               background: "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.18) 35%, rgba(var(--dark-rgb),0.72) 100%)"
             }} />
