@@ -127,7 +127,7 @@ export const TEMPLATES: TemplateMeta[] = [
     title: "Day-of-week deal",
     description: "Special pricing on a specific weekday.",
     example: "Tacos · Tuesdays",
-    available: false,
+    available: true,
     defaults: { ...COMMON_DEFAULTS, weekdays: [2] },
   },
   {
