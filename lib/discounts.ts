@@ -313,16 +313,6 @@ function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
     return reject(d, "Only valid on your first order.");
   }
 
-  // Determine the "applicable subtotal" — what portion of the cart this
-  // discount applies to. For ORDER scope = whole cart. For ITEMS scope =
-  // only matching lines.
-  const applicableLines = filterApplicableLines(d, ctx.cart.lines);
-  const applicableSubtotal = applicableLines.reduce((s, l) => s + l.lineTotalCents, 0);
-
-  if (d.scope === "ITEMS" && applicableLines.length === 0) {
-    return reject(d, "No matching items in cart.");
-  }
-
   // Minimum thresholds — compared against the full cart subtotal +
   // line count (operators set these in terms of the whole order, not
   // the matching subset).
@@ -331,6 +321,22 @@ function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
   }
   if (d.minItemCount !== null && lineCount < d.minItemCount) {
     return reject(d, `Order must contain at least ${d.minItemCount} item${d.minItemCount === 1 ? "" : "s"}.`);
+  }
+
+  // BOGO branch — separate code path for buy-one-get-one logic.
+  const isBogo = d.bogoBuyItemIds.length > 0 || d.bogoGetItemIds.length > 0;
+  if (isBogo) {
+    return evaluateBogo(d, ctx);
+  }
+
+  // Determine the "applicable subtotal" — what portion of the cart this
+  // discount applies to. For ORDER scope = whole cart. For ITEMS scope =
+  // only matching lines.
+  const applicableLines = filterApplicableLines(d, ctx.cart.lines);
+  const applicableSubtotal = applicableLines.reduce((s, l) => s + l.lineTotalCents, 0);
+
+  if (d.scope === "ITEMS" && applicableLines.length === 0) {
+    return reject(d, "No matching items in cart.");
   }
 
   // Compute the dollar amount.
@@ -346,6 +352,82 @@ function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
   }
 
   return { discount: d, amountCents, reason: null };
+}
+
+/** BOGO (buy-one-get-one) discount evaluation.
+ *  Separate code path since the "applicable subtotal" model doesn't apply —
+ *  we discount exactly one matched item, not a subtotal. Returns early with
+ *  a rejection reason if buy/get matching fails, or the computed discount
+ *  amount if a target line is found. */
+function evaluateBogo(d: Discount, ctx: EvalContext): DiscountEvaluation {
+  // buyMatches: lines whose menuItemId is in bogoBuyItemIds (or all lines if empty).
+  const buyMatchIndices = findMatchingLineIndices(ctx.cart.lines, d.bogoBuyItemIds);
+  if (buyMatchIndices.length === 0) {
+    return reject(d, "Cart doesn't contain a qualifying item to buy.");
+  }
+
+  // getMatches: lines whose menuItemId is in bogoGetItemIds (or all lines if empty),
+  // sorted by lineTotalCents ascending (cheapest first).
+  const getMatchIndices = findMatchingLineIndices(ctx.cart.lines, d.bogoGetItemIds);
+  if (getMatchIndices.length === 0) {
+    return reject(d, "Cart doesn't contain a qualifying item to discount.");
+  }
+
+  // Sort get-match indices by price ascending (cheapest first).
+  getMatchIndices.sort((ia, ib) => {
+    const priceA = ctx.cart.lines[ia].lineTotalCents;
+    const priceB = ctx.cart.lines[ib].lineTotalCents;
+    return priceA - priceB;
+  });
+
+  // Overlap guard: find the first get-match candidate that has at least one
+  // buy-match at a *different* array index. This ensures a cart with one
+  // burger (where both buy and get sets include "Burger") rejects, but a
+  // cart with two burgers accepts and discounts the cheaper one.
+  let targetIndex: number | null = null;
+
+  for (const getIndex of getMatchIndices) {
+    // Check if there's at least one buy-match at a different index.
+    const hasOtherBuyMatch = buyMatchIndices.some((buyIndex) => buyIndex !== getIndex);
+    if (hasOtherBuyMatch) {
+      targetIndex = getIndex;
+      break;
+    }
+  }
+
+  if (targetIndex === null) {
+    return reject(d, "Add another qualifying item to use this discount.");
+  }
+
+  // Compute the discount amount for the target line.
+  const targetLine = ctx.cart.lines[targetIndex];
+  let amountCents = computeAmount(d, targetLine.lineTotalCents);
+
+  // Cap at the line's price (can't discount more than the item costs).
+  if (amountCents > targetLine.lineTotalCents) amountCents = targetLine.lineTotalCents;
+  // Round down to whole cents.
+  amountCents = Math.floor(amountCents);
+
+  if (amountCents <= 0) {
+    return reject(d, "Discount amount is zero.");
+  }
+
+  return { discount: d, amountCents, reason: null };
+}
+
+/** Find indices of cart lines whose menuItemId matches the given set.
+ *  Empty idSet means "all lines". Returns array of indices in order
+ *  they appear in the cart. */
+function findMatchingLineIndices(lines: CartLine[], idSet: string[]): number[] {
+  if (idSet.length === 0) {
+    // Empty set means all lines.
+    return lines.map((_, i) => i);
+  }
+
+  const matchSet = new Set(idSet);
+  return lines
+    .map((line, i) => (matchSet.has(line.menuItemId) ? i : -1))
+    .filter((i) => i !== -1);
 }
 
 function filterApplicableLines(d: Discount, lines: CartLine[]): CartLine[] {
