@@ -172,7 +172,7 @@ export const TEMPLATES: TemplateMeta[] = [
     title: "Custom",
     description: "Build from scratch with every option.",
     example: "All fields available",
-    available: false,
+    available: true,
     defaults: { ...COMMON_DEFAULTS },
   },
 ];

@@ -163,6 +163,35 @@ export function DiscountBuilder({ template, initial, schools, menuItems, discoun
         </div>
       )}
 
+      {/* Custom template — optional promo code field */}
+      {template.kind === "CUSTOM" && (
+        <div className="rounded-[16px] border border-editorial-line bg-editorial-paper-2 p-4 mb-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-editorial-ink-soft mb-2">
+            Customer code (optional)
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              value={state.code}
+              onChange={(e) => update({ code: e.target.value.toUpperCase().replace(/\s/g, "") })}
+              placeholder="Leave empty for automatic discount"
+              maxLength={40}
+              className="flex-1 font-mono text-[14px] text-editorial-ink bg-white border border-editorial-line rounded-[12px] px-3 py-2 tracking-wider focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
+            />
+            <button
+              type="button"
+              onClick={() => update({ code: generateCode() })}
+              className="text-[11px] font-semibold px-3 py-2 rounded-full border border-editorial-line bg-white hover:border-editorial-green hover:text-editorial-green text-editorial-ink"
+              title="Generate a random code"
+            >
+              ⟲ Generate
+            </button>
+          </div>
+          <p className="text-[11px] text-editorial-ink-soft mt-2">
+            Optional. If set, customers type this code at checkout to unlock the discount.
+          </p>
+        </div>
+      )}
+
       {/* The sentence */}
       <div className="rounded-[16px] border border-editorial-line bg-white p-5 mb-5 text-[15px] leading-[2.2] text-editorial-ink shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         {/* Amount + main clause */}
@@ -205,6 +234,12 @@ export function DiscountBuilder({ template, initial, schools, menuItems, discoun
             <ItemPill state={state} update={update} menuItems={menuItems} openPillId={openPillId} setOpenPillId={setOpenPillId} />
             {"."}
           </>
+        ) : template.kind === "CUSTOM" ? (
+          <>
+            <AmountPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+            {" · scope: "}
+            <ScopePill state={state} update={update} menuItems={menuItems} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+          </>
         ) : (
           // Fallback for templates whose builders aren't ready yet
           <>{" off any order."}</>
@@ -223,6 +258,36 @@ export function DiscountBuilder({ template, initial, schools, menuItems, discoun
           <SchoolPill state={state} update={update} schools={schools} openPillId={openPillId} setOpenPillId={setOpenPillId} />
           {" · "}
           <MinOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+        </div>
+      )}
+
+      {/* Custom template — when scope is ITEMS, show item picker */}
+      {template.kind === "CUSTOM" && state.scope === "ITEMS" && (
+        <div className="rounded-[16px] border border-editorial-line bg-white px-5 py-3 mb-3 text-[14px] leading-[2.2] shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-1.5">Which items?</p>
+          <ItemPill state={state} update={update} menuItems={menuItems} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+        </div>
+      )}
+
+      {/* Custom template — eligibility rules */}
+      {template.kind === "CUSTOM" && (
+        <div className="rounded-[16px] border border-editorial-line bg-white px-5 py-3 mb-3 text-[14px] leading-[2.2] shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-1.5">Eligibility</p>
+          <FirstOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+          {" · "}
+          <SchoolPill state={state} update={update} schools={schools} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+          {" · "}
+          <MinOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+        </div>
+      )}
+
+      {/* Custom template — additional restrictions */}
+      {template.kind === "CUSTOM" && (
+        <div className="rounded-[16px] border border-editorial-line bg-white px-5 py-3 mb-3 text-[14px] leading-[2.2] shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-1.5">Restrictions</p>
+          <WeekdayPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+          {" · "}
+          <MinItemCountPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
         </div>
       )}
 
@@ -676,6 +741,66 @@ function ItemPill({ state, update, menuItems, openPillId, setOpenPillId }: PillS
           ))}
         </div>
       )}
+    </DiscountPill>
+  );
+}
+
+function ScopePill({ state, update, menuItems, openPillId, setOpenPillId }: PillSharedProps & { menuItems: { id: string; name: string; category: string | null }[] }) {
+  const isDefault = state.scope === "ORDER";
+  const label = isDefault ? "order-wide" : "specific items";
+  return (
+    <DiscountPill id="scope" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">Scope</p>
+      <div className="space-y-1">
+        <label className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
+          <input
+            type="radio"
+            name="scope"
+            checked={state.scope === "ORDER"}
+            onChange={() => update({ scope: "ORDER" })}
+          />
+          Apply to entire order
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
+          <input
+            type="radio"
+            name="scope"
+            checked={state.scope === "ITEMS"}
+            onChange={() => update({ scope: "ITEMS" })}
+          />
+          Apply to specific items
+        </label>
+      </div>
+    </DiscountPill>
+  );
+}
+
+function MinItemCountPill({ state, update, openPillId, setOpenPillId }: PillSharedProps) {
+  const n = parseInt(state.minItemCount, 10) || 0;
+  const isDefault = !n || n <= 0;
+  const label = isDefault ? "any item count" : `${n}+ items`;
+  return (
+    <DiscountPill id="minItemCount" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
+        Minimum items per order
+      </p>
+      <input
+        type="number"
+        step={1}
+        min={0}
+        placeholder="0"
+        value={state.minItemCount}
+        onChange={(e) => update({ minItemCount: e.target.value })}
+        className="w-full border border-editorial-line rounded-[10px] px-2 py-1.5 text-[14px] focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
+        autoFocus
+      />
+      <button
+        type="button"
+        onClick={() => update({ minItemCount: "" })}
+        className="text-[11px] text-editorial-ink-soft mt-2 hover:text-editorial-ink"
+      >
+        Clear — any item count
+      </button>
     </DiscountPill>
   );
 }
