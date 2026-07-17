@@ -87,7 +87,8 @@ export default async function WeeklyPage() {
                 schoolName: c.school.name,
                 timezone: c.school.timezone,
                 studentName: c.studentName,
-                grade: c.grade
+                grade: c.grade,
+                locationType: c.school.locationType
               }))}
               deliveryDates={deliveryDates.map((date) => ({
                 id: date.id,
