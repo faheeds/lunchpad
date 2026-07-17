@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { BELLEVUE_GRADES, REDMOND_GRADES } from "@/lib/grades";
+import { getLabels } from "@/lib/location-labels";
+import type { LocationType } from "@prisma/client";
 
 function gradesForSchoolName(name: string): string[] {
   const n = name.toLowerCase();
@@ -18,13 +20,17 @@ export function GradeSelect({
   defaultSchoolId,
   defaultGrade,
 }: {
-  schools: { id: string; name: string }[];
+  schools: { id: string; name: string; locationType?: LocationType }[];
   defaultSchoolId?: string;
   defaultGrade?: string;
 }) {
   const [schoolId, setSchoolId] = useState(defaultSchoolId ?? schools[0]?.id ?? "");
-  const schoolName = schools.find((s) => s.id === schoolId)?.name ?? "";
+  const selectedSchool = schools.find((s) => s.id === schoolId);
+  const schoolName = selectedSchool?.name ?? "";
+  const locationType = selectedSchool?.locationType ?? "SCHOOL";
+  const labels = getLabels(locationType);
   const grades = gradesForSchoolName(schoolName);
+  const isSchool = locationType === "SCHOOL";
 
   return (
     <>
@@ -32,7 +38,7 @@ export function GradeSelect({
         name="schoolId"
         value={schoolId}
         onChange={(e) => setSchoolId(e.target.value)}
-        className="w-full rounded-xl border-slate-200 text-[13px]"
+        className="w-full rounded-xl border border-slate-200 text-[13px]"
         required
       >
         {schools.map((s) => (
@@ -40,17 +46,28 @@ export function GradeSelect({
         ))}
       </select>
 
-      <select
-        name="grade"
-        defaultValue={defaultGrade ?? ""}
-        className="w-full rounded-xl border-slate-200 text-[13px]"
-        required
-      >
-        <option value="" disabled>Select grade</option>
-        {grades.map((g) => (
-          <option key={g} value={g}>{g}</option>
-        ))}
-      </select>
+      {isSchool ? (
+        <select
+          name="grade"
+          defaultValue={defaultGrade ?? ""}
+          className="w-full rounded-xl border border-slate-200 text-[13px]"
+          required
+        >
+          <option value="" disabled>Select grade</option>
+          {grades.map((g) => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          name="grade"
+          type="text"
+          defaultValue={defaultGrade ?? ""}
+          placeholder={labels.gradePlaceholder}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          required
+        />
+      )}
     </>
   );
 }
