@@ -194,6 +194,11 @@ export function DiscountBuilder({ template, initial, schools, discountId }: Disc
             <MinOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
             {"."}
           </>
+        ) : template.kind === "DAY_OF_WEEK" ? (
+          <>
+            <WeekdayPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+            {"."}
+          </>
         ) : (
           // Fallback for templates whose builders aren't ready yet
           <>{" off any order."}</>
@@ -550,6 +555,46 @@ function LimitPill({
       >
         Clear — no limit
       </button>
+    </DiscountPill>
+  );
+}
+
+function WeekdayPill({ state, update, openPillId, setOpenPillId }: PillSharedProps) {
+  const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const isDefault = state.weekdays.length === 0;
+  const label = isDefault
+    ? "any day"
+    : state.weekdays.length === 1
+    ? `on ${WEEKDAY_NAMES[state.weekdays[0] - 1]}s`
+    : `on ${state.weekdays.length} days a week`;
+  function toggle(isoDay: number) {
+    update({
+      weekdays: state.weekdays.includes(isoDay)
+        ? state.weekdays.filter((x) => x !== isoDay)
+        : [...state.weekdays, isoDay].sort((a, b) => a - b),
+    });
+  }
+  return (
+    <DiscountPill id="weekdays" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
+        Which days?
+      </p>
+      <div className="space-y-1">
+        {WEEKDAY_NAMES.map((name, idx) => {
+          const isoDay = idx + 1;
+          return (
+            <label key={isoDay} className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
+              <input
+                type="checkbox"
+                checked={state.weekdays.includes(isoDay)}
+                onChange={() => toggle(isoDay)}
+                className="rounded"
+              />
+              {name}
+            </label>
+          );
+        })}
+      </div>
     </DiscountPill>
   );
 }
