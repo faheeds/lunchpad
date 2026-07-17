@@ -332,13 +332,15 @@ export function ThemePicker({
         </div>
       </div>
 
-      {/* Hidden inputs to carry color values into the form */}
+      {/* Hidden inputs to carry color and font values into the form */}
       <input type="hidden" name="primaryColor"    value={colors.primaryColor} />
       <input type="hidden" name="accentColor"     value={colors.accentColor} />
       <input type="hidden" name="darkColor"       value={colors.darkColor} />
       <input type="hidden" name="heroTitleColor"  value={colors.heroTitleColor} />
       <input type="hidden" name="heroAccentColor" value={colors.heroAccentColor} />
       <input type="hidden" name="bodyTextColor"   value={colors.bodyTextColor} />
+      <input type="hidden" name="displayFont"     value={colors.displayFont} />
+      <input type="hidden" name="bodyFont"        value={colors.bodyFont} />
     </div>
   );
 }
