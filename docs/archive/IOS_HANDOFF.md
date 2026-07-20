@@ -1,3 +1,5 @@
+> **ARCHIVED — describes a superseded single-tenant predecessor app, not the current multi-tenant lunchpad.us platform.**
+
 # LBB Hot Lunch — iOS app handoff
 
 This file is a handoff for building an iOS app companion to the LBB Hot Lunch

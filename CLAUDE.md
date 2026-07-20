@@ -149,6 +149,44 @@ Files staged in push-fix.bat:
 - `app/admin/(protected)/reports/page.tsx`
 - `lib/restaurant.ts` (platform homepage fix)
 
+## Lane rules — agents
+
+Two lanes. Each agent owns specific files and must never touch the other lane's files. If dev
+and QA need the same file, they coordinate through the lead — never in parallel.
+
+**dev** → all source code: `app/`, `components/`, `lib/` (excluding test files), `scripts/` —
+implementation only, never test files. Per `docs/agent-pipeline.md`, changes to `lib/orders.ts`,
+`app/api/stripe/*`, admin auth, or `prisma/schema.prisma` need explicit lead sign-off before dev
+proceeds — these are money/auth/schema blast-radius files.
+
+**qa** → ALL test files (`tests/*.test.ts`, `vitest.config.ts`) — QA owns test authorship end to
+end.
+
+### QA lane — hard rules
+
+QA owns every test file. Dev writes SOURCE CODE ONLY and never authors test cases — if dev
+believes a test is needed, it describes the test case to the lead in plain language; the lead
+routes it to QA.
+
+QA branches are named `qa/<short-desc>`, NOT `agent/<short-desc>`.
+
+Every happy-path test needs at least one adversarial test (boundary, malformed input, race
+condition, cross-tenant access attempt where relevant). No flaky tests. No tests that hit
+production services (Stripe live mode, production DB).
+
+When a test fails, QA documents the disagreement between expected and actual behavior as a
+finding — QA does not fix application code.
+
+### Lead responsibilities
+
+The lead agent (this session) reads incoming tickets, decides whether each requires dev work,
+QA work, or both, and dispatches accordingly using this session's own subagent tooling rather
+than doing both kinds of work directly in the main thread. The lead resolves conflicts when dev
+and QA need the same file, and is responsible for opening/merging PRs whose scope spans both
+lanes' commits. Per this repo's existing convention, PRs for money-adjacent changes
+(`lib/orders.ts`, refunds, Stripe) should be opened but not auto-merged — leave those for human
+review.
+
 ## Known Issues / Watch Out For
 - `.git/index.lock` sometimes left by Windows — `push-fix.bat` clears it automatically
 - Prisma `$queryRaw` fallback in `restaurant.ts` is for legacy DB schema compatibility — keep it

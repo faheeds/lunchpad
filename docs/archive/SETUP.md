@@ -1,3 +1,5 @@
+> **ARCHIVED — describes a superseded single-tenant predecessor app, not the current multi-tenant lunchpad.us platform.**
+
 # LunchPad — New Project Setup Guide
 
 This project is a clean copy of the LBB Hot Lunch app, repurposed as the
