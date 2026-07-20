@@ -5,6 +5,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
 import type { LocationType } from "@prisma/client";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
+import { resolveLineItemPrice } from "@/lib/pricing";
 import { getGradesForSchoolName } from "@/lib/grades";
 import { getLabels } from "@/lib/location-labels";
 import { cn } from "@/lib/utils";
@@ -313,11 +314,13 @@ export function OrderForm({
     // size if state hasn't caught up). Non-sized: legacy basePriceCents.
     const sizes = selectedMenuItem.sizes ?? [];
     const sizeMatch = sizes.length > 0 ? (sizes.find((s) => s.name === selectedSize) ?? sizes[0]) : null;
-    const baseCents = sizeMatch ? sizeMatch.priceCents : selectedMenuItem.basePriceCents;
-    const extra = selectedMenuItem.options
-      .filter((o) => o.optionType === "ADD_ON" && selectedAdditions.includes(o.name))
-      .reduce((sum, o) => sum + o.priceDeltaCents, 0);
-    return baseCents + extra;
+    return resolveLineItemPrice({
+      basePriceCents: selectedMenuItem.basePriceCents,
+      size: sizeMatch,
+      additions: selectedMenuItem.options.filter(
+        (o) => o.optionType === "ADD_ON" && selectedAdditions.includes(o.name)
+      ),
+    });
   }, [selectedAdditions, selectedMenuItem, selectedSize]);
 
   const totalCents = useMemo(() => cartItems.reduce((s, i) => s + i.lineTotalCents * i.quantity, 0), [cartItems]);
