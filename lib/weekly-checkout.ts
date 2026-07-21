@@ -2,6 +2,7 @@ import { OrderStatus, PaymentStatus, WeeklyCheckoutStatus } from "@prisma/client
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
+import { resolveLineItemPrice } from "@/lib/pricing";
 import { getUpcomingOrderingWindowRange, getWeekdayNumber } from "@/lib/weekly-week";
 
 const WEEKDAY_LABELS: Record<number, string> = {
@@ -171,9 +172,12 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
       resolvedBaseCents = matchedSize.priceCents;
     }
 
-    const addOnCost = plan.menuItem.options
-      .filter((option) => option.optionType === "ADD_ON" && plan.additions.includes(option.name))
-      .reduce((sum, option) => sum + option.priceDeltaCents, 0);
+    const lineTotalCents = resolveLineItemPrice({
+      basePriceCents: resolvedBaseCents,
+      additions: plan.menuItem.options.filter(
+        (option) => option.optionType === "ADD_ON" && plan.additions.includes(option.name)
+      ),
+    });
 
     return [
       {
@@ -187,7 +191,7 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
         removals: plan.removals,
         itemNameSnapshot: plan.menuItem.name,
         basePriceCents: resolvedBaseCents,
-        lineTotalCents: resolvedBaseCents + addOnCost
+        lineTotalCents
       }
     ];
   });

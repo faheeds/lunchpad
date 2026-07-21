@@ -9,6 +9,7 @@ import { stripe } from "@/lib/payments/stripe";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
 import { pickApplicableDiscounts, type CartLine } from "@/lib/discounts";
+import { resolveLineItemPrice } from "@/lib/pricing";
 
 export function buildPaidState(now = new Date()) {
   return {
@@ -194,10 +195,10 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       lineBasePriceCents = menuItem.basePriceCents;
     }
 
-    const additionCost = menuItem.options
-      .filter((option) => cartItem.additions.includes(option.name))
-      .reduce((sum, option) => sum + option.priceDeltaCents, 0);
-    const lineTotalCents = lineBasePriceCents + additionCost;
+    const lineTotalCents = resolveLineItemPrice({
+      basePriceCents: lineBasePriceCents,
+      additions: menuItem.options.filter((option) => cartItem.additions.includes(option.name)),
+    });
 
     return {
       menuItem,
@@ -492,10 +493,10 @@ export async function createAdminOrder(args: {
       lineBasePriceCents = menuItem.basePriceCents;
     }
 
-    const additionCost = menuItem.options
-      .filter((option) => cartItem.additions.includes(option.name))
-      .reduce((sum, option) => sum + option.priceDeltaCents, 0);
-    const lineTotalCents = lineBasePriceCents + additionCost;
+    const lineTotalCents = resolveLineItemPrice({
+      basePriceCents: lineBasePriceCents,
+      additions: menuItem.options.filter((option) => cartItem.additions.includes(option.name)),
+    });
 
     return {
       menuItem,
@@ -873,10 +874,10 @@ export async function updateOrderBeforeCutoff(args: {
     throw new Error("One or more removals are invalid.");
   }
 
-  const additionCost = item.menuItem.options
-    .filter((option) => args.additions.includes(option.name))
-    .reduce((sum, option) => sum + option.priceDeltaCents, 0);
-  const totalCents = item.basePriceCents + additionCost;
+  const totalCents = resolveLineItemPrice({
+    basePriceCents: item.basePriceCents,
+    additions: item.menuItem.options.filter((option) => args.additions.includes(option.name)),
+  });
 
   return prisma.$transaction(async (tx) => {
     await tx.student.update({
@@ -986,10 +987,10 @@ export async function updateOrderAsAdmin(args: {
   if (!args.additions.every((v) => addOnSet.has(v))) throw new Error("One or more add-ons are invalid.");
   if (!args.removals.every((v) => removalSet.has(v))) throw new Error("One or more removals are invalid.");
 
-  const additionCost = item.menuItem.options
-    .filter((o) => args.additions.includes(o.name))
-    .reduce((sum, o) => sum + o.priceDeltaCents, 0);
-  const totalCents = item.basePriceCents + additionCost;
+  const totalCents = resolveLineItemPrice({
+    basePriceCents: item.basePriceCents,
+    additions: item.menuItem.options.filter((o) => args.additions.includes(o.name)),
+  });
 
   // Prepend admin note to specialInstructions if provided
   const specialInstructions = args.adminNote

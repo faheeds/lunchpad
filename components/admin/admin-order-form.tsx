@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 import type { LocationType } from "@prisma/client";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
+import { resolveLineItemPrice } from "@/lib/pricing";
 import { getLabels } from "@/lib/location-labels";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -189,10 +190,12 @@ export function AdminOrderForm({
   const requiredChoices = activeMenuItem ? getRequiredChoicesForMenuItem(activeMenuItem) : [];
   const activeLineTotal = useMemo(() => {
     if (!activeMenuItem) return 0;
-    const extras = activeMenuItem.options
-      .filter((o) => o.optionType === "ADD_ON" && activeAdditions.includes(o.name))
-      .reduce((sum, o) => sum + o.priceDeltaCents, 0);
-    return activeMenuItem.basePriceCents + extras;
+    return resolveLineItemPrice({
+      basePriceCents: activeMenuItem.basePriceCents,
+      additions: activeMenuItem.options.filter(
+        (o) => o.optionType === "ADD_ON" && activeAdditions.includes(o.name)
+      ),
+    });
   }, [activeMenuItem, activeAdditions]);
   const cartTotal = useMemo(() => cartItems.reduce((s, i) => s + i.lineTotalCents, 0), [cartItems]);
 
