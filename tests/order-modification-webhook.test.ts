@@ -252,22 +252,15 @@ describe("webhook — order_edit_increase", () => {
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it("duplicate webhook — already finalized: FINDING — duplicate guard unreachable; orphan path taken instead", async () => {
-    // FINDING: The duplicate-webhook guard in the webhook handler is dead code.
+  it("duplicate webhook — already finalized: no-op, no refund issued, returns 200", async () => {
+    // After finalization, pendingEditCheckoutSession is null and deltaPaymentIntentId
+    // is set to the PI that was charged. A duplicate webhook for the same session
+    // should return 200 early without issuing a refund.
     //
-    // When pendingEditCheckoutSession is null (cleared after finalization) and
-    // a duplicate webhook arrives with the same session.id, the earlier condition:
-    //   `order.pendingEditCheckoutSession !== session.id`  →  `null !== "cs_delta_123"` → TRUE
-    // routes to the orphan path BEFORE the duplicate guard `else if` is evaluated.
-    // The duplicate guard `else if (pendingEditCheckoutSession === null && deltaPaymentIntentId === pi)`
-    // can never be reached because reaching the `else if` requires pendingEditCheckoutSession
-    // to equal session.id (non-null), but the guard itself checks it equals null.
-    //
-    // Impact: a duplicate webhook on a finalized order incorrectly issues a full Stripe
-    // refund instead of returning 200 early. The source code should reorder the checks:
-    // evaluate the duplicate guard BEFORE the `pendingEditCheckoutSession !== session.id` guard.
-    //
-    // This test documents the ACTUAL (incorrect) behavior. The source must be fixed.
+    // The duplicate guard must be evaluated BEFORE the session-mismatch check:
+    // `null !== session.id` is true, so without the guard ordering fix the orphan
+    // refund path would fire instead. (Bug was present in the initial implementation;
+    // fixed in commit b252c0e by reordering the else-if chain.)
 
     mockPrisma.order.findUnique.mockResolvedValue(
       makeOrder({
@@ -280,13 +273,10 @@ describe("webhook — order_edit_increase", () => {
 
     expect(response.status).toBe(200);
 
-    // ACTUAL (incorrect) behavior: orphan refund is issued instead of a no-op
-    expect(mockStripe.refunds.create).toHaveBeenCalledOnce();
-    expect(mockStripe.refunds.create.mock.calls[0][0].payment_intent).toBe("pi_delta_xyz");
-
-    // EXPECTED (correct) behavior if the bug were fixed:
-    // expect(mockStripe.refunds.create).not.toHaveBeenCalled();
-    // expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    // No refund should be issued — this is a no-op early return
+    expect(mockStripe.refunds.create).not.toHaveBeenCalled();
+    // No DB transaction — nothing to write
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("malformed newItemsJson: skips item update but still clears pendingEdit and sets deltaPaymentIntentId", async () => {
