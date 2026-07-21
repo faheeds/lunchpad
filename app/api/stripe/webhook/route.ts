@@ -157,6 +157,12 @@ export async function POST(request: Request) {
               summary: `[order_edit_orphan] No order found for edit session ${session.id} — refunded ${formatCurrency(session.amount_total ?? 0)}`,
               metadata: { sessionId: session.id, orderId, paymentIntentId, reason: "order_not_found" },
             });
+          } else if (order.pendingEditCheckoutSession === null && order.deltaPaymentIntentId === paymentIntentId) {
+            // Duplicate webhook — already finalized. No-op.
+            // IMPORTANT: this guard must come before the session-mismatch check
+            // below. After finalization, pendingEditCheckoutSession is null, so
+            // null !== session.id would be true and incorrectly trigger an orphan
+            // refund without this early-return guard.
           } else if (order.pendingEditCheckoutSession !== session.id) {
             // Orphan webhook — session doesn't match the order's pending edit.
             // Real money arrived but we can't apply it. Refund immediately.
@@ -181,8 +187,6 @@ export async function POST(request: Request) {
                 reason: "session_mismatch",
               },
             });
-          } else if (order.pendingEditCheckoutSession === null && order.deltaPaymentIntentId === paymentIntentId) {
-            // Duplicate webhook — already finalized. No-op.
           } else {
             // Happy path: finalize the increase-edit.
             let pendingItems: {
