@@ -1,3 +1,5 @@
+> **ARCHIVED — describes a superseded single-tenant predecessor app, not the current multi-tenant lunchpad.us platform.**
+
 # Production deploy — lunch.localbiggerburger.com
 
 This is the end-to-end checklist for getting the LBB Hot Lunch app live on Vercel with Neon Postgres, Stripe live mode, Resend, and Google OAuth, attached to the subdomain `lunch.localbiggerburger.com`.
