@@ -323,3 +323,25 @@ React Native / iOS app.
   ]
   ```
 - **Errors**: `401`, `500`
+
+---
+
+## DELETE /api/mobile/native/orders/[orderId]
+
+- **Method**: DELETE
+- **Auth**: Bearer JWT required (`requireMobileAuth`)
+- **Tenant scoping**: JWT `restaurantId` must match the request host (enforced by
+  `requireMobileAuth`); additionally the order must belong to the JWT's `parentUserId`
+  and the resolved tenant.
+- **Request**: path param `orderId`; no body
+- **Behavior**: cancels a PAID order before its delivery cutoff. Issues a full Stripe
+  refund via `cancelOrderWithRefund` (same path as the web cancel flow). Sends a
+  best-effort cancellation email to the parent.
+- **Success (200)**: `{ "ok": true }`
+- **Errors**:
+  - `401` — missing or invalid Bearer token
+  - `403 { "error": "Not your order." }` — order exists but belongs to a different parent
+  - `404 { "error": "Order not found." }` — no order with this ID in this tenant
+  - `409 { "error": "Only paid orders can be cancelled." }` — order not in PAID status
+  - `422 { "error": "<cutoff message>" }` — past the delivery cutoff
+  - `500 { "error": "Failed to cancel order." }` — unexpected server error
