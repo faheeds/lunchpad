@@ -65,7 +65,11 @@ export async function adminCancelOrderWithRefund(
 ) {
   const order = await prisma.order.findFirst({
     where: { id: orderId, restaurantId },
-    include: { payment: true, student: true },
+    include: {
+      payment: true,
+      student: true,
+      restaurant: { select: { stripeAccountId: true } },
+    },
   });
 
   if (!order) throw new Error(`Order ${orderId} not found in this restaurant.`);
@@ -74,13 +78,24 @@ export async function adminCancelOrderWithRefund(
   }
 
   const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+  const { stripeAccountId } = order.restaurant;
 
-  if (stripe && paymentIntentId) {
+  if (stripe) {
     try {
-      await stripe.refunds.create({
-        payment_intent: paymentIntentId,
-        reason: "requested_by_customer",
-      });
+      // Multi-PI: refund delta charge first (if an increase-edit was finalized).
+      if (order.deltaPaymentIntentId && (order.deltaAmountCents ?? 0) > 0) {
+        await stripe.refunds.create({
+          payment_intent: order.deltaPaymentIntentId,
+          reason: "requested_by_customer",
+        });
+      }
+
+      if (paymentIntentId) {
+        await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          reason: "requested_by_customer",
+        });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       // Log but don't block — the order can still be cancelled in the DB
