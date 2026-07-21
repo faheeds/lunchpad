@@ -176,6 +176,26 @@ React Native / iOS app.
   - `400 { error: "schoolId and studentName are required" }`
   - `401`, `500`
 
+## PATCH /api/mobile/native/account/children/[id]
+
+- **Method**: PATCH
+- **Auth**: Bearer JWT required (`requireMobileAuth`)
+- **Tenant scoping**: JWT tenant check + child must belong to `parentUserId` + child's school must belong to the resolved tenant
+- **Request body**: `{ studentName: string (required), schoolId?: string, grade?: string, allergyNotes?: string }` — only supplied fields are updated
+- **Behavior**: updates the named fields on a non-archived child. Archived or missing children return 404.
+- **Success (200)**: updated child (same shape as POST /account/children 201 response)
+- **Errors**: `400 { "error": "studentName is required" }`, `401`, `404 { "error": "Child not found." }`, `500`
+
+## DELETE /api/mobile/native/account/children/[id]
+
+- **Method**: DELETE
+- **Auth**: Bearer JWT required (`requireMobileAuth`)
+- **Tenant scoping**: JWT tenant check + child ownership
+- **Request**: path param `id`; no body
+- **Behavior**: soft-deletes the child (sets `archivedAt`) and cascade-deletes all `WeeklyLunchPlan` rows for that child in a single transaction. No 409 — weekly plans are always cleared.
+- **Success (200)**: `{ "ok": true }`
+- **Errors**: `401`, `404 { "error": "Child not found." }`, `500`
+
 ---
 
 ## GET /api/mobile/native/weekly-plans
