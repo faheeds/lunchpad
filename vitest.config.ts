@@ -12,7 +12,8 @@ export default defineConfig({
       DATABASE_URL: "postgresql://test:test@localhost:5432/lunchpad_test",
       NEXTAUTH_URL: "http://localhost:3000",
       NEXTAUTH_SECRET: "test-secret-thirty-two-chars-min-x",
-      APP_BASE_URL: "http://localhost:3000"
+      APP_BASE_URL: "http://localhost:3000",
+      STRIPE_WEBHOOK_SECRET: "whsec_test_secret_for_vitest_only"
     }
   },
   resolve: {
