@@ -1,8 +1,7 @@
 /**
- * DELETE /api/mobile/native/orders/[orderId]
+ * PATCH /api/mobile/native/orders/[orderId] — modify a PAID order before cutoff
+ * DELETE /api/mobile/native/orders/[orderId] — cancel a PAID order before cutoff
  *
- * Cancel a PAID order before its delivery cutoff. Issues a full Stripe
- * refund via cancelOrderWithRefund (same path as the web cancel flow).
  * Auth: Bearer JWT required.
  */
 
@@ -14,10 +13,71 @@ import {
   jsonOk,
   jsonErr,
 } from "@/lib/mobile-bearer";
-import { cancelOrderWithRefund } from "@/lib/orders";
+import { cancelOrderWithRefund, updateOrderBeforeCutoff } from "@/lib/orders";
 import { sendCancellationEmail } from "@/lib/email/service";
 
 export { corsOptions as OPTIONS };
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ orderId: string }> }
+) {
+  try {
+    const auth = await requireMobileAuth(request);
+    const { orderId } = await context.params;
+
+    // Pre-check: verify tenant ownership before calling updateOrderBeforeCutoff.
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, parentUserId: true, restaurantId: true },
+    });
+
+    if (!order || order.restaurantId !== auth.restaurantId) {
+      return jsonErr("Order not found.", 404);
+    }
+    if (order.parentUserId !== auth.parentUserId) {
+      return jsonErr("Not your order.", 403);
+    }
+
+    const body = await request.json();
+
+    let result: Awaited<ReturnType<typeof updateOrderBeforeCutoff>>;
+    try {
+      result = await updateOrderBeforeCutoff({
+        orderId,
+        parentUserId: auth.parentUserId,
+        additions: Array.isArray(body.additions) ? body.additions : [],
+        removals: Array.isArray(body.removals) ? body.removals : [],
+        allergyNotes: typeof body.allergyNotes === "string" ? body.allergyNotes : undefined,
+        dietaryNotes: typeof body.dietaryNotes === "string" ? body.dietaryNotes : undefined,
+        specialInstructions: typeof body.specialInstructions === "string" ? body.specialInstructions : undefined,
+        teacherName: typeof body.teacherName === "string" ? body.teacherName : undefined,
+        classroom: typeof body.classroom === "string" ? body.classroom : undefined,
+      });
+    } catch (modifyErr: unknown) {
+      const msg = modifyErr instanceof Error ? modifyErr.message : "";
+
+      if (msg === "Order not found.") return jsonErr("Order not found.", 404);
+      if (msg === "Only paid orders can be modified.") return jsonErr(msg, 409);
+      if (msg.startsWith("You already have a pending edit")) return jsonErr(msg, 409);
+      if (msg.startsWith("This order has already been increased once")) return jsonErr(msg, 409);
+
+      // Cutoff errors, invalid add-on/removal, too-close-to-cutoff → 422
+      if (modifyErr instanceof Error) return jsonErr(modifyErr.message, 422);
+      return jsonErr("Failed to modify order.", 500);
+    }
+
+    if (result.action === "checkout_required") {
+      return jsonOk({ action: "checkout_required", checkoutUrl: result.checkoutUrl });
+    }
+
+    return jsonOk({ action: "updated", order: result.order });
+  } catch (err: unknown) {
+    const status = (err as { status?: number }).status ?? 500;
+    const message = err instanceof Error ? err.message : "Failed to modify order.";
+    return jsonErr(message, status);
+  }
+}
 
 export async function DELETE(
   request: NextRequest,

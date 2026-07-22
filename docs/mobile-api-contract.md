@@ -346,6 +346,49 @@ React Native / iOS app.
 
 ---
 
+## PATCH /api/mobile/native/orders/[orderId]
+
+Modify a PAID order before its delivery cutoff.
+
+- **Method**: PATCH
+- **Auth**: Bearer JWT required (`requireMobileAuth`)
+- **Tenant scoping**: JWT `restaurantId` must match the request host; additionally the order must belong to the JWT's `parentUserId`
+
+**Request body** (JSON, all fields optional):
+
+| Field | Type | Description |
+|---|---|---|
+| `additions` | `string[]` | Add-on option names to select |
+| `removals` | `string[]` | Removal option names to select |
+| `allergyNotes` | `string` | Updated allergy notes |
+| `dietaryNotes` | `string` | Updated dietary notes |
+| `specialInstructions` | `string` | Order-level special instructions |
+| `teacherName` | `string` | Student's teacher name |
+| `classroom` | `string` | Student's classroom |
+
+**Response — order updated (200):**
+```json
+{ "action": "updated", "order": { "id": "...", "orderNumber": "...", "restaurantId": "..." } }
+```
+
+**Response — delta payment required (200):**
+```json
+{ "action": "checkout_required", "checkoutUrl": "https://checkout.stripe.com/..." }
+```
+The client should open `checkoutUrl` in a browser or in-app web view. The order's items are NOT updated until the payment completes via the Stripe webhook.
+
+**Errors:**
+
+| Status | Condition |
+|---|---|
+| `401` | Missing or invalid Bearer token |
+| `403` | Order belongs to a different parent |
+| `404` | Order not found (or belongs to a different tenant) |
+| `409` | Order not in PAID status / pending edit already in flight / one-edit limit reached |
+| `422` | Past delivery cutoff / too close to cutoff (<30 min) / invalid add-on or removal |
+
+---
+
 ## DELETE /api/mobile/native/orders/[orderId]
 
 - **Method**: DELETE
