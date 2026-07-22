@@ -19,13 +19,21 @@ CREATE TYPE "AdminRole" AS ENUM ('OWNER', 'ADMIN', 'STAFF');
 CREATE TYPE "RestaurantPlan" AS ENUM ('FREE', 'STARTER', 'PRO');
 
 -- DropIndex
-DROP INDEX "AdminUser_email_key";
+-- Fixed 2026-07-21: the original `DROP INDEX` fails on a fresh shadow-database
+-- replay because AdminUser_email_key is registered as a table constraint there
+-- (not a bare index) — Postgres requires dropping the constraint, which
+-- cascades to remove its backing index. This already succeeded historically
+-- against the real database under the old syntax; this fix only matters for
+-- fresh replays (shadow DB, new dev environments, CI).
+ALTER TABLE "AdminUser" DROP CONSTRAINT "AdminUser_email_key";
 
 -- DropIndex
-DROP INDEX "MenuItem_slug_key";
+-- Fixed 2026-07-21: same constraint-vs-index issue as AdminUser_email_key above.
+ALTER TABLE "MenuItem" DROP CONSTRAINT "MenuItem_slug_key";
 
 -- DropIndex
-DROP INDEX "School_slug_key";
+-- Fixed 2026-07-21: same constraint-vs-index issue as AdminUser_email_key above.
+ALTER TABLE "School" DROP CONSTRAINT "School_slug_key";
 
 -- AlterTable
 ALTER TABLE "AdminUser" ADD COLUMN     "restaurantId" TEXT NOT NULL,
