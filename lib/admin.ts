@@ -81,25 +81,19 @@ export async function adminCancelOrderWithRefund(
   const { stripeAccountId } = order.restaurant;
 
   if (stripe) {
-    try {
-      // Multi-PI: refund delta charge first (if an increase-edit was finalized).
-      if (order.deltaPaymentIntentId && (order.deltaAmountCents ?? 0) > 0) {
-        await stripe.refunds.create({
-          payment_intent: order.deltaPaymentIntentId,
-          reason: "requested_by_customer",
-        });
-      }
+    // Multi-PI: refund delta charge first (if an increase-edit was finalized).
+    if (order.deltaPaymentIntentId && (order.deltaAmountCents ?? 0) > 0) {
+      await stripe.refunds.create({
+        payment_intent: order.deltaPaymentIntentId,
+        reason: "requested_by_customer",
+      });
+    }
 
-      if (paymentIntentId) {
-        await stripe.refunds.create({
-          payment_intent: paymentIntentId,
-          reason: "requested_by_customer",
-        });
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // Log but don't block — the order can still be cancelled in the DB
-      console.error(`[admin-cancel] Stripe refund failed for order ${orderId}:`, msg);
+    if (paymentIntentId) {
+      await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        reason: "requested_by_customer",
+      });
     }
   }
 

@@ -141,21 +141,28 @@ export async function POST(request: Request) {
 
           if (!order) {
             // No matching order — orphan webhook (money with no order). Refund.
+            let orphanRefunded = false;
+            let orphanRefundError: string | null = null;
             if (stripe && paymentIntentId) {
               try {
                 await stripe.refunds.create(
                   { payment_intent: paymentIntentId },
                   { idempotencyKey: `edit-orphan-${session.id}` }
                 );
-              } catch { /* best-effort */ }
+                orphanRefunded = true;
+              } catch (e) {
+                orphanRefundError = e instanceof Error ? e.message : String(e);
+              }
             }
             await logActivity({
               restaurantId: "unknown",
               entityType: "ORDER",
               entityId: orderId ?? "unknown",
               action: "MODIFIED",
-              summary: `[order_edit_orphan] No order found for edit session ${session.id} — refunded ${formatCurrency(session.amount_total ?? 0)}`,
-              metadata: { sessionId: session.id, orderId, paymentIntentId, reason: "order_not_found" },
+              summary: orphanRefunded
+                ? `[order_edit_orphan] No order found for edit session ${session.id} — refunded ${formatCurrency(session.amount_total ?? 0)}`
+                : `[order_edit_orphan] No order found for edit session ${session.id} — REFUND FAILED (${orphanRefundError ?? "unknown error"}) — manual action required`,
+              metadata: { sessionId: session.id, orderId, paymentIntentId, reason: "order_not_found", orphanRefunded, ...(orphanRefundError ? { orphanRefundError } : {}) },
             });
           } else if (order.pendingEditCheckoutSession === null && order.deltaPaymentIntentId === paymentIntentId) {
             // Duplicate webhook — already finalized. No-op.
@@ -166,25 +173,34 @@ export async function POST(request: Request) {
           } else if (order.pendingEditCheckoutSession !== session.id) {
             // Orphan webhook — session doesn't match the order's pending edit.
             // Real money arrived but we can't apply it. Refund immediately.
+            let orphanRefunded = false;
+            let orphanRefundError: string | null = null;
             if (stripe && paymentIntentId) {
               try {
                 await stripe.refunds.create(
                   { payment_intent: paymentIntentId },
                   { idempotencyKey: `edit-orphan-${session.id}` }
                 );
-              } catch { /* best-effort */ }
+                orphanRefunded = true;
+              } catch (e) {
+                orphanRefundError = e instanceof Error ? e.message : String(e);
+              }
             }
             await logActivity({
               restaurantId: order.restaurantId,
               entityType: "ORDER",
               entityId: order.id,
               action: "MODIFIED",
-              summary: `[order_edit_orphan] Stale edit session ${session.id} for order ${order.orderNumber} — refunded ${formatCurrency(session.amount_total ?? 0)}`,
+              summary: orphanRefunded
+                ? `[order_edit_orphan] Stale edit session ${session.id} for order ${order.orderNumber} — refunded ${formatCurrency(session.amount_total ?? 0)}`
+                : `[order_edit_orphan] Stale edit session ${session.id} for order ${order.orderNumber} — REFUND FAILED (${orphanRefundError ?? "unknown error"}) — manual action required`,
               metadata: {
                 sessionId: session.id,
                 expectedSession: order.pendingEditCheckoutSession,
                 paymentIntentId,
                 reason: "session_mismatch",
+                orphanRefunded,
+                ...(orphanRefundError ? { orphanRefundError } : {}),
               },
             });
           } else {

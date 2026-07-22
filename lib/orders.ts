@@ -950,7 +950,10 @@ export async function updateOrderBeforeCutoff(args: {
     const refundCents = -deltaCents; // positive amount to refund
     const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
 
-    if (stripe && paymentIntentId) {
+    if (!paymentIntentId) {
+      throw new Error("Cannot issue refund: no Stripe payment intent found for this order. Contact support.");
+    }
+    if (stripe) {
       await stripe.refunds.create(
         {
           payment_intent: paymentIntentId,
@@ -1148,22 +1151,29 @@ export async function updateOrderAsAdmin(args: {
     const refundCents = -deltaCents;
     const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
 
-    if (stripe && paymentIntentId) {
-      await stripe.refunds.create(
-        {
-          payment_intent: paymentIntentId,
-          amount: refundCents,
-          metadata: {
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            editDecrease: "true",
-            newTotalCents: String(newTotalCents),
-            adminUserId: args.adminUserId ?? "unknown",
+    const isStripePayment = order.payment?.provider === "stripe" || order.payment?.provider === "stripe_checkout_link";
+    if (isStripePayment) {
+      if (!paymentIntentId) {
+        throw new Error("Cannot issue refund: Stripe order is missing a payment intent. Contact support.");
+      }
+      if (stripe) {
+        await stripe.refunds.create(
+          {
+            payment_intent: paymentIntentId,
+            amount: refundCents,
+            metadata: {
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              editDecrease: "true",
+              newTotalCents: String(newTotalCents),
+              adminUserId: args.adminUserId ?? "unknown",
+            },
           },
-        },
-        { idempotencyKey: `edit-decrease-${order.id}-${newTotalCents}` }
-      );
+          { idempotencyKey: `edit-decrease-${order.id}-${newTotalCents}` }
+        );
+      }
     }
+    // Non-Stripe orders (manual/comped): no refund call — admin absorbed the cost.
 
     await prisma.orderItem.update({
       where: { id: item.id },
