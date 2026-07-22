@@ -14,6 +14,7 @@ import { isDuplicateWebhookEvent } from "@/lib/payments/webhook";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
+import { sendPushForOrder, sendPushToParent } from "@/lib/push/service";
 
 export async function POST(request: Request) {
   if (!stripe || !env.STRIPE_WEBHOOK_SECRET) {
@@ -277,6 +278,7 @@ export async function POST(request: Request) {
 
             // Best-effort "your order has been updated" email.
             sendOrderModifiedEmail(order.id, order.restaurantId).catch(() => {});
+            sendPushForOrder(order.id, { title: "Order updated", body: "Your order has been updated." }).catch(() => {});
           }
         } else if (session.metadata?.checkoutType === "weekly_batch") {
           const result = await markWeeklyBatchPaidByCheckoutSession(
@@ -290,7 +292,7 @@ export async function POST(request: Request) {
           if (result.createdOrderIds.length > 0) {
             const sample = await prisma.order.findUnique({
               where: { id: result.createdOrderIds[0] },
-              select: { restaurantId: true },
+              select: { restaurantId: true, parentUserId: true },
             });
             if (sample) {
               try {
@@ -300,6 +302,9 @@ export async function POST(request: Request) {
                 );
               } catch {
                 // Email failures are logged and can be retried in admin.
+              }
+              if (sample.parentUserId) {
+                sendPushToParent(sample.parentUserId, { title: "Weekly orders confirmed!", body: "Your lunch orders for the week are set." }).catch(() => {});
               }
             }
           }
@@ -314,6 +319,7 @@ export async function POST(request: Request) {
           } catch {
             // Email failures are logged and can be retried in admin.
           }
+          sendPushForOrder(order.id, { title: "Order confirmed!", body: "Your lunch order is on its way." }).catch(() => {});
           // Previously: scheduleCutoffReminderEmail(order.id, ...). Removed
           // because that sent a "Ordering closes soon — Place Order Now"
           // reminder to the parent who had JUST placed and paid for an

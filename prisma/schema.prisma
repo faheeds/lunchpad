@@ -385,9 +385,23 @@ model ParentUser {
   weeklyPlans           WeeklyLunchPlan[]
   weeklyCheckoutBatches WeeklyCheckoutBatch[]
   discountRedemptions   DiscountRedemption[]
+  pushTokens            PushToken[]
 
   @@unique([restaurantId, email])
   @@index([email])
+}
+
+model PushToken {
+  id           String     @id @default(cuid())
+  parentUserId String
+  token        String
+  platform     String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  parentUser   ParentUser @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+
+  @@unique([parentUserId, token])
+  @@index([parentUserId])
 }
 
 model ParentChild {
