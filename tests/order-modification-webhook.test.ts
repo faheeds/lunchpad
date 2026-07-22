@@ -216,8 +216,9 @@ describe("webhook — order_edit_increase", () => {
     expect(mockPrisma.processedWebhookEvent.create).toHaveBeenCalledOnce();
   });
 
-  it("orphan webhook — order not found: issues full refund and returns 200", async () => {
+  it("orphan webhook — order not found: issues full refund, logs orphanRefunded: true", async () => {
     mockPrisma.order.findUnique.mockResolvedValue(null);
+    mockStripe.refunds.create.mockResolvedValue({ id: "re_orphan_abc" });
 
     const response = await callWebhook(makeEditIncreaseEvent());
 
@@ -229,15 +230,40 @@ describe("webhook — order_edit_increase", () => {
     expect(refundArgs.payment_intent).toBe("pi_delta_xyz");
     expect(refundOpts?.idempotencyKey).toBe("edit-orphan-cs_delta_123");
 
-    // No order DB writes
+    // Activity log must reflect actual success
+    expect(mockLogActivity).toHaveBeenCalledOnce();
+    const logCall = mockLogActivity.mock.calls[0][0];
+    expect(logCall.summary).toMatch(/refunded/i);
+    expect(logCall.summary).not.toMatch(/REFUND FAILED/i);
+    expect(logCall.metadata.orphanRefunded).toBe(true);
+
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it("orphan webhook — session mismatch: issues full refund and returns 200", async () => {
+  it("orphan webhook — order not found, refund fails: logs REFUND FAILED with error detail", async () => {
+    mockPrisma.order.findUnique.mockResolvedValue(null);
+    mockStripe.refunds.create.mockRejectedValue(new Error("charge already refunded"));
+
+    const response = await callWebhook(makeEditIncreaseEvent());
+
+    expect(response.status).toBe(200); // still 200 so Stripe doesn't retry
+
+    // Activity log must reflect the failure
+    expect(mockLogActivity).toHaveBeenCalledOnce();
+    const logCall = mockLogActivity.mock.calls[0][0];
+    expect(logCall.summary).toMatch(/REFUND FAILED/i);
+    expect(logCall.metadata.orphanRefunded).toBe(false);
+    expect(logCall.metadata.orphanRefundError).toContain("charge already refunded");
+
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("orphan webhook — session mismatch: issues full refund, logs orphanRefunded: true", async () => {
     // Order has a DIFFERENT pendingEditCheckoutSession
     mockPrisma.order.findUnique.mockResolvedValue(
       makeOrder({ pendingEditCheckoutSession: "cs_some_other_session" })
     );
+    mockStripe.refunds.create.mockResolvedValue({ id: "re_orphan_abc" });
 
     const response = await callWebhook(makeEditIncreaseEvent());
 
@@ -248,6 +274,31 @@ describe("webhook — order_edit_increase", () => {
     const [refundArgs, refundOpts] = mockStripe.refunds.create.mock.calls[0];
     expect(refundArgs.payment_intent).toBe("pi_delta_xyz");
     expect(refundOpts?.idempotencyKey).toBe("edit-orphan-cs_delta_123");
+
+    // Activity log reflects success
+    expect(mockLogActivity).toHaveBeenCalledOnce();
+    const logCall = mockLogActivity.mock.calls[0][0];
+    expect(logCall.summary).toMatch(/refunded/i);
+    expect(logCall.metadata.orphanRefunded).toBe(true);
+
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("orphan webhook — session mismatch, refund fails: logs REFUND FAILED with error detail", async () => {
+    mockPrisma.order.findUnique.mockResolvedValue(
+      makeOrder({ pendingEditCheckoutSession: "cs_some_other_session" })
+    );
+    mockStripe.refunds.create.mockRejectedValue(new Error("payment_intent already refunded"));
+
+    const response = await callWebhook(makeEditIncreaseEvent());
+
+    expect(response.status).toBe(200);
+
+    expect(mockLogActivity).toHaveBeenCalledOnce();
+    const logCall = mockLogActivity.mock.calls[0][0];
+    expect(logCall.summary).toMatch(/REFUND FAILED/i);
+    expect(logCall.metadata.orphanRefunded).toBe(false);
+    expect(logCall.metadata.orphanRefundError).toContain("payment_intent already refunded");
 
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
   });

@@ -231,20 +231,29 @@ describe("adminCancelOrderWithRefund — multi-PI", () => {
     expect(mockStripe.refunds.create.mock.calls[0][0].payment_intent).toBe("pi_original_abc");
   });
 
-  it("Stripe throws on delta PI refund: error is caught; cancel proceeds to DB (admin catch block)", async () => {
+  it("Stripe throws on delta PI refund: error propagates; DB is NOT updated", async () => {
     mockPrisma.order.findFirst.mockResolvedValue(makeOrderWithDeltaPI());
-    // First refunds.create (delta PI) throws; second (original PI) succeeds
-    mockStripe.refunds.create
-      .mockRejectedValueOnce(new Error("delta PI already fully refunded"))
-      .mockResolvedValueOnce({ id: "re_orig_abc" });
+    // Delta PI refund throws
+    mockStripe.refunds.create.mockRejectedValueOnce(new Error("delta PI already fully refunded"));
 
-    // adminCancelOrderWithRefund catches Stripe errors and continues
+    // adminCancelOrderWithRefund no longer catches — error propagates
     await expect(
       adminCancelOrderWithRefund("rest-1", "order-1", "admin-1")
-    ).resolves.not.toThrow();
+    ).rejects.toThrow("delta PI already fully refunded");
 
-    // DB transaction still ran despite the Stripe error
-    expect(mockPrisma.$transaction).toHaveBeenCalledOnce();
+    // DB transaction must NOT have run — no false "refunded" record
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("Stripe throws on original PI refund: error propagates; DB is NOT updated", async () => {
+    mockPrisma.order.findFirst.mockResolvedValue(makeOrder());
+    mockStripe.refunds.create.mockRejectedValueOnce(new Error("payment_intent already refunded"));
+
+    await expect(
+      adminCancelOrderWithRefund("rest-1", "order-1", "admin-1")
+    ).rejects.toThrow("payment_intent already refunded");
+
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("throws 'Order not found' when restaurantId does not match (cross-tenant)", async () => {

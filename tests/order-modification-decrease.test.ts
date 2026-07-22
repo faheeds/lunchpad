@@ -93,7 +93,7 @@ function makeDecreaseOrder(overrides: Record<string, unknown> = {}) {
       },
     ],
     student: { id: "student-1" },
-    payment: { id: "pay-1", amountCents: 700, providerPaymentIntent: "pi_original_abc", status: "PAID" },
+    payment: { id: "pay-1", amountCents: 700, providerPaymentIntent: "pi_original_abc", provider: "stripe", status: "PAID" },
     restaurant: { stripeAccountId: null },
     ...overrides,
   };
@@ -224,6 +224,28 @@ describe("updateOrderBeforeCutoff — Case A: decrease", () => {
     const [refundParams] = mockStripe.refunds.create.mock.calls[0];
     expect(refundParams.payment_intent).toBe("pi_original_abc"); // from payment.providerPaymentIntent
   });
+
+  it("throws when both paymentIntentId and payment.providerPaymentIntent are null", async () => {
+    mockPrisma.order.findFirst.mockResolvedValue(
+      makeDecreaseOrder({
+        paymentIntentId: null,
+        payment: { id: "pay-1", amountCents: 700, providerPaymentIntent: null, status: "PAID" },
+      })
+    );
+
+    await expect(
+      updateOrderBeforeCutoff({
+        orderId: "order-1",
+        parentUserId: "parent-1",
+        additions: [],
+        removals: [],
+      })
+    ).rejects.toThrow("Cannot issue refund: no Stripe payment intent found for this order");
+
+    // No DB writes when refund cannot be issued
+    expect(mockPrisma.orderItem.update).not.toHaveBeenCalled();
+    expect(mockPrisma.order.update).not.toHaveBeenCalled();
+  });
 });
 
 describe("updateOrderAsAdmin — Case A: decrease", () => {
@@ -291,5 +313,64 @@ describe("updateOrderAsAdmin — Case A: decrease", () => {
         removals: [],
       })
     ).rejects.toThrow("Order not found");
+  });
+
+  it("manual payment: skips Stripe refund, still updates DB to new lower total", async () => {
+    // Admin order created as cash/manual — no paymentIntentId, provider = "manual"
+    mockPrisma.order.findFirst.mockResolvedValue(
+      makeDecreaseOrder({
+        paymentIntentId: null,
+        payment: {
+          id: "pay-1",
+          amountCents: 700,
+          providerPaymentIntent: null,
+          provider: "manual",
+          status: "PAID",
+        },
+      })
+    );
+
+    const result = await updateOrderAsAdmin({
+      orderId: "order-1",
+      restaurantId: "rest-1",
+      additions: [],
+      removals: [],
+    });
+
+    expect(result.action).toBe("updated");
+    // No Stripe call for manual orders
+    expect(mockStripe.refunds.create).not.toHaveBeenCalled();
+    // But DB should still be updated to the new price
+    expect(mockPrisma.order.update).toHaveBeenCalledOnce();
+    const orderUpdateData = mockPrisma.order.update.mock.calls[0][0].data;
+    expect(orderUpdateData.totalCents).toBe(500);
+  });
+
+  it("Stripe payment with missing paymentIntentId throws instead of silently skipping refund", async () => {
+    // provider = "stripe" but no PI — broken data state
+    mockPrisma.order.findFirst.mockResolvedValue(
+      makeDecreaseOrder({
+        paymentIntentId: null,
+        payment: {
+          id: "pay-1",
+          amountCents: 700,
+          providerPaymentIntent: null,
+          provider: "stripe",
+          status: "PAID",
+        },
+      })
+    );
+
+    await expect(
+      updateOrderAsAdmin({
+        orderId: "order-1",
+        restaurantId: "rest-1",
+        additions: [],
+        removals: [],
+      })
+    ).rejects.toThrow("Cannot issue refund: Stripe order is missing a payment intent");
+
+    expect(mockStripe.refunds.create).not.toHaveBeenCalled();
+    expect(mockPrisma.order.update).not.toHaveBeenCalled();
   });
 });
