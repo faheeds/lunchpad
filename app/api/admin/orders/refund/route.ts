@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { assertAdminApiRequest } from "@/lib/admin-auth";
 import { issueOrderRefund } from "@/lib/refund";
 import { sendRefundEmail } from "@/lib/email/service";
+import { sendPushForOrder } from "@/lib/push/service";
 
 export async function POST(request: Request) {
   let restaurantId: string;
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
 
     // Send refund email (best-effort).
     await sendRefundEmail(orderId, restaurantId, amountCents).catch(() => {});
+    sendPushForOrder(orderId, { title: "Refund issued", body: "Your order was updated and a refund has been issued." }).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch (error) {

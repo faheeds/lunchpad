@@ -15,6 +15,7 @@ import {
 } from "@/lib/mobile-bearer";
 import { cancelOrderWithRefund, updateOrderBeforeCutoff } from "@/lib/orders";
 import { sendCancellationEmail } from "@/lib/email/service";
+import { sendPushForOrder } from "@/lib/push/service";
 
 export { corsOptions as OPTIONS };
 
@@ -126,6 +127,7 @@ export async function DELETE(
 
     // Best-effort cancellation email — never let this fail the response.
     sendCancellationEmail(orderId, auth.restaurantId).catch(() => {});
+    sendPushForOrder(orderId, { title: "Order cancelled", body: "Your order has been cancelled and a refund is on the way." }).catch(() => {});
 
     return jsonOk({ ok: true });
   } catch (err: unknown) {

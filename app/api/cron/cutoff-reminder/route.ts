@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { sendWeeklyPlanCutoffReminderEmail } from "@/lib/email/service";
+import { sendPushToParent } from "@/lib/push/service";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { addHours } from "date-fns";
 
@@ -169,6 +170,7 @@ export async function GET(request: NextRequest) {
                 orderUrl,
                 restaurantName: restaurant.name,
               });
+              sendPushToParent(parentId, { title: "Last chance to order!", body: "Ordering for this week closes soon." }).catch(() => {});
             }
 
             results.push({
