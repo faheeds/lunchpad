@@ -25,6 +25,11 @@ type SharedCheckoutArgs = {
   /** Human-readable label that shows up as the coupon name on Stripe
    *  (and on the customer receipt). Defaults to "Discount". */
   discountLabel?: string;
+  /** Unix timestamp (seconds) for when the Checkout session expires.
+   *  Used by the order-edit increase flow to align session expiry with
+   *  the delivery cutoff. Must be at least 30 minutes in the future.
+   *  Omit to use Stripe's default (24 hours). */
+  expiresAt?: number;
 };
 
 type OrderCheckoutArgs = {
@@ -112,6 +117,7 @@ async function createSession(args: SharedCheckoutArgs) {
     },
     ...(paymentIntentData ? { payment_intent_data: paymentIntentData } : {}),
     ...(discountStripeArg ? { discounts: discountStripeArg } : {}),
+    ...(args.expiresAt ? { expires_at: args.expiresAt } : {}),
     line_items: args.lineItems.map((item) => ({
       quantity: 1,
       price_data: {
@@ -151,5 +157,60 @@ export async function createWeeklyStripeCheckoutSession(args: WeeklyBatchCheckou
     },
     lineItems: args.lineItems,
     stripeAccountId: args.stripeAccountId,
+  });
+}
+
+type OrderEditCheckoutArgs = {
+  orderId: string;
+  orderNumber: string;
+  parentEmail: string;
+  deltaCents: number;
+  newTotalCents: number;
+  /** Serialized JSON of the pending item state — stored in session metadata
+   *  and applied to OrderItem rows by the webhook on payment confirmation. */
+  newItemsJson: string;
+  stripeAccountId?: string | null;
+  /** Unix timestamp (seconds) — Stripe session expires at this time.
+   *  Set to min(cutoffAt, now+24h-60s) so the session cannot be completed
+   *  after the delivery cutoff. Must be ≥ 30 minutes in the future. */
+  expiresAt: number;
+  /** Where to redirect after successful payment. */
+  successUrl?: string;
+  /** Where to redirect if customer cancels. */
+  cancelUrl?: string;
+};
+
+/**
+ * Create a Stripe Checkout session for the delta amount of an order
+ * increase-edit. Reuses the same Connect-aware session logic as the
+ * original order checkout — same platform fee, same transfer routing.
+ *
+ * The session's metadata carries checkoutType="order_edit_increase" so
+ * the webhook handler can distinguish it from a new-order session.
+ *
+ * IMPORTANT: expires_at is mandatory here (unlike new-order sessions)
+ * because the session must not outlive the delivery cutoff.
+ */
+export async function createOrderEditCheckoutSession(args: OrderEditCheckoutArgs) {
+  return createSession({
+    parentEmail: args.parentEmail,
+    successUrl: args.successUrl ?? `${env.APP_BASE_URL}/account/orders/${args.orderId}?edit_paid=1`,
+    cancelUrl: args.cancelUrl ?? `${env.APP_BASE_URL}/account/orders/${args.orderId}?edit_cancelled=1`,
+    metadata: {
+      checkoutType: "order_edit_increase",
+      orderId: args.orderId,
+      orderNumber: args.orderNumber,
+      newTotalCents: String(args.newTotalCents),
+      newItemsJson: args.newItemsJson,
+    },
+    lineItems: [
+      {
+        name: `Order update — ${args.orderNumber}`,
+        description: "Add-ons for your existing order",
+        amountCents: args.deltaCents,
+      },
+    ],
+    stripeAccountId: args.stripeAccountId,
+    expiresAt: args.expiresAt,
   });
 }

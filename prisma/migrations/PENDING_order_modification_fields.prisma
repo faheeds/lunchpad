@@ -1,0 +1,27 @@
+// PENDING SCHEMA MIGRATION — do NOT apply automatically.
+// Show to lead (Faheed) for review before running `prisma migrate dev`.
+//
+// Add these five fields to model Order in prisma/schema.prisma.
+// They are already present in the schema file for TypeScript type generation,
+// but the database has NOT been migrated yet.
+
+// Pending increase-edit cluster — null when no edit is in flight.
+// pendingEditCheckoutSession is @unique: one Stripe session per order at a time.
+pendingEditTotalCents       Int?
+pendingEditCheckoutSession  String?   @unique
+pendingEditCreatedAt        DateTime?
+
+// Supplemental charge from a finalized increase-edit.
+// Payment.providerPaymentIntent is NEVER overwritten — it stays as the
+// original charge. This pair tracks the one allowed delta charge per order.
+// If multi-edit is ever needed, replace with an OrderPaymentCharge join table.
+deltaPaymentIntentId        String?
+deltaAmountCents            Int?
+
+// ── Suggested migration SQL (for manual review) ──────────────────────────────
+// ALTER TABLE "Order"
+//   ADD COLUMN "pendingEditTotalCents"      INTEGER,
+//   ADD COLUMN "pendingEditCheckoutSession" TEXT UNIQUE,
+//   ADD COLUMN "pendingEditCreatedAt"       TIMESTAMP(3),
+//   ADD COLUMN "deltaPaymentIntentId"       TEXT,
+//   ADD COLUMN "deltaAmountCents"           INTEGER;

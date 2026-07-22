@@ -34,7 +34,7 @@ export async function POST(
   }
 
   try {
-    const order = await updateOrderBeforeCutoff({
+    const result = await updateOrderBeforeCutoff({
       orderId,
       parentUserId,
       additions: body.additions ?? [],
@@ -43,14 +43,19 @@ export async function POST(
       specialInstructions: body.specialInstructions,
     });
 
+    if (result.action === "checkout_required") {
+      logInfo("order_modify_checkout_required", { orderId, parentUserId });
+      return NextResponse.json({ ok: true, action: "checkout_required", checkoutUrl: result.checkoutUrl });
+    }
+
     logInfo("order_modified_successfully", {
-      orderId: order.id,
+      orderId: result.order.id,
       parentUserId,
       hasAdditions: (body.additions?.length ?? 0) > 0,
       hasRemovals: (body.removals?.length ?? 0) > 0,
     });
 
-    return NextResponse.json({ ok: true, orderId: order.id });
+    return NextResponse.json({ ok: true, action: "updated", orderId: result.order.id });
   } catch (error) {
     logException(error, "order_modify_failed", { orderId, parentUserId });
     const message = formatApiError(error, "Failed to update order.");

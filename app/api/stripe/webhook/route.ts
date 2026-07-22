@@ -6,11 +6,14 @@ import { stripe } from "@/lib/payments/stripe";
 import { markOrderPaidByCheckoutSession } from "@/lib/orders";
 import {
   sendOrderConfirmationEmail,
+  sendOrderModifiedEmail,
   sendWeeklyOrderConfirmationEmail,
   sendSubscriptionChangedEmail,
 } from "@/lib/email/service";
 import { isDuplicateWebhookEvent } from "@/lib/payments/webhook";
 import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
+import { logActivity } from "@/lib/activity";
+import { formatCurrency } from "@/lib/utils";
 
 export async function POST(request: Request) {
   if (!stripe || !env.STRIPE_WEBHOOK_SECRET) {
@@ -122,6 +125,158 @@ export async function POST(request: Request) {
             });
             // Best-effort confirmation email with proration details.
             sendSubscriptionChangedEmail(restaurantId, before?.plan ?? "FREE", plan).catch(() => {});
+          }
+        } else if (session.metadata?.checkoutType === "order_edit_increase") {
+          // ── Order increase-edit: delta payment confirmed ──────────────────
+          const { orderId, newTotalCents: newTotalCentsStr, newItemsJson } = session.metadata;
+          const newTotalCents = parseInt(newTotalCentsStr ?? "0", 10);
+          const paymentIntentId = typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+          const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: { items: true, payment: true },
+          });
+
+          if (!order) {
+            // No matching order — orphan webhook (money with no order). Refund.
+            let orphanRefunded = false;
+            let orphanRefundError: string | null = null;
+            if (stripe && paymentIntentId) {
+              try {
+                await stripe.refunds.create(
+                  { payment_intent: paymentIntentId },
+                  { idempotencyKey: `edit-orphan-${session.id}` }
+                );
+                orphanRefunded = true;
+              } catch (e) {
+                orphanRefundError = e instanceof Error ? e.message : String(e);
+              }
+            }
+            await logActivity({
+              restaurantId: "unknown",
+              entityType: "ORDER",
+              entityId: orderId ?? "unknown",
+              action: "MODIFIED",
+              summary: orphanRefunded
+                ? `[order_edit_orphan] No order found for edit session ${session.id} — refunded ${formatCurrency(session.amount_total ?? 0)}`
+                : `[order_edit_orphan] No order found for edit session ${session.id} — REFUND FAILED (${orphanRefundError ?? "unknown error"}) — manual action required`,
+              metadata: { sessionId: session.id, orderId, paymentIntentId, reason: "order_not_found", orphanRefunded, ...(orphanRefundError ? { orphanRefundError } : {}) },
+            });
+          } else if (order.pendingEditCheckoutSession === null && order.deltaPaymentIntentId === paymentIntentId) {
+            // Duplicate webhook — already finalized. No-op.
+            // IMPORTANT: this guard must come before the session-mismatch check
+            // below. After finalization, pendingEditCheckoutSession is null, so
+            // null !== session.id would be true and incorrectly trigger an orphan
+            // refund without this early-return guard.
+          } else if (order.pendingEditCheckoutSession !== session.id) {
+            // Orphan webhook — session doesn't match the order's pending edit.
+            // Real money arrived but we can't apply it. Refund immediately.
+            let orphanRefunded = false;
+            let orphanRefundError: string | null = null;
+            if (stripe && paymentIntentId) {
+              try {
+                await stripe.refunds.create(
+                  { payment_intent: paymentIntentId },
+                  { idempotencyKey: `edit-orphan-${session.id}` }
+                );
+                orphanRefunded = true;
+              } catch (e) {
+                orphanRefundError = e instanceof Error ? e.message : String(e);
+              }
+            }
+            await logActivity({
+              restaurantId: order.restaurantId,
+              entityType: "ORDER",
+              entityId: order.id,
+              action: "MODIFIED",
+              summary: orphanRefunded
+                ? `[order_edit_orphan] Stale edit session ${session.id} for order ${order.orderNumber} — refunded ${formatCurrency(session.amount_total ?? 0)}`
+                : `[order_edit_orphan] Stale edit session ${session.id} for order ${order.orderNumber} — REFUND FAILED (${orphanRefundError ?? "unknown error"}) — manual action required`,
+              metadata: {
+                sessionId: session.id,
+                expectedSession: order.pendingEditCheckoutSession,
+                paymentIntentId,
+                reason: "session_mismatch",
+                orphanRefunded,
+                ...(orphanRefundError ? { orphanRefundError } : {}),
+              },
+            });
+          } else {
+            // Happy path: finalize the increase-edit.
+            let pendingItems: {
+              additions: string[];
+              removals: string[];
+              allergyNotes: string | null;
+              dietaryNotes: string | null;
+              specialInstructions: string | null;
+              lineTotalCents: number;
+            } | null = null;
+            try {
+              pendingItems = JSON.parse(newItemsJson ?? "null");
+            } catch { /* malformed JSON — proceed without item update */ }
+
+            const oldTotalCents = order.totalCents;
+            const deltaCents = newTotalCents - oldTotalCents;
+            const item = order.items[0];
+
+            await prisma.$transaction(async (tx) => {
+              if (pendingItems && item) {
+                await tx.orderItem.update({
+                  where: { id: item.id },
+                  data: {
+                    additions: pendingItems.additions,
+                    removals: pendingItems.removals,
+                    allergyNotes: pendingItems.allergyNotes,
+                    dietaryNotes: pendingItems.dietaryNotes,
+                    specialInstructions: pendingItems.specialInstructions,
+                    lineTotalCents: pendingItems.lineTotalCents,
+                  },
+                });
+              }
+
+              await tx.order.update({
+                where: { id: order.id },
+                data: {
+                  subtotalCents: newTotalCents,
+                  totalCents: newTotalCents,
+                  pendingEditTotalCents: null,
+                  pendingEditCheckoutSession: null,
+                  pendingEditCreatedAt: null,
+                  deltaPaymentIntentId: paymentIntentId,
+                  deltaAmountCents: deltaCents,
+                },
+              });
+
+              if (order.payment) {
+                await tx.payment.update({
+                  where: { orderId: order.id },
+                  data: {
+                    amountCents: order.payment.amountCents + deltaCents,
+                    // providerPaymentIntent intentionally left as-is (original charge)
+                  },
+                });
+              }
+            });
+
+            await logActivity({
+              restaurantId: order.restaurantId,
+              entityType: "ORDER",
+              entityId: order.id,
+              action: "MODIFIED",
+              summary: `Order ${order.orderNumber} increase-edit confirmed — total updated to ${formatCurrency(newTotalCents)} (+${formatCurrency(deltaCents)})`,
+              metadata: {
+                orderNumber: order.orderNumber,
+                oldTotalCents,
+                newTotalCents,
+                deltaCents,
+                deltaPaymentIntentId: paymentIntentId,
+              },
+            });
+
+            // Best-effort "your order has been updated" email.
+            sendOrderModifiedEmail(order.id, order.restaurantId).catch(() => {});
           }
         } else if (session.metadata?.checkoutType === "weekly_batch") {
           const result = await markWeeklyBatchPaidByCheckoutSession(

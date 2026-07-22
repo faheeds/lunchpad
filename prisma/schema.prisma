@@ -518,6 +518,21 @@ model Order {
   /// customer self-service orders. SetNull on admin delete so the order
   /// history survives admin churn.
   createdByAdminId    String?
+
+  // ── Order-modification tracking ──────────────────────────────────────────
+  // Pending increase-edit cluster — null when no edit is in flight.
+  // pendingEditCheckoutSession is @unique: one Stripe session per order.
+  pendingEditTotalCents      Int?
+  pendingEditCheckoutSession String?   @unique
+  pendingEditCreatedAt       DateTime?
+
+  // Supplemental charge from a finalized increase-edit.
+  // Payment.providerPaymentIntent is NEVER overwritten (always = original charge).
+  // This pair tracks the one allowed delta charge. Replace with OrderPaymentCharge
+  // join table if multi-edit support is ever needed.
+  deltaPaymentIntentId       String?
+  deltaAmountCents           Int?
+
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   restaurant          Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Restrict)

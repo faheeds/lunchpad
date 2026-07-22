@@ -10,6 +10,7 @@ import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
 import { pickApplicableDiscounts, type CartLine } from "@/lib/discounts";
 import { resolveLineItemPrice } from "@/lib/pricing";
+import { createOrderEditCheckoutSession } from "@/lib/payments/checkout";
 
 export function buildPaidState(now = new Date()) {
   return {
@@ -827,6 +828,10 @@ export async function listOrders(filters: {
   });
 }
 
+export type OrderUpdateResult =
+  | { action: "updated"; order: { id: string; orderNumber: string; restaurantId: string } }
+  | { action: "checkout_required"; checkoutUrl: string };
+
 export async function updateOrderBeforeCutoff(args: {
   orderId: string;
   /** REQUIRED — verifies the order belongs to the calling parent. */
@@ -838,7 +843,7 @@ export async function updateOrderBeforeCutoff(args: {
   allergyNotes?: string;
   dietaryNotes?: string;
   specialInstructions?: string;
-}) {
+}): Promise<OrderUpdateResult> {
   // Tenant-scoped: only the order's owning parent can modify it.
   const order = await prisma.order.findFirst({
     where: { id: args.orderId, parentUserId: args.parentUserId },
@@ -852,12 +857,18 @@ export async function updateOrderBeforeCutoff(args: {
           }
         }
       },
-      student: true
+      student: true,
+      payment: true,
+      restaurant: { select: { stripeAccountId: true } },
     }
   });
 
   if (!order) {
     throw new Error("Order not found.");
+  }
+
+  if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.PARTIALLY_REFUNDED) {
+    throw new Error("Only paid orders can be modified.");
   }
 
   assertOrderingOpen(new Date(), order.deliveryDate.cutoffAt, order.deliveryDate.deliveryDate, order.school.timezone);
@@ -874,23 +885,92 @@ export async function updateOrderBeforeCutoff(args: {
     throw new Error("One or more removals are invalid.");
   }
 
-  const totalCents = resolveLineItemPrice({
+  const newTotalCents = resolveLineItemPrice({
     basePriceCents: item.basePriceCents,
     additions: item.menuItem.options.filter((option) => args.additions.includes(option.name)),
   });
 
-  return prisma.$transaction(async (tx) => {
-    await tx.student.update({
-      where: { id: order.studentId },
-      data: {
-        teacherName: args.teacherName || null,
-        classroom: args.classroom || null,
-        allergyNotes: args.allergyNotes || null,
-        dietaryNotes: args.dietaryNotes || null
-      }
+  const deltaCents = newTotalCents - order.totalCents;
+
+  // ── Case B: increase — customer must pay the delta via a new Checkout session ──
+  if (deltaCents > 0) {
+    const now = new Date();
+    const cutoffAt = order.deliveryDate.cutoffAt;
+    const msUntilCutoff = cutoffAt.getTime() - now.getTime();
+
+    if (msUntilCutoff < 30 * 60 * 1000) {
+      throw new Error("Too close to cutoff — contact the restaurant to make this change.");
+    }
+
+    if (order.pendingEditCheckoutSession) {
+      throw new Error("You already have a pending edit in progress. Complete or wait for it to expire before submitting another.");
+    }
+
+    if (order.deltaPaymentIntentId) {
+      throw new Error("This order has already been increased once and cannot be increased again.");
+    }
+
+    const twentyFourHoursFromNow = now.getTime() + 24 * 60 * 60 * 1000 - 60_000;
+    const expiresAt = Math.floor(Math.min(cutoffAt.getTime(), twentyFourHoursFromNow) / 1000);
+
+    const newItemsJson = JSON.stringify({
+      additions: args.additions,
+      removals: args.removals,
+      allergyNotes: args.allergyNotes ?? null,
+      dietaryNotes: args.dietaryNotes ?? null,
+      specialInstructions: args.specialInstructions ?? null,
+      lineTotalCents: newTotalCents,
     });
 
-    await tx.orderItem.update({
+    const session = await createOrderEditCheckoutSession({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      parentEmail: order.parentEmail,
+      deltaCents,
+      newTotalCents,
+      newItemsJson,
+      stripeAccountId: order.restaurant.stripeAccountId,
+      expiresAt,
+    });
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        pendingEditTotalCents: newTotalCents,
+        pendingEditCheckoutSession: session.id,
+        pendingEditCreatedAt: now,
+      },
+    });
+
+    return { action: "checkout_required", checkoutUrl: session.url! };
+  }
+
+  // ── Case A: decrease — issue partial Stripe refund first, then update DB ──
+  if (deltaCents < 0) {
+    const refundCents = -deltaCents; // positive amount to refund
+    const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+
+    if (!paymentIntentId) {
+      throw new Error("Cannot issue refund: no Stripe payment intent found for this order. Contact support.");
+    }
+    if (stripe) {
+      await stripe.refunds.create(
+        {
+          payment_intent: paymentIntentId,
+          amount: refundCents,
+          metadata: {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            editDecrease: "true",
+            newTotalCents: String(newTotalCents),
+          },
+        },
+        { idempotencyKey: `edit-decrease-${order.id}-${newTotalCents}` }
+      );
+    }
+
+    // DB writes sequentially after Stripe succeeds.
+    await prisma.orderItem.update({
       where: { id: item.id },
       data: {
         additions: args.additions,
@@ -898,53 +978,116 @@ export async function updateOrderBeforeCutoff(args: {
         allergyNotes: args.allergyNotes || null,
         dietaryNotes: args.dietaryNotes || null,
         specialInstructions: args.specialInstructions || null,
-        lineTotalCents: totalCents
-      }
+        lineTotalCents: newTotalCents,
+      },
     });
 
-    return tx.order.update({
+    await prisma.student.update({
+      where: { id: order.studentId },
+      data: {
+        teacherName: args.teacherName || null,
+        classroom: args.classroom || null,
+        allergyNotes: args.allergyNotes || null,
+        dietaryNotes: args.dietaryNotes || null,
+      },
+    });
+
+    const updated = await prisma.order.update({
       where: { id: order.id },
       data: {
-        subtotalCents: totalCents,
-        totalCents,
+        subtotalCents: newTotalCents,
+        totalCents: newTotalCents,
         specialInstructions: args.specialInstructions || null,
-        payment: {
-          update: {
-            amountCents: totalCents
-          }
-        }
+        payment: { update: { amountCents: newTotalCents } },
       },
-      include: {
-        school: true,
-        deliveryDate: true,
-        student: true,
-        items: true
-      }
+      select: { id: true, orderNumber: true, restaurantId: true },
     });
-  }).then(async (updated) => {
-    // Best-effort timeline entry — customer-driven edit before cutoff.
+
     await logActivity({
       restaurantId: updated.restaurantId,
       parentUserId: args.parentUserId,
       entityType: "ORDER",
       entityId: updated.id,
       action: "MODIFIED",
-      summary: `Customer modified order ${updated.orderNumber} — total ${formatCurrency(totalCents)}`,
+      summary: `Customer modified order ${updated.orderNumber} — total adjusted to ${formatCurrency(newTotalCents)} (${formatCurrency(refundCents)} refunded)`,
       metadata: {
         orderNumber: updated.orderNumber,
-        totalCents,
+        newTotalCents,
+        refundCents,
         additions: args.additions,
         removals: args.removals,
       },
     });
-    return updated;
+
+    return { action: "updated", order: updated };
+  }
+
+  // ── Case equal: no price change — update items/notes only ──
+  await prisma.student.update({
+    where: { id: order.studentId },
+    data: {
+      teacherName: args.teacherName || null,
+      classroom: args.classroom || null,
+      allergyNotes: args.allergyNotes || null,
+      dietaryNotes: args.dietaryNotes || null,
+    },
   });
+
+  await prisma.orderItem.update({
+    where: { id: item.id },
+    data: {
+      additions: args.additions,
+      removals: args.removals,
+      allergyNotes: args.allergyNotes || null,
+      dietaryNotes: args.dietaryNotes || null,
+      specialInstructions: args.specialInstructions || null,
+      lineTotalCents: newTotalCents,
+    },
+  });
+
+  const updated = await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      specialInstructions: args.specialInstructions || null,
+    },
+    select: { id: true, orderNumber: true, restaurantId: true },
+  });
+
+  await logActivity({
+    restaurantId: updated.restaurantId,
+    parentUserId: args.parentUserId,
+    entityType: "ORDER",
+    entityId: updated.id,
+    action: "MODIFIED",
+    summary: `Customer modified order ${updated.orderNumber} — total unchanged at ${formatCurrency(newTotalCents)}`,
+    metadata: {
+      orderNumber: updated.orderNumber,
+      totalCents: newTotalCents,
+      additions: args.additions,
+      removals: args.removals,
+    },
+  });
+
+  return { action: "updated", order: updated };
 }
+
+export type AdminAdjustmentMode =
+  | { kind: "stripe_link" }
+  | { kind: "manual"; method: string; reference?: string; notes?: string }
+  | { kind: "comped"; reason?: string };
 
 /**
  * Admin-only order update — bypasses the cutoff check.
- * Identical to updateOrderBeforeCutoff except it skips assertOrderingOpen
- * and accepts an optional adminNote stored in specialInstructions.
+ * Handles price decreases (Stripe refund), increases (stripe_link / manual / comped),
+ * and metadata-only edits (same price).
+ *
+ * `adjustmentMode` controls how a price increase is handled:
+ *   stripe_link — generate a delta Checkout URL the admin shares with the parent
+ *   manual      — record an off-Stripe payment, apply immediately
+ *   comped      — admin waives the extra cost, apply immediately (default)
+ *
+ * Defaults to { kind: "comped" } for backwards compatibility with callers
+ * that do not pass adjustmentMode (admin edit form — price rarely changes).
  */
 export async function updateOrderAsAdmin(args: {
   orderId: string;
@@ -962,7 +1105,10 @@ export async function updateOrderAsAdmin(args: {
   dietaryNotes?: string;
   specialInstructions?: string;
   adminNote?: string;
-}) {
+  adjustmentMode?: AdminAdjustmentMode;
+}): Promise<OrderUpdateResult> {
+  const adjustmentMode: AdminAdjustmentMode = args.adjustmentMode ?? { kind: "comped" };
+
   // Tenant-scoped: order must belong to the admin's restaurant.
   const order = await prisma.order.findFirst({
     where: { id: args.orderId, restaurantId: args.restaurantId },
@@ -971,6 +1117,8 @@ export async function updateOrderAsAdmin(args: {
       deliveryDate: true,
       items: { include: { menuItem: { include: { options: true } } } },
       student: true,
+      payment: true,
+      restaurant: { select: { stripeAccountId: true } },
     },
   });
 
@@ -987,18 +1135,59 @@ export async function updateOrderAsAdmin(args: {
   if (!args.additions.every((v) => addOnSet.has(v))) throw new Error("One or more add-ons are invalid.");
   if (!args.removals.every((v) => removalSet.has(v))) throw new Error("One or more removals are invalid.");
 
-  const totalCents = resolveLineItemPrice({
+  const newTotalCents = resolveLineItemPrice({
     basePriceCents: item.basePriceCents,
     additions: item.menuItem.options.filter((o) => args.additions.includes(o.name)),
   });
 
-  // Prepend admin note to specialInstructions if provided
+  const deltaCents = newTotalCents - order.totalCents;
+
   const specialInstructions = args.adminNote
     ? `[Admin note: ${args.adminNote}]${args.specialInstructions ? `\n${args.specialInstructions}` : ""}`
     : (args.specialInstructions ?? order.specialInstructions ?? null);
 
-  return prisma.$transaction(async (tx) => {
-    await tx.student.update({
+  // ── Case A: decrease — Stripe refund first, DB update after ──
+  if (deltaCents < 0) {
+    const refundCents = -deltaCents;
+    const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+
+    const isStripePayment = order.payment?.provider === "stripe" || order.payment?.provider === "stripe_checkout_link";
+    if (isStripePayment) {
+      if (!paymentIntentId) {
+        throw new Error("Cannot issue refund: Stripe order is missing a payment intent. Contact support.");
+      }
+      if (stripe) {
+        await stripe.refunds.create(
+          {
+            payment_intent: paymentIntentId,
+            amount: refundCents,
+            metadata: {
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              editDecrease: "true",
+              newTotalCents: String(newTotalCents),
+              adminUserId: args.adminUserId ?? "unknown",
+            },
+          },
+          { idempotencyKey: `edit-decrease-${order.id}-${newTotalCents}` }
+        );
+      }
+    }
+    // Non-Stripe orders (manual/comped): no refund call — admin absorbed the cost.
+
+    await prisma.orderItem.update({
+      where: { id: item.id },
+      data: {
+        additions: args.additions,
+        removals: args.removals,
+        allergyNotes: args.allergyNotes ?? null,
+        dietaryNotes: args.dietaryNotes ?? null,
+        specialInstructions: args.specialInstructions ?? null,
+        lineTotalCents: newTotalCents,
+      },
+    });
+
+    await prisma.student.update({
       where: { id: order.studentId },
       data: {
         teacherName: args.teacherName ?? null,
@@ -1008,31 +1197,17 @@ export async function updateOrderAsAdmin(args: {
       },
     });
 
-    await tx.orderItem.update({
-      where: { id: item.id },
-      data: {
-        additions: args.additions,
-        removals: args.removals,
-        allergyNotes: args.allergyNotes ?? null,
-        dietaryNotes: args.dietaryNotes ?? null,
-        specialInstructions: args.specialInstructions ?? null,
-        lineTotalCents: totalCents,
-      },
-    });
-
-    return tx.order.update({
+    const updated = await prisma.order.update({
       where: { id: order.id },
       data: {
-        subtotalCents: totalCents,
-        totalCents,
+        subtotalCents: newTotalCents,
+        totalCents: newTotalCents,
         specialInstructions,
-        payment: { update: { amountCents: totalCents } },
+        payment: { update: { amountCents: newTotalCents } },
       },
-      include: { school: true, deliveryDate: true, student: true, items: true },
+      select: { id: true, orderNumber: true, restaurantId: true },
     });
-  }).then(async (updated) => {
-    // Best-effort timeline entry — admin-initiated edit. Captures the
-    // admin note (or lack thereof) so we know why an override happened.
+
     const noteFragment = args.adminNote ? ` · note: "${args.adminNote.slice(0, 80)}"` : "";
     await logActivity({
       restaurantId: updated.restaurantId,
@@ -1040,17 +1215,131 @@ export async function updateOrderAsAdmin(args: {
       entityType: "ORDER",
       entityId: updated.id,
       action: "MODIFIED",
-      summary: `Admin modified order ${updated.orderNumber} — total ${formatCurrency(totalCents)}${noteFragment}`,
+      summary: `Admin modified order ${updated.orderNumber} — total adjusted to ${formatCurrency(newTotalCents)} (${formatCurrency(refundCents)} refunded)${noteFragment}`,
       metadata: {
         orderNumber: updated.orderNumber,
-        totalCents,
+        newTotalCents,
+        refundCents,
         additions: args.additions,
         removals: args.removals,
         adminNote: args.adminNote ?? null,
       },
     });
-    return updated;
+
+    return { action: "updated", order: updated };
+  }
+
+  // ── Case B: increase via stripe_link — generate delta Checkout URL ──
+  if (deltaCents > 0 && adjustmentMode.kind === "stripe_link") {
+    if (order.pendingEditCheckoutSession) {
+      throw new Error("This order already has a pending edit in progress.");
+    }
+    if (order.deltaPaymentIntentId) {
+      throw new Error("This order has already been increased once and cannot be increased again.");
+    }
+
+    const now = new Date();
+    const cutoffAt = order.deliveryDate.cutoffAt;
+    const msUntilCutoff = cutoffAt.getTime() - now.getTime();
+    if (msUntilCutoff < 30 * 60 * 1000) {
+      throw new Error("Too close to cutoff — the parent cannot pay a delta checkout in time.");
+    }
+
+    const twentyFourHoursFromNow = now.getTime() + 24 * 60 * 60 * 1000 - 60_000;
+    const expiresAt = Math.floor(Math.min(cutoffAt.getTime(), twentyFourHoursFromNow) / 1000);
+
+    const newItemsJson = JSON.stringify({
+      additions: args.additions,
+      removals: args.removals,
+      allergyNotes: args.allergyNotes ?? null,
+      dietaryNotes: args.dietaryNotes ?? null,
+      specialInstructions: args.specialInstructions ?? null,
+      lineTotalCents: newTotalCents,
+    });
+
+    const session = await createOrderEditCheckoutSession({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      parentEmail: order.parentEmail,
+      deltaCents,
+      newTotalCents,
+      newItemsJson,
+      stripeAccountId: order.restaurant.stripeAccountId,
+      expiresAt,
+    });
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        pendingEditTotalCents: newTotalCents,
+        pendingEditCheckoutSession: session.id,
+        pendingEditCreatedAt: now,
+      },
+    });
+
+    return { action: "checkout_required", checkoutUrl: session.url! };
+  }
+
+  // ── Case C: increase via manual or comped — apply immediately, no Stripe ──
+  await prisma.orderItem.update({
+    where: { id: item.id },
+    data: {
+      additions: args.additions,
+      removals: args.removals,
+      allergyNotes: args.allergyNotes ?? null,
+      dietaryNotes: args.dietaryNotes ?? null,
+      specialInstructions: args.specialInstructions ?? null,
+      lineTotalCents: newTotalCents,
+    },
   });
+
+  await prisma.student.update({
+    where: { id: order.studentId },
+    data: {
+      teacherName: args.teacherName ?? null,
+      classroom: args.classroom ?? null,
+      allergyNotes: args.allergyNotes ?? null,
+      dietaryNotes: args.dietaryNotes ?? null,
+    },
+  });
+
+  const updated = await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      subtotalCents: newTotalCents,
+      totalCents: newTotalCents,
+      specialInstructions,
+      payment: { update: { amountCents: newTotalCents } },
+    },
+    select: { id: true, orderNumber: true, restaurantId: true },
+  });
+
+  const noteFragment = args.adminNote ? ` · note: "${args.adminNote.slice(0, 80)}"` : "";
+  const modeFragment = deltaCents > 0
+    ? adjustmentMode.kind === "comped"
+      ? ` (increase comped${adjustmentMode.kind === "comped" && adjustmentMode.reason ? `: ${adjustmentMode.reason}` : ""})`
+      : ` (increase recorded as ${adjustmentMode.kind === "manual" ? adjustmentMode.method : "manual"})`
+    : "";
+
+  await logActivity({
+    restaurantId: updated.restaurantId,
+    adminUserId: args.adminUserId,
+    entityType: "ORDER",
+    entityId: updated.id,
+    action: deltaCents !== 0 ? "MODIFIED" : "MODIFIED",
+    summary: `Admin modified order ${updated.orderNumber} — total ${formatCurrency(newTotalCents)}${modeFragment}${noteFragment}`,
+    metadata: {
+      orderNumber: updated.orderNumber,
+      newTotalCents,
+      deltaCents,
+      additions: args.additions,
+      removals: args.removals,
+      adminNote: args.adminNote ?? null,
+      adjustmentMode: adjustmentMode.kind,
+    },
+  });
+
+  return { action: "updated", order: updated };
 }
 
 /**
@@ -1081,6 +1370,7 @@ export async function cancelOrderWithRefund(args: {
       student: true,
       items: true,
       payment: true,
+      restaurant: { select: { stripeAccountId: true } },
     },
   });
 
@@ -1110,12 +1400,26 @@ export async function cancelOrderWithRefund(args: {
   );
 
   const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+  const { stripeAccountId } = order.restaurant;
+  let stripeRefundIssued = false;
 
-  if (stripe && paymentIntentId) {
-    await stripe.refunds.create({
-      payment_intent: paymentIntentId,
-      reason: "requested_by_customer",
-    });
+  if (stripe) {
+    // Multi-PI: refund delta charge first (if an increase-edit was finalized),
+    // then refund the original charge. Both calls outside any DB transaction.
+    if (order.deltaPaymentIntentId && (order.deltaAmountCents ?? 0) > 0) {
+      await stripe.refunds.create({
+        payment_intent: order.deltaPaymentIntentId,
+        reason: "requested_by_customer",
+      });
+    }
+
+    if (paymentIntentId) {
+      await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        reason: "requested_by_customer",
+      });
+      stripeRefundIssued = true;
+    }
   }
 
   const now = new Date();
@@ -1141,13 +1445,8 @@ export async function cancelOrderWithRefund(args: {
       },
     });
   }).then(async (cancelled) => {
-    // Best-effort timeline entry — customer self-cancellation. Tracks
-    // both the cancel and the refund in one row since they always
-    // happen together in this code path.
-    // Attribute the action: signed-in parents get linked via parentUserId;
-    // guests (no session) get a generic "Customer" tag in the timeline.
     const actorTag = parentUserId ? "Customer" : "Guest customer";
-    const refundedDescription = paymentIntentId && stripe
+    const refundedDescription = stripeRefundIssued
       ? `${actorTag} cancelled order ${cancelled.orderNumber} — ${formatCurrency(cancelled.totalCents)} refunded via Stripe`
       : `${actorTag} cancelled order ${cancelled.orderNumber} (no payment intent — manual refund may be required)`;
     await logActivity({
@@ -1160,7 +1459,8 @@ export async function cancelOrderWithRefund(args: {
       metadata: {
         orderNumber: cancelled.orderNumber,
         totalCents: cancelled.totalCents,
-        refundIssued: Boolean(paymentIntentId && stripe),
+        refundIssued: stripeRefundIssued,
+        deltaRefundIssued: Boolean(order.deltaPaymentIntentId),
         viaGuestToken: !parentUserId && Boolean(guestToken),
       },
     });
