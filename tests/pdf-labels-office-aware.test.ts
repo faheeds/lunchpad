@@ -52,8 +52,8 @@ const BASE_DELIVERY_DATE = {
 };
 
 function makeOrder(
-  schoolOverrides: Partial<typeof BASE_SCHOOL> = {},
-  studentOverrides: Partial<typeof BASE_STUDENT> = {}
+  schoolOverrides: Record<string, unknown> = {},
+  studentOverrides: Record<string, unknown> = {}
 ): MinimalOrder {
   return {
     id: "order-1",
