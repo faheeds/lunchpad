@@ -337,6 +337,7 @@ React Native / iOS app.
     {
       "id": "...", "orderNumber": "...", "status": "PAID|PENDING",
       "deliveryDate": "ISO", "schoolName": "...",
+      "parentChildId": "...|null", "deliveryDateId": "...",
       "totalCents": 0, "createdAt": "ISO",
       "items": [{ "name": "...", "lineTotalCents": 0, "additions": [], "removals": [] }]
     }

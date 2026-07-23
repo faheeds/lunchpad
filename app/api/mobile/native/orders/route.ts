@@ -46,6 +46,8 @@ export async function GET(request: NextRequest) {
         schoolName: o.school.name,
         totalCents: o.totalCents,
         createdAt: o.createdAt.toISOString(),
+        parentChildId: o.parentChildId,
+        deliveryDateId: o.deliveryDateId,
         items: o.items.map((i) => ({
           name: i.itemNameSnapshot,
           lineTotalCents: i.lineTotalCents,
