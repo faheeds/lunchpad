@@ -46,6 +46,19 @@ const styles = StyleSheet.create({
   }
 });
 
+export function getLabelMetaLines(order: LabelOrder): { line1: string; line2: string | null } {
+  const isOffice = order.school.locationType === "OFFICE";
+  if (isOffice) {
+    return { line1: order.school.name, line2: null };
+  }
+  const teacher = order.student.teacherName ?? "Teacher n/a";
+  const room = order.student.classroom ? ` | Room ${order.student.classroom}` : "";
+  return {
+    line1: `Grade ${order.student.grade} | ${order.school.name}`,
+    line2: `${teacher}${room}`,
+  };
+}
+
 function LabelCard({ order }: { order: LabelOrder }) {
   const allergy = order.items.map((item) => item.allergyNotes).find(Boolean) || order.student.allergyNotes;
   const itemLines = order.items.map((item) => ({
@@ -59,12 +72,15 @@ function LabelCard({ order }: { order: LabelOrder }) {
     <View style={styles.label}>
       <>
         <Text style={styles.title}>{order.student.studentName}</Text>
-        <Text style={styles.meta}>
-          Grade {order.student.grade} | {order.school.name}
-        </Text>
-        <Text style={styles.meta}>
-          {order.student.teacherName || "Teacher n/a"} {order.student.classroom ? `| Room ${order.student.classroom}` : ""}
-        </Text>
+        {(() => {
+          const meta = getLabelMetaLines(order);
+          return (
+            <>
+              <Text style={styles.meta}>{meta.line1}</Text>
+              {meta.line2 !== null ? <Text style={styles.meta}>{meta.line2}</Text> : null}
+            </>
+          );
+        })()}
         {itemLines.map((item, index) => (
           <View key={`${order.id}-${index}`} style={{ marginTop: 8 }}>
             <Text style={{ fontSize: 12 }}>{item.name}</Text>
