@@ -18,7 +18,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireMobileAuth, CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
-import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
+import { getUpcomingSchoolWeekRange } from "@/lib/weekly-week";
 
 export { corsOptions as OPTIONS };
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     // timezone. Falls back to LA time if the parent has no children yet.
     const now = new Date();
     const primaryTimezone = parent.children[0]?.school.timezone ?? "America/Los_Angeles";
-    const range = getUpcomingOrderingWindowRange(now, primaryTimezone);
+    const range = getUpcomingSchoolWeekRange(now, primaryTimezone);
 
     const schoolIds = [...new Set(parent.children.map((c) => c.schoolId))];
 

@@ -205,6 +205,10 @@ React Native / iOS app.
 - **Tenant scoping**: JWT tenant check; menu / delivery-date results are
   scoped to the parent's children's schools
 - **Request**: no body
+- **Delivery date window**: exactly one calendar week — Mon–Sun of the
+  **next** week (via `getUpcomingSchoolWeekRange`). No two dates in a
+  single response will share the same weekday number, so the iOS client's
+  weekday-keyed planner can always resolve a unique slot per day.
 - **Success (200)**:
   ```json
   {
