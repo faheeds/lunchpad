@@ -51,7 +51,7 @@ export function getLabelMetaLines(order: LabelOrder): { line1: string; line2: st
   if (isOffice) {
     return { line1: order.school.name, line2: null };
   }
-  const teacher = order.student.teacherName ?? "Teacher n/a";
+  const teacher = order.student.teacherName || "Teacher n/a";
   const room = order.student.classroom ? ` | Room ${order.student.classroom}` : "";
   return {
     line1: `Grade ${order.student.grade} | ${order.school.name}`,
