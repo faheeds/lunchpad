@@ -27,6 +27,8 @@ type ConfirmationTemplateArgs = {
   restaurantPrimaryColor?: string | null;
   restaurantContactEmail?: string | null;
   restaurantContactPhone?: string | null;
+  /** Self-service URL so a guest can return to view or cancel before cutoff. */
+  guestCancelUrl?: string | null;
 };
 
 /**
@@ -114,6 +116,11 @@ export function buildConfirmationEmail(args: ConfirmationTemplateArgs) {
       `Order number: ${args.orderNumber}`,
       "",
       help.text,
+      ...(args.guestCancelUrl ? [
+        "",
+        `Manage your order: ${args.guestCancelUrl}`,
+        "(Use this link to view order details or cancel before the delivery cutoff.)"
+      ] : []),
       "",
       `Thanks for ordering with ${args.restaurantName}.`,
       `— The ${args.restaurantName} team`
@@ -138,6 +145,13 @@ export function buildConfirmationEmail(args: ConfirmationTemplateArgs) {
             <tr><td style="padding: 6px 0;"><strong>Amount paid</strong></td><td>${formatCurrency(args.amountCents)}</td></tr>
             <tr><td style="padding: 6px 0;"><strong>Order number</strong></td><td>${args.orderNumber}</td></tr>
           </table>
+          ${args.guestCancelUrl ? `
+          <div style="margin:20px 0;text-align:center">
+            <a href="${args.guestCancelUrl}" style="display:inline-block;background:#1c2a35;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;padding:10px 20px">
+              Manage your order
+            </a>
+            <p style="margin:8px 0 0;font-size:12px;color:#64748b">Use this link to view details or cancel before the delivery cutoff.</p>
+          </div>` : ""}
           ${help.html}
           <p style="margin:16px 0 4px">Thanks for ordering with <strong>${args.restaurantName}</strong>.</p>
           <p style="margin:0;color:#64748b;font-size:13px">— The ${args.restaurantName} team</p>
