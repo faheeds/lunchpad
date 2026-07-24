@@ -93,6 +93,8 @@ type OrderFormProps = {
   initialItemSlug?: string;
   /** Items from a reorder that aren't on the current date's menu — shown as a warning banner */
   unavailableReorderItems?: string[];
+  /** Items from a reorder that are on the menu but need a manual choice/size before adding */
+  needsSelectionItems?: string[];
   /** Per delivery date ID: list of menuItemIds that have sold out */
   soldOutByDeliveryDate?: Record<string, string[]>;
   /** Restaurant.operatorType — "school" | "office" | "hybrid" | null.
@@ -160,7 +162,7 @@ function getTimeToDeadline(cutoffAt: string, timezone: string): { days: number; 
 export function OrderForm({
   deliveryDates, menuItemsByDeliveryDate, savedChildren = [], operatorType,
   initialParentProfile, initialSchoolId, initialDeliveryDateId, initialCartItems = [],
-  initialItemSlug, unavailableReorderItems = [], soldOutByDeliveryDate = {},
+  initialItemSlug, unavailableReorderItems = [], needsSelectionItems = [], soldOutByDeliveryDate = {},
 }: OrderFormProps) {
   const defaultSchoolId = initialSchoolId || "";
   const defaultDeliveryDateId = initialDeliveryDateId || "";
@@ -522,30 +524,48 @@ export function OrderForm({
   return (
     <div className="pb-48">
       {/* Reorder unavailability notice */}
-      {unavailableReorderItems.length > 0 && (
-        <div style={{
-          borderRadius: 14, border: "1px solid #E3DBC6",
-          background: "#F6F1E6", padding: "12px 14px",
-          display: "flex", gap: 10, alignItems: "flex-start",
-          marginBottom: 16,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0673E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#211D15", marginBottom: 2 }}>
-              {unavailableReorderItems.length === 1
-                ? "1 item isn't available for this date"
-                : `${unavailableReorderItems.length} items aren't available for this date`}
-            </p>
-            <p style={{ fontSize: 12, color: "#C0673E", lineHeight: 1.5 }}>
-              {unavailableReorderItems.join(", ")} {unavailableReorderItems.length === 1 ? "has" : "have"} been removed from your cart. Pick a replacement from the menu below.
-            </p>
+      {unavailableReorderItems.length > 0 && (() => {
+        const allNeedsSelection = needsSelectionItems.length === unavailableReorderItems.length;
+        const hasNotOnMenu = unavailableReorderItems.length > needsSelectionItems.length;
+        const hasBoth = needsSelectionItems.length > 0 && hasNotOnMenu;
+
+        let title: string;
+        let body: string;
+        if (allNeedsSelection) {
+          title = needsSelectionItems.length === 1
+            ? "1 item needs a selection"
+            : `${needsSelectionItems.length} items need a selection`;
+          body = `${needsSelectionItems.join(", ")} ${needsSelectionItems.length === 1 ? "requires" : "require"} a choice or size — tap each one in the menu below to pick your option.`;
+        } else if (hasBoth) {
+          const notOnMenu = unavailableReorderItems.filter((n) => !needsSelectionItems.includes(n));
+          title = "Some items couldn't be carried over";
+          body = `${needsSelectionItems.join(", ")} ${needsSelectionItems.length === 1 ? "needs" : "need"} a selection; ${notOnMenu.join(", ")} ${notOnMenu.length === 1 ? "isn't" : "aren't"} on today's menu.`;
+        } else {
+          title = unavailableReorderItems.length === 1
+            ? "1 item isn't available for this date"
+            : `${unavailableReorderItems.length} items aren't available for this date`;
+          body = `${unavailableReorderItems.join(", ")} ${unavailableReorderItems.length === 1 ? "has" : "have"} been removed from your cart. Pick a replacement from the menu below.`;
+        }
+
+        return (
+          <div style={{
+            borderRadius: 14, border: "1px solid #E3DBC6",
+            background: "#F6F1E6", padding: "12px 14px",
+            display: "flex", gap: 10, alignItems: "flex-start",
+            marginBottom: 16,
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0673E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#211D15", marginBottom: 2 }}>{title}</p>
+              <p style={{ fontSize: 12, color: "#C0673E", lineHeight: 1.5 }}>{body}</p>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Progress */}
       <div className="flex items-center gap-1 mb-4">
