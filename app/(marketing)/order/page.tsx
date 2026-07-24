@@ -3,6 +3,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
+import { classifyReorderItem } from "@/lib/reorder-classify";
 import { getCurrentRestaurant, requireRestaurant } from "@/lib/restaurant";
 import { requireParentTenant } from "@/lib/parent-auth";
 import { SiteHeaderServer } from "@/components/site-header-server";
@@ -182,6 +183,17 @@ export default async function OrderPage({
     reorderOrder?.items.map((item) => {
       const requiredChoices = getRequiredChoicesForMenuItem(item.menuItem);
       const choice = item.additions.find((v) => requiredChoices.includes(v));
+      const menuItemOnDate = availableMenuItemIds.has(item.menuItemId)
+        ? (menuItemsByDeliveryDate[initialDeliveryDateId ?? ""] ?? []).find((m) => m.id === item.menuItemId)
+        : undefined;
+      const available = sameSchool && availableMenuItemIds.has(item.menuItemId);
+      const reason = classifyReorderItem({
+        available,
+        requiredChoices,
+        capturedChoice: choice,
+        hasSizes: (menuItemOnDate?.sizes?.length ?? 0) > 0,
+        capturedSize: item.sizeName,
+      });
       return {
         id: item.id,
         menuItemId: item.menuItemId,
@@ -190,7 +202,8 @@ export default async function OrderPage({
         additions: item.additions.filter((v) => !requiredChoices.includes(v)),
         removals: item.removals,
         lineTotalCents: item.lineTotalCents,
-        available: sameSchool && availableMenuItemIds.has(item.menuItemId),
+        available: available && reason === null,
+        reason,
       };
     }) ?? [];
 
@@ -213,12 +226,14 @@ export default async function OrderPage({
   }
   const initialCartItems = Array.from(collapsed.values());
 
-  const unavailableReorderItems = reorderCandidates
-    .filter((i) => !i.available)
-    .map((i) => i.itemName);
-
-  // Distinct: same item might appear twice but only show once in the notice
-  const unavailableNames = [...new Set(unavailableReorderItems)];
+  const notOnMenuNames = [...new Set(
+    reorderCandidates.filter((i) => i.reason === "not_on_menu").map((i) => i.itemName)
+  )];
+  const needsSelectionNames = [...new Set(
+    reorderCandidates.filter((i) => i.reason === "needs_selection").map((i) => i.itemName)
+  )];
+  // Combined list for backward-compat: any item that couldn't be auto-cloned
+  const unavailableNames = [...new Set([...notOnMenuNames, ...needsSelectionNames])];
 
   return (
     <>
@@ -332,6 +347,7 @@ export default async function OrderPage({
               initialDeliveryDateId={initialDeliveryDateId ?? ""}
               initialCartItems={initialCartItems}
               unavailableReorderItems={unavailableNames}
+              needsSelectionItems={needsSelectionNames}
               soldOutByDeliveryDate={soldOutByDeliveryDate}
               initialItemSlug={params.item}
             />
