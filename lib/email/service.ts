@@ -25,6 +25,7 @@ export async function sendOrderConfirmationEmail(orderId: string, restaurantId: 
   if (!order) {
     throw new Error("Order not found.");
   }
+  const guestCancelUrl = `https://${order.restaurant.slug}.${env.ROOT_DOMAIN}/checkout/success?order=${order.id}`;
   const message = buildConfirmationEmail({
     parentName: order.parentName,
     studentName: order.student.studentName,
@@ -43,6 +44,7 @@ export async function sendOrderConfirmationEmail(orderId: string, restaurantId: 
     restaurantPrimaryColor: order.restaurant.primaryColor,
     restaurantContactEmail: order.restaurant.contactEmail,
     restaurantContactPhone: order.restaurant.contactPhone,
+    guestCancelUrl,
   });
 
   try {
