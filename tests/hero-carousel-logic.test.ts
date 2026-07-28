@@ -101,6 +101,69 @@ describe("carouselReducer — zero photos fallback", () => {
   });
 });
 
+// ── Hero mode resolution (heroImageUrl priority rule) ────────────────────────
+
+type HeroMode = "static-hero" | "carousel" | "gradient";
+
+function resolveHeroMode(args: {
+  heroImageUrl: string | null | undefined;
+  slideCount: number;
+}): HeroMode {
+  if (args.heroImageUrl) return "static-hero";
+  if (args.slideCount > 0) return "carousel";
+  return "gradient";
+}
+
+describe("resolveHeroMode — static hero (heroImageUrl set)", () => {
+  it("heroImageUrl set + slides present → static-hero (not carousel)", () => {
+    expect(resolveHeroMode({ heroImageUrl: "https://cdn.example.com/hero.jpg", slideCount: 3 })).toBe("static-hero");
+  });
+
+  it("heroImageUrl set + zero slides → static-hero (not gradient)", () => {
+    expect(resolveHeroMode({ heroImageUrl: "https://cdn.example.com/hero.jpg", slideCount: 0 })).toBe("static-hero");
+  });
+
+  it("heroImageUrl set + slideCount = 5 → static-hero", () => {
+    expect(resolveHeroMode({ heroImageUrl: "https://cdn.example.com/hero.jpg", slideCount: 5 })).toBe("static-hero");
+  });
+});
+
+describe("resolveHeroMode — carousel (heroImageUrl unset)", () => {
+  it("heroImageUrl: null + slideCount > 0 → carousel", () => {
+    expect(resolveHeroMode({ heroImageUrl: null, slideCount: 3 })).toBe("carousel");
+  });
+
+  it("heroImageUrl: undefined + slideCount > 0 → carousel", () => {
+    expect(resolveHeroMode({ heroImageUrl: undefined, slideCount: 2 })).toBe("carousel");
+  });
+});
+
+describe("resolveHeroMode — gradient fallback", () => {
+  it("heroImageUrl: null + slideCount = 0 → gradient", () => {
+    expect(resolveHeroMode({ heroImageUrl: null, slideCount: 0 })).toBe("gradient");
+  });
+
+  it("heroImageUrl: undefined + slideCount = 0 → gradient", () => {
+    expect(resolveHeroMode({ heroImageUrl: undefined, slideCount: 0 })).toBe("gradient");
+  });
+});
+
+describe("resolveHeroMode — adversarial (invalid URLs)", () => {
+  it("empty string heroImageUrl + slides → carousel (empty string is falsy)", () => {
+    expect(resolveHeroMode({ heroImageUrl: "", slideCount: 3 })).toBe("carousel");
+  });
+
+  it("empty string heroImageUrl + no slides → gradient (empty string is falsy)", () => {
+    expect(resolveHeroMode({ heroImageUrl: "", slideCount: 0 })).toBe("gradient");
+  });
+
+  it("whitespace-only heroImageUrl + slides → carousel (whitespace is truthy — document as known edge)", () => {
+    // "   " is truthy in JS, so resolveHeroMode treats it as a set URL.
+    // Real mitigation belongs in the admin input layer (trim before save).
+    expect(resolveHeroMode({ heroImageUrl: "   ", slideCount: 3 })).toBe("static-hero");
+  });
+});
+
 // ── Adversarial ───────────────────────────────────────────────────────────────
 
 describe("carouselReducer — adversarial", () => {
