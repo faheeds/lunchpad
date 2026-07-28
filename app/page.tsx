@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { formatInTimeZone } from "date-fns-tz";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { SiteFooter } from "@/components/site-footer";
@@ -8,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { getLabelsForOperator } from "@/lib/location-labels";
 import { PlatformLanding } from "@/components/platform-landing";
+import { HeroCarousel } from "@/components/hero-carousel";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +109,9 @@ export default async function HomePage() {
       orderBy: { name: "asc" },
     });
 
+    // Up to 5 photos for the hero carousel (sliced before stripItems logic)
+    const carouselSlides = itemsWithPhotos.slice(0, 5).map((i) => ({ src: i.imageUrl!, alt: i.name }));
+
     const pick = (keywords: string[]) =>
       itemsWithPhotos.find((i) => keywords.some((k) => i.name.toLowerCase().includes(k)));
 
@@ -129,80 +132,15 @@ export default async function HomePage() {
         <main className="app-content" id="main-content">
 
           {/* Hero */}
-          <div className="relative overflow-hidden" style={{ height: 290 }}>
-            {restaurant.heroImageUrl ? (
-              <Image
-                src={restaurant.heroImageUrl}
-                alt={`${restaurantName} hero`}
-                fill
-                style={{ objectFit: "cover", objectPosition: "center top" }}
-                priority
-              />
-            ) : (
-              <div
-                aria-label={`${restaurantName} hero`}
-                role="img"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: `linear-gradient(135deg, ${restaurant.darkColor ?? "#1E2C22"}, ${restaurant.primaryColor ?? "#2C4031"})`,
-                }}
-              />
-            )}
-            <div className="absolute inset-0" style={{
-              background: "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.18) 35%, rgba(var(--dark-rgb),0.72) 100%)"
-            }} />
-            <div className="absolute inset-0 flex flex-col justify-end" style={{ padding: "0 20px 0" }}>
-              <p style={{
-                fontSize: 14, fontWeight: 700, letterSpacing: "0.28em",
-                textTransform: "uppercase", color: "var(--hero-accent)",
-                marginBottom: 6, fontFamily: "var(--font-display)"
-              }}>
-                ★ Fresh · Daily · Delivered ★
-              </p>
-              {/* Hero headline is the restaurant's own name in their
-                  accent color. Previously this was hardcoded to "Hot Lunch"
-                  — leftover from the platform's first single-tenant operator
-                  (FS's Kitchen). For multi-tenant the restaurant name is
-                  the right thing to lead with. */}
-              <h1 style={{
-                fontSize: 38, fontWeight: 700, lineHeight: 1.0,
-                color: "white", marginBottom: 10,
-                fontFamily: "var(--font-display)",
-                textTransform: "uppercase", letterSpacing: "0.01em"
-              }}>
-                <span style={{ color: "var(--accent)" }}>{restaurantName}</span>
-              </h1>
-              <p style={{ fontSize: 16, color: "rgba(255,255,255,0.72)", marginBottom: 20, lineHeight: 1.5 }}>
-                Fresh food delivered to your {labels.type.toLowerCase()} &mdash; order for tomorrow or plan the whole week.
-              </p>
-              <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                <Link href="/order" style={{
-                  padding: "12px 22px", borderRadius: 100,
-                  fontSize: 14, fontWeight: 700, textDecoration: "none",
-                  background: "var(--brand-on-dark)", color: "white",
-                  fontFamily: "var(--font-display)",
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                  boxShadow: "0 4px 16px rgba(var(--brand-rgb),0.45)"
-                }}>
-                  Order Single Day
-                </Link>
-                <Link href="/weekly" style={{
-                  padding: "12px 20px", borderRadius: 100,
-                  fontSize: 14, fontWeight: 700, textDecoration: "none",
-                  background: "var(--accent)", color: "var(--dark-bg)",
-                  fontFamily: "var(--font-display)",
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                  boxShadow: "0 4px 16px rgba(var(--accent-rgb),0.40)"
-                }}>
-                  Plan The Week
-                </Link>
-              </div>
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.60)", letterSpacing: "0.06em", textTransform: "uppercase", paddingBottom: 14 }}>
-                {restaurantName}
-              </p>
-            </div>
-          </div>
+          <HeroCarousel
+            slides={carouselSlides}
+            gradientFrom={restaurant.darkColor ?? "#1E2C22"}
+            gradientTo={restaurant.primaryColor ?? "#2C4031"}
+            restaurantName={restaurantName}
+            labels={labels}
+            menuSummary={menuSummary}
+            cutoffCopy={cutoffCopy}
+          />
 
           {/* Food strip */}
           {stripItems.length > 0 && (
