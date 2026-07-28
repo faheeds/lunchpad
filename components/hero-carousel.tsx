@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 export type HeroCarouselSlide = { src: string; alt: string };
@@ -131,14 +132,12 @@ export function HeroCarousel({ slides, heroImageUrl, gradientFrom, gradientTo, r
           style={{ position: "relative", height: 220, overflow: "hidden", flexShrink: 0 }}
           className="lg:w-[45%] lg:h-auto lg:min-h-[360px]"
         >
-          <img
+          <Image
             src={heroImageUrl}
             alt={`${restaurantName} hero`}
-            style={{
-              position: "absolute", inset: 0,
-              width: "100%", height: "100%",
-              objectFit: "cover", objectPosition: "center top",
-            }}
+            fill
+            priority
+            style={{ objectFit: "cover", objectPosition: "center top" }}
           />
         </div>
         {textBlock}
