@@ -7,6 +7,7 @@ export type HeroCarouselSlide = { src: string; alt: string };
 
 type Props = {
   slides: HeroCarouselSlide[];
+  heroImageUrl?: string | null;
   gradientFrom: string;
   gradientTo: string;
   restaurantName: string;
@@ -15,7 +16,7 @@ type Props = {
   cutoffCopy?: string;
 };
 
-export function HeroCarousel({ slides, gradientFrom, gradientTo, restaurantName, labels }: Props) {
+export function HeroCarousel({ slides, heroImageUrl, gradientFrom, gradientTo, restaurantName, labels }: Props) {
   const hasSlides = slides.length > 0;
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -121,6 +122,29 @@ export function HeroCarousel({ slides, gradientFrom, gradientTo, restaurantName,
       </p>
     </div>
   );
+
+  // Tenant has a custom hero image — render it as a static single image (no carousel)
+  if (heroImageUrl) {
+    return (
+      <div className="lg:flex lg:flex-row">
+        <div
+          style={{ position: "relative", height: 220, overflow: "hidden", flexShrink: 0 }}
+          className="lg:w-[45%] lg:h-auto lg:min-h-[360px]"
+        >
+          <img
+            src={heroImageUrl}
+            alt={`${restaurantName} hero`}
+            style={{
+              position: "absolute", inset: 0,
+              width: "100%", height: "100%",
+              objectFit: "cover", objectPosition: "center top",
+            }}
+          />
+        </div>
+        {textBlock}
+      </div>
+    );
+  }
 
   // No photos — gradient-only treatment (matches old hero fallback)
   if (!hasSlides) {

@@ -134,6 +134,7 @@ export default async function HomePage() {
           {/* Hero */}
           <HeroCarousel
             slides={carouselSlides}
+            heroImageUrl={restaurant.heroImageUrl ?? null}
             gradientFrom={restaurant.darkColor ?? "#1E2C22"}
             gradientTo={restaurant.primaryColor ?? "#2C4031"}
             restaurantName={restaurantName}
