@@ -62,7 +62,7 @@ export default async function HistoryPage() {
           </h1>
 
           {orders.length ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:gap-3">
               {orders.map((order) => {
                 const badge = getOrderStatusColors(order.status);
                 const isPaid = order.status === "PAID";
