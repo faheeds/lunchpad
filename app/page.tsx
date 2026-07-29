@@ -66,13 +66,13 @@ export default async function HomePage() {
               <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.30em", textTransform: "uppercase", color: "rgba(255,255,255,0.60)", marginBottom: 12, fontFamily: "var(--font-display)" }}>
                 {restaurantName}
               </p>
-              <h1 style={{ fontSize: "clamp(2.4rem, 9vw, 5rem)", fontWeight: 700, lineHeight: 1.0, color: "white", marginBottom: 18, fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.01em", maxWidth: 720 }}>
-                {restaurantName}
+              <h1 style={{ fontSize: "clamp(2.4rem, 9vw, 5rem)", fontWeight: 700, lineHeight: 1.0, color: "white", marginBottom: 18, fontFamily: "var(--font-display)", letterSpacing: "-0.02em", maxWidth: 720 }}>
+                Fresh food delivered to your {labels.type.toLowerCase()}
               </h1>
               <p style={{ fontSize: 16, color: "rgba(255,255,255,0.72)", marginBottom: 32, lineHeight: 1.5, maxWidth: 480 }}>
-                Fresh food delivered to your {labels.type.toLowerCase()} &mdash; order for tomorrow or plan the whole week.
+                Order for a single day or plan the whole week &mdash; one checkout covers it all.
               </p>
-              <Link href="/order" style={{ padding: "14px 34px", borderRadius: 100, fontSize: 15, fontWeight: 700, textDecoration: "none", background: "#C0673E", color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.08em", boxShadow: "0 4px 24px rgba(192,103,62,0.50)" }}>
+              <Link href="/order" style={{ padding: "14px 34px", borderRadius: 100, fontSize: 15, fontWeight: 700, textDecoration: "none", background: restaurant.primaryColor ?? "#2C4031", color: "white", fontFamily: "var(--font-display)", letterSpacing: "0.04em", boxShadow: "0 4px 24px rgba(0,0,0,0.25)" }}>
                 Order Now
               </Link>
             </div>
