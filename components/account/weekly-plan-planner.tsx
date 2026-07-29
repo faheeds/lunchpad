@@ -336,7 +336,7 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
             <p className="text-[11px] font-semibold text-ink mb-2">
               2. Build {selectedChild.studentName}&apos;s week
             </p>
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 lg:overflow-x-visible lg:flex-wrap lg:pb-0">
               {availableDaysForChild.map(({ weekday, deliveryDate }) => {
                 const tz = deliveryDate.school.timezone;
                 const count = plansByWeekday[weekday]?.length ?? 0;
