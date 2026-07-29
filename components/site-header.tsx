@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { HelpDrawer } from "./help-drawer";
 
@@ -38,8 +38,15 @@ export function SiteHeader({
   const [logoFailed, setLogoFailed] = useState(false);
   const showUploadedLogo = Boolean(logoUrl) && !logoFailed;
 
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="app-header" style={{ flexDirection: "column", padding: 0, background: "#F6F1E6" }}>
+    <header className="app-header" style={{ flexDirection: "column", padding: 0, background: scrolled ? "#FCFAF3" : "transparent", backdropFilter: scrolled ? "none" : "blur(8px)", borderBottom: scrolled ? "1px solid #E3DBC6" : "none", transition: "background 200ms, border-color 200ms" }}>
       <a href="#main-content" style={{
         position: "absolute",
         left: "-9999px",
@@ -84,10 +91,6 @@ export function SiteHeader({
             {[
               { href: "/", label: "Home" },
               { href: "/menu", label: "Menu" },
-              { href: "/order", label: "Order" },
-              { href: "/weekly", label: "Weekly" },
-              { href: "/history", label: "History" },
-              { href: "/account", label: "Account" },
             ].map((item) => (
               <Link key={item.href} href={item.href} style={{
                 fontSize: 14, fontWeight: 600, color: "#211D15",
@@ -97,6 +100,15 @@ export function SiteHeader({
                 {item.label}
               </Link>
             ))}
+            <Link href="/order" style={{
+              fontSize: 14, fontWeight: 700, color: "white",
+              textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
+              textTransform: "uppercase", letterSpacing: "0.05em",
+              background: "#C0673E", borderRadius: 100,
+              padding: "8px 16px",
+            }}>
+              Order lunch
+            </Link>
           </nav>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
