@@ -129,8 +129,8 @@ export function HeroCarousel({ slides, heroImageUrl, gradientFrom, gradientTo, r
     return (
       <div className="lg:flex lg:flex-row">
         <div
-          style={{ position: "relative", height: 220, overflow: "hidden", flexShrink: 0 }}
-          className="lg:w-[45%] lg:h-auto lg:min-h-[360px]"
+          style={{ position: "relative", overflow: "hidden", flexShrink: 0 }}
+          className="h-[220px] lg:w-[45%] lg:h-auto lg:min-h-[360px]"
         >
           <Image
             src={heroImageUrl}
@@ -156,8 +156,8 @@ export function HeroCarousel({ slides, heroImageUrl, gradientFrom, gradientTo, r
 
   const imageBlock = (
     <div
-      style={{ position: "relative", height: 220, overflow: "hidden" }}
-      className="lg:flex-none lg:w-[45%] lg:h-auto lg:min-h-[360px]"
+      style={{ position: "relative", overflow: "hidden" }}
+      className="h-[220px] lg:flex-none lg:w-[45%] lg:h-auto lg:min-h-[360px]"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       onClick={handleInteraction}
