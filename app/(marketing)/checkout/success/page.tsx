@@ -110,7 +110,7 @@ export default async function CheckoutSuccessPage({
     <>
       <SiteHeaderServer />
       <main className="app-content pb-24" id="main-content">
-        <div className="px-4 pt-8 pb-4">
+        <div className="px-4 pt-8 pb-4 lg:max-w-lg lg:mx-auto">
 
           {/* ── Success header ─────────────────────────────────────── */}
           <div className="text-center mb-6">
