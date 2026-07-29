@@ -169,7 +169,7 @@ export default async function HomePage() {
 
           {/* Feature cards — 2-up mobile, 4-up desktop */}
           <div style={{ padding: "20px 20px 0" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="lg:grid-cols-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-[10px]">
               {features.map((f) => {
                 const card = (
                   <div style={{
