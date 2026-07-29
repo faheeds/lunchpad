@@ -38,7 +38,7 @@ export default async function OrderPage({
       <>
         <SiteHeaderServer />
         <main className="app-content" id="main-content">
-          <div className="px-4 py-4">
+          <div className="px-4 py-4 lg:max-w-3xl lg:mx-auto">
             <div className="rounded-[18px] border border-blue-200 bg-blue-50 p-8 text-center">
               <h2 className="text-lg font-semibold text-blue-900 mb-2">
                 We're getting set up
@@ -239,7 +239,7 @@ export default async function OrderPage({
     <>
       <SiteHeaderServer />
       <main className="app-content" id="main-content">
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 lg:max-w-3xl lg:mx-auto">
           {/* Reorder: original school has no open dates — show a clear notice above the form */}
           {reorderOrder && reorderSchoolId && !sameSchool && deliveryDates.length > 0 && (
             <div style={{
