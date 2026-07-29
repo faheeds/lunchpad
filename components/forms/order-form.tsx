@@ -913,7 +913,7 @@ export function OrderForm({
               <p className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-2 flex items-center gap-1.5" style={{ color: "#938B78" }}>
                 <span>{getCategoryIcon(category)}</span>{category}
               </p>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {items.map((item) => {
                   const isSelected = selectedMenuItemId === item.id;
                   const cartQty = cartItems.reduce((s, c) => c.menuItemId === item.id ? s + c.quantity : s, 0);
