@@ -164,6 +164,16 @@ async function generateRecurringSchedule(formData: FormData) {
     }
   }
 
+  // Notify waitlist if any dates were created
+  if (created.length > 0) {
+    const { notifyWaitlistForDeliveryDates } = await import("@/lib/email/service");
+    try {
+      await notifyWaitlistForDeliveryDates(restaurant.id);
+    } catch (err) {
+      console.error("[delivery-dates] waitlist notification failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
   revalidatePath("/admin/delivery-dates");
 }
 

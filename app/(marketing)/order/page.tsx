@@ -10,6 +10,7 @@ import { SiteHeaderServer } from "@/components/site-header-server";
 import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 import { OrderForm } from "@/components/forms/order-form";
+import { NotifyMeForm } from "@/components/forms/notify-me-form";
 
 export const dynamic = "force-dynamic";
 
@@ -391,31 +392,7 @@ export default async function OrderPage({
                   )}
                 </>
               ) : (
-                <div className="rounded-[16px] border border-editorial-line bg-editorial-card p-6 text-center shadow-card">
-                  <p className="text-sm font-medium text-editorial-ink mb-2">Ordering is closed</p>
-                  <p className="text-sm text-editorial-ink-soft mb-6">
-                    There are no upcoming delivery dates at the moment.
-                  </p>
-                  {(restaurant.contactEmail || restaurant.contactPhone) && (
-                    <div className="border-t border-editorial-line pt-4 mt-4 text-sm text-editorial-ink-soft">
-                      <p className="font-medium mb-2">Questions?</p>
-                      {restaurant.contactEmail && (
-                        <p>
-                          <a href={`mailto:${restaurant.contactEmail}`} className="text-editorial-green hover:text-editorial-green-deep">
-                            {restaurant.contactEmail}
-                          </a>
-                        </p>
-                      )}
-                      {restaurant.contactPhone && (
-                        <p>
-                          <a href={`tel:${restaurant.contactPhone}`} className="text-editorial-green hover:text-editorial-green-deep">
-                            {restaurant.contactPhone}
-                          </a>
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <NotifyMeForm restaurantId={restaurant.id} />
               )}
             </div>
           )}

@@ -12,6 +12,7 @@ import {
   buildRefundEmail,
   buildWeeklyConfirmationEmail,
   buildWeeklyPlanCutoffReminderEmail,
+  buildDeliveryDatesAddedEmail,
 } from "@/lib/email/templates";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -705,6 +706,84 @@ export async function sendWeeklyPlanCutoffReminderEmail(args: {
  * stamps each order so the admin order list and "resend" tooling stay
  * consistent.
  */
+export async function sendDeliveryDatesAddedEmail(
+  restaurantId: string,
+  email: string
+) {
+  if (!resend || !env.EMAIL_FROM) {
+    throw new Error("Email delivery is not configured.");
+  }
+
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: { name: true, slug: true, logoUrl: true, primaryColor: true }
+  });
+
+  if (!restaurant) {
+    throw new Error("Restaurant not found.");
+  }
+
+  const orderingUrl = `https://${restaurant.slug}.${env.ROOT_DOMAIN}/order`;
+
+  const message = buildDeliveryDatesAddedEmail({
+    restaurantName: restaurant.name,
+    restaurantLogoUrl: restaurant.logoUrl,
+    restaurantPrimaryColor: restaurant.primaryColor,
+    orderingUrl,
+  });
+
+  const result = await resend.emails.send({
+    from: env.EMAIL_FROM_NAME ? `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>` : env.EMAIL_FROM,
+    to: email,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message || "Resend email delivery failed.");
+  }
+
+  return { ok: true, providerId: result.data?.id };
+}
+
+/**
+ * Notifies all unnotified waitlist signups for a restaurant that new delivery
+ * dates have been added. Best-effort: failures don't block the caller and are
+ * logged only. Each signup that's successfully emailed gets marked notified.
+ */
+export async function notifyWaitlistForDeliveryDates(restaurantId: string) {
+  try {
+    const waitlist = await prisma.deliveryNotifyRequest.findMany({
+      where: { restaurantId, notifiedAt: null },
+      select: { id: true, email: true },
+    });
+
+    if (waitlist.length === 0) return;
+
+    const now = new Date();
+    for (const signup of waitlist) {
+      try {
+        await sendDeliveryDatesAddedEmail(restaurantId, signup.email);
+        await prisma.deliveryNotifyRequest.update({
+          where: { id: signup.id },
+          data: { notifiedAt: now },
+        });
+      } catch (err) {
+        console.error(
+          `[notify-waitlist] Failed to email ${signup.email}:`,
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
+  } catch (err) {
+    console.error(
+      `[notify-waitlist] Failed:`,
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
 export async function sendWeeklyOrderConfirmationEmail(
   orderIds: string[],
   restaurantId: string
