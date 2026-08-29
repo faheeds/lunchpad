@@ -11,7 +11,7 @@ async function submitNotifyMe(restaurantId: string, email: string) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || "Failed to submit");
+    throw new Error(error.error || "Failed to submit");
   }
 
   return response.json();
