@@ -170,6 +170,14 @@ async function generateRecurringForWizard(formData: FormData) {
     }
   }
 
+  // Notify waitlist of new delivery dates
+  const { notifyWaitlistForDeliveryDates } = await import("@/lib/email/service");
+  try {
+    await notifyWaitlistForDeliveryDates(restaurant.id);
+  } catch (err) {
+    console.error("[onboarding] waitlist notification failed:", err instanceof Error ? err.message : err);
+  }
+
   revalidatePath("/admin/onboarding");
   redirect("/admin/onboarding?step=8");
 }

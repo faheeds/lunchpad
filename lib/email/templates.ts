@@ -1026,3 +1026,42 @@ export function buildWeeklyConfirmationEmail(args: WeeklyConfirmationTemplateArg
     `,
   };
 }
+
+export function buildDeliveryDatesAddedEmail(args: {
+  restaurantName: string;
+  restaurantLogoUrl?: string | null;
+  restaurantPrimaryColor?: string | null;
+  orderingUrl: string;
+}) {
+  return {
+    subject: `${args.restaurantName} — new delivery dates available!`,
+    text: [
+      `Hi there,`,
+      "",
+      `${args.restaurantName} has just added new delivery dates. Head to their menu and place your order!`,
+      "",
+      `${args.orderingUrl}`,
+      "",
+      `Happy ordering!`,
+      `— The LunchPad team`,
+    ].join("\n"),
+    html: `
+      <div style="${base}">
+        ${brandHeader(args.restaurantName, args.restaurantLogoUrl, args.restaurantPrimaryColor)}
+        <div style="${card};border-top:none;border-radius:0 0 10px 10px;margin-top:0">
+          <h2 style="margin:0 0 16px;font-size:20px;color:#1c2a35">New delivery dates available</h2>
+          <p style="margin:0 0 14px">Hi there,</p>
+          <p style="margin:0 0 16px;color:#475569;line-height:1.6">
+            <strong>${args.restaurantName}</strong> has just added new delivery dates. Head over and place your order!
+          </p>
+          <a href="${args.orderingUrl}" style="display:inline-block;background:#2c4031;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 24px;font-weight:600;font-size:14px;margin:16px 0">
+            View menu & order
+          </a>
+          <p style="margin:20px 0 0;color:#64748b;font-size:12px">
+            You're receiving this because you signed up to be notified when <strong>${args.restaurantName}</strong> adds new dates.
+          </p>
+        </div>
+      </div>
+    `,
+  };
+}
