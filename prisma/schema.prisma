@@ -131,6 +131,7 @@ model Restaurant {
   processedWebhookEvents   ProcessedWebhookEvent[]
   activityLogs             ActivityLog[]
   discounts                Discount[]
+  deliveryNotifyRequests   DeliveryNotifyRequest[]
 }
 
 // ─── ADMIN USERS ─────────────────────────────────────────────────────────────
@@ -778,6 +779,23 @@ model Discount {
   // by default so this @@unique works as expected.
   @@unique([restaurantId, code])
   @@index([restaurantId, isActive])
+}
+
+// Email-capture waitlist for the "no upcoming delivery dates" empty state
+// on the customer-facing /order page. A visitor leaves their email; once
+// the operator adds new delivery dates, everyone with notifiedAt still
+// null for that restaurant gets a one-time email, then notifiedAt is set
+// so they're never emailed twice for the same signup.
+model DeliveryNotifyRequest {
+  id           String    @id @default(cuid())
+  restaurantId String
+  email        String
+  createdAt    DateTime  @default(now())
+  notifiedAt   DateTime?
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, email])
+  @@index([restaurantId, notifiedAt])
 }
 
 // Records every time a discount was actually applied to an order.
