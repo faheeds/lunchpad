@@ -24,6 +24,14 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(100).default(2.9), // LunchPad's cut %
   CRON_SECRET: z.string().optional(),
+  // 32-byte AES-256-GCM key (64 hex chars) used to encrypt admin MFA TOTP
+  // secrets at rest. Optional during phase 1 (foundation only — no runtime
+  // code path reads or writes ciphertext yet). Phase 3 tightens this to
+  // required once the login flow starts enforcing MFA.
+  MFA_ENCRYPTION_KEY: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/i, "MFA_ENCRYPTION_KEY must be 64 hex chars (32 bytes)")
+    .optional(),
 });
 
 export const env = envSchema.parse({
@@ -50,4 +58,5 @@ export const env = envSchema.parse({
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   PLATFORM_FEE_PERCENT: process.env.PLATFORM_FEE_PERCENT,
   CRON_SECRET: process.env.CRON_SECRET,
+  MFA_ENCRYPTION_KEY: process.env.MFA_ENCRYPTION_KEY,
 });
