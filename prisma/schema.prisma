@@ -147,16 +147,54 @@ model AdminUser {
   // owners can see who's still actively using their dashboard. Nullable
   // until first login (existing rows backfill to null until they sign in).
   lastActiveAt  DateTime?
+
+  // ── MFA / TOTP (phase 1 foundation) ──────────────────────────────────
+  // All fields nullable so the migration is safe against existing rows
+  // and no UI wiring lands until phases 2 (enrollment) and 3 (login gate).
+  //
+  //   mfaSecretEnc   — AES-256-GCM ciphertext of the TOTP secret in the
+  //                    form `iv:authtag:ciphertext` (all hex). Encryption
+  //                    key is env.MFA_ENCRYPTION_KEY (never NEXTAUTH_SECRET).
+  //   mfaEnrolledAt  — timestamp of when the user finished enrollment
+  //                    (scanned QR + verified their first code). Set even
+  //                    if MFA is later toggled off, so we know whether
+  //                    the user has ever completed enrollment.
+  //   mfaEnabledAt   — non-null means "require a TOTP code on login".
+  //                    Distinct from mfaEnrolledAt so an owner-forced
+  //                    disable (recovery flow) can null this out while
+  //                    keeping enrollment history.
+  mfaEnabledAt    DateTime?
+  mfaSecretEnc    String?
+  mfaEnrolledAt   DateTime?
+
   createdAt     DateTime                   @default(now())
   updatedAt     DateTime                   @updatedAt
   restaurant    Restaurant                 @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   resetTokens   AdminPasswordResetToken[]
+  recoveryCodes AdminRecoveryCode[]
   invitesSent   AdminInvite[]              @relation("InvitesSent")
   invitesAccepted AdminInvite[]            @relation("InvitesAccepted")
   ordersCreated Order[]                    @relation("AdminCreatedOrders")
   activityLogs  ActivityLog[]
 
   @@unique([restaurantId, email])
+}
+
+// Single-use recovery codes issued at MFA enrollment. We store only the
+// SHA-256 hex hash of each code so the plaintext exists exactly once
+// (shown to the user immediately after enrollment) and can never be
+// recovered from the DB. `usedAt` marks a code as spent — a spent code
+// must not be accepted again (replay defense). Cascade on adminUserId
+// so deleting an admin cleans up their codes.
+model AdminRecoveryCode {
+  id            String    @id @default(cuid())
+  adminUserId   String
+  codeHash      String    // sha256 hex
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+  adminUser     AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
 }
 
 // Magic-link invitations to join an admin team. The owner (or a manager,
