@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { auth } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { ThemePicker } from "@/components/admin/theme-picker";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
@@ -215,11 +216,25 @@ export default async function AdminSettingsPage({
     reset_success?: string;
   }>;
 }) {
-  const [params, restaurant] = await Promise.all([
+  const [params, restaurant, session] = await Promise.all([
     searchParams,
     requireRestaurant(),
+    auth(),
   ]);
   await requireAdminRole("OWNER");
+
+  // Look up the current admin's MFA state so we can show an "Enabled /
+  // Not enabled" badge on the danger-zone MFA row. Tenant-scoped
+  // lookup: id + restaurantId both from the session, never from client
+  // input. See lib/MULTI_TENANT_RULES.md.
+  const currentAdminId = session?.user?.adminUserId;
+  const currentAdmin = currentAdminId
+    ? await prisma.adminUser.findFirst({
+        where: { id: currentAdminId, restaurantId: restaurant.id },
+        select: { mfaEnabledAt: true },
+      })
+    : null;
+  const mfaEnabled = currentAdmin?.mfaEnabledAt != null;
 
   // Plan details now live exclusively on /admin/subscription. Redirect any
   // legacy ?tab=plan visit there so old bookmarks don't dead-end.
@@ -626,6 +641,29 @@ export default async function AdminSettingsPage({
               <Link href="/admin/team"
                 className="px-3 py-1.5 rounded-lg border border-editorial-line text-[11px] font-semibold text-editorial-ink-soft no-underline hover:bg-editorial-paper-2 transition">
                 Go to Team →
+              </Link>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-[12px] font-medium text-editorial-ink">Two-factor authentication</p>
+                  {mfaEnabled ? (
+                    <span className="text-[10px] font-bold text-editorial-green bg-editorial-sage px-1.5 py-0.5 rounded-full">
+                      Enabled
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-editorial-ink-faint bg-editorial-paper-2 px-1.5 py-0.5 rounded-full">
+                      Not enabled
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-editorial-ink-faint">
+                  Extra sign-in protection using a code from an app on your phone
+                </p>
+              </div>
+              <Link href="/admin/settings/mfa"
+                className="px-3 py-1.5 rounded-lg border border-editorial-line text-[11px] font-semibold text-editorial-ink-soft no-underline hover:bg-editorial-paper-2 transition">
+                Manage 2FA →
               </Link>
             </div>
             <div className="flex items-center justify-between gap-3">

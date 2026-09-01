@@ -467,6 +467,27 @@ export default async function AdminTeamPage() {
                     }}>
                       {cfg.label}
                     </span>
+                    {/* MFA state — mirrors role-pill styling. mfaEnabledAt
+                        is the source of truth (mfaEnrolledAt persists even
+                        after a disable, but "enabled" is what matters for
+                        "is this account protected right now?"). */}
+                    {member.mfaEnabledAt ? (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700,
+                        color: "#2C4031", background: "#DCE9DA",
+                        borderRadius: 100, padding: "2px 8px",
+                      }}>
+                        2FA enabled
+                      </span>
+                    ) : (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700,
+                        color: "#5B5446", background: "#F3EEE3",
+                        borderRadius: 100, padding: "2px 8px",
+                      }}>
+                        2FA off
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-editorial-ink-faint mt-0.5 truncate">
                     {member.email}
