@@ -304,7 +304,7 @@ export async function POST(request: Request) {
                 // Email failures are logged and can be retried in admin.
               }
               if (sample.parentUserId) {
-                sendPushToParent(sample.parentUserId, { title: "Weekly orders confirmed!", body: "Your lunch orders for the week are set." }).catch(() => {});
+                sendPushToParent(sample.parentUserId, { title: "Weekly orders confirmed!", body: "Your lunch orders for the week are set.", data: { screen: "weekly" } }).catch(() => {});
               }
             }
           }
@@ -319,7 +319,7 @@ export async function POST(request: Request) {
           } catch {
             // Email failures are logged and can be retried in admin.
           }
-          sendPushForOrder(order.id, { title: "Order confirmed!", body: "Your lunch order is on its way." }).catch(() => {});
+          sendPushForOrder(order.id, { title: "Order confirmed!", body: "Your lunch order is on its way.", data: { screen: "order", orderId: order.id } }).catch(() => {});
           // Previously: scheduleCutoffReminderEmail(order.id, ...). Removed
           // because that sent a "Ordering closes soon — Place Order Now"
           // reminder to the parent who had JUST placed and paid for an

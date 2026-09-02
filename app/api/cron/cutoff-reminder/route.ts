@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
                 orderUrl,
                 restaurantName: restaurant.name,
               });
-              sendPushToParent(parentId, { title: "Last chance to order!", body: "Ordering for this week closes soon." }).catch(() => {});
+              sendPushToParent(parentId, { title: "Last chance to order!", body: "Ordering for this week closes soon.", data: { screen: "order" } }).catch(() => {});
             }
 
             results.push({
