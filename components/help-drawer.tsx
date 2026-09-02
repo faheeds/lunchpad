@@ -1,10 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FAQAccordion } from "./faq-accordion";
 
 export function HelpDrawer() {
   const [isOpen, setIsOpen] = useState(false);
+  // Gates whether the drawer's markup is in the DOM at all. Starts false so
+  // nothing is rendered until the first open -- not just visually hidden,
+  // genuinely absent. Flips true on first open and stays true afterwards
+  // (closing animates via isOpen/transform as before; there's no value in
+  // unmounting again after the first open, since a closed-but-mounted
+  // drawer with pointer-events: none is inert either way).
+  const [hasBeenOpened, setHasBeenOpened] = useState(false);
+  // Portals need document.body, which doesn't exist during SSR. Only
+  // render the portal after mount, client-side.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const focusTrapRef = useRef<HTMLDivElement>(null);
@@ -68,7 +80,10 @@ export function HelpDrawer() {
     <>
       <button
         ref={triggerRef}
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setHasBeenOpened(true);
+          setIsOpen(true);
+        }}
         aria-label="Open help"
         className="flex items-center justify-center"
         style={{
@@ -98,23 +113,25 @@ export function HelpDrawer() {
         ?
       </button>
 
-      {isOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.4)",
-            zIndex: 999,
-          }}
-          onClick={() => {
-            setIsOpen(false);
-            triggerRef.current?.focus();
-          }}
-        />
-      )}
+      {mounted && hasBeenOpened && createPortal(
+        <>
+          {isOpen && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0, 0, 0, 0.4)",
+                zIndex: 999,
+              }}
+              onClick={() => {
+                setIsOpen(false);
+                triggerRef.current?.focus();
+              }}
+            />
+          )}
 
-      <div
-        ref={drawerRef}
+          <div
+          ref={drawerRef}
         role="dialog"
         aria-label="Help and frequently asked questions"
         aria-modal="true"
@@ -239,6 +256,9 @@ export function HelpDrawer() {
           </a>
         </div>
       </div>
+        </>,
+        document.body
+      )}
     </>
   );
 }
