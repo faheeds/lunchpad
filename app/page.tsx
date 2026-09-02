@@ -86,7 +86,7 @@ export default async function HomePage() {
               </p>
               {/* Tablet + desktop: 2-col / 4-col grid */}
               <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {menuGridItems.slice(0, 8).map((item, i) => (
+                {menuGridItems.slice(0, 4).map((item, i) => (
                   <Link key={i} href="/menu" style={{ display: "block", textDecoration: "none", borderRadius: 14, overflow: "hidden", position: "relative", aspectRatio: "1 / 1", boxShadow: "0 3px 10px rgba(var(--dark-rgb),0.15)" }}>
                     <img src={item.src} alt={item.alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "22px 10px 8px", background: "linear-gradient(to top, rgba(0,0,0,0.72), transparent)" }}>
@@ -95,8 +95,14 @@ export default async function HomePage() {
                   </Link>
                 ))}
               </div>
+              {/* See full menu link */}
+              <div className="hidden sm:flex justify-center mt-6">
+                <Link href="/menu" style={{ padding: "12px 28px", borderRadius: 100, fontSize: 13, fontWeight: 700, textDecoration: "none", background: "transparent", color: restaurant.primaryColor ?? "#2C4031", fontFamily: "var(--font-display)", letterSpacing: "0.04em", border: `2px solid ${restaurant.primaryColor ?? "#2C4031"}` }}>
+                  See full menu →
+                </Link>
+              </div>
               {/* Mobile: horizontal scroll */}
-              <div className="sm:hidden" style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollSnapType: "x mandatory" }}>
+              <div className="sm:hidden flex gap-2 overflow-x-auto pb-1" style={{ scrollSnapType: "x mandatory" }}>
                 {menuGridItems.slice(0, 8).map((item, i) => (
                   <Link key={i} href="/menu" style={{ flexShrink: 0, width: 150, height: 150, borderRadius: 14, overflow: "hidden", position: "relative", scrollSnapAlign: "start", boxShadow: "0 3px 10px rgba(var(--dark-rgb),0.18)", display: "block", textDecoration: "none" }}>
                     <img src={item.src} alt={item.alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -111,19 +117,35 @@ export default async function HomePage() {
 
           {/* Weekly plan promo */}
           <div style={{ padding: "20px 20px 28px" }}>
-            <div style={{ background: restaurant.primaryColor ?? "#2C4031", borderRadius: 18, padding: "28px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-display)" }}>
-                Save time
-              </p>
-              <p style={{ fontSize: 24, fontWeight: 700, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", lineHeight: 1.1 }}>
-                Plan<br />The Week
-              </p>
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.70)", lineHeight: 1.5, maxWidth: 340 }}>
-                Order multiple days at once &mdash; one checkout, all week sorted.
-              </p>
-              <Link href="/weekly" style={{ padding: "12px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, textDecoration: "none", background: "white", color: restaurant.primaryColor ?? "#2C4031", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.06em", alignSelf: "flex-start", marginTop: 6, display: "inline-block" }}>
-                Plan The Week
-              </Link>
+            <div style={{ background: restaurant.primaryColor ?? "#2C4031", borderRadius: 18, padding: "28px 24px", display: "flex", flexDirection: "column", gap: 10, position: "relative", overflow: "hidden" }}>
+              {/* Desktop: two-column layout with image on right */}
+              {heroSrc && (
+                <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-1/2" style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%" }}>
+                  <Image
+                    src={heroSrc}
+                    alt=""
+                    fill
+                    style={{ objectFit: "cover", objectPosition: "center" }}
+                  />
+                  {/* Gradient overlay to blend with card background */}
+                  <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to right, ${restaurant.primaryColor ?? "#2C4031"}, ${restaurant.primaryColor ?? "#2C4031"} 20%, transparent)` }} />
+                </div>
+              )}
+              {/* Text content */}
+              <div style={{ position: "relative", zIndex: 1, maxWidth: heroSrc ? 340 : "100%" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-display)" }}>
+                  Save time
+                </p>
+                <p style={{ fontSize: 24, fontWeight: 700, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", lineHeight: 1.1, marginBottom: 12 }}>
+                  Plan<br />The Week
+                </p>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.70)", lineHeight: 1.5, marginBottom: 16 }}>
+                  Order multiple days at once &mdash; one checkout, all week sorted.
+                </p>
+                <Link href="/weekly" style={{ padding: "12px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, textDecoration: "none", background: "white", color: restaurant.primaryColor ?? "#2C4031", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.06em", display: "inline-block" }}>
+                  Plan The Week
+                </Link>
+              </div>
             </div>
           </div>
 
