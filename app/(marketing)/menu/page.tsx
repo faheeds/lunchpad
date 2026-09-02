@@ -93,7 +93,9 @@ export default async function MenuPage() {
           borderTop: "1px solid #E3DBC6",
           borderBottom: "1px solid #E3DBC6",
           position: "sticky", top: 0, zIndex: 10,
-        }} className="lg:mx-auto lg:max-w-2xl lg:px-8">
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }} className="lg:mx-auto lg:max-w-2xl lg:px-8 [&::-webkit-scrollbar]:hidden">
           {categories.map((cat) => {
             const count = grouped.get(cat)?.length ?? 0;
             if (!count) return null;
