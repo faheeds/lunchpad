@@ -86,8 +86,8 @@ export default async function HomePage() {
               </p>
               {/* Tablet + desktop: 2-col / 4-col grid */}
               <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {menuGridItems.slice(0, 4).map((item, i) => (
-                  <Link key={i} href="/menu" style={{ display: "block", textDecoration: "none", borderRadius: 14, overflow: "hidden", position: "relative", aspectRatio: "1 / 1", boxShadow: "0 3px 10px rgba(var(--dark-rgb),0.15)" }}>
+                {menuGridItems.slice(0, 4).map((item) => (
+                  <Link key={item.alt} href="/menu" style={{ display: "block", textDecoration: "none", borderRadius: 14, overflow: "hidden", position: "relative", aspectRatio: "1 / 1", boxShadow: "0 3px 10px rgba(var(--dark-rgb),0.15)" }}>
                     <img src={item.src} alt={item.alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "22px 10px 8px", background: "linear-gradient(to top, rgba(0,0,0,0.72), transparent)" }}>
                       <p style={{ fontSize: 12, fontWeight: 600, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.alt}</p>
@@ -103,8 +103,8 @@ export default async function HomePage() {
               </div>
               {/* Mobile: horizontal scroll */}
               <div className="sm:hidden flex gap-2 overflow-x-auto pb-1" style={{ scrollSnapType: "x mandatory" }}>
-                {menuGridItems.slice(0, 8).map((item, i) => (
-                  <Link key={i} href="/menu" style={{ flexShrink: 0, width: 150, height: 150, borderRadius: 14, overflow: "hidden", position: "relative", scrollSnapAlign: "start", boxShadow: "0 3px 10px rgba(var(--dark-rgb),0.18)", display: "block", textDecoration: "none" }}>
+                {menuGridItems.slice(0, 8).map((item) => (
+                  <Link key={item.alt} href="/menu" style={{ flexShrink: 0, width: 150, height: 150, borderRadius: 14, overflow: "hidden", position: "relative", scrollSnapAlign: "start", boxShadow: "0 3px 10px rgba(var(--dark-rgb),0.18)", display: "block", textDecoration: "none" }}>
                     <img src={item.src} alt={item.alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "18px 8px 7px", background: "linear-gradient(to top, rgba(0,0,0,0.72), transparent)" }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.alt}</p>
@@ -120,7 +120,7 @@ export default async function HomePage() {
             <div style={{ background: restaurant.primaryColor ?? "#2C4031", borderRadius: 18, padding: "28px 24px", display: "flex", flexDirection: "column", gap: 10, position: "relative", overflow: "hidden" }}>
               {/* Desktop: two-column layout with image on right */}
               {heroSrc && (
-                <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-1/2" style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%" }}>
+                <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-1/2">
                   <Image
                     src={heroSrc}
                     alt=""
