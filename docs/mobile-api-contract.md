@@ -26,6 +26,47 @@ React Native / iOS app.
 
 ---
 
+## GET /api/mobile/native/restaurants/search
+
+Restaurant discovery endpoint for the mobile app's initial "find your
+restaurant" screen. Cross-tenant (deliberately — the app needs to search
+before it knows which tenant to target). Unauthenticated.
+
+- **Method**: GET
+- **Auth**: none (cross-tenant discovery — no JWT possible at this point)
+- **Tenant scoping**: none (this is the bootstrapping endpoint)
+- **Request**: query parameter `q` (required, non-empty string)
+  - User input — could be a restaurant name, slug, or pasted link
+  - Examples: `q=Local+Bigger+Burger`, `q=lbb`, `q=lbb.lunchpad.us`, `q=https://lbb.lunchpad.us/`
+  - Normalization: the endpoint strips `https://`, `.lunchpad.us`, trailing
+    slashes/paths, lowercases, and trims before matching
+- **Behavior**:
+  - Searches by partial name match (case-insensitive) OR partial slug match
+  - Only returns `isActive: true` restaurants
+  - Results ordered by relevance: exact slug match first, then name matches,
+    then alphabetically
+  - Limited to 20 results
+- **Success (200)**: array of restaurants
+  ```json
+  [
+    {
+      "id": "...",
+      "slug": "...",
+      "name": "...",
+      "logoUrl": "...|null",
+      "primaryColor": "...|null"
+    }
+  ]
+  ```
+  - Note: response includes only public branding fields — no `stripeAccountId`,
+    `contactEmail`, `contactPhone`, `subscriptionStatus`, or other operational
+    data. Treat as if visible on the restaurant's public subdomain.
+- **Errors**:
+  - `400 { error: "q parameter is required" }` — missing or empty query
+  - `500 { error: "Failed to search restaurants" }`
+
+---
+
 ## GET /api/mobile/native/info
 
 - **Method**: GET
