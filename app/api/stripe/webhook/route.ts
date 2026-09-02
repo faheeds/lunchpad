@@ -278,7 +278,7 @@ export async function POST(request: Request) {
 
             // Best-effort "your order has been updated" email.
             sendOrderModifiedEmail(order.id, order.restaurantId).catch(() => {});
-            sendPushForOrder(order.id, { title: "Order updated", body: "Your order has been updated." }).catch(() => {});
+            sendPushForOrder(order.id, { title: "Order updated", body: "Your order has been updated.", data: { screen: "order", orderId: order.id } }).catch(() => {});
           }
         } else if (session.metadata?.checkoutType === "weekly_batch") {
           const result = await markWeeklyBatchPaidByCheckoutSession(
