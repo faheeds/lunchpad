@@ -133,6 +133,7 @@ export function HelpDrawer() {
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          pointerEvents: isOpen ? "auto" : "none",
         }}
       >
         {/* Header */}
@@ -162,7 +163,7 @@ export function HelpDrawer() {
             style={{
               background: "none",
               border: "none",
-              color: "#938B78",
+              color: "#211D15",
               cursor: "pointer",
               fontSize: 24,
               padding: 0,
@@ -177,7 +178,7 @@ export function HelpDrawer() {
               e.currentTarget.style.color = "#5B5446";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#938B78";
+              e.currentTarget.style.color = "#211D15";
             }}
           >
             ✕
