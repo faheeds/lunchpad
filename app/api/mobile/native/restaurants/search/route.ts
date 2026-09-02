@@ -60,6 +60,7 @@ export async function GET(request: Request) {
           {
             slug: {
               contains: normalized,
+              mode: "insensitive",
             },
           },
         ],
@@ -77,8 +78,8 @@ export async function GET(request: Request) {
     // Sort by relevance: exact slug match first, then by name match quality,
     // then alphabetically.
     const sorted = restaurants.sort((a, b) => {
-      const aExactSlugMatch = a.slug === normalized ? 1 : 0;
-      const bExactSlugMatch = b.slug === normalized ? 1 : 0;
+      const aExactSlugMatch = a.slug.toLowerCase() === normalized ? 1 : 0;
+      const bExactSlugMatch = b.slug.toLowerCase() === normalized ? 1 : 0;
 
       if (aExactSlugMatch !== bExactSlugMatch) {
         return bExactSlugMatch - aExactSlugMatch;
