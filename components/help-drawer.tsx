@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FAQAccordion } from "./faq-accordion";
 
 export function HelpDrawer() {
@@ -12,6 +13,10 @@ export function HelpDrawer() {
   // unmounting again after the first open, since a closed-but-mounted
   // drawer with pointer-events: none is inert either way).
   const [hasBeenOpened, setHasBeenOpened] = useState(false);
+  // Portals need document.body, which doesn't exist during SSR. Only
+  // render the portal after mount, client-side.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const focusTrapRef = useRef<HTMLDivElement>(null);
@@ -108,23 +113,24 @@ export function HelpDrawer() {
         ?
       </button>
 
-      {hasBeenOpened && isOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.4)",
-            zIndex: 999,
-          }}
-          onClick={() => {
-            setIsOpen(false);
-            triggerRef.current?.focus();
-          }}
-        />
-      )}
+      {mounted && hasBeenOpened && createPortal(
+        <>
+          {isOpen && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0, 0, 0, 0.4)",
+                zIndex: 999,
+              }}
+              onClick={() => {
+                setIsOpen(false);
+                triggerRef.current?.focus();
+              }}
+            />
+          )}
 
-      {hasBeenOpened && (
-        <div
+          <div
           ref={drawerRef}
         role="dialog"
         aria-label="Help and frequently asked questions"
@@ -250,6 +256,8 @@ export function HelpDrawer() {
           </a>
         </div>
       </div>
+        </>,
+        document.body
       )}
     </>
   );
