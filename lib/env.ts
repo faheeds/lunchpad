@@ -10,6 +10,7 @@ const envSchema = z.object({
   AUTH_APPLE_SECRET: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_CONNECT_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_CONNECT_CLIENT_ID: z.string().optional(), // ca_xxx from Stripe Connect settings
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
@@ -44,6 +45,7 @@ export const env = envSchema.parse({
   AUTH_APPLE_SECRET: process.env.AUTH_APPLE_SECRET,
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_CONNECT_WEBHOOK_SECRET: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
   STRIPE_CONNECT_CLIENT_ID: process.env.STRIPE_CONNECT_CLIENT_ID,
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
