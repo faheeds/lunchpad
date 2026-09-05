@@ -32,8 +32,18 @@ export async function POST(request: Request) {
   try {
     event = stripe.webhooks.constructEvent(payload, signature, env.STRIPE_WEBHOOK_SECRET);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid webhook signature.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    // Try the Connect webhook secret if the primary secret fails
+    if (env.STRIPE_CONNECT_WEBHOOK_SECRET) {
+      try {
+        event = stripe.webhooks.constructEvent(payload, signature, env.STRIPE_CONNECT_WEBHOOK_SECRET);
+      } catch (connectError) {
+        const message = connectError instanceof Error ? connectError.message : "Invalid webhook signature.";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+    } else {
+      const message = error instanceof Error ? error.message : "Invalid webhook signature.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
   }
 
   const alreadyProcessed = await prisma.processedWebhookEvent.findUnique({
