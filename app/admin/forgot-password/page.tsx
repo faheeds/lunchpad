@@ -119,7 +119,7 @@ export default async function ForgotPasswordPage({
           ) : params.sent ? (
             <div className="space-y-4">
               <div className="rounded-xl bg-editorial-sage border border-[#C6CDB2] px-3.5 py-3 text-[12.5px] text-editorial-green">
-                If an admin account exists for that email, we&apos;ve sent a password reset link. Check your inbox — the link expires in {RESET_TOKEN_LIFETIME_MINUTES} minutes.
+                If an admin account exists for that email, we&apos;ve sent a password reset link. It can take a few minutes to arrive — check your spam/junk folder if you don&apos;t see it right away. The link expires in {RESET_TOKEN_LIFETIME_MINUTES} minutes.
               </div>
               <Link href="/admin/login" className="block w-full text-center py-3 rounded-full border border-editorial-line text-editorial-ink text-[13px] font-semibold no-underline hover:border-editorial-green hover:text-editorial-green transition-colors">
                 Back to sign in
