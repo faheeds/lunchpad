@@ -36,8 +36,8 @@ export async function POST(request: Request) {
     if (env.STRIPE_CONNECT_WEBHOOK_SECRET) {
       try {
         event = stripe.webhooks.constructEvent(payload, signature, env.STRIPE_CONNECT_WEBHOOK_SECRET);
-      } catch {
-        const message = error instanceof Error ? error.message : "Invalid webhook signature.";
+      } catch (connectError) {
+        const message = connectError instanceof Error ? connectError.message : "Invalid webhook signature.";
         return NextResponse.json({ error: message }, { status: 400 });
       }
     } else {
