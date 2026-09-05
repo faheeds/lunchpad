@@ -251,6 +251,12 @@ model School {
   name                 String
   slug                 String
   locationType         LocationType       @default(SCHOOL)
+  // Per-school list of grade/section options shown in the parent-facing
+  // "add child" grade dropdown. Empty = falls back to a generic K-12 list
+  // (lib/grades.ts's STANDARD_GRADES) rather than showing nothing. Only
+  // meaningful for locationType=SCHOOL; OFFICE locations use a free-text
+  // Title field instead and ignore this.
+  grades               String[]           @default([])
   timezone             String             @default("America/Los_Angeles")
   defaultCutoffHour    Int                @default(17)
   defaultCutoffMinute  Int                @default(0)
