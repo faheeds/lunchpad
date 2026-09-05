@@ -31,6 +31,7 @@ type MenuItem = {
   slug: string;
   name: string;
   description: string | null;
+  category: string | null;
   basePriceCents: number;
   /** Operator-set required choices (e.g. Beef / Crispy Chicken / Vegan).
    *  Optional for back-compat — when empty the helper falls back to a
@@ -77,43 +78,40 @@ const WEEKDAY_LABELS: Record<number, { short: string; long: string }> = {
   7: { short: "Sun", long: "Sunday" },
 };
 
-const CATEGORY_ORDER = [
-  "Signature Burgers & Sandwiches",
-  "Salads with Protein",
-  "Comfort Favorites",
-  "Sides & Snacks"
-];
-
-const CATEGORY_ICONS: Record<string, string> = {
-  "Signature Burgers & Sandwiches": "🍔",
-  "Salads with Protein": "🥗",
-  "Comfort Favorites": "🍗",
-  "Sides & Snacks": "🍟"
-};
-
+// Category resolution now reads from MenuItem.category (operator-set via
+// admin Menu page). Items without a category land in "Other" so they
+// still render. Previously hardcoded to a fixed four-bucket heuristic
+// that ignored the real category field entirely — same bug fixed in
+// order-form.tsx and the admin Menu page; fixed here too for consistency
+// across every place a parent sees the weekly menu.
 function fmt(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-function getCategory(item: MenuItem) {
-  const prefix = item.description?.split(".")[0]?.trim();
-  if (prefix && CATEGORY_ORDER.includes(prefix)) return prefix;
-  if (item.name.includes("Burger") || item.name.includes("Sandwich")) return "Signature Burgers & Sandwiches";
-  if (item.name.includes("Salad")) return "Salads with Protein";
-  if (
-    item.name.includes("Mac") ||
-    item.name.includes("Quesadilla") ||
-    item.name.includes("Wings") ||
-    item.name.includes("Tender")
-  )
-    return "Comfort Favorites";
-  return "Sides & Snacks";
+function getCategory(item: MenuItem): string {
+  return item.category?.trim() || "Other";
+}
+
+// Pick a sensible emoji for whichever category an operator named. Same
+// keyword-match heuristic as order-form.tsx and the marketing /menu page
+// so the visual vocabulary stays consistent everywhere.
+function getCategoryIcon(category: string): string {
+  const c = category.toLowerCase();
+  if (c.match(/burger|sandwich|wrap|sub/)) return "🍔";
+  if (c.match(/salad|veg|green|bowl/)) return "🥗";
+  if (c.match(/pizza|pasta|italian/)) return "🍕";
+  if (c.match(/chicken|wings|tender|nugget/)) return "🍗";
+  if (c.match(/taco|burrito|mexican|quesadilla/)) return "🌮";
+  if (c.match(/asian|noodle|rice|sushi/)) return "🍜";
+  if (c.match(/breakfast|pancake|waffle|egg/)) return "🥞";
+  if (c.match(/drink|beverage|juice|smoothie|milk|tea|coffee/)) return "🥤";
+  if (c.match(/dessert|cookie|cake|ice cream|sweet/)) return "🍰";
+  if (c.match(/side|snack|fries|chips/)) return "🍟";
+  if (c.match(/comfort|favorite/)) return "🍗";
+  return "🍽";
 }
 
 function getDesc(item: MenuItem) {
-  const parts = item.description?.split(". ");
-  if (!parts?.length) return "";
-  if (CATEGORY_ORDER.includes(parts[0].trim())) return parts.slice(1).join(". ").trim();
   return item.description ?? "";
 }
 
@@ -180,8 +178,15 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
       acc[cat].push(item);
       return acc;
     }, {});
-    return CATEGORY_ORDER.reduce<Record<string, MenuItem[]>>((ordered, cat) => {
-      if (groups[cat]?.length) ordered[cat] = groups[cat];
+    // Alphabetical, with "Other" always last — categories are now
+    // whatever an operator named them, not a fixed four-bucket list.
+    const orderedNames = Object.keys(groups).sort((a, b) => {
+      if (a === "Other") return 1;
+      if (b === "Other") return -1;
+      return a.localeCompare(b);
+    });
+    return orderedNames.reduce<Record<string, MenuItem[]>>((ordered, cat) => {
+      ordered[cat] = groups[cat];
       return ordered;
     }, {});
   }, [dayMenuItems]);
@@ -463,7 +468,7 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
                       {Object.entries(groupedMenuItems).map(([category, items]) => (
                         <div key={category}>
                           <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2 flex items-center gap-1.5">
-                            <span>{CATEGORY_ICONS[category]}</span>
+                            <span>{getCategoryIcon(category)}</span>
                             {category}
                           </p>
                           <div className="space-y-2">
@@ -488,7 +493,7 @@ export function WeeklyPlanPlanner({ children, deliveryDates, existingPlans }: Pl
                                   )}
                                 >
                                   <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-lg flex-shrink-0">
-                                    {CATEGORY_ICONS[category] || "🍽"}
+                                    {getCategoryIcon(category)}
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-2">
