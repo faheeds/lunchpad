@@ -6,14 +6,14 @@ import { differenceInDays, differenceInHours, differenceInMinutes } from "date-f
 import type { LocationType } from "@prisma/client";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { resolveLineItemPrice } from "@/lib/pricing";
-import { getGradesForSchoolName } from "@/lib/grades";
+import { STANDARD_GRADES } from "@/lib/grades";
 import { getLabels } from "@/lib/location-labels";
 import { cn } from "@/lib/utils";
 import { getLabelsForOperator } from "@/lib/location-labels";
 
 type DeliveryDate = {
   id: string; schoolId: string; deliveryDate: string; cutoffAt: string; orderingOpen: boolean;
-  school: { id: string; name: string; timezone: string; locationType: LocationType };
+  school: { id: string; name: string; timezone: string; locationType: LocationType; grades?: string[] };
 };
 
 // Threshold above which the location selector switches from tile UI to a
@@ -234,7 +234,6 @@ export function OrderForm({
     }, []), [deliveryDates]);
 
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
-  const selectedSchoolName = selectedSchool?.name ?? "";
   // Labels track the *currently selected* location's type. Before any
   // selection we default to school labels (the more common case) but the
   // form re-renders the moment the user picks a location.
@@ -247,7 +246,7 @@ export function OrderForm({
     ? getLabels(selectedSchool.locationType)
     : getLabelsForOperator(operatorType);
   const isOffice = selectedSchool?.locationType === "OFFICE";
-  const gradeOptions = getGradesForSchoolName(selectedSchoolName);
+  const gradeOptions = selectedSchool?.grades?.length ? selectedSchool.grades : STANDARD_GRADES;
 
   // Group locations by type for the dropdown — when the tenant has both
   // schools and offices we render two <optgroup>s so the selector doesn't

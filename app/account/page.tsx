@@ -99,7 +99,7 @@ export default async function ParentAccountPage() {
     }),
     prisma.school.findMany({
       where: { isActive: true, restaurantId: restaurant.id },
-      select: { id: true, name: true, locationType: true },
+      select: { id: true, name: true, locationType: true, grades: true },
       orderBy: { name: "asc" },
     }),
     // Tenant-scoped: belt-and-braces. With per-tenant ParentUser records

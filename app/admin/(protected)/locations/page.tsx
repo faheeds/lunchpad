@@ -10,6 +10,7 @@ import { slugify } from "@/lib/utils";
 import { checkLimit, PlanLimitError, PLAN_LIMITS } from "@/lib/plans";
 
 import { EmptyState } from "@/components/admin/empty-state";
+import { STANDARD_GRADES } from "@/lib/grades";
 export const dynamic = "force-dynamic";
 
 const TIMEZONES = [
@@ -22,6 +23,23 @@ const TIMEZONES = [
 ];
 
 // ── Server actions ──────────────────────────────────────────────────────────
+
+// Parses a newline-or-comma-separated textarea of grade/section names into
+// a clean, deduped array. Order is preserved (input order = display order
+// in the parent-facing dropdown), dedup is case-insensitive.
+function parseGrades(raw: string): string[] {
+  const seen = new Set<string>();
+  const grades: string[] = [];
+  for (const piece of raw.split(/[\n,]+/)) {
+    const trimmed = piece.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    grades.push(trimmed);
+  }
+  return grades;
+}
 
 async function createSchool(formData: FormData) {
   "use server";
@@ -49,6 +67,10 @@ async function createSchool(formData: FormData) {
     throw e;
   }
 
+  const collectTeacher = locationType === "SCHOOL" && formData.get("collectTeacher") === "on";
+  const collectClassroom = locationType === "SCHOOL" && formData.get("collectClassroom") === "on";
+  const grades = parseGrades(String(formData.get("grades") || ""));
+
   await prisma.school.create({
     data: {
       restaurantId: restaurant.id,
@@ -58,8 +80,9 @@ async function createSchool(formData: FormData) {
       timezone,
       defaultCutoffHour: parseInt(hourStr ?? "21", 10),
       defaultCutoffMinute: parseInt(minStr ?? "0", 10),
-      collectTeacher: locationType === "SCHOOL" && formData.get("collectTeacher") === "on",
-      collectClassroom: locationType === "SCHOOL" && formData.get("collectClassroom") === "on",
+      collectTeacher,
+      collectClassroom,
+      grades: locationType === "SCHOOL" ? grades : [],
       isActive: true,
     },
   });
@@ -88,6 +111,7 @@ async function updateSchool(formData: FormData) {
       defaultCutoffMinute: parseInt(minStr ?? "0", 10),
       collectTeacher: formData.get("collectTeacher") === "on",
       collectClassroom: formData.get("collectClassroom") === "on",
+      grades: parseGrades(String(formData.get("grades") || "")),
     },
   });
   revalidatePath("/admin/locations");
@@ -338,6 +362,24 @@ export default async function AdminSchoolsPage({
                         Collect classroom
                       </label>
                     </div>
+                    {school.locationType === "SCHOOL" && (
+                      <div>
+                        <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">
+                          Grades
+                          <span className="text-editorial-ink-faint font-normal ml-1">(one per line — shown in the order parents see them)</span>
+                        </label>
+                        <textarea
+                          name="grades"
+                          defaultValue={(school.grades ?? []).join("\n")}
+                          placeholder={STANDARD_GRADES.join("\n")}
+                          rows={Math.max(3, (school.grades?.length ?? 0) + 1)}
+                          className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[12px] px-3 py-2 leading-snug resize-y font-mono bg-white focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
+                        />
+                        <p className="text-[10px] text-editorial-ink-faint mt-1">
+                          Shown to parents when they add a child at this location. Leave blank to use a generic K-12 list.
+                        </p>
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <button type="submit"
                         className="flex-1 py-2 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
@@ -428,6 +470,18 @@ export default async function AdminSchoolsPage({
               <input type="checkbox" name="collectClassroom" defaultChecked className="rounded" />
               Collect classroom
             </label>
+          </div>
+          <div>
+            <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">
+              Grades
+              <span className="text-editorial-ink-faint font-normal ml-1">(one per line — leave blank to use a generic K-12 list; only applies to school locations)</span>
+            </label>
+            <textarea
+              name="grades"
+              placeholder={STANDARD_GRADES.join("\n")}
+              rows={3}
+              className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[12px] px-3 py-2 leading-snug resize-y font-mono focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
+            />
           </div>
           <button type="submit"
             className="w-full py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
