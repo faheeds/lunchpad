@@ -16,9 +16,9 @@
  * rigor the weekly version already applies to server-read data.
  *
  * Body: {
- *   deliveryDateId: string
  *   items: {
  *     parentChildId: string
+ *     deliveryDateId: string
  *     menuItemId: string
  *     choice?: string
  *     size?: string
@@ -55,19 +55,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const deliveryDateId = body?.deliveryDateId;
     const items = Array.isArray(body?.items) ? body.items : [];
 
-    if (!deliveryDateId || items.length === 0) {
+    if (items.length === 0) {
       logWarn("mobile_cart_checkout_missing_fields", { parentUserId: auth.parentUserId });
       return NextResponse.json(
-        { error: "Missing delivery date or cart items." },
+        { error: "Cart is empty." },
         { status: 400, headers: CORS_HEADERS }
       );
     }
 
     const cartItems = items.map((item: Record<string, unknown>) => ({
       parentChildId: String(item.parentChildId ?? ""),
+      deliveryDateId: String(item.deliveryDateId ?? ""),
       menuItemId: String(item.menuItemId ?? ""),
       choice: item.choice ? String(item.choice) : null,
       size: item.size ? String(item.size) : null,
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       removals: Array.isArray(item.removals) ? item.removals.map(String) : [],
     }));
 
-    const batch = await createAdHocCheckoutBatch(auth.parentUserId, String(deliveryDateId), cartItems);
+    const batch = await createAdHocCheckoutBatch(auth.parentUserId, cartItems);
 
     logInfo("mobile_cart_checkout_batch_created", {
       parentUserId: auth.parentUserId,

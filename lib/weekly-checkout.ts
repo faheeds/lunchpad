@@ -240,7 +240,7 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
 
 /**
  * Builds a WeeklyCheckoutBatch from a live, ad-hoc cart submitted by the
- * mobile app for a single delivery date — as opposed to
+ * mobile app for one or more delivery dates — as opposed to
  * createWeeklyCheckoutBatch, which reads pre-saved WeeklyLunchPlan rows.
  * Reuses the exact same WeeklyCheckoutBatch/WeeklyCheckoutBatchItem models
  * and the exact same downstream payment/webhook path
@@ -251,18 +251,26 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
  * data, since a mobile client cannot be trusted to submit correct prices,
  * valid children, or valid delivery-date/menu-item combinations.
  *
+ * Each cart item carries its own deliveryDateId (not one shared for the
+ * whole cart) so a single checkout can include children at different
+ * schools ordering on the same day — each item is independently
+ * validated against its own assigned child's actual school, so a child
+ * can never be attributed to a delivery date at a school they don't
+ * attend, regardless of what else is in the same cart.
+ *
  * This is how a single cart with items for multiple different children
- * becomes multiple separate Order rows after payment — each
- * WeeklyCheckoutBatchItem always becomes exactly one Order (existing
- * behavior in markWeeklyBatchPaidByCheckoutSession, unchanged), so three
- * items for three different kids in one cart produces three Orders,
- * correctly attributed, from one payment.
+ * (at the same school or different schools) becomes multiple separate
+ * Order rows after payment — each WeeklyCheckoutBatchItem always becomes
+ * exactly one Order (existing behavior in
+ * markWeeklyBatchPaidByCheckoutSession, unchanged), so three items for
+ * three different kids in one cart produces three Orders, correctly
+ * attributed, from one payment.
  */
 export async function createAdHocCheckoutBatch(
   parentUserId: string,
-  deliveryDateId: string,
   cartItems: {
     parentChildId: string;
+    deliveryDateId: string;
     menuItemId: string;
     choice?: string | null;
     size?: string | null;
@@ -276,8 +284,9 @@ export async function createAdHocCheckoutBatch(
 
   const now = new Date();
 
-  const deliveryDate = await prisma.deliveryDate.findUnique({
-    where: { id: deliveryDateId },
+  const deliveryDateIds = [...new Set(cartItems.map((item) => item.deliveryDateId))];
+  const deliveryDates = await prisma.deliveryDate.findMany({
+    where: { id: { in: deliveryDateIds } },
     include: {
       school: true,
       menuAvailability: {
@@ -286,23 +295,30 @@ export async function createAdHocCheckoutBatch(
       }
     }
   });
-
-  if (!deliveryDate) {
+  const deliveryDateById = new Map(deliveryDates.map((d) => [d.id, d]));
+  const missingDeliveryDate = deliveryDateIds.find((id) => !deliveryDateById.has(id));
+  if (missingDeliveryDate) {
     throw new Error("Delivery date not found.");
   }
-  if (!deliveryDate.orderingOpen || deliveryDate.cutoffAt <= now) {
-    throw new Error("Ordering has closed for this delivery date.");
+  const closedDeliveryDate = deliveryDates.find((d) => !d.orderingOpen || d.cutoffAt <= now);
+  if (closedDeliveryDate) {
+    throw new Error(`Ordering has closed for ${closedDeliveryDate.school.name}.`);
   }
 
-  const restaurantId = (
-    await prisma.school.findUnique({
-      where: { id: deliveryDate.schoolId },
-      select: { restaurantId: true }
-    })
-  )?.restaurantId;
-  if (!restaurantId) {
-    throw new Error("Could not determine restaurant for this order.");
+  // Every delivery date referenced in the cart must belong to the same
+  // restaurant -- a cart spanning multiple schools at one restaurant is
+  // supported; a cart somehow spanning two different restaurants is not
+  // and would indicate something has gone wrong upstream.
+  const schoolIds = [...new Set(deliveryDates.map((d) => d.schoolId))];
+  const schools = await prisma.school.findMany({
+    where: { id: { in: schoolIds } },
+    select: { id: true, restaurantId: true }
+  });
+  const restaurantIds = new Set(schools.map((s) => s.restaurantId));
+  if (restaurantIds.size !== 1) {
+    throw new Error("Could not determine a single restaurant for this order.");
   }
+  const restaurantId = [...restaurantIds][0];
 
   // Verify every referenced child actually belongs to the authenticated
   // parent, not just that a parentChildId string was supplied. This is
@@ -319,23 +335,24 @@ export async function createAdHocCheckoutBatch(
     throw new Error("One of the selected eaters could not be verified.");
   }
 
-  // Every assigned child's own home school must match the delivery
-  // date's school. Without this check, a cart built against the wrong
-  // campus's delivery date would silently create a real, paid order
-  // attributing a child to a school they don't actually attend --
-  // exactly the bug this check exists to prevent, found via a real
-  // multi-campus test order.
-  const wrongSchoolChild = children.find((c) => c.schoolId !== deliveryDate.schoolId);
-  if (wrongSchoolChild) {
-    throw new Error(
-      `${wrongSchoolChild.studentName} is registered at a different location than this delivery date. Double-check the delivery date matches each child's school.`
-    );
-  }
-
   const skippedItems: string[] = [];
 
   const batchItems = cartItems.flatMap((cartItem) => {
     const child = childById.get(cartItem.parentChildId)!;
+    const deliveryDate = deliveryDateById.get(cartItem.deliveryDateId)!;
+
+    // Each item is checked against its OWN delivery date's school, not a
+    // single shared one — this is what makes a genuinely multi-school
+    // cart safe: a child assigned to an item can never end up attributed
+    // to a school they don't actually attend, no matter which other
+    // schools appear elsewhere in the same cart.
+    if (child.schoolId !== deliveryDate.schoolId) {
+      skippedItems.push(
+        `${child.studentName} is registered at a different location than the delivery date selected for their item.`
+      );
+      return [];
+    }
+
     const availability = deliveryDate.menuAvailability.find(
       (entry) => entry.menuItemId === cartItem.menuItemId
     );
