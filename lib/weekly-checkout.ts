@@ -238,6 +238,167 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
   });
 }
 
+/**
+ * Builds a WeeklyCheckoutBatch from a live, ad-hoc cart submitted by the
+ * mobile app for a single delivery date — as opposed to
+ * createWeeklyCheckoutBatch, which reads pre-saved WeeklyLunchPlan rows.
+ * Reuses the exact same WeeklyCheckoutBatch/WeeklyCheckoutBatchItem models
+ * and the exact same downstream payment/webhook path
+ * (createWeeklyStripeCheckoutSession + markWeeklyBatchPaidByCheckoutSession
+ * are both already generic and need zero changes) — this function's only
+ * job is validating client-submitted cart data with the same rigor
+ * createWeeklyCheckoutBatch already applies to server-read weekly-plan
+ * data, since a mobile client cannot be trusted to submit correct prices,
+ * valid children, or valid delivery-date/menu-item combinations.
+ *
+ * This is how a single cart with items for multiple different children
+ * becomes multiple separate Order rows after payment — each
+ * WeeklyCheckoutBatchItem always becomes exactly one Order (existing
+ * behavior in markWeeklyBatchPaidByCheckoutSession, unchanged), so three
+ * items for three different kids in one cart produces three Orders,
+ * correctly attributed, from one payment.
+ */
+export async function createAdHocCheckoutBatch(
+  parentUserId: string,
+  deliveryDateId: string,
+  cartItems: {
+    parentChildId: string;
+    menuItemId: string;
+    choice?: string | null;
+    size?: string | null;
+    additions: string[];
+    removals: string[];
+  }[]
+) {
+  if (!cartItems.length) {
+    throw new Error("Cart is empty.");
+  }
+
+  const now = new Date();
+
+  const deliveryDate = await prisma.deliveryDate.findUnique({
+    where: { id: deliveryDateId },
+    include: {
+      school: true,
+      menuAvailability: {
+        where: { isAvailable: true },
+        include: { menuItem: { include: { options: true, sizes: true } } }
+      }
+    }
+  });
+
+  if (!deliveryDate) {
+    throw new Error("Delivery date not found.");
+  }
+  if (!deliveryDate.orderingOpen || deliveryDate.cutoffAt <= now) {
+    throw new Error("Ordering has closed for this delivery date.");
+  }
+
+  const restaurantId = (
+    await prisma.school.findUnique({
+      where: { id: deliveryDate.schoolId },
+      select: { restaurantId: true }
+    })
+  )?.restaurantId;
+  if (!restaurantId) {
+    throw new Error("Could not determine restaurant for this order.");
+  }
+
+  // Verify every referenced child actually belongs to the authenticated
+  // parent, not just that a parentChildId string was supplied. This is
+  // the one check createWeeklyCheckoutBatch doesn't need (its data comes
+  // from parent.weeklyPlans, already scoped by definition) but is
+  // essential here since the client submits parentChildId directly.
+  const childIds = [...new Set(cartItems.map((item) => item.parentChildId))];
+  const children = await prisma.parentChild.findMany({
+    where: { id: { in: childIds }, parentUserId, archivedAt: null }
+  });
+  const childById = new Map(children.map((c) => [c.id, c]));
+  const missingChild = childIds.find((id) => !childById.has(id));
+  if (missingChild) {
+    throw new Error("One of the selected eaters could not be verified.");
+  }
+
+  const skippedItems: string[] = [];
+
+  const batchItems = cartItems.flatMap((cartItem) => {
+    const child = childById.get(cartItem.parentChildId)!;
+    const availability = deliveryDate.menuAvailability.find(
+      (entry) => entry.menuItemId === cartItem.menuItemId
+    );
+    if (!availability) {
+      skippedItems.push(`${child.studentName}'s item is no longer available for this delivery date.`);
+      return [];
+    }
+
+    const menuItem = availability.menuItem;
+    const requiredChoices = getRequiredChoicesForMenuItem(menuItem);
+    if (requiredChoices.length && (!cartItem.choice || !requiredChoices.includes(cartItem.choice))) {
+      skippedItems.push(`${child.studentName}'s ${menuItem.name} is missing a required choice.`);
+      return [];
+    }
+
+    let resolvedBaseCents = menuItem.basePriceCents;
+    if (menuItem.sizes.length) {
+      const matchedSize = cartItem.size
+        ? menuItem.sizes.find((size) => size.name === cartItem.size)
+        : undefined;
+      if (!matchedSize) {
+        skippedItems.push(`${child.studentName}'s ${menuItem.name} is missing a size selection.`);
+        return [];
+      }
+      resolvedBaseCents = matchedSize.priceCents;
+    }
+
+    const lineTotalCents = resolveLineItemPrice({
+      basePriceCents: resolvedBaseCents,
+      additions: menuItem.options.filter(
+        (option) => option.optionType === "ADD_ON" && cartItem.additions.includes(option.name)
+      )
+    });
+
+    return [
+      {
+        parentChildId: cartItem.parentChildId,
+        schoolId: deliveryDate.schoolId,
+        deliveryDateId: deliveryDate.id,
+        menuItemId: cartItem.menuItemId,
+        choice: cartItem.choice ?? null,
+        size: cartItem.size ?? null,
+        additions: cartItem.additions,
+        removals: cartItem.removals,
+        itemNameSnapshot: menuItem.name,
+        basePriceCents: resolvedBaseCents,
+        lineTotalCents
+      }
+    ];
+  });
+
+  if (skippedItems.length) {
+    throw new Error(`Checkout could not continue. ${skippedItems.join(" ")}`);
+  }
+
+  const totalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
+
+  return prisma.weeklyCheckoutBatch.create({
+    data: {
+      parentUserId,
+      restaurantId,
+      totalCents,
+      items: { create: batchItems }
+    },
+    include: {
+      items: {
+        include: {
+          parentChild: true,
+          deliveryDate: { include: { school: true } }
+        }
+      },
+      parentUser: true
+    }
+  });
+}
+
 export async function markWeeklyBatchPaidByCheckoutSession(
   sessionId: string,
   paymentIntentId?: string | null,
