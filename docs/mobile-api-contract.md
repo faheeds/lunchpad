@@ -320,6 +320,47 @@ before it knows which tenant to target). Unauthenticated.
 
 ---
 
+## POST /api/mobile/native/cart-checkout
+
+- **Method**: POST
+- **Auth**: Bearer JWT required
+- **Tenant scoping**: JWT tenant check; the created `WeeklyCheckoutBatch`
+  resolves its `restaurantId` from the delivery date's school
+- **Request body**:
+  ```json
+  {
+    "deliveryDateId": "...",
+    "items": [
+      { "parentChildId": "...", "menuItemId": "...", "choice": "Beef", "size": "Medium", "additions": ["Extra cheese"], "removals": [] }
+    ]
+  }
+  ```
+- **Behavior**: ad-hoc equivalent of `weekly-checkout` — builds a
+  `WeeklyCheckoutBatch` from the submitted cart instead of pre-saved
+  `WeeklyLunchPlan` rows, for a single delivery date. Every item's price
+  is resolved server-side from the actual menu item / size / add-on
+  records — submitted prices, if any, are ignored. Every `parentChildId`
+  is verified to belong to the authenticated parent before anything is
+  created. Each cart item becomes one Order after payment (same as
+  weekly checkout), so a cart with items for several different children
+  produces several separate, correctly-attributed orders from one
+  payment.
+- **Success (200)**:
+  ```json
+  { "checkoutUrl": "https://checkout.stripe.com/...", "batchId": "...", "totalCents": 0 }
+  ```
+- **Errors**:
+  - `400 { error: "Missing delivery date or cart items." }`
+  - `400 { error: "Cart is empty." }`
+  - `400 { error: "Delivery date not found." }`
+  - `400 { error: "Ordering has closed for this delivery date." }`
+  - `400 { error: "One of the selected eaters could not be verified." }`
+  - `400 { error: "Checkout could not continue. <per-item reasons — unavailable item, missing required choice, missing size>" }`
+  - `500 { error: "Stripe is not configured." }`
+  - `401`
+
+---
+
 ## POST /api/mobile/native/order
 
 - **Method**: POST
