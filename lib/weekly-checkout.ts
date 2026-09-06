@@ -319,6 +319,19 @@ export async function createAdHocCheckoutBatch(
     throw new Error("One of the selected eaters could not be verified.");
   }
 
+  // Every assigned child's own home school must match the delivery
+  // date's school. Without this check, a cart built against the wrong
+  // campus's delivery date would silently create a real, paid order
+  // attributing a child to a school they don't actually attend --
+  // exactly the bug this check exists to prevent, found via a real
+  // multi-campus test order.
+  const wrongSchoolChild = children.find((c) => c.schoolId !== deliveryDate.schoolId);
+  if (wrongSchoolChild) {
+    throw new Error(
+      `${wrongSchoolChild.studentName} is registered at a different location than this delivery date. Double-check the delivery date matches each child's school.`
+    );
+  }
+
   const skippedItems: string[] = [];
 
   const batchItems = cartItems.flatMap((cartItem) => {

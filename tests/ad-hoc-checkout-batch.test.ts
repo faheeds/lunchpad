@@ -64,8 +64,8 @@ function buildDeliveryDate(overrides: Record<string, unknown> = {}) {
   };
 }
 
-const CHILD_HANA = { id: "child-hana", parentUserId: "parent-1", studentName: "Hana", archivedAt: null };
-const CHILD_HIBA = { id: "child-hiba", parentUserId: "parent-1", studentName: "Hiba", archivedAt: null };
+const CHILD_HANA = { id: "child-hana", parentUserId: "parent-1", studentName: "Hana", schoolId: "school-1", archivedAt: null };
+const CHILD_HIBA = { id: "child-hiba", parentUserId: "parent-1", studentName: "Hiba", schoolId: "school-1", archivedAt: null };
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -119,6 +119,36 @@ describe("createAdHocCheckoutBatch", () => {
         { parentChildId: "child-someone-elses", menuItemId: "item-burger", additions: [], removals: [] },
       ])
     ).rejects.toThrow(/could not be verified/i);
+
+    expect(weeklyCheckoutBatchCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a child whose home school doesn't match the delivery date's school (the real bug found in testing)", async () => {
+    // Redmond-registered child, Bellevue delivery date -- exactly the
+    // real scenario that produced a wrong, paid order.
+    const redmondChild = { ...CHILD_HANA, schoolId: "school-redmond" };
+    parentChildFindManyMock.mockResolvedValue([redmondChild]);
+    deliveryDateFindUniqueMock.mockResolvedValue(buildDeliveryDate({ schoolId: "school-bellevue" }));
+
+    await expect(
+      createAdHocCheckoutBatch("parent-1", "date-1", [
+        { parentChildId: "child-hana", menuItemId: "item-burger", additions: [], removals: [] },
+      ])
+    ).rejects.toThrow(/different location/i);
+
+    expect(weeklyCheckoutBatchCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects when even one of several children is at the wrong school, not just when all are", async () => {
+    const redmondChild = { ...CHILD_HIBA, schoolId: "school-redmond" };
+    parentChildFindManyMock.mockResolvedValue([CHILD_HANA, redmondChild]); // Hana matches, Hiba doesn't
+
+    await expect(
+      createAdHocCheckoutBatch("parent-1", "date-1", [
+        { parentChildId: "child-hana", menuItemId: "item-burger", additions: [], removals: [] },
+        { parentChildId: "child-hiba", menuItemId: "item-tenders", additions: [], removals: [] },
+      ])
+    ).rejects.toThrow(/different location/i);
 
     expect(weeklyCheckoutBatchCreateMock).not.toHaveBeenCalled();
   });
