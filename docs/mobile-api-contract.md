@@ -325,24 +325,29 @@ before it knows which tenant to target). Unauthenticated.
 - **Method**: POST
 - **Auth**: Bearer JWT required
 - **Tenant scoping**: JWT tenant check; the created `WeeklyCheckoutBatch`
-  resolves its `restaurantId` from the delivery date's school
-- **Request body**:
+  resolves its `restaurantId` from the schools of the delivery dates
+  referenced across the cart (all must belong to the same restaurant)
+- **Request body**: each item carries its own `deliveryDateId`, so a
+  single cart can include children ordering at different schools on the
+  same day, not just different items for children at one shared school
   ```json
   {
-    "deliveryDateId": "...",
     "items": [
-      { "parentChildId": "...", "menuItemId": "...", "choice": "Beef", "size": "Medium", "additions": ["Extra cheese"], "removals": [] }
+      { "parentChildId": "...", "deliveryDateId": "...", "menuItemId": "...", "choice": "Beef", "size": "Medium", "additions": ["Extra cheese"], "removals": [] }
     ]
   }
   ```
 - **Behavior**: ad-hoc equivalent of `weekly-checkout` — builds a
   `WeeklyCheckoutBatch` from the submitted cart instead of pre-saved
-  `WeeklyLunchPlan` rows, for a single delivery date. Every item's price
-  is resolved server-side from the actual menu item / size / add-on
-  records — submitted prices, if any, are ignored. Every `parentChildId`
-  is verified to belong to the authenticated parent before anything is
-  created. Each cart item becomes one Order after payment (same as
-  weekly checkout), so a cart with items for several different children
+  `WeeklyLunchPlan` rows. Every item's price is resolved server-side from
+  the actual menu item / size / add-on records — submitted prices, if
+  any, are ignored. Every `parentChildId` is verified to belong to the
+  authenticated parent, and each item's assigned child's own school must
+  match that item's `deliveryDateId` — an item cannot be checked out
+  against a delivery date at a school the assigned child doesn't attend,
+  even when other items in the same cart legitimately use that school.
+  Each cart item becomes one Order after payment (same as weekly
+  checkout), so a cart with items for children at different schools
   produces several separate, correctly-attributed orders from one
   payment.
 - **Success (200)**:
@@ -350,12 +355,12 @@ before it knows which tenant to target). Unauthenticated.
   { "checkoutUrl": "https://checkout.stripe.com/...", "batchId": "...", "totalCents": 0 }
   ```
 - **Errors**:
-  - `400 { error: "Missing delivery date or cart items." }`
   - `400 { error: "Cart is empty." }`
   - `400 { error: "Delivery date not found." }`
-  - `400 { error: "Ordering has closed for this delivery date." }`
+  - `400 { error: "Ordering has closed for <school name>." }`
   - `400 { error: "One of the selected eaters could not be verified." }`
-  - `400 { error: "Checkout could not continue. <per-item reasons — unavailable item, missing required choice, missing size>" }`
+  - `400 { error: "Could not determine a single restaurant for this order." }` — the cart's delivery dates resolved to more than one restaurant, which should never happen from a real client
+  - `400 { error: "Checkout could not continue. <per-item reasons — wrong school for the assigned child, unavailable item, missing required choice, missing size>" }`
   - `500 { error: "Stripe is not configured." }`
   - `401`
 

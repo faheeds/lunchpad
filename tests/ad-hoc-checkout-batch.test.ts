@@ -2,21 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // All mocks must be hoisted so vi.mock() factories can reference them.
 const {
-  deliveryDateFindUniqueMock,
-  schoolFindUniqueMock,
+  deliveryDateFindManyMock,
+  schoolFindManyMock,
   parentChildFindManyMock,
   weeklyCheckoutBatchCreateMock,
 } = vi.hoisted(() => ({
-  deliveryDateFindUniqueMock: vi.fn(),
-  schoolFindUniqueMock: vi.fn(),
+  deliveryDateFindManyMock: vi.fn(),
+  schoolFindManyMock: vi.fn(),
   parentChildFindManyMock: vi.fn(),
   weeklyCheckoutBatchCreateMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   prisma: {
-    deliveryDate: { findUnique: deliveryDateFindUniqueMock },
-    school: { findUnique: schoolFindUniqueMock },
+    deliveryDate: { findMany: deliveryDateFindManyMock },
+    school: { findMany: schoolFindManyMock },
     parentChild: { findMany: parentChildFindManyMock },
     weeklyCheckoutBatch: { create: weeklyCheckoutBatchCreateMock },
   },
@@ -50,12 +50,12 @@ const MENU_ITEM_TENDERS = {
 
 function buildDeliveryDate(overrides: Record<string, unknown> = {}) {
   return {
-    id: "date-1",
-    schoolId: "school-1",
+    id: "date-redmond",
+    schoolId: "school-redmond",
     deliveryDate: NOW,
     orderingOpen: true,
     cutoffAt: FUTURE_CUTOFF,
-    school: { id: "school-1", name: "Medina Academy - Bellevue Campus", timezone: "America/Los_Angeles" },
+    school: { id: "school-redmond", name: "Medina Academy - Redmond Campus", timezone: "America/Los_Angeles" },
     menuAvailability: [
       { menuItemId: "item-burger", menuItem: MENU_ITEM_BURGER },
       { menuItemId: "item-tenders", menuItem: MENU_ITEM_TENDERS },
@@ -64,20 +64,30 @@ function buildDeliveryDate(overrides: Record<string, unknown> = {}) {
   };
 }
 
-const CHILD_HANA = { id: "child-hana", parentUserId: "parent-1", studentName: "Hana", schoolId: "school-1", archivedAt: null };
-const CHILD_HIBA = { id: "child-hiba", parentUserId: "parent-1", studentName: "Hiba", schoolId: "school-1", archivedAt: null };
+function buildBellevueDeliveryDate(overrides: Record<string, unknown> = {}) {
+  return buildDeliveryDate({
+    id: "date-bellevue",
+    schoolId: "school-bellevue",
+    school: { id: "school-bellevue", name: "Medina Academy - Bellevue Campus", timezone: "America/Los_Angeles" },
+    ...overrides,
+  });
+}
+
+const CHILD_HANA_REDMOND = { id: "child-hana", parentUserId: "parent-1", studentName: "Hana", schoolId: "school-redmond", archivedAt: null };
+const CHILD_HIBA_REDMOND = { id: "child-hiba", parentUserId: "parent-1", studentName: "Hiba", schoolId: "school-redmond", archivedAt: null };
+const CHILD_HUDA_BELLEVUE = { id: "child-huda", parentUserId: "parent-1", studentName: "Huda", schoolId: "school-bellevue", archivedAt: null };
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
-  deliveryDateFindUniqueMock.mockReset();
-  schoolFindUniqueMock.mockReset();
+  deliveryDateFindManyMock.mockReset();
+  schoolFindManyMock.mockReset();
   parentChildFindManyMock.mockReset();
   weeklyCheckoutBatchCreateMock.mockReset();
 
-  deliveryDateFindUniqueMock.mockResolvedValue(buildDeliveryDate());
-  schoolFindUniqueMock.mockResolvedValue({ restaurantId: "restaurant-1" });
-  parentChildFindManyMock.mockResolvedValue([CHILD_HANA, CHILD_HIBA]);
+  deliveryDateFindManyMock.mockResolvedValue([buildDeliveryDate()]);
+  schoolFindManyMock.mockResolvedValue([{ id: "school-redmond", restaurantId: "restaurant-1" }]);
+  parentChildFindManyMock.mockResolvedValue([CHILD_HANA_REDMOND, CHILD_HIBA_REDMOND]);
   weeklyCheckoutBatchCreateMock.mockImplementation(async ({ data }) => ({
     id: "batch-1",
     restaurantId: data.restaurantId,
@@ -87,11 +97,11 @@ beforeEach(() => {
   }));
 });
 
-describe("createAdHocCheckoutBatch", () => {
+describe("createAdHocCheckoutBatch — single school (existing behavior)", () => {
   it("creates one batch item per cart item, each correctly attributed to its own child", async () => {
-    const batch = await createAdHocCheckoutBatch("parent-1", "date-1", [
-      { parentChildId: "child-hana", menuItemId: "item-burger", additions: [], removals: [] },
-      { parentChildId: "child-hiba", menuItemId: "item-tenders", additions: [], removals: [] },
+    const batch = await createAdHocCheckoutBatch("parent-1", [
+      { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-burger", additions: [], removals: [] },
+      { parentChildId: "child-hiba", deliveryDateId: "date-redmond", menuItemId: "item-tenders", additions: [], removals: [] },
     ]);
 
     expect(weeklyCheckoutBatchCreateMock).toHaveBeenCalledTimes(1);
@@ -103,50 +113,32 @@ describe("createAdHocCheckoutBatch", () => {
   });
 
   it("correctly sums add-on option prices into the resolved line total", async () => {
-    await createAdHocCheckoutBatch("parent-1", "date-1", [
-      { parentChildId: "child-hana", menuItemId: "item-burger", additions: ["Extra cheese"], removals: [] },
+    await createAdHocCheckoutBatch("parent-1", [
+      { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-burger", additions: ["Extra cheese"], removals: [] },
     ]);
     const created = weeklyCheckoutBatchCreateMock.mock.calls[0][0].data.items.create;
     expect(created[0].lineTotalCents).toBe(1099 + 100);
   });
 
   it("rejects a parentChildId that does not belong to the authenticated parent", async () => {
-    // Only Hana is a real child of this parent; "child-someone-elses" is not.
-    parentChildFindManyMock.mockResolvedValue([CHILD_HANA]);
+    parentChildFindManyMock.mockResolvedValue([CHILD_HANA_REDMOND]);
 
     await expect(
-      createAdHocCheckoutBatch("parent-1", "date-1", [
-        { parentChildId: "child-someone-elses", menuItemId: "item-burger", additions: [], removals: [] },
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-someone-elses", deliveryDateId: "date-redmond", menuItemId: "item-burger", additions: [], removals: [] },
       ])
     ).rejects.toThrow(/could not be verified/i);
 
     expect(weeklyCheckoutBatchCreateMock).not.toHaveBeenCalled();
   });
 
-  it("rejects a child whose home school doesn't match the delivery date's school (the real bug found in testing)", async () => {
-    // Redmond-registered child, Bellevue delivery date -- exactly the
-    // real scenario that produced a wrong, paid order.
-    const redmondChild = { ...CHILD_HANA, schoolId: "school-redmond" };
-    parentChildFindManyMock.mockResolvedValue([redmondChild]);
-    deliveryDateFindUniqueMock.mockResolvedValue(buildDeliveryDate({ schoolId: "school-bellevue" }));
+  it("rejects a child whose home school doesn't match their item's delivery date (the real bug found in testing)", async () => {
+    deliveryDateFindManyMock.mockResolvedValue([buildBellevueDeliveryDate()]);
+    schoolFindManyMock.mockResolvedValue([{ id: "school-bellevue", restaurantId: "restaurant-1" }]);
 
     await expect(
-      createAdHocCheckoutBatch("parent-1", "date-1", [
-        { parentChildId: "child-hana", menuItemId: "item-burger", additions: [], removals: [] },
-      ])
-    ).rejects.toThrow(/different location/i);
-
-    expect(weeklyCheckoutBatchCreateMock).not.toHaveBeenCalled();
-  });
-
-  it("rejects when even one of several children is at the wrong school, not just when all are", async () => {
-    const redmondChild = { ...CHILD_HIBA, schoolId: "school-redmond" };
-    parentChildFindManyMock.mockResolvedValue([CHILD_HANA, redmondChild]); // Hana matches, Hiba doesn't
-
-    await expect(
-      createAdHocCheckoutBatch("parent-1", "date-1", [
-        { parentChildId: "child-hana", menuItemId: "item-burger", additions: [], removals: [] },
-        { parentChildId: "child-hiba", menuItemId: "item-tenders", additions: [], removals: [] },
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-hana", deliveryDateId: "date-bellevue", menuItemId: "item-burger", additions: [], removals: [] },
       ])
     ).rejects.toThrow(/different location/i);
 
@@ -154,11 +146,11 @@ describe("createAdHocCheckoutBatch", () => {
   });
 
   it("rejects when ordering has closed for the delivery date (cutoff passed)", async () => {
-    deliveryDateFindUniqueMock.mockResolvedValue(buildDeliveryDate({ cutoffAt: PAST_CUTOFF }));
+    deliveryDateFindManyMock.mockResolvedValue([buildDeliveryDate({ cutoffAt: PAST_CUTOFF })]);
 
     await expect(
-      createAdHocCheckoutBatch("parent-1", "date-1", [
-        { parentChildId: "child-hana", menuItemId: "item-burger", additions: [], removals: [] },
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-burger", additions: [], removals: [] },
       ])
     ).rejects.toThrow(/ordering has closed/i);
 
@@ -166,23 +158,23 @@ describe("createAdHocCheckoutBatch", () => {
   });
 
   it("rejects when ordering is explicitly closed for the delivery date", async () => {
-    deliveryDateFindUniqueMock.mockResolvedValue(buildDeliveryDate({ orderingOpen: false }));
+    deliveryDateFindManyMock.mockResolvedValue([buildDeliveryDate({ orderingOpen: false })]);
 
     await expect(
-      createAdHocCheckoutBatch("parent-1", "date-1", [
-        { parentChildId: "child-hana", menuItemId: "item-burger", additions: [], removals: [] },
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-burger", additions: [], removals: [] },
       ])
     ).rejects.toThrow(/ordering has closed/i);
   });
 
   it("skips an item that isn't available on this delivery date and reports why", async () => {
-    deliveryDateFindUniqueMock.mockResolvedValue(
-      buildDeliveryDate({ menuAvailability: [{ menuItemId: "item-burger", menuItem: MENU_ITEM_BURGER }] })
-    );
+    deliveryDateFindManyMock.mockResolvedValue([
+      buildDeliveryDate({ menuAvailability: [{ menuItemId: "item-burger", menuItem: MENU_ITEM_BURGER }] }),
+    ]);
 
     await expect(
-      createAdHocCheckoutBatch("parent-1", "date-1", [
-        { parentChildId: "child-hana", menuItemId: "item-tenders", additions: [], removals: [] },
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-tenders", additions: [], removals: [] },
       ])
     ).rejects.toThrow(/no longer available/i);
 
@@ -195,13 +187,13 @@ describe("createAdHocCheckoutBatch", () => {
       id: "item-sized",
       sizes: [{ name: "Small", priceCents: 500 }, { name: "Large", priceCents: 800 }],
     };
-    deliveryDateFindUniqueMock.mockResolvedValue(
-      buildDeliveryDate({ menuAvailability: [{ menuItemId: "item-sized", menuItem: sizedItem }] })
-    );
+    deliveryDateFindManyMock.mockResolvedValue([
+      buildDeliveryDate({ menuAvailability: [{ menuItemId: "item-sized", menuItem: sizedItem }] }),
+    ]);
 
     await expect(
-      createAdHocCheckoutBatch("parent-1", "date-1", [
-        { parentChildId: "child-hana", menuItemId: "item-sized", additions: [], removals: [] },
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-sized", additions: [], removals: [] },
       ])
     ).rejects.toThrow(/missing a size selection/i);
   });
@@ -210,32 +202,83 @@ describe("createAdHocCheckoutBatch", () => {
     const sizedItem = {
       ...MENU_ITEM_BURGER,
       id: "item-sized",
-      basePriceCents: 999999, // sentinel — must NOT be used when a size matches
+      basePriceCents: 999999,
       sizes: [{ name: "Small", priceCents: 500 }, { name: "Large", priceCents: 800 }],
     };
-    deliveryDateFindUniqueMock.mockResolvedValue(
-      buildDeliveryDate({ menuAvailability: [{ menuItemId: "item-sized", menuItem: sizedItem }] })
-    );
+    deliveryDateFindManyMock.mockResolvedValue([
+      buildDeliveryDate({ menuAvailability: [{ menuItemId: "item-sized", menuItem: sizedItem }] }),
+    ]);
 
-    await createAdHocCheckoutBatch("parent-1", "date-1", [
-      { parentChildId: "child-hana", menuItemId: "item-sized", size: "Large", additions: [], removals: [] },
+    await createAdHocCheckoutBatch("parent-1", [
+      { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-sized", size: "Large", additions: [], removals: [] },
     ]);
     const created = weeklyCheckoutBatchCreateMock.mock.calls[0][0].data.items.create;
     expect(created[0].lineTotalCents).toBe(800);
   });
 
   it("rejects an empty cart", async () => {
-    await expect(createAdHocCheckoutBatch("parent-1", "date-1", [])).rejects.toThrow(/cart is empty/i);
-    expect(deliveryDateFindUniqueMock).not.toHaveBeenCalled();
+    await expect(createAdHocCheckoutBatch("parent-1", [])).rejects.toThrow(/cart is empty/i);
+    expect(deliveryDateFindManyMock).not.toHaveBeenCalled();
   });
 
-  it("rejects when the delivery date doesn't exist", async () => {
-    deliveryDateFindUniqueMock.mockResolvedValue(null);
+  it("rejects when a referenced delivery date doesn't exist", async () => {
+    deliveryDateFindManyMock.mockResolvedValue([]);
 
     await expect(
-      createAdHocCheckoutBatch("parent-1", "date-missing", [
-        { parentChildId: "child-hana", menuItemId: "item-burger", additions: [], removals: [] },
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-hana", deliveryDateId: "date-missing", menuItemId: "item-burger", additions: [], removals: [] },
       ])
     ).rejects.toThrow(/delivery date not found/i);
+  });
+});
+
+describe("createAdHocCheckoutBatch — multiple schools in one cart", () => {
+  beforeEach(() => {
+    deliveryDateFindManyMock.mockResolvedValue([buildDeliveryDate(), buildBellevueDeliveryDate()]);
+    schoolFindManyMock.mockResolvedValue([
+      { id: "school-redmond", restaurantId: "restaurant-1" },
+      { id: "school-bellevue", restaurantId: "restaurant-1" },
+    ]);
+    parentChildFindManyMock.mockResolvedValue([CHILD_HANA_REDMOND, CHILD_HUDA_BELLEVUE]);
+  });
+
+  it("allows a Redmond child and a Bellevue child in the same cart, each against their own correct delivery date", async () => {
+    const batch = await createAdHocCheckoutBatch("parent-1", [
+      { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-burger", additions: [], removals: [] },
+      { parentChildId: "child-huda", deliveryDateId: "date-bellevue", menuItemId: "item-tenders", additions: [], removals: [] },
+    ]);
+
+    const created = weeklyCheckoutBatchCreateMock.mock.calls[0][0].data.items.create;
+    expect(created).toHaveLength(2);
+    expect(created.find((i: { parentChildId: string }) => i.parentChildId === "child-hana").schoolId).toBe("school-redmond");
+    expect(created.find((i: { parentChildId: string }) => i.parentChildId === "child-huda").schoolId).toBe("school-bellevue");
+    expect(batch.totalCents).toBe(1099 + 999);
+  });
+
+  it("still rejects a child assigned to the wrong school's delivery date even when the cart genuinely spans multiple schools", async () => {
+    await expect(
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-hana", deliveryDateId: "date-bellevue", menuItemId: "item-burger", additions: [], removals: [] },
+        { parentChildId: "child-huda", deliveryDateId: "date-bellevue", menuItemId: "item-tenders", additions: [], removals: [] },
+      ])
+    ).rejects.toThrow(/different location/i);
+
+    expect(weeklyCheckoutBatchCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects if ordering has closed at just one of the two schools in the cart", async () => {
+    deliveryDateFindManyMock.mockResolvedValue([
+      buildDeliveryDate(),
+      buildBellevueDeliveryDate({ cutoffAt: PAST_CUTOFF }),
+    ]);
+
+    await expect(
+      createAdHocCheckoutBatch("parent-1", [
+        { parentChildId: "child-hana", deliveryDateId: "date-redmond", menuItemId: "item-burger", additions: [], removals: [] },
+        { parentChildId: "child-huda", deliveryDateId: "date-bellevue", menuItemId: "item-tenders", additions: [], removals: [] },
+      ])
+    ).rejects.toThrow(/ordering has closed/i);
+
+    expect(weeklyCheckoutBatchCreateMock).not.toHaveBeenCalled();
   });
 });
