@@ -135,12 +135,15 @@ before it knows which tenant to target). Unauthenticated.
       "id": "...", "schoolId": "...",
       "deliveryDate": "ISO", "cutoffAt": "ISO",
       "orderingOpen": true,
-      "school": { "id": "...", "name": "...", "timezone": "...", "locationType": "..." },
+      "school": { "id": "...", "name": "...", "timezone": "...", "locationType": "...", "grades": ["Kindergarten", "1st Grade", "..."] },
       "soldOut": ["menuItemId", "..."],
       "menuItems": [{ /* same shape as /menu items, no dietaryTags */ }]
     }
   ]
   ```
+  `school.grades` may be an empty array if the operator hasn't configured a
+  custom list for that location — clients should fall back to a generic
+  K-12 list in that case, not show an empty picker.
 - **Errors**: `500 { error: "Failed to load delivery dates" }`
 
 ---
