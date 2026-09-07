@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
+import { sortCategoryNames } from "@/lib/menu-config";
 
 export { corsOptions as OPTIONS };
 
@@ -51,6 +52,23 @@ export async function GET() {
     // All weekdays accepted — restaurants control delivery days by what they schedule.
     const dates = allDates;
 
+    // Precompute a category-position lookup once for the whole
+    // restaurant, then sort each date's flat menuItems array by it below
+    // -- this keeps the response shape a bare array (unchanged contract
+    // for already-shipped app versions) while still letting the iOS
+    // client's grouping-by-category naturally produce sections in the
+    // restaurant's configured order, since it groups by iterating in
+    // whatever order items already arrive in.
+    const categoryOrderRows = await prisma.categoryOrder.findMany({
+      where: { restaurantId: restaurant.id },
+      select: { name: true, sortOrder: true },
+    });
+    const categoryPosition = new Map(categoryOrderRows.map((o) => [o.name, o.sortOrder]));
+    const positionFor = (category: string | null) => {
+      const pos = categoryPosition.get(category ?? "Other");
+      return pos !== undefined ? pos : Number.MAX_SAFE_INTEGER; // unordered categories sort after all explicitly-ordered ones
+    };
+
     const result = dates.map((d) => {
       // Build sold-out set
       const countMap = new Map<string, number>();
@@ -75,7 +93,16 @@ export async function GET() {
         orderingOpen: d.orderingOpen,
         school: d.school,
         soldOut,
-        menuItems: d.menuAvailability.map((e) => ({
+        menuItems: [...d.menuAvailability]
+          .sort((a, b) => {
+            const posA = positionFor(a.menuItem.category);
+            const posB = positionFor(b.menuItem.category);
+            if (posA !== posB) return posA - posB;
+            // Same category (or both "Other") -- alphabetical by name,
+            // consistent with the /menu endpoint's own secondary sort.
+            return a.menuItem.name.localeCompare(b.menuItem.name);
+          })
+          .map((e) => ({
           id: e.menuItem.id,
           slug: e.menuItem.slug,
           name: e.menuItem.name,

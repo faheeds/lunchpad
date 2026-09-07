@@ -125,6 +125,7 @@ model Restaurant {
   adminInvites             AdminInvite[]
   schools                  School[]
   menuItems                MenuItem[]
+  categoryOrders            CategoryOrder[]
   orders                   Order[]
   parentUsers              ParentUser[]
   weeklyCheckoutBatches    WeeklyCheckoutBatch[]
@@ -359,6 +360,24 @@ model MenuItem {
   schoolRestrictions  SchoolMenuItem[]   // empty = available to all schools
 
   @@unique([restaurantId, slug])
+}
+
+// Per-restaurant display order for menu categories. Categories
+// themselves are deliberately kept as plain strings on MenuItem, not a
+// relational model, to keep bulk Excel uploads simple (see the comment
+// on MenuItem.category) -- this table only maps a category NAME to a
+// position, without needing categories to be their own real entity.
+// Missing = falls back to alphabetical, same as before this existed.
+model CategoryOrder {
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  sortOrder    Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, name])
 }
 
 model DeliveryMenuItem {
