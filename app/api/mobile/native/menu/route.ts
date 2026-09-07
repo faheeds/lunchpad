@@ -17,6 +17,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
 import { CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
+import { sortCategoryNames } from "@/lib/menu-config";
 
 export { corsOptions as OPTIONS };
 
@@ -46,9 +47,18 @@ export async function GET() {
       grouped.get(key)!.push(item);
     }
 
-    const categories = Array.from(grouped.entries()).map(([title, list]) => ({
+    // Sort category names per the restaurant's own configured order
+    // (admin Menu page's "Manage categories" panel) -- falls back to
+    // alphabetical for any category without an explicit position set.
+    const categoryOrder = await prisma.categoryOrder.findMany({
+      where: { restaurantId: restaurant.id },
+      select: { name: true, sortOrder: true },
+    });
+    const orderedNames = sortCategoryNames([...grouped.keys()], categoryOrder);
+
+    const categories = orderedNames.map((title) => ({
       title,
-      items: list.map((item) => ({
+      items: grouped.get(title)!.map((item) => ({
         id: item.id,
         slug: item.slug,
         name: item.name,

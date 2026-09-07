@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/admin/empty-state";
 import { MenuAddTabs } from "@/components/admin/menu-add-tabs";
 import { ImageUpload } from "@/components/admin/image-upload";
 import { DietaryTagsPicker } from "@/components/admin/dietary-tags-picker";
+import { sortCategoryNames } from "@/lib/menu-config";
 
 export const dynamic = "force-dynamic";
 
@@ -243,13 +244,67 @@ async function renameCategory(formData: FormData) {
   revalidatePath("/menu");
 }
 
+/**
+ * Moves a category one position up or down in display order. Writes an
+ * explicit CategoryOrder row for EVERY currently-displayed category
+ * (not just the two being swapped) reflecting their current effective
+ * order first -- this "materializes" a full explicit ordering the first
+ * time anyone reorders anything, so subsequent moves operate on a
+ * consistent baseline instead of a mix of explicit positions and
+ * alphabetical fallback. "Uncategorized" is excluded -- it's a special
+ * bucket for items with no real category, not something to persist an
+ * order for, and always stays last.
+ */
+async function moveCategory(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("MANAGER");
+  const name = String(formData.get("name") || "").trim();
+  const direction = String(formData.get("direction") || "");
+  if (!name || (direction !== "up" && direction !== "down")) return;
+
+  const items = await prisma.menuItem.findMany({
+    where: { restaurantId: restaurant.id },
+    select: { category: true },
+  });
+  const realCategoryNames = Array.from(
+    new Set(items.map((i) => i.category?.trim()).filter((c): c is string => !!c))
+  );
+  const existingOrder = await prisma.categoryOrder.findMany({
+    where: { restaurantId: restaurant.id },
+    select: { name: true, sortOrder: true },
+  });
+  const currentOrder = sortCategoryNames(realCategoryNames, existingOrder);
+
+  const index = currentOrder.indexOf(name);
+  if (index === -1) return;
+  const swapWith = direction === "up" ? index - 1 : index + 1;
+  if (swapWith < 0 || swapWith >= currentOrder.length) return; // already at the edge
+
+  const reordered = [...currentOrder];
+  [reordered[index], reordered[swapWith]] = [reordered[swapWith], reordered[index]];
+
+  await prisma.$transaction(
+    reordered.map((catName, position) =>
+      prisma.categoryOrder.upsert({
+        where: { restaurantId_name: { restaurantId: restaurant.id, name: catName } },
+        create: { restaurantId: restaurant.id, name: catName, sortOrder: position },
+        update: { sortOrder: position },
+      })
+    )
+  );
+
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+}
+
 export const metadata: Metadata = {
   title: "Menu",
 };
 
 export default async function AdminMenuPage() {
   const [restaurant] = await Promise.all([requireRestaurant(), requireAdminRole("MANAGER")]);
-  const [items, schools] = await Promise.all([
+  const [items, schools, categoryOrder] = await Promise.all([
     prisma.menuItem.findMany({
       where: { restaurantId: restaurant.id },
       include: {
@@ -264,6 +319,10 @@ export default async function AdminMenuPage() {
       select: { id: true, name: true, locationType: true },
       orderBy: { name: "asc" },
     }),
+    prisma.categoryOrder.findMany({
+      where: { restaurantId: restaurant.id },
+      select: { name: true, sortOrder: true },
+    }),
   ]);
 
   // Group by the item's REAL category field — not a guessed/hardcoded one.
@@ -273,13 +332,20 @@ export default async function AdminMenuPage() {
   // view even though they were correctly reflected on the live /menu
   // page. Fixed to match the same real-field logic the customer-facing
   // page already used.)
-  const categoryNames = Array.from(
-    new Set(items.map((i) => i.category?.trim() || UNCATEGORIZED))
-  ).sort((a, b) => {
-    if (a === UNCATEGORIZED) return 1;
-    if (b === UNCATEGORIZED) return -1;
-    return a.localeCompare(b);
-  });
+  //
+  // Ordering: real categories are sorted per the restaurant's own
+  // configured order (sortCategoryNames, falling back to alphabetical
+  // for anything without an explicit position) -- "Uncategorized" is
+  // excluded from that mechanism entirely and always pinned last, since
+  // it's not a real category to persist a position for.
+  const realCategoryNames = Array.from(
+    new Set(items.map((i) => i.category?.trim()).filter((c): c is string => !!c))
+  );
+  const hasUncategorized = items.some((i) => !i.category?.trim());
+  const categoryNames = [
+    ...sortCategoryNames(realCategoryNames, categoryOrder),
+    ...(hasUncategorized ? [UNCATEGORIZED] : []),
+  ];
 
   const grouped = categoryNames.reduce<Record<string, typeof items>>((acc, cat) => {
     acc[cat] = items.filter((i) => (i.category?.trim() || UNCATEGORIZED) === cat);
@@ -318,14 +384,51 @@ export default async function AdminMenuPage() {
               Rename a category to update every item that has it. Renaming to match an existing
               category merges them together.
             </p>
-            {categoryNames.map((cat) => (
-              <form
-                key={cat}
-                action={renameCategory}
-                className="flex items-center gap-2"
-                // Confirm before submitting if the new name matches an existing
-                // category (a merge), so it's never an accidental surprise.
-              >
+            {(() => {
+              const realOrder = sortCategoryNames(realCategoryNames, categoryOrder);
+              return categoryNames.map((cat) => {
+              const isReal = cat !== UNCATEGORIZED;
+              const realIndex = realOrder.indexOf(cat);
+              const isFirst = realIndex <= 0;
+              const isLast = realIndex === realOrder.length - 1;
+              return (
+              <div key={cat} className="flex items-center gap-2">
+                {isReal ? (
+                  <div className="flex flex-col flex-shrink-0">
+                    <form action={moveCategory}>
+                      <input type="hidden" name="name" value={cat} />
+                      <input type="hidden" name="direction" value="up" />
+                      <button
+                        type="submit"
+                        disabled={isFirst}
+                        aria-label={`Move ${cat} up`}
+                        className="w-6 h-5 flex items-center justify-center text-editorial-ink-faint hover:text-editorial-ink disabled:opacity-25 disabled:hover:text-editorial-ink-faint"
+                      >
+                        ▲
+                      </button>
+                    </form>
+                    <form action={moveCategory}>
+                      <input type="hidden" name="name" value={cat} />
+                      <input type="hidden" name="direction" value="down" />
+                      <button
+                        type="submit"
+                        disabled={isLast}
+                        aria-label={`Move ${cat} down`}
+                        className="w-6 h-5 flex items-center justify-center text-editorial-ink-faint hover:text-editorial-ink disabled:opacity-25 disabled:hover:text-editorial-ink-faint"
+                      >
+                        ▼
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="w-6 flex-shrink-0" />
+                )}
+                <form
+                  action={renameCategory}
+                  className="flex items-center gap-2 flex-1"
+                  // Confirm before submitting if the new name matches an existing
+                  // category (a merge), so it's never an accidental surprise.
+                >
                 <input type="hidden" name="oldName" value={cat} />
                 <span className="text-[11px] text-editorial-ink-faint flex-shrink-0 w-[90px] text-right">
                   {grouped[cat]?.length ?? 0} item{(grouped[cat]?.length ?? 0) !== 1 ? "s" : ""}
@@ -341,8 +444,11 @@ export default async function AdminMenuPage() {
                 >
                   Rename
                 </button>
-              </form>
-            ))}
+                </form>
+              </div>
+              );
+            });
+            })()}
           </div>
         </details>
       )}

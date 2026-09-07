@@ -22,3 +22,23 @@ type MenuItemLike = { requiredChoices?: string[] | null | undefined };
 export function getRequiredChoicesForMenuItem(item: MenuItemLike): string[] {
   return item.requiredChoices ?? [];
 }
+
+// Sorts a set of category names for display, per-restaurant. Categories
+// with an explicit CategoryOrder row (set via the admin Menu page's
+// "Manage categories" panel) come first, in that order; anything without
+// one falls back to alphabetical, appended after. This is what backs
+// "Burgers first, Rice second, Comfort next, Salads after" as a real,
+// per-tenant preference instead of hardcoded app logic -- every mobile
+// and web surface that groups items by category should sort through
+// this function so the order stays consistent everywhere.
+export function sortCategoryNames(names: string[], explicitOrder: { name: string; sortOrder: number }[]): string[] {
+  const orderByName = new Map(explicitOrder.map((o) => [o.name, o.sortOrder]));
+  return [...names].sort((a, b) => {
+    const orderA = orderByName.get(a);
+    const orderB = orderByName.get(b);
+    if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
+    if (orderA !== undefined) return -1; // explicitly-ordered categories always come before unordered ones
+    if (orderB !== undefined) return 1;
+    return a.localeCompare(b); // both unordered -- alphabetical, same as before this existed
+  });
+}
