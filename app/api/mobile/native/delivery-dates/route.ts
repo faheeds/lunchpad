@@ -80,6 +80,7 @@ export async function GET() {
           slug: e.menuItem.slug,
           name: e.menuItem.name,
           description: e.menuItem.description,
+          category: e.menuItem.category,
           imageUrl: e.menuItem.imageUrl,
           basePriceCents: e.menuItem.basePriceCents,
           // Pick-one selections the customer MUST resolve before adding
