@@ -1,7 +1,16 @@
 import { prisma } from "@/lib/db";
 
+// Official Expo Push API endpoint -- confirmed directly against
+// https://docs.expo.dev/push-notifications/sending-notifications/
+// (no "/exponent/" segment -- a previous version of this constant had
+// an extra "/exponent/" in the path, which is NOT the real endpoint and
+// 404s. That bug went undetected because the existing test mocks
+// fetch() and only checks internal consistency (was fetch called with
+// *some* URL string matching this constant), never actually validating
+// against Expo's real servers -- confirmed directly with curl during
+// debugging: the old URL returns 404, this one returns 200.
 const EXPO_PUSH_URL =
-  process.env.EXPO_PUSH_ENDPOINT ?? "https://exp.host/--/exponent/api/v2/push/send";
+  process.env.EXPO_PUSH_ENDPOINT ?? "https://exp.host/--/api/v2/push/send";
 
 export interface PushPayload {
   title: string;

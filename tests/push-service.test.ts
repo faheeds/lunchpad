@@ -29,7 +29,7 @@ import { sendPushToParent, sendPushForOrder } from "@/lib/push/service";
 // Helpers
 // ---------------------------------------------------------------------------
 
-const EXPO_URL = "https://exp.host/--/exponent/api/v2/push/send";
+const EXPO_URL = "https://exp.host/--/api/v2/push/send";
 const PAYLOAD = { title: "Test", body: "Test body" };
 
 function makeToken(n: number) {
