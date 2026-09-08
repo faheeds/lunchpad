@@ -24,6 +24,12 @@ function AppleIcon() {
 
 export function ParentSignInButtons({ googleEnabled, appleEnabled }: { googleEnabled: boolean; appleEnabled: boolean }) {
   const [message, setMessage] = useState("");
+  // Sign in with Apple doesn't make practical sense to offer to a visitor
+  // on an Android device (they're very unlikely to have a usable Apple ID
+  // signed in on that device) -- hide it there even when otherwise
+  // configured, keeping it for iOS, Mac, Windows, and everything else.
+  const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+  const showApple = appleEnabled && !isAndroid;
 
   async function handleSignIn(provider: "google" | "apple", enabled: boolean) {
     if (!enabled) { setMessage(`${provider === "google" ? "Google" : "Apple"} sign-in is not configured yet.`); return; }
@@ -49,7 +55,7 @@ export function ParentSignInButtons({ googleEnabled, appleEnabled }: { googleEna
       >
         <GoogleIcon /> Continue with Google
       </button>
-      {appleEnabled && (
+      {showApple && (
         <button
           type="button"
           onClick={() => handleSignIn("apple", appleEnabled)}
