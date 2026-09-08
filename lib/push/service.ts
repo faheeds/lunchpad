@@ -52,7 +52,7 @@ export async function sendPushToParent(
     });
 
     if (!response.ok) {
-      throw new Error(`Expo push failed: ${response.status}`);
+      throw new Error(`Expo push failed: ${response.status} (url: ${EXPO_PUSH_URL})`);
     }
 
     const result = await response.json() as {
