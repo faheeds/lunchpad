@@ -73,6 +73,7 @@ export default async function AdminNewOrderPage() {
             name: d.school.name,
             timezone: d.school.timezone,
             locationType: d.school.locationType,
+            grades: d.school.grades,
           },
           menuItems: d.menuAvailability.map((entry) => ({
             id: entry.menuItem.id,
