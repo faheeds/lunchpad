@@ -274,6 +274,7 @@ export default async function OrderPage({
                   name: date.school.name,
                   timezone: date.school.timezone,
                   locationType: date.school.locationType,
+                  grades: date.school.grades,
                 }
               }))}
               menuItemsByDeliveryDate={Object.fromEntries(
