@@ -282,11 +282,19 @@ export function OrderForm({
     return groups;
   }, [menuItems]);
 
-  // When arriving at step 3 from an "Order this item →" deep-link, auto-select
-  // the requested item so it's already highlighted and ready to customize.
-  // Must be placed after menuItems is declared.
+  // When arriving at step 2 ("Menu") from an "Order this item →" deep-link,
+  // auto-select the requested item so it's already highlighted and ready to
+  // customize. Must be placed after menuItems is declared.
+  //
+  // Confirmed off-by-one bug: progressSteps = ["Date", "Menu", "Recipient",
+  // "Review"] with step initialized to 1 means step 2 is "Menu" (where the
+  // item list actually lives), not step 3 ("Recipient", already past the
+  // item list). The check below previously waited for step 3, which the
+  // user reaches only after already leaving the item-selection screen --
+  // so the auto-select never had a chance to fire while the list was
+  // actually visible.
   useEffect(() => {
-    if (step !== 3 || !initialItemSlug || itemSlugAutoSelected.current) return;
+    if (step !== 2 || !initialItemSlug || itemSlugAutoSelected.current) return;
     const match = menuItems.find((item) => item.slug === initialItemSlug);
     if (!match) return;
     itemSlugAutoSelected.current = true;

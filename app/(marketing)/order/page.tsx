@@ -285,6 +285,7 @@ export default async function OrderPage({
                     slug: item.slug,
                     name: item.name,
                     description: item.description,
+                    category: item.category,
                     imageUrl: item.imageUrl ?? null,
                     basePriceCents: item.basePriceCents,
                     // Required-choices and sizes were being stripped here when
