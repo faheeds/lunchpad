@@ -5,10 +5,12 @@ const {
   requireMobileAuthMock,
   findUniqueMock,
   findManyMock,
+  categoryOrderFindManyMock,
 } = vi.hoisted(() => ({
   requireMobileAuthMock: vi.fn(),
   findUniqueMock: vi.fn(),
   findManyMock: vi.fn(),
+  categoryOrderFindManyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/mobile-bearer", () => ({
@@ -21,6 +23,7 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     parentUser: { findUnique: findUniqueMock },
     deliveryDate: { findMany: findManyMock },
+    categoryOrder: { findMany: categoryOrderFindManyMock },
   },
 }));
 
@@ -93,6 +96,7 @@ describe("GET /api/mobile/native/weekly-plans — single-week window", () => {
     requireMobileAuthMock.mockResolvedValue(DEFAULT_AUTH);
     findUniqueMock.mockResolvedValue(makeParent());
     findManyMock.mockResolvedValue([]);
+    categoryOrderFindManyMock.mockResolvedValue([]);
   });
 
   afterEach(() => {

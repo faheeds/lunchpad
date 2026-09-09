@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireMobileAuth, CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
 import { getUpcomingSchoolWeekRange } from "@/lib/weekly-week";
+import { sortCategoryNames } from "@/lib/menu-config";
 
 export { corsOptions as OPTIONS };
 
@@ -83,6 +84,21 @@ export async function GET(request: NextRequest) {
         })
       : [];
 
+    // Precompute a category-position lookup once, then sort each date's
+    // flat menuItems array by it below -- same pattern as
+    // /api/mobile/native/delivery-dates, so category order stays
+    // consistent across every screen that groups items this way (the
+    // per-date order screen and, with this fix, the weekly planner).
+    const categoryOrderRows = await prisma.categoryOrder.findMany({
+      where: { restaurantId: parent.restaurantId },
+      select: { name: true, sortOrder: true },
+    });
+    const categoryPosition = new Map(categoryOrderRows.map((o) => [o.name, o.sortOrder]));
+    const positionFor = (category: string | null) => {
+      const pos = categoryPosition.get(category ?? "Other");
+      return pos !== undefined ? pos : Number.MAX_SAFE_INTEGER; // unordered categories sort after all explicitly-ordered ones
+    };
+
     return NextResponse.json(
       {
         children: parent.children.map((c) => ({
@@ -99,11 +115,19 @@ export async function GET(request: NextRequest) {
           deliveryDate: d.deliveryDate.toISOString(),
           cutoffAt: d.cutoffAt.toISOString(),
           school: d.school,
-          menuItems: d.menuAvailability.map((entry) => ({
+          menuItems: [...d.menuAvailability]
+            .sort((a, b) => {
+              const posA = positionFor(a.menuItem.category);
+              const posB = positionFor(b.menuItem.category);
+              if (posA !== posB) return posA - posB;
+              return a.menuItem.name.localeCompare(b.menuItem.name);
+            })
+            .map((entry) => ({
             id: entry.menuItem.id,
             slug: entry.menuItem.slug,
             name: entry.menuItem.name,
             description: entry.menuItem.description,
+            category: entry.menuItem.category,
             imageUrl: entry.menuItem.imageUrl,
             basePriceCents: entry.menuItem.basePriceCents,
             // Pick-one required choices — surfaced so the iOS weekly
