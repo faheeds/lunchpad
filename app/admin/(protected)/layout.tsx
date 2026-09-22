@@ -61,6 +61,15 @@ export default async function AdminProtectedLayout({
 
   const restaurant = await requireRestaurant();
 
+  // Needed early: the subscription-lock screen below must not block the one
+  // page (/admin/subscription) a locked-out operator needs to reach in order
+  // to pick a plan and unlock everything else. Without this exemption,
+  // "View plans" links back to /admin/subscription, which re-triggers the
+  // same lock screen — a dead end with no way to actually subscribe.
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "";
+  const isSubscriptionPage = pathname.startsWith("/admin/subscription");
+
   // ── Subscription gating ─────────────────────────────────────────────────
   let full: Awaited<ReturnType<typeof prisma.restaurant.findUnique>> | null = null;
   try {
@@ -69,7 +78,7 @@ export default async function AdminProtectedLayout({
     // Migration not yet applied — skip subscription gating
   }
 
-  if (full) {
+  if (full && !isSubscriptionPage) {
     const isCancelled = full.subscriptionStatus === "CANCELLED";
     const isExpiredTrial =
       full.subscriptionStatus === "TRIAL" &&
@@ -113,8 +122,6 @@ export default async function AdminProtectedLayout({
   // we trust their decision and let them into the rest of the admin. The legacy
   // "must have schools + menu + dates" check is now only a fallback for old
   // restaurants whose onboardingComplete flag isn't set yet.
-  const headerList = await headers();
-  const pathname = headerList.get("x-pathname") ?? "";
   const isSetupExempt = SETUP_EXEMPT.some((p) => pathname.startsWith(p));
 
   if (!isSetupExempt && !full?.onboardingComplete) {
