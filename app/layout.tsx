@@ -123,6 +123,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${oswald.variable} ${inter.variable} ${shellMode}`}>
       <head>
+        {shellMode !== "is-admin" && (
+          <meta name="apple-itunes-app" content="app-id=6766374605" />
+        )}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href={displayFontObj.googleUrl} rel="stylesheet" />
