@@ -15,15 +15,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Stripe is not configured." }, { status: 500 });
   }
 
-  const restaurant = await requireRestaurant();
-  const full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
-  if (!full) return NextResponse.json({ error: "Restaurant not found." }, { status: 404 });
-
-  if (!full.stripeSubscriptionId) {
-    return NextResponse.json({ error: "No active subscription to cancel." }, { status: 400 });
-  }
-
+  // Wrapped end-to-end: requireRestaurant()/prisma calls outside a try/catch
+  // would otherwise let an uncaught error escape as a bodyless 500, which the
+  // client's res.json() can't parse ("Unexpected end of JSON input").
   try {
+    const restaurant = await requireRestaurant();
+    const full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
+    if (!full) return NextResponse.json({ error: "Restaurant not found." }, { status: 404 });
+
+    if (!full.stripeSubscriptionId) {
+      return NextResponse.json({ error: "No active subscription to cancel." }, { status: 400 });
+    }
+
     await stripe.subscriptions.cancel(full.stripeSubscriptionId);
 
     await prisma.restaurant.update({
