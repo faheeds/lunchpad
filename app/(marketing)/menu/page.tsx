@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AppNav } from "@/components/app-nav";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
 import { getCurrentRestaurant } from "@/lib/restaurant";
+import { sortCategoryNames } from "@/lib/menu-config";
 
 export const dynamic = "force-dynamic";
 
@@ -18,28 +19,32 @@ export default async function MenuPage() {
 
   // Multi-tenant: only show menu items for the current restaurant.
   // If no restaurant context (e.g. apex /menu), show none.
-  const items = restaurant
-    ? await prisma.menuItem.findMany({
-        where: { restaurantId: restaurant.id, isActive: true },
-        include: {
-          options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] },
-        },
-        orderBy: { name: "asc" },
-      })
-    : [];
+  const [items, categoryOrder] = restaurant
+    ? await Promise.all([
+        prisma.menuItem.findMany({
+          where: { restaurantId: restaurant.id, isActive: true },
+          include: {
+            options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] },
+          },
+          orderBy: { name: "asc" },
+        }),
+        prisma.categoryOrder.findMany({ where: { restaurantId: restaurant.id } }),
+      ])
+    : [[], []];
 
   // Group by MenuItem.category, with an "Other" bucket for uncategorized
-  // items. The order of categories is whatever sortOrder the operator
-  // configured (set on MenuItem.sortOrder, items already ordered by name);
-  // we extract distinct categories in first-seen order so the rendering
-  // matches the admin's intended structure.
+  // items. Category display order comes from sortCategoryNames — the same
+  // per-tenant CategoryOrder the admin Menu page's "Manage categories"
+  // panel writes — not first-seen order from the alphabetically-sorted
+  // item list, which used to make this page's order effectively random
+  // relative to what the operator configured.
   const grouped = new Map<string, typeof items>();
   for (const item of items) {
     const key = item.category?.trim() || "Other";
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(item);
   }
-  const categories = Array.from(grouped.keys());
+  const categories = sortCategoryNames([...grouped.keys()], categoryOrder);
 
   const totalItems = items.length;
 
