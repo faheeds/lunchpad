@@ -60,6 +60,7 @@ export interface BuilderState {
   minItemCount: string;
   firstOrderOnly: boolean;
   schoolIds: string[];
+  grades: string[];
   weekdays: number[];
   startsAt: string; // yyyy-MM-dd
   endsAt: string;
@@ -76,13 +77,17 @@ export interface DiscountBuilderProps {
   initial: BuilderState;
   schools: { id: string; name: string }[];
   menuItems: { id: string; name: string; category: string | null }[];
+  /** Distinct grade values available to scope a discount to — the union
+   *  of every active school's `grades` list for this tenant (includes
+   *  any operator-added value like "Teacher/Admin"). */
+  gradeOptions: string[];
   /** When set, the builder operates in edit mode. */
   discountId?: string;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function DiscountBuilder({ template, initial, schools, menuItems, discountId }: DiscountBuilderProps) {
+export function DiscountBuilder({ template, initial, schools, menuItems, gradeOptions, discountId }: DiscountBuilderProps) {
   const router = useRouter();
   const [state, setState] = useState<BuilderState>(initial);
   const [openPillId, setOpenPillId] = useState<string | null>(null);
@@ -265,6 +270,8 @@ export function DiscountBuilder({ template, initial, schools, menuItems, discoun
           {" · "}
           <SchoolPill state={state} update={update} schools={schools} openPillId={openPillId} setOpenPillId={setOpenPillId} />
           {" · "}
+          <GradePill state={state} update={update} gradeOptions={gradeOptions} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+          {" · "}
           <MinOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
         </div>
       )}
@@ -284,6 +291,8 @@ export function DiscountBuilder({ template, initial, schools, menuItems, discoun
           <FirstOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
           {" · "}
           <SchoolPill state={state} update={update} schools={schools} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+          {" · "}
+          <GradePill state={state} update={update} gradeOptions={gradeOptions} openPillId={openPillId} setOpenPillId={setOpenPillId} />
           {" · "}
           <MinOrderPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
         </div>
@@ -471,6 +480,60 @@ function SchoolPill({ state, update, schools, openPillId, setOpenPillId }: PillS
           ))}
         </div>
       )}
+    </DiscountPill>
+  );
+}
+
+function GradePill({ state, update, gradeOptions, openPillId, setOpenPillId }: PillSharedProps & { gradeOptions: string[] }) {
+  const isDefault = state.grades.length === 0;
+  const label = isDefault
+    ? "for any grade"
+    : state.grades.length === 1
+    ? `for ${state.grades[0]}`
+    : `for ${state.grades.length} grades`;
+  function toggle(g: string) {
+    update({
+      grades: state.grades.includes(g)
+        ? state.grades.filter((x) => x !== g)
+        : [...state.grades, g],
+    });
+  }
+  return (
+    <DiscountPill id="grades" label={label} isDefault={isDefault} openPillId={openPillId} setOpenPillId={setOpenPillId}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-2">
+        Which grades?
+      </p>
+      {gradeOptions.length === 0 ? (
+        <p className="text-[12px] text-editorial-ink-soft italic">
+          No grades configured yet — add them under a location's grade list first.
+        </p>
+      ) : (
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
+            <input
+              type="checkbox"
+              checked={state.grades.length === 0}
+              onChange={() => update({ grades: [] })}
+              className="rounded"
+            />
+            All grades
+          </label>
+          {gradeOptions.map((g) => (
+            <label key={g} className="flex items-center gap-2 cursor-pointer text-[13px] text-editorial-ink">
+              <input
+                type="checkbox"
+                checked={state.grades.includes(g)}
+                onChange={() => toggle(g)}
+                className="rounded"
+              />
+              {g}
+            </label>
+          ))}
+        </div>
+      )}
+      <p className="text-[11px] text-editorial-ink-soft mt-2">
+        Useful for a staff discount — e.g. select just a "Teacher/Admin" grade option.
+      </p>
     </DiscountPill>
   );
 }
@@ -1024,6 +1087,7 @@ function serialize(s: BuilderState): string {
     minItemCount: s.minItemCount ? parseInt(s.minItemCount, 10) : undefined,
     firstOrderOnly: s.firstOrderOnly,
     schoolIds: s.schoolIds,
+    grades: s.grades,
     weekdays: s.weekdays,
     startsAt: s.startsAt || undefined,
     endsAt: s.endsAt || undefined,

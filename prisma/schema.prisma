@@ -809,6 +809,13 @@ model Discount {
   minItemCount          Int?                // minimum cart-line count (sibling discount uses 2)
   firstOrderOnly        Boolean             @default(false)
   schoolIds             String[]            @default([])   // empty = all schools
+  // Student/ParentChild.grade values eligible for this discount (exact
+  // string match — same free-text values as School.grades, e.g. "5th
+  // Grade" or an operator-added value like "Teacher/Admin"). Empty = all
+  // grades. Lets an operator build a staff/teacher discount by adding a
+  // "Teacher/Admin" grade option on their schools and scoping a discount
+  // to just that value.
+  grades                String[]            @default([])
   weekdays              Int[]               @default([])   // ISO 1..7, empty = all days
   startsAt              DateTime?
   endsAt                DateTime?

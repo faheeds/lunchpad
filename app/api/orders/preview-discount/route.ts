@@ -24,6 +24,12 @@ import { pickApplicableDiscounts, type CartLine } from "@/lib/discounts";
 const bodySchema = z.object({
   deliveryDateId: z.string().min(1),
   schoolId: z.string().min(1),
+  /** Resolved Student/ParentChild.grade for this cart, when known.
+   *  The order form only has this once the customer reaches the
+   *  recipient step, so early previews (no grade picked yet) simply
+   *  omit it — grade-scoped discounts won't preview as applied until
+   *  a matching grade is selected, same as any other eligibility rule. */
+  grade: z.string().optional(),
   /** Empty/whitespace code means "auto discounts only, no code".
    *  Non-empty means "auto + check this code". */
   code: z.string().optional(),
@@ -87,6 +93,7 @@ export async function POST(request: Request) {
       schoolId: deliveryDate.school.id,
       deliveryDate: deliveryDate.deliveryDate,
       parentUserId,
+      grade: parsed.grade || null,
       lines,
     },
     code: parsed.code,

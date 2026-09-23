@@ -42,7 +42,7 @@ export default async function NewDiscountPage({
 
   const schools = await prisma.school.findMany({
     where: { restaurantId: restaurant.id, isActive: true },
-    select: { id: true, name: true },
+    select: { id: true, name: true, grades: true },
     orderBy: { name: "asc" },
   });
 
@@ -52,9 +52,13 @@ export default async function NewDiscountPage({
     orderBy: { name: "asc" },
   });
 
+  // Union of every active school's grade list — includes any
+  // operator-added value like "Teacher/Admin" used for staff discounts.
+  const gradeOptions = [...new Set(schools.flatMap((s) => s.grades))].sort();
+
   const initial = seedState(template);
 
-  return <DiscountBuilder template={template} initial={initial} schools={schools} menuItems={menuItems} />;
+  return <DiscountBuilder template={template} initial={initial} schools={schools} gradeOptions={gradeOptions} menuItems={menuItems} />;
 }
 
 function seedState(t: TemplateMeta): BuilderState {
@@ -75,6 +79,7 @@ function seedState(t: TemplateMeta): BuilderState {
     minItemCount: d.minItemCount ? String(d.minItemCount) : "",
     firstOrderOnly: d.firstOrderOnly,
     schoolIds: [],
+    grades: [],
     weekdays: d.weekdays,
     startsAt: "",
     endsAt: "",
