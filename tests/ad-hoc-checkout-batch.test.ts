@@ -6,11 +6,15 @@ const {
   schoolFindManyMock,
   parentChildFindManyMock,
   weeklyCheckoutBatchCreateMock,
+  restaurantFindUniqueMock,
+  orderCountMock,
 } = vi.hoisted(() => ({
   deliveryDateFindManyMock: vi.fn(),
   schoolFindManyMock: vi.fn(),
   parentChildFindManyMock: vi.fn(),
   weeklyCheckoutBatchCreateMock: vi.fn(),
+  restaurantFindUniqueMock: vi.fn(),
+  orderCountMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -19,6 +23,11 @@ vi.mock("@/lib/db", () => ({
     school: { findMany: schoolFindManyMock },
     parentChild: { findMany: parentChildFindManyMock },
     weeklyCheckoutBatch: { create: weeklyCheckoutBatchCreateMock },
+    // Used by assertOrderCapacity's monthly-order-cap check, which every
+    // checkout path now runs before creating a batch. Default to a plan
+    // with plenty of headroom so existing tests don't need to know about it.
+    restaurant: { findUnique: restaurantFindUniqueMock },
+    order: { count: orderCountMock },
   },
 }));
 
@@ -84,10 +93,14 @@ beforeEach(() => {
   schoolFindManyMock.mockReset();
   parentChildFindManyMock.mockReset();
   weeklyCheckoutBatchCreateMock.mockReset();
+  restaurantFindUniqueMock.mockReset();
+  orderCountMock.mockReset();
 
   deliveryDateFindManyMock.mockResolvedValue([buildDeliveryDate()]);
   schoolFindManyMock.mockResolvedValue([{ id: "school-redmond", restaurantId: "restaurant-1" }]);
   parentChildFindManyMock.mockResolvedValue([CHILD_HANA_REDMOND, CHILD_HIBA_REDMOND]);
+  restaurantFindUniqueMock.mockResolvedValue({ plan: "SCALE" });
+  orderCountMock.mockResolvedValue(0);
   weeklyCheckoutBatchCreateMock.mockImplementation(async ({ data }) => ({
     id: "batch-1",
     restaurantId: data.restaurantId,
