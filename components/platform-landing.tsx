@@ -117,18 +117,18 @@ const STEPS = [
 const PRICING = [
   {
     name: "Starter", price: "49", pop: false,
-    desc: "Perfect for single-location operations just getting started.",
-    feats: ["Up to 2 locations", "Unlimited menu items", "Stripe payouts", "Email confirmations", "Order dashboard"],
+    desc: "Perfect for a couple of locations just getting started.",
+    feats: ["Up to 2 locations", "750 orders / month", "Stripe payouts", "Email confirmations", "Order dashboard"],
   },
   {
-    name: "Growth", price: "149", pop: true,
+    name: "Growth", price: "99", pop: true,
     desc: "For growing operators serving multiple locations.",
-    feats: ["Up to 10 locations", "Weekly batch checkout", "Cutoff reminders", "Priority support", "Everything in Starter"],
+    feats: ["Up to 5 locations", "2,000 orders / month", "Weekly batch checkout", "Priority support", "Everything in Starter"],
   },
   {
-    name: "Scale", price: "349", pop: false,
-    desc: "Enterprise-grade for large districts and multi-brand operators.",
-    feats: ["Unlimited locations", "Custom branding", "Dedicated onboarding", "SLA support", "Everything in Growth"],
+    name: "Scale", price: "199", pop: false,
+    desc: "For large districts and multi-brand operators.",
+    feats: ["Up to 10 locations", "Unlimited orders", "Custom branding", "Dedicated onboarding", "Everything in Growth"],
   },
 ];
 
