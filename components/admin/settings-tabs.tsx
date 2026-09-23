@@ -30,7 +30,13 @@ const TABS: Tab[] = [
   { id: "general",       label: "General",       href: "/admin/settings?tab=general" },
   { id: "branding",      label: "Branding",      href: "/admin/settings?tab=branding" },
   { id: "domain",        label: "Domain",        href: "/admin/settings?tab=domain" },
-  { id: "payments",      label: "Payments",      href: "/admin/settings?tab=payments" },
+  // Labeled "Payouts", not "Payments" — this tab is Stripe Connect (customer
+  // payments flowing OUT to the restaurant's own Stripe account), a distinct
+  // relationship from the LunchPad subscription charge on the Plan tab
+  // (restaurant paying LunchPad). "Payments" reads as ambiguous next to the
+  // Plan page's "add a payment method" trial-expired banner and sent at
+  // least one operator looking here for a card-entry form that isn't here.
+  { id: "payments",      label: "Payouts",       href: "/admin/settings?tab=payments" },
   { id: "notifications", label: "Notifications", href: "/admin/settings?tab=notifications" },
   // Team and Plan are their own routes (legacy pages we're keeping in
   // place), but rendered under the same Settings umbrella here.
