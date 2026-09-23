@@ -70,6 +70,13 @@ export default async function OrderPage({
 
   const now = new Date();
 
+  // Same per-tenant category order the admin "Manage categories" panel
+  // writes and the /menu page reads — decides the order categories render
+  // in below (OrderForm sorts groupedMenuItems through it).
+  const categoryOrder = await prisma.categoryOrder.findMany({
+    where: { restaurantId: restaurant.id },
+  });
+
   const allDeliveryDates = await prisma.deliveryDate.findMany({
     where: {
       orderingOpen: true,
@@ -352,6 +359,7 @@ export default async function OrderPage({
               unavailableReorderItems={unavailableNames}
               needsSelectionItems={needsSelectionNames}
               soldOutByDeliveryDate={soldOutByDeliveryDate}
+              categoryOrder={categoryOrder}
               initialItemSlug={params.item}
             />
           ) : (

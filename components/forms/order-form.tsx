@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
 import type { LocationType } from "@prisma/client";
-import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
+import { getRequiredChoicesForMenuItem, sortCategoryNames } from "@/lib/menu-config";
 import { resolveLineItemPrice } from "@/lib/pricing";
 import { STANDARD_GRADES } from "@/lib/grades";
 import { getLabels } from "@/lib/location-labels";
@@ -97,6 +97,11 @@ type OrderFormProps = {
   needsSelectionItems?: string[];
   /** Per delivery date ID: list of menuItemIds that have sold out */
   soldOutByDeliveryDate?: Record<string, string[]>;
+  /** Per-restaurant CategoryOrder rows (the same ones the admin "Manage
+   *  categories" panel writes) — decides the order categories render in
+   *  below. Missing = falls back to alphabetical, same as every other
+   *  surface that uses sortCategoryNames. */
+  categoryOrder?: { name: string; sortOrder: number }[];
   /** Restaurant.operatorType — "school" | "office" | "hybrid" | null.
    *  Drives whether user-facing copy says "Student" / "Grade" / "Parent" or
    *  the office-appropriate equivalents. Defaults to school for legacy
@@ -163,6 +168,7 @@ export function OrderForm({
   deliveryDates, menuItemsByDeliveryDate, savedChildren = [], operatorType,
   initialParentProfile, initialSchoolId, initialDeliveryDateId, initialCartItems = [],
   initialItemSlug, unavailableReorderItems = [], needsSelectionItems = [], soldOutByDeliveryDate = {},
+  categoryOrder = [],
 }: OrderFormProps) {
   const defaultSchoolId = initialSchoolId || "";
   const defaultDeliveryDateId = initialDeliveryDateId || "";
@@ -268,10 +274,12 @@ export function OrderForm({
   const selectedMenuItem = menuItems.find((item) => item.id === selectedMenuItemId);
   const requiredChoices = selectedMenuItem ? getRequiredChoicesForMenuItem(selectedMenuItem) : [];
 
-  // Group items by their MenuItem.category. Order of categories is
-  // first-seen — since menu items arrive sorted by sortOrder (admin can
-  // drag-reorder) the categories surface in the operator's intended
-  // sequence. "Other" bucket catches items with no category set.
+  // Group items by their MenuItem.category, then order the categories via
+  // sortCategoryNames — the same per-tenant CategoryOrder the admin Menu
+  // page's "Manage categories" panel writes. (Previously relied on
+  // first-seen order from the fetched item list, which isn't sorted by
+  // category at all, so the sequence here didn't match what the operator
+  // configured.) "Other" bucket catches items with no category set.
   const groupedMenuItems = useMemo(() => {
     const groups: Record<string, MenuItem[]> = {};
     for (const item of menuItems) {
@@ -279,8 +287,12 @@ export function OrderForm({
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(item);
     }
-    return groups;
-  }, [menuItems]);
+    const ordered: Record<string, MenuItem[]> = {};
+    for (const cat of sortCategoryNames(Object.keys(groups), categoryOrder)) {
+      ordered[cat] = groups[cat];
+    }
+    return ordered;
+  }, [menuItems, categoryOrder]);
 
   // When arriving at step 2 ("Menu") from an "Order this item →" deep-link,
   // auto-select the requested item so it's already highlighted and ready to
