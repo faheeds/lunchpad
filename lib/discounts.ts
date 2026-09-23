@@ -45,6 +45,12 @@ export interface CartContext {
    *  honor automatic order-level discounts but skip per-user redemption
    *  caps). */
   parentUserId: string | null;
+  /** Resolved Student/ParentChild.grade value for this order (e.g.
+   *  "5th Grade", or an operator-added value like "Teacher/Admin").
+   *  Null when not yet known (e.g. the live cart preview fires before
+   *  the customer reaches the recipient step) or not applicable (OFFICE
+   *  locations). Discounts scoped by `grades` reject when this is null. */
+  grade?: string | null;
   /** One entry per unit. Identical lines come through as N entries (the
    *  cart UI collapses them with qty steppers but the engine sees
    *  unit-level rows — same shape as the eventual OrderItem rows). */
@@ -296,6 +302,11 @@ export function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
   // School scope.
   if (d.schoolIds.length > 0 && !d.schoolIds.includes(ctx.cart.schoolId)) {
     return reject(d, "Not valid for this location.");
+  }
+
+  // Grade scope (e.g. a Teacher/Admin staff discount).
+  if (d.grades.length > 0 && (!ctx.cart.grade || !d.grades.includes(ctx.cart.grade))) {
+    return reject(d, "Not valid for this grade.");
   }
 
   // Weekday — ISO 1..7 (Mon=1, Sun=7). Slice 1 uses UTC weekday; slice 2

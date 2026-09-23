@@ -275,6 +275,7 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       schoolId: parsed.schoolId,
       deliveryDate: deliveryDate.deliveryDate,
       parentUserId: parentUserId ?? parentChild?.parentUserId ?? null,
+      grade: parsed.grade || null,
       lines: cartLines,
     },
     code: parsed.discountCode,
