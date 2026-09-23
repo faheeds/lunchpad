@@ -108,6 +108,7 @@ export const discountInputSchema = z.object({
   minItemCount: intOrUndefined,
   firstOrderOnly: z.coerce.boolean().default(false),
   schoolIds: z.array(z.string()).default([]),
+  grades: z.array(z.string()).default([]),
   weekdays: z.array(z.coerce.number().int().min(1).max(7)).default([]),
 
   // Window

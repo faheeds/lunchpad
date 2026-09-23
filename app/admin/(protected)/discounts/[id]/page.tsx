@@ -47,9 +47,16 @@ export default async function DiscountDetailPage({
 
   const schools = await prisma.school.findMany({
     where: { restaurantId: restaurant.id, isActive: true },
-    select: { id: true, name: true },
+    select: { id: true, name: true, grades: true },
     orderBy: { name: "asc" },
   });
+
+  // Union of every active school's grade list — includes any
+  // operator-added value like "Teacher/Admin" used for staff discounts.
+  // Also fold in any grade values this discount already references (e.g.
+  // from a school that's since gone inactive) so editing doesn't silently
+  // drop them from the checklist.
+  const gradeOptions = [...new Set([...schools.flatMap((s) => s.grades), ...discount.grades])].sort();
 
   const menuItems = await prisma.menuItem.findMany({
     where: { restaurantId: restaurant.id, isActive: true },
@@ -88,6 +95,7 @@ export default async function DiscountDetailPage({
     minItemCount: discount.minItemCount ? String(discount.minItemCount) : "",
     firstOrderOnly: discount.firstOrderOnly,
     schoolIds: discount.schoolIds,
+    grades: discount.grades,
     weekdays: discount.weekdays,
     startsAt: discount.startsAt ? toDateInput(discount.startsAt) : "",
     endsAt: discount.endsAt ? toDateInput(discount.endsAt) : "",
@@ -117,6 +125,7 @@ export default async function DiscountDetailPage({
         template={template}
         initial={initial}
         schools={schools}
+        gradeOptions={gradeOptions}
         menuItems={menuItems}
         discountId={id}
       />

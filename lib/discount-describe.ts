@@ -58,6 +58,9 @@ export function describeDiscount(d: Discount): string {
   if (d.schoolIds.length > 0) {
     conditions.push(d.schoolIds.length === 1 ? "at selected location" : `at ${d.schoolIds.length} locations`);
   }
+  if (d.grades.length > 0) {
+    conditions.push(d.grades.length === 1 ? `for ${d.grades[0]}` : `for ${d.grades.slice(0, 3).join(" / ")}${d.grades.length > 3 ? " + more" : ""}`);
+  }
   if (conditions.length === 1) {
     parts.push(`on ${conditions[0]}`);
   } else if (conditions.length > 1) {
