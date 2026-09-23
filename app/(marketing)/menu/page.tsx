@@ -93,9 +93,7 @@ export default async function MenuPage() {
           borderTop: "1px solid #E3DBC6",
           borderBottom: "1px solid #E3DBC6",
           position: "sticky", top: 0, zIndex: 10,
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }} className="lg:mx-auto lg:max-w-2xl lg:px-8 [&::-webkit-scrollbar]:hidden">
+        }} className="lg:mx-auto lg:max-w-2xl lg:px-8">
           {categories.map((cat) => {
             const count = grouped.get(cat)?.length ?? 0;
             if (!count) return null;
@@ -141,12 +139,8 @@ export default async function MenuPage() {
                   </p>
                 </div>
 
-                {/* 2-column grid (mobile), 3-column at >=1280px */}
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: 12,
-                }} className="lg:grid-cols-2 xl:grid-cols-3">
+                {/* 2-column grid on mobile, 3-column at 1280px */}
+                <div className="grid grid-cols-2 gap-3 xl:grid-cols-3 xl:gap-4">
                   {catItems.map((item) => (
                     <MenuItemCard
                       key={item.id}
