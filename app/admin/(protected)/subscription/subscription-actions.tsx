@@ -9,18 +9,18 @@ import { CancelSubscriptionModal } from "@/components/admin/cancel-subscription-
 const UPGRADE_PLANS = [
   {
     id: "STARTER", name: "Starter", price: "$49/mo",
-    tagline: "One school or office — perfect to get started.",
-    features: ["1 location", "Up to 3 team seats", "500 orders / month", "All core features included"],
+    tagline: "Up to 2 locations — perfect to get started.",
+    features: ["Up to 2 locations", "Up to 3 team seats", "750 orders / month", "All core features included"],
   },
   {
-    id: "GROWTH", name: "Growth", price: "$149/mo", badge: "Most popular",
+    id: "GROWTH", name: "Growth", price: "$99/mo", badge: "Most popular",
     tagline: "Room to grow across multiple sites.",
-    features: ["Up to 5 locations", "Up to 10 team seats", "5,000 orders / month", "All core features included"],
+    features: ["Up to 5 locations", "Up to 10 team seats", "2,000 orders / month", "All core features included"],
   },
   {
-    id: "SCALE", name: "Scale", price: "$349/mo",
+    id: "SCALE", name: "Scale", price: "$199/mo",
     tagline: "For multi-site operators who've outgrown the caps.",
-    features: ["Unlimited locations", "Unlimited team seats", "Unlimited orders", "All core features included"],
+    features: ["Up to 10 locations", "Unlimited team seats", "Unlimited orders", "All core features included"],
   },
 ];
 

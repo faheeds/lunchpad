@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
 
 const PLAN_LABELS: Record<string, { name: string; price: string; description: string }> = {
   FREE:    { name: "Free",    price: "$0/mo",    description: "Limited access" },
-  STARTER: { name: "Starter", price: "$49/mo",   description: "1 location" },
-  GROWTH:  { name: "Growth",  price: "$149/mo",  description: "Up to 5 locations" },
-  SCALE:   { name: "Scale",   price: "$349/mo",  description: "Unlimited locations" },
+  STARTER: { name: "Starter", price: "$49/mo",   description: "Up to 2 locations" },
+  GROWTH:  { name: "Growth",  price: "$99/mo",   description: "Up to 5 locations" },
+  SCALE:   { name: "Scale",   price: "$199/mo",  description: "Up to 10 locations" },
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
