@@ -4,10 +4,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CancelSubscriptionModal } from "@/components/admin/cancel-subscription-modal";
 
+// Mirrors lib/plans.ts's PLAN_LIMITS (server-only, not importable from a
+// client component). Keep these two in sync if limits ever change.
 const UPGRADE_PLANS = [
-  { id: "STARTER", name: "Starter", price: "$49/mo" },
-  { id: "GROWTH",  name: "Growth",  price: "$149/mo" },
-  { id: "SCALE",   name: "Scale",   price: "$349/mo" },
+  {
+    id: "STARTER", name: "Starter", price: "$49/mo",
+    tagline: "One school or office — perfect to get started.",
+    features: ["1 location", "Up to 3 team seats", "500 orders / month", "All core features included"],
+  },
+  {
+    id: "GROWTH", name: "Growth", price: "$149/mo", badge: "Most popular",
+    tagline: "Room to grow across multiple sites.",
+    features: ["Up to 5 locations", "Up to 10 team seats", "5,000 orders / month", "All core features included"],
+  },
+  {
+    id: "SCALE", name: "Scale", price: "$349/mo",
+    tagline: "For multi-site operators who've outgrown the caps.",
+    features: ["Unlimited locations", "Unlimited team seats", "Unlimited orders", "All core features included"],
+  },
 ];
 
 interface Props {
@@ -123,27 +137,63 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
             : "Choose a plan to unlock full access. You can change plans anytime."}
         </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
           {availablePlans.map((p) => (
             <div key={p.id} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "14px 16px", border: "1px solid #E3DBC6", borderRadius: 12,
+              position: "relative",
+              padding: "18px 18px 16px",
+              border: p.badge ? "1.5px solid #2C4031" : "1px solid #E3DBC6",
+              borderRadius: 14,
+              background: p.badge ? "#FAF7EE" : "white",
             }}>
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#211D15" }}>{p.name}</p>
-                <p style={{ fontSize: 12, color: "#938B78" }}>{p.price}</p>
+              {p.badge && (
+                <span style={{
+                  position: "absolute", top: -10, left: 16,
+                  background: "#2C4031", color: "#F6F1E6",
+                  fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+                  padding: "3px 10px", borderRadius: 999,
+                }}>
+                  {p.badge}
+                </span>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: "#211D15" }}>{p.name}</p>
+                  <p style={{ fontSize: 12, color: "#5B5446", marginTop: 1 }}>{p.tagline}</p>
+                </div>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#211D15", whiteSpace: "nowrap", marginLeft: 12 }}>
+                  {p.price}
+                </p>
               </div>
+
+              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 14px", display: "flex", flexDirection: "column", gap: 5 }}>
+                {p.features.map((f) => (
+                  <li key={f} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#3D3728" }}>
+                    <span style={{
+                      width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+                      background: "#DEE2CF", color: "#2C4031",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 9, fontWeight: 700, lineHeight: 1,
+                    }}>
+                      ✓
+                    </span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
               <button
                 onClick={() => handleUpgrade(p.id)}
                 disabled={loading}
                 style={{
-                  padding: "8px 18px", borderRadius: 20,
+                  width: "100%", padding: "9px 18px", borderRadius: 20,
                   background: loading ? "#E3DBC6" : "#2C4031",
                   color: loading ? "#5B5446" : "#F6F1E6", fontSize: 13, fontWeight: 700,
                   border: "none", cursor: loading ? "not-allowed" : "pointer",
                 }}
               >
-                {loading ? "..." : (isActiveSubscriber ? "Switch to" : "Select")}
+                {loading ? "..." : (isActiveSubscriber ? `Switch to ${p.name}` : `Select ${p.name}`)}
               </button>
             </div>
           ))}
