@@ -103,19 +103,31 @@ export function DiscountBuilder({ template, initial, schools, menuItems, gradeOp
     startSaving(async () => {
       try {
         if (isEdit && discountId) {
-          await updateDiscount(discountId, payload);
+          const result = await updateDiscount(discountId, payload);
+          if (result?.error) {
+            setError(result.error);
+            return;
+          }
           router.push(`/admin/discounts/${discountId}`);
           router.refresh();
         } else {
-          await createDiscount(payload);
-          // createDiscount redirects via Next's server-action redirect
-          // mechanism — the await above won't return on success; it
-          // throws a NEXT_REDIRECT sentinel that the catch below
-          // re-throws so Next's runtime can act on it.
+          const result = await createDiscount(payload);
+          // On success createDiscount redirects via Next's server-action
+          // redirect mechanism — the await above won't return; it throws
+          // a NEXT_REDIRECT sentinel that the catch below re-throws so
+          // Next's runtime can act on it. On validation/business-rule
+          // failure it returns { error } instead (see actions.ts) so the
+          // message survives Next's production error redaction.
+          if (result?.error) {
+            setError(result.error);
+            return;
+          }
         }
       } catch (err) {
         // Don't swallow Next's redirect mechanism — re-throw so the
-        // navigation actually happens. Anything else is a real error.
+        // navigation actually happens. Anything else is a genuinely
+        // unexpected error (not a validation/business-rule one — those
+        // come back as { error } above).
         if (isRedirectError(err)) throw err;
         setError(err instanceof Error ? err.message : "Save failed.");
       }

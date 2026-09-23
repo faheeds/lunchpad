@@ -35,32 +35,45 @@ async function adminContext(): Promise<{ restaurantId: string; adminUserId: stri
   return { restaurantId: restaurant.id, adminUserId };
 }
 
+/** Result shape for createDiscount/updateDiscount. We return validation
+ *  and business-rule failures as data rather than throwing them: Next.js
+ *  redacts thrown Error messages from Server Actions by default in
+ *  production ("The specific message is omitted in production builds"),
+ *  so a thrown `new Error("Name is required.")` never actually reaches
+ *  the operator — they just see a generic, unhelpful error box. Returning
+ *  `{ error }` sidesteps that redaction entirely. */
+type ActionResult = { error: string } | undefined;
+
 /** Parse the JSON payload the client builder sends. We accept JSON
  *  instead of FormData because the builder has nested array fields
  *  (schoolIds, weekdays, categories) that play poorly with FormData
- *  serialization. */
-function parsePayload(raw: string) {
+ *  serialization. Returns either the parsed data or a friendly error
+ *  string — never throws, so callers can return it directly to the
+ *  client without it being redacted (see ActionResult above). */
+function parsePayload(raw: string): { data: ReturnType<typeof discountInputSchema.parse> } | { error: string } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error("Invalid request payload.");
+    return { error: "Invalid request payload." };
   }
   const result = discountInputSchema.safeParse(parsed);
   if (!result.success) {
     // Surface the first error to the operator. Friendly enough for now;
     // we can wire to a toast/field-level display in the builder later.
     const issue = result.error.issues[0];
-    throw new Error(issue.message ?? "Invalid discount.");
+    return { error: issue.message ?? "Invalid discount." };
   }
-  return result.data;
+  return { data: result.data };
 }
 
 // ─── Actions ────────────────────────────────────────────────────────────────
 
-export async function createDiscount(payload: string) {
+export async function createDiscount(payload: string): Promise<ActionResult> {
   const { restaurantId, adminUserId } = await adminContext();
-  const data = parsePayload(payload);
+  const parsed = parsePayload(payload);
+  if ("error" in parsed) return { error: parsed.error };
+  const { data } = parsed;
 
   // Code uniqueness check (case-insensitive). The DB has a partial
   // @@unique on (restaurantId, code) but null codes are excluded, so
@@ -71,7 +84,7 @@ export async function createDiscount(payload: string) {
       select: { id: true },
     });
     if (dup) {
-      throw new Error(`A discount with code "${data.code}" already exists.`);
+      return { error: `A discount with code "${data.code}" already exists.` };
     }
   }
 
@@ -128,16 +141,18 @@ export async function createDiscount(payload: string) {
   redirect(`/admin/discounts/${created.id}`);
 }
 
-export async function updateDiscount(discountId: string, payload: string) {
+export async function updateDiscount(discountId: string, payload: string): Promise<ActionResult> {
   const { restaurantId, adminUserId } = await adminContext();
-  const data = parsePayload(payload);
+  const parsed = parsePayload(payload);
+  if ("error" in parsed) return { error: parsed.error };
+  const { data } = parsed;
 
   // Tenant-scoped existence + identity check.
   const existing = await prisma.discount.findFirst({
     where: { id: discountId, restaurantId },
     select: { id: true, code: true, name: true },
   });
-  if (!existing) throw new Error("Discount not found.");
+  if (!existing) return { error: "Discount not found." };
 
   // Code uniqueness — only enforce if the code changed.
   if (data.code && data.code !== existing.code) {
@@ -146,7 +161,7 @@ export async function updateDiscount(discountId: string, payload: string) {
       select: { id: true },
     });
     if (dup) {
-      throw new Error(`A discount with code "${data.code}" already exists.`);
+      return { error: `A discount with code "${data.code}" already exists.` };
     }
   }
 
