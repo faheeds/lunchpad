@@ -427,6 +427,15 @@ export function OrderForm({
   const [codeError, setCodeError] = useState<string | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
 
+  // Recipient name + grade as the discount engine needs them — same
+  // "office self-order mirrors parentName" and "grade only for locations
+  // that show it" rules as the checkout payload below. Shared so the
+  // live preview and the real submission never drift out of sync (e.g.
+  // a grade-scoped discount previewing as ineligible but then applying
+  // at checkout, or vice versa).
+  const effectiveStudentName = isOffice && orderForSelf ? parentName : studentName;
+  const effectiveGrade = labels.showGrade ? grade : "";
+
   /** Fetches the current discount preview from the server. Pass the
    *  optional code to also try a customer-typed promo. The server
    *  returns the single best auto + the code outcome; we mirror both
@@ -442,6 +451,8 @@ export function OrderForm({
         body: JSON.stringify({
           deliveryDateId: selectedDeliveryDateId,
           schoolId: selectedDelivery.school.id,
+          grade: effectiveGrade || undefined,
+          studentName: effectiveStudentName || undefined,
           code: codeOverride ?? codeApplied ?? undefined,
           cartItems: cartItems.flatMap((i) =>
             Array.from({ length: i.quantity }, () => ({
@@ -469,13 +480,16 @@ export function OrderForm({
 
   // Fetch when the customer lands on the review step. Re-fetches if the
   // cart changes while they're on Step 4 (rare, but possible if they
-  // navigate back and forth).
+  // navigate back and forth), and also if the recipient name or grade
+  // changes — grade- and firstOrderOnly-scoped discounts (e.g. a
+  // Teacher/Admin staff discount) depend on both, so a stale preview
+  // from before the recipient step would otherwise never pick them up.
   useEffect(() => {
     if (step === 4) {
       void refreshDiscountPreview();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, selectedDeliveryDateId, cartItems]);
+  }, [step, selectedDeliveryDateId, cartItems, effectiveGrade, effectiveStudentName]);
 
   async function handleApplyCode() {
     const code = codeInput.trim();
@@ -500,12 +514,12 @@ export function OrderForm({
   async function handleSubmit() {
     setError("");
     if (!cartItems.length) { setError("Add at least one item to continue."); return; }
-    // For office self-orders, the recipient name mirrors the orderer's name.
-    // For school orders, grade is required and gets sent through; for office
-    // orders, grade is omitted and the server fills "—" so the non-null DB
-    // column stays clean without forcing a meaningless field on the form.
-    const effectiveStudentName = isOffice && orderForSelf ? parentName : studentName;
-    const effectiveGrade = labels.showGrade ? grade : "";
+    // effectiveStudentName/effectiveGrade (defined above, alongside the
+    // discount-preview state) mirror the office-self-order and
+    // grade-visibility rules — for office self-orders the recipient name
+    // mirrors the orderer's name, and grade is omitted where the location
+    // doesn't show it (the server fills "—" so the non-null DB column
+    // stays clean without forcing a meaningless field on the form).
     const payload = {
       parentName, parentEmail,
       schoolId: selectedDelivery?.school.id,

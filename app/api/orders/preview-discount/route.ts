@@ -30,6 +30,10 @@ const bodySchema = z.object({
    *  omit it — grade-scoped discounts won't preview as applied until
    *  a matching grade is selected, same as any other eligibility rule. */
   grade: z.string().optional(),
+  /** Recipient name as entered so far. Same "when known" caveat as
+   *  `grade` — used to preview `firstOrderOnly` eligibility per child
+   *  rather than per parent account (see lib/discounts.ts). */
+  studentName: z.string().optional(),
   /** Empty/whitespace code means "auto discounts only, no code".
    *  Non-empty means "auto + check this code". */
   code: z.string().optional(),
@@ -80,9 +84,12 @@ export async function POST(request: Request) {
   }));
 
   // Try to attribute the request to a signed-in parent so per-user
-  // redemption caps + firstOrderOnly checks work correctly. Guests
-  // (no session) just appear to have zero prior orders, which means
-  // welcome-offer discounts naturally apply.
+  // redemption caps on promo codes work correctly. Guests (no session)
+  // just appear to have made zero prior code redemptions, which is
+  // correct — per-user caps are keyed on the account, not the child.
+  // (firstOrderOnly welcome-offer eligibility is keyed on studentName +
+  // grade instead — see lib/discounts.ts — so it works the same for
+  // guests and signed-in parents alike.)
   const session = await auth();
   const parentUserId =
     session?.user?.role === "PARENT" ? session.user.parentUserId ?? null : null;
@@ -94,6 +101,7 @@ export async function POST(request: Request) {
       deliveryDate: deliveryDate.deliveryDate,
       parentUserId,
       grade: parsed.grade || null,
+      studentName: parsed.studentName || null,
       lines,
     },
     code: parsed.code,

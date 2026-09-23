@@ -51,6 +51,15 @@ export interface CartContext {
    *  the customer reaches the recipient step) or not applicable (OFFICE
    *  locations). Discounts scoped by `grades` reject when this is null. */
   grade?: string | null;
+  /** Recipient's name as entered on the order form (e.g. "Ava Chen").
+   *  Used together with `grade` to track `firstOrderOnly` eligibility
+   *  per child rather than per parent account/email — a new Student row
+   *  is created for every order (it's a per-order snapshot, not a
+   *  shared roster), and a parent can check out as a guest or under a
+   *  different email each time, so neither `parentUserId` nor a lookup
+   *  by student id can tell "has this child ordered before" reliably.
+   *  Matching is case-insensitive. Null when not yet known. */
+  studentName?: string | null;
   /** One entry per unit. Identical lines come through as N entries (the
    *  cart UI collapses them with qty steppers but the engine sees
    *  unit-level rows — same shape as the eventual OrderItem rows). */
@@ -131,16 +140,31 @@ export async function pickApplicableDiscounts(args: {
   const autos = activeDiscounts.filter((d) => d.code === null);
   const codedPool = activeDiscounts.filter((d) => d.code !== null);
 
-  // Pre-compute parent's prior order count once if anyone needs it
+  // Pre-compute the child's prior order count once if anyone needs it
   // (only firstOrderOnly discounts do, so skip the query if none).
+  //
+  // Tracked by (studentName, grade) rather than parentUserId/email: a new
+  // Student row is created per order (see createPendingOrder — it's a
+  // per-order snapshot, not a shared roster we could key on by id), and
+  // parents can check out as a guest or under a different account/email
+  // each time. Keying on parentUserId let the same family reset their
+  // "first order" eligibility just by checking out as a guest or signing
+  // in with a different email — this closes that gap, and also means a
+  // family with multiple kids correctly gets the welcome offer once per
+  // child instead of only for whichever child ordered first.
   const anyFirstOrder = activeDiscounts.some((d) => d.firstOrderOnly);
   let priorOrderCount = 0;
-  if (anyFirstOrder && cart.parentUserId) {
+  const studentNameKey = cart.studentName?.trim();
+  const gradeKey = cart.grade?.trim();
+  if (anyFirstOrder && studentNameKey && gradeKey) {
     priorOrderCount = await prisma.order.count({
       where: {
-        parentUserId: cart.parentUserId,
         restaurantId: cart.restaurantId,
         status: { in: ["PAID"] },
+        student: {
+          studentName: { equals: studentNameKey, mode: "insensitive" },
+          grade: { equals: gradeKey, mode: "insensitive" },
+        },
       },
     });
   }
