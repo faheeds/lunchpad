@@ -24,10 +24,18 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   // Always show plan options — active users can upgrade/downgrade themselves.
-  // Excludes the plan they're currently on (no point selling them what they have).
   const showUpgrade = subscriptionStatus !== "PAST_DUE";
-  const availablePlans = UPGRADE_PLANS.filter((p) => p.id !== currentPlan);
   const isActiveSubscriber = hasActiveSubscription && subscriptionStatus === "ACTIVE";
+  // Only hide the current plan from the list once they're actually paying for
+  // it — "switching to" the plan you're already subscribed to makes no sense.
+  // But a trial user hasn't paid for anything yet: currentPlan there is just
+  // the plan they'll land on when they subscribe, so it must stay selectable,
+  // or someone whose trial plan was Growth only ever sees Starter/Scale —
+  // an accidental downgrade or upsell with no way to just pay for what they
+  // were already trialing.
+  const availablePlans = isActiveSubscriber
+    ? UPGRADE_PLANS.filter((p) => p.id !== currentPlan)
+    : UPGRADE_PLANS;
 
   async function handleUpgrade(plan: string) {
     setLoading(true);
@@ -107,7 +115,7 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
         border: "1px solid #E3DBC6", boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
       }}>
         <p style={{ fontSize: 15, fontWeight: 700, color: "#211D15", marginBottom: 4 }}>
-          {isActiveSubscriber ? "Change your plan" : "Upgrade your plan"}
+          {isActiveSubscriber ? "Change your plan" : "Choose your plan"}
         </p>
         <p style={{ fontSize: 13, color: "#5B5446", marginBottom: 20 }}>
           {isActiveSubscriber
