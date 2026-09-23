@@ -35,76 +35,86 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid plan or price not configured." }, { status: 400 });
   }
 
-  const restaurant = await requireRestaurant();
-  const full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
-  if (!full) return NextResponse.json({ error: "Restaurant not found." }, { status: 404 });
+  // Everything below talks to Prisma and Stripe. Left unguarded, any thrown
+  // error (a Stripe API error, a DB hiccup, etc.) escapes to Next.js's default
+  // handler, which returns a bare 500 with no body — the client's `res.json()`
+  // then fails with "Unexpected end of JSON input" instead of showing the real
+  // error. Wrapping it ensures we always hand back valid JSON.
+  try {
+    const restaurant = await requireRestaurant();
+    const full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
+    if (!full) return NextResponse.json({ error: "Restaurant not found." }, { status: 404 });
 
-  // ── Plan switch path ────────────────────────────────────────────────────
-  // If the restaurant already has an active Stripe subscription, update the
-  // existing subscription's price item rather than creating a new subscription.
-  // Stripe handles proration automatically. This avoids double-charging the
-  // customer (which would happen if we created a parallel subscription).
-  if (full.stripeSubscriptionId && full.subscriptionStatus === "ACTIVE") {
-    try {
-      const existing = await stripe.subscriptions.retrieve(full.stripeSubscriptionId);
-      const itemId = existing.items.data[0]?.id;
-      if (!itemId) {
-        return NextResponse.json({ error: "Existing subscription has no items to update." }, { status: 500 });
+    // ── Plan switch path ────────────────────────────────────────────────────
+    // If the restaurant already has an active Stripe subscription, update the
+    // existing subscription's price item rather than creating a new subscription.
+    // Stripe handles proration automatically. This avoids double-charging the
+    // customer (which would happen if we created a parallel subscription).
+    if (full.stripeSubscriptionId && full.subscriptionStatus === "ACTIVE") {
+      try {
+        const existing = await stripe.subscriptions.retrieve(full.stripeSubscriptionId);
+        const itemId = existing.items.data[0]?.id;
+        if (!itemId) {
+          return NextResponse.json({ error: "Existing subscription has no items to update." }, { status: 500 });
+        }
+        await stripe.subscriptions.update(full.stripeSubscriptionId, {
+          items: [{ id: itemId, price: priceId }],
+          proration_behavior: "create_prorations",
+          metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
+        });
+        // Update Restaurant immediately — no webhook round-trip needed for in-place switch.
+        const oldPlan = full.plan;
+        await prisma.restaurant.update({
+          where: { id: full.id },
+          data: { plan: body.plan as "STARTER" | "GROWTH" | "SCALE" },
+        });
+        // Best-effort confirmation email with proration details. Never block on it.
+        sendSubscriptionChangedEmail(full.id, oldPlan, body.plan).catch(() => {});
+        // No Stripe Checkout redirect — return a direct URL the client navigates to.
+        return NextResponse.json({ url: `${env.APP_BASE_URL}/admin/subscription?success=1` });
+      } catch (err) {
+        // If the stored subscription ID is stale/cancelled in Stripe, fall through
+        // to the regular new-subscription path below.
+        const message = err instanceof Error ? err.message : "Subscription update failed.";
+        // Only fall through for "not found" errors; surface anything else.
+        if (!/No such subscription|resource_missing/i.test(message)) {
+          return NextResponse.json({ error: message }, { status: 400 });
+        }
+        // Fall through to checkout below.
       }
-      await stripe.subscriptions.update(full.stripeSubscriptionId, {
-        items: [{ id: itemId, price: priceId }],
-        proration_behavior: "create_prorations",
-        metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
+    }
+
+    // ── First-time / lapsed subscription path ───────────────────────────────
+    // Reuse or create Stripe customer
+    let customerId = full.stripeCustomerId ?? undefined;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: full.contactEmail ?? undefined,
+        name: full.name,
+        metadata: { restaurantId: full.id },
       });
-      // Update Restaurant immediately — no webhook round-trip needed for in-place switch.
-      const oldPlan = full.plan;
+      customerId = customer.id;
       await prisma.restaurant.update({
         where: { id: full.id },
-        data: { plan: body.plan as "STARTER" | "GROWTH" | "SCALE" },
+        data: { stripeCustomerId: customerId },
       });
-      // Best-effort confirmation email with proration details. Never block on it.
-      sendSubscriptionChangedEmail(full.id, oldPlan, body.plan).catch(() => {});
-      // No Stripe Checkout redirect — return a direct URL the client navigates to.
-      return NextResponse.json({ url: `${env.APP_BASE_URL}/admin/subscription?success=1` });
-    } catch (err) {
-      // If the stored subscription ID is stale/cancelled in Stripe, fall through
-      // to the regular new-subscription path below.
-      const message = err instanceof Error ? err.message : "Subscription update failed.";
-      // Only fall through for "not found" errors; surface anything else.
-      if (!/No such subscription|resource_missing/i.test(message)) {
-        return NextResponse.json({ error: message }, { status: 400 });
-      }
-      // Fall through to checkout below.
     }
-  }
 
-  // ── First-time / lapsed subscription path ───────────────────────────────
-  // Reuse or create Stripe customer
-  let customerId = full.stripeCustomerId ?? undefined;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: full.contactEmail ?? undefined,
-      name: full.name,
-      metadata: { restaurantId: full.id },
-    });
-    customerId = customer.id;
-    await prisma.restaurant.update({
-      where: { id: full.id },
-      data: { stripeCustomerId: customerId },
-    });
-  }
-
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${env.APP_BASE_URL}/admin/subscription?success=1`,
-    cancel_url: `${env.APP_BASE_URL}/admin/subscription`,
-    metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
-    subscription_data: {
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${env.APP_BASE_URL}/admin/subscription?success=1`,
+      cancel_url: `${env.APP_BASE_URL}/admin/subscription`,
       metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
-    },
-  });
+      subscription_data: {
+        metadata: { checkoutType: "subscription", restaurantId: full.id, plan: body.plan },
+      },
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to start checkout.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
