@@ -13,6 +13,7 @@ import { logActivity } from "@/lib/activity";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
 import { EmptyState } from "@/components/admin/empty-state";
+import { checkLimit, PlanLimitError } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,21 @@ async function inviteAdmin(formData: FormData) {
   });
   if (existing) {
     throw new Error(`${email} is already on the team.`);
+  }
+
+  // Plan-limit check: count existing seats (actual AdminUser rows — a
+  // pending invite doesn't consume a seat until accepted). Blocking here
+  // gives the inviter immediate feedback; accept-invite re-checks at the
+  // moment the seat is actually claimed, since multiple pending invites
+  // could otherwise all get accepted past the cap.
+  const currentSeatCount = await prisma.adminUser.count({
+    where: { restaurantId: restaurant.id },
+  });
+  try {
+    checkLimit(restaurant.plan, "teamSeats", currentSeatCount);
+  } catch (e) {
+    if (e instanceof PlanLimitError) throw new Error(e.message);
+    throw e;
   }
 
   // Invalidate any prior pending invites for the same email — only the

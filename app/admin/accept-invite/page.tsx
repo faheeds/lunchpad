@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { logActivity } from "@/lib/activity";
+import { checkLimit, PlanLimitError } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,28 @@ async function acceptInvite(formData: FormData) {
     redirect("/admin/login?invited=existing");
   }
 
+  // Final seat-cap guard — inviteAdmin already checked this when the invite
+  // was sent, but that was only a point-in-time snapshot: several invites
+  // could have been sent while there was room and now all be accepted
+  // around the same time. This is the moment the seat is actually claimed.
+  const restaurantForInvite = await prisma.restaurant.findUnique({
+    where: { id: invite.restaurantId },
+    select: { plan: true },
+  });
+  if (restaurantForInvite) {
+    const currentSeatCount = await prisma.adminUser.count({
+      where: { restaurantId: invite.restaurantId },
+    });
+    try {
+      checkLimit(restaurantForInvite.plan, "teamSeats", currentSeatCount);
+    } catch (e) {
+      if (e instanceof PlanLimitError) {
+        redirect(`/admin/accept-invite?token=${encodeURIComponent(token)}&error=seats_full`);
+      }
+      throw e;
+    }
+  }
+
   const passwordHash = await bcrypt.hash(password, 12);
 
   const newAdmin = await prisma.$transaction(async (tx) => {
@@ -109,6 +132,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   mismatch: "Passwords don't match.",
   name:     "Please enter your name.",
   invalid:  "This invite link has expired, was cancelled, or has already been used. Ask the inviter to send a new one.",
+  seats_full: "This team has reached its plan's seat limit. Ask an owner to upgrade the plan or remove an unused seat before you can join.",
 };
 
 export default async function AcceptInvitePage({

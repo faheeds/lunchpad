@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { resolveLineItemPrice } from "@/lib/pricing";
 import { getUpcomingOrderingWindowRange, getWeekdayNumber } from "@/lib/weekly-week";
+import { assertOrderCapacity } from "@/lib/orders";
 
 const WEEKDAY_LABELS: Record<number, string> = {
   1: "Monday",
@@ -72,6 +73,13 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
   if (!parent.weeklyPlans.length) {
     throw new Error("No active weekly lunch plans found.");
   }
+
+  // Same monthly order cap as a regular checkout — check before building
+  // out a multi-day batch. This is a soft check against the count as of
+  // right now (not reserving capacity for every day in the batch), same
+  // tolerance the discount engine below documents: a race past the cap
+  // is harmless and rare for a usage-based SaaS limit like this one.
+  await assertOrderCapacity(parent.weeklyPlans[0].school.restaurantId);
 
   const now = new Date();
   const primaryTimezone = parent.weeklyPlans[0]?.school.timezone ?? "America/Los_Angeles";
@@ -319,6 +327,11 @@ export async function createAdHocCheckoutBatch(
     throw new Error("Could not determine a single restaurant for this order.");
   }
   const restaurantId = [...restaurantIds][0];
+
+  // Same monthly order cap as a regular checkout — see the comment in
+  // createWeeklyCheckoutBatch above for why this is a soft, count-as-of-now
+  // check rather than reserving capacity for every item in the cart.
+  await assertOrderCapacity(restaurantId);
 
   // Verify every referenced child actually belongs to the authenticated
   // parent, not just that a parentChildId string was supplied. This is
