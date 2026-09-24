@@ -54,6 +54,9 @@ type WeeklyBatchCheckoutArgs = {
   /** Optional overrides so the redirect lands on the tenant subdomain. */
   successUrl?: string;
   cancelUrl?: string;
+  /** See discountCents on SharedCheckoutArgs. */
+  discountCents?: number;
+  discountLabel?: string;
 };
 
 async function createSession(args: SharedCheckoutArgs) {
@@ -105,10 +108,14 @@ async function createSession(args: SharedCheckoutArgs) {
     mode: "payment",
     customer_email: args.parentEmail,
     billing_address_collection: "required",
-    // `automatic_tax` and `discounts` interact: Stripe requires
-    // `customer_update` to be allow-listed when both are on. Keep tax off
-    // for Connect (already the policy) so the combination stays simple.
-    automatic_tax: { enabled: !args.stripeAccountId }, // tax only on direct charges; skip for Connect
+    // Automatic tax is enabled for every order, including Connect
+    // (destination-charge) orders — LunchPad's platform Stripe account is
+    // the merchant of record for Stripe Tax purposes here, so tax is
+    // calculated the same way regardless of payout routing. (Previously
+    // this was disabled for Connect orders, which meant tax silently
+    // never applied for any restaurant that had completed Connect
+    // onboarding — effectively all of them.)
+    automatic_tax: { enabled: true },
     success_url: args.successUrl,
     cancel_url: args.cancelUrl,
     metadata: {
@@ -157,6 +164,8 @@ export async function createWeeklyStripeCheckoutSession(args: WeeklyBatchCheckou
     },
     lineItems: args.lineItems,
     stripeAccountId: args.stripeAccountId,
+    discountCents: args.discountCents,
+    discountLabel: args.discountLabel,
   });
 }
 
