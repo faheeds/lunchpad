@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createWeeklyStripeCheckoutSession } from "@/lib/payments/checkout";
-import { createWeeklyCheckoutBatch } from "@/lib/weekly-checkout";
+import { createWeeklyCheckoutBatch, computeBatchDiscountLabel } from "@/lib/weekly-checkout";
 import { assertParentApiRequest } from "@/lib/parent-auth";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
 import { logInfo, logWarn, logException } from "@/lib/log";
@@ -21,14 +21,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const batch = await createWeeklyCheckoutBatch(parentUserId);
+    const body = await request.json().catch(() => ({}));
+    const code = typeof body?.code === "string" ? body.code : undefined;
+    const batch = await createWeeklyCheckoutBatch(parentUserId, code);
 
     logInfo("weekly_checkout_batch_created", {
       parentUserId,
       restaurantId: batch.restaurantId,
       batchId: batch.id,
       itemCount: batch.items.length,
+      discountCents: batch.discountCents,
     });
+
+    const discountLabel = await computeBatchDiscountLabel(batch.items);
 
     // Look up the restaurant's Stripe Connect account for payment routing
     const restaurantStripe = await prisma.restaurant.findUnique({
@@ -54,6 +59,8 @@ export async function POST(request: Request) {
         description: `${item.deliveryDate.school.name} - ${item.deliveryDate.deliveryDate.toISOString().slice(0, 10)}`,
         amountCents: item.lineTotalCents,
       })),
+      discountCents: batch.discountCents,
+      discountLabel,
     });
 
     await prisma.weeklyCheckoutBatch.update({

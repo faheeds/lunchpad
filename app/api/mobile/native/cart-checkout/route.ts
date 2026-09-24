@@ -25,6 +25,8 @@
  *     additions?: string[]
  *     removals?: string[]
  *   }[]
+ *   code?: string   // optional promo code; auto-discounts (welcome offer,
+ *                   // Teacher/Admin, etc.) apply regardless of this field
  * }
  *
  * Response: { checkoutUrl: string, batchId: string, totalCents: number }
@@ -34,7 +36,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
 import { createWeeklyStripeCheckoutSession } from "@/lib/payments/checkout";
-import { createAdHocCheckoutBatch } from "@/lib/weekly-checkout";
+import { createAdHocCheckoutBatch, computeBatchDiscountLabel } from "@/lib/weekly-checkout";
 import { requireMobileAuth, CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
 import { logInfo, logWarn, logException } from "@/lib/log";
 
@@ -75,14 +77,18 @@ export async function POST(request: NextRequest) {
       removals: Array.isArray(item.removals) ? item.removals.map(String) : [],
     }));
 
-    const batch = await createAdHocCheckoutBatch(auth.parentUserId, cartItems);
+    const code = typeof body?.code === "string" ? body.code : undefined;
+    const batch = await createAdHocCheckoutBatch(auth.parentUserId, cartItems, code);
 
     logInfo("mobile_cart_checkout_batch_created", {
       parentUserId: auth.parentUserId,
       restaurantId: batch.restaurantId,
       batchId: batch.id,
       itemCount: batch.items.length,
+      discountCents: batch.discountCents,
     });
+
+    const discountLabel = await computeBatchDiscountLabel(batch.items);
 
     const restaurantStripe = await prisma.restaurant.findUnique({
       where: { id: batch.restaurantId },
@@ -115,6 +121,8 @@ export async function POST(request: NextRequest) {
           .slice(0, 10)}`,
         amountCents: item.lineTotalCents,
       })),
+      discountCents: batch.discountCents,
+      discountLabel,
     });
 
     await prisma.weeklyCheckoutBatch.update({

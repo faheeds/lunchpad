@@ -521,6 +521,11 @@ model WeeklyCheckoutBatch {
   status            WeeklyCheckoutStatus @default(PENDING)
   checkoutSessionId String?              @unique
   paymentIntentId   String?              @unique
+  // Gross, pre-discount sum of item lineTotalCents. totalCents (below)
+  // is what's actually charged — subtotalCents minus discountCents —
+  // same subtotal/discount/total split the Order model already uses.
+  subtotalCents     Int                  @default(0)
+  discountCents     Int                  @default(0)
   totalCents        Int
   paidAt            DateTime?
   createdAt         DateTime             @default(now())
@@ -544,6 +549,15 @@ model WeeklyCheckoutBatchItem {
   itemNameSnapshot      String
   basePriceCents        Int
   lineTotalCents        Int
+  // Discount evaluated for THIS item at batch-creation time, scored
+  // per-child (studentName + grade), same as the single-order flow —
+  // eligibility (e.g. firstOrderOnly) genuinely differs child to child
+  // within one cart, so it can't be computed once for the whole batch.
+  // Null discountId = no discount applied to this item. Kept even after
+  // payment so markWeeklyBatchPaidByCheckoutSession can create the
+  // matching DiscountRedemption against the Order this item becomes.
+  discountId            String?
+  discountCents         Int                 @default(0)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   weeklyCheckoutBatch   WeeklyCheckoutBatch @relation(fields: [weeklyCheckoutBatchId], references: [id], onDelete: Cascade)
@@ -551,6 +565,9 @@ model WeeklyCheckoutBatchItem {
   school                School              @relation(fields: [schoolId], references: [id], onDelete: Restrict)
   deliveryDate          DeliveryDate        @relation(fields: [deliveryDateId], references: [id], onDelete: Restrict)
   menuItem              MenuItem            @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  discount              Discount?           @relation(fields: [discountId], references: [id], onDelete: SetNull)
+
+  @@index([discountId])
 }
 
 // ─── ORDERS ───────────────────────────────────────────────────────────────────
@@ -843,6 +860,7 @@ model Discount {
 
   restaurant            Restaurant          @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   redemptions           DiscountRedemption[]
+  weeklyCheckoutBatchItems WeeklyCheckoutBatchItem[]
 
   // Code must be unique per tenant when present (null codes can repeat —
   // multiple automatic discounts coexist). Postgres treats NULL as distinct
