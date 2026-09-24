@@ -5,6 +5,57 @@ import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { resolveLineItemPrice } from "@/lib/pricing";
 import { getUpcomingOrderingWindowRange, getWeekdayNumber } from "@/lib/weekly-week";
 import { assertOrderCapacity } from "@/lib/orders";
+import { pickApplicableDiscounts } from "@/lib/discounts";
+import { logActivity } from "@/lib/activity";
+import { formatCurrency } from "@/lib/utils";
+
+/**
+ * Scores one batch item's discount independently of every other item in
+ * the same batch — eligibility (most importantly firstOrderOnly) is
+ * evaluated per child (studentName + grade), so two kids in the same
+ * cart can legitimately get different discounts, or one can qualify for
+ * the welcome offer while a sibling doesn't. This mirrors exactly what
+ * lib/orders.ts's createPendingOrder already does for a single-item
+ * checkout — this is that same call, just made once per batch item.
+ *
+ * NOTE: a promo `code` with maxRedemptionsPerUser is checked against
+ * already-persisted redemptions, so two items in the SAME batch can
+ * both win the same limited code (its redemption rows don't exist yet
+ * to count against each other) — same accepted race class the capacity
+ * check above already documents; a real-world code should rarely have
+ * enough volume in one cart for this to matter.
+ */
+async function scoreItemDiscount(args: {
+  restaurantId: string;
+  schoolId: string;
+  deliveryDate: Date;
+  parentUserId: string;
+  studentName: string;
+  grade: string | null;
+  menuItemId: string;
+  category: string | null;
+  lineTotalCents: number;
+  code?: string | null;
+}) {
+  const result = await pickApplicableDiscounts({
+    cart: {
+      restaurantId: args.restaurantId,
+      schoolId: args.schoolId,
+      deliveryDate: args.deliveryDate,
+      parentUserId: args.parentUserId,
+      grade: args.grade,
+      studentName: args.studentName,
+      lines: [{ menuItemId: args.menuItemId, category: args.category, lineTotalCents: args.lineTotalCents }],
+    },
+    code: args.code,
+  });
+  const winning = result.code ?? result.auto;
+  return {
+    discountId: winning?.discount.id ?? null,
+    discountCents: winning?.amountCents ?? 0,
+    discountName: winning?.discount.name ?? null,
+  };
+}
 
 const WEEKDAY_LABELS: Record<number, string> = {
   1: "Monday",
@@ -20,27 +71,42 @@ function buildOrderNumber(timezone: string) {
   return `SL-${formatInTimeZone(new Date(), timezone, "yyyyMMdd")}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
-function distributeExtraCents(baseAmounts: number[], totalWithExtra: number) {
+/**
+ * Proportionally reallocates each item's share of the ACTUAL amount
+ * Stripe charged (amountTotalCents from the webhook) against each
+ * item's raw (gross, pre-discount) lineTotalCents, so every Order's
+ * totalCents adds up to exactly what was paid.
+ *
+ * Renamed from the old distributeExtraCents, which only handled the
+ * actual total being >= the raw subtotal (i.e. only ever added tax on
+ * top) and silently returned the untouched gross amounts whenever the
+ * actual total came in lower — which is exactly what happens whenever a
+ * discount applies (actual = gross - discount + tax, and a typical
+ * discount is bigger than tax). That meant a paid Order's totalCents
+ * could show the full undiscounted price even though the customer paid
+ * less. This version scales correctly either direction; the last item
+ * still absorbs the rounding remainder so the sum matches exactly.
+ */
+function allocateActualTotal(baseAmounts: number[], actualTotalCents: number) {
   const subtotal = baseAmounts.reduce((sum, value) => sum + value, 0);
-  if (!subtotal || totalWithExtra <= subtotal) {
+  if (!subtotal || actualTotalCents === subtotal) {
     return [...baseAmounts];
   }
 
-  const extra = totalWithExtra - subtotal;
-  let remainingExtra = extra;
+  let remaining = actualTotalCents;
 
   return baseAmounts.map((amount, index) => {
     if (index === baseAmounts.length - 1) {
-      return amount + remainingExtra;
+      return remaining;
     }
 
-    const allocated = Math.floor((extra * amount) / subtotal);
-    remainingExtra -= allocated;
-    return amount + allocated;
+    const share = Math.round((actualTotalCents * amount) / subtotal);
+    remaining -= share;
+    return share;
   });
 }
 
-export async function createWeeklyCheckoutBatch(parentUserId: string) {
+export async function createWeeklyCheckoutBatch(parentUserId: string, code?: string | null) {
   const parent = await prisma.parentUser.findUnique({
     where: { id: parentUserId },
     include: {
@@ -120,9 +186,22 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
     throw new Error("Ordering has closed for every delivery date in the upcoming lunch week.");
   }
 
+  // Derive restaurantId from the first school on the plan (all plans for one
+  // parent within a weekly checkout belong to one restaurant). Needed up
+  // front now, not just for the final create — each item's discount score
+  // below requires it.
+  const firstSchool = eligibleDeliveryDates[0]?.school;
+  const restaurantId = firstSchool
+    ? (await prisma.school.findUnique({ where: { id: firstSchool.id }, select: { restaurantId: true } }))?.restaurantId
+    : null;
+
+  if (!restaurantId) {
+    throw new Error("Could not determine restaurant for weekly checkout.");
+  }
+
   const skippedItems: string[] = [];
 
-  const batchItems = parent.weeklyPlans.flatMap((plan) => {
+  const batchItemGroups = await Promise.all(parent.weeklyPlans.map(async (plan) => {
     const weekdayLabel = WEEKDAY_LABELS[plan.weekday] ?? `Day ${plan.weekday}`;
     const matchingDeliveryDate = eligibleDeliveryDates.find(
       (deliveryDate) =>
@@ -187,6 +266,19 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
       ),
     });
 
+    const { discountId, discountCents } = await scoreItemDiscount({
+      restaurantId,
+      schoolId: plan.schoolId,
+      deliveryDate: matchingDeliveryDate.deliveryDate,
+      parentUserId,
+      studentName: plan.parentChild.studentName,
+      grade: plan.parentChild.grade ?? null,
+      menuItemId: plan.menuItemId,
+      category: plan.menuItem.category ?? null,
+      lineTotalCents,
+      code,
+    });
+
     return [
       {
         parentChildId: plan.parentChildId,
@@ -199,10 +291,14 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
         removals: plan.removals,
         itemNameSnapshot: plan.menuItem.name,
         basePriceCents: resolvedBaseCents,
-        lineTotalCents
+        lineTotalCents,
+        discountId,
+        discountCents
       }
     ];
-  });
+  }));
+
+  const batchItems = batchItemGroups.flat();
 
   if (skippedItems.length) {
     throw new Error(`Weekly checkout could not continue. ${skippedItems.join(" ")}`);
@@ -212,23 +308,16 @@ export async function createWeeklyCheckoutBatch(parentUserId: string) {
     throw new Error("No delivery dates in the upcoming lunch week matched the planned items.");
   }
 
-  const totalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
-
-  // Derive restaurantId from the first school on the plan (all plans for one
-  // parent within a weekly checkout belong to one restaurant).
-  const firstSchool = eligibleDeliveryDates[0]?.school;
-  const restaurantId = firstSchool
-    ? (await prisma.school.findUnique({ where: { id: firstSchool.id }, select: { restaurantId: true } }))?.restaurantId
-    : null;
-
-  if (!restaurantId) {
-    throw new Error("Could not determine restaurant for weekly checkout.");
-  }
+  const subtotalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
+  const discountCents = batchItems.reduce((sum, item) => sum + item.discountCents, 0);
+  const totalCents = Math.max(0, subtotalCents - discountCents);
 
   return prisma.weeklyCheckoutBatch.create({
     data: {
       parentUserId,
       restaurantId,
+      subtotalCents,
+      discountCents,
       totalCents,
       items: {
         create: batchItems
@@ -284,7 +373,8 @@ export async function createAdHocCheckoutBatch(
     size?: string | null;
     additions: string[];
     removals: string[];
-  }[]
+  }[],
+  code?: string | null
 ) {
   if (!cartItems.length) {
     throw new Error("Cart is empty.");
@@ -350,7 +440,7 @@ export async function createAdHocCheckoutBatch(
 
   const skippedItems: string[] = [];
 
-  const batchItems = cartItems.flatMap((cartItem) => {
+  const batchItemGroups = await Promise.all(cartItems.map(async (cartItem) => {
     const child = childById.get(cartItem.parentChildId)!;
     const deliveryDate = deliveryDateById.get(cartItem.deliveryDateId)!;
 
@@ -400,6 +490,19 @@ export async function createAdHocCheckoutBatch(
       )
     });
 
+    const { discountId, discountCents } = await scoreItemDiscount({
+      restaurantId,
+      schoolId: deliveryDate.schoolId,
+      deliveryDate: deliveryDate.deliveryDate,
+      parentUserId,
+      studentName: child.studentName,
+      grade: child.grade ?? null,
+      menuItemId: cartItem.menuItemId,
+      category: menuItem.category ?? null,
+      lineTotalCents,
+      code,
+    });
+
     return [
       {
         parentChildId: cartItem.parentChildId,
@@ -412,21 +515,29 @@ export async function createAdHocCheckoutBatch(
         removals: cartItem.removals,
         itemNameSnapshot: menuItem.name,
         basePriceCents: resolvedBaseCents,
-        lineTotalCents
+        lineTotalCents,
+        discountId,
+        discountCents
       }
     ];
-  });
+  }));
+
+  const batchItems = batchItemGroups.flat();
 
   if (skippedItems.length) {
     throw new Error(`Checkout could not continue. ${skippedItems.join(" ")}`);
   }
 
-  const totalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
+  const subtotalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
+  const discountCents = batchItems.reduce((sum, item) => sum + item.discountCents, 0);
+  const totalCents = Math.max(0, subtotalCents - discountCents);
 
   return prisma.weeklyCheckoutBatch.create({
     data: {
       parentUserId,
       restaurantId,
+      subtotalCents,
+      discountCents,
       totalCents,
       items: { create: batchItems }
     },
@@ -442,12 +553,38 @@ export async function createAdHocCheckoutBatch(
   });
 }
 
+/**
+ * Stripe Checkout only supports one session-level coupon, but different
+ * children in a batch can independently win different discounts
+ * (eligibility is scored per child in createWeeklyCheckoutBatch /
+ * createAdHocCheckoutBatch above). When every item that got a discount
+ * won the SAME one, use its real name on the Stripe page/receipt;
+ * otherwise fall back to a generic label rather than picking one
+ * arbitrarily. Shared by all three checkout-session callers (web + mobile
+ * weekly-plan checkout, mobile ad-hoc cart checkout) so the same rule
+ * applies everywhere.
+ */
+export async function computeBatchDiscountLabel(
+  items: { discountId: string | null }[]
+): Promise<string | undefined> {
+  const distinctDiscountIds = [...new Set(items.map((item) => item.discountId).filter((id): id is string => Boolean(id)))];
+  if (distinctDiscountIds.length === 0) return undefined;
+  if (distinctDiscountIds.length > 1) return "Discounts";
+  const discount = await prisma.discount.findUnique({
+    where: { id: distinctDiscountIds[0] },
+    select: { name: true },
+  });
+  return discount?.name;
+}
+
 export async function markWeeklyBatchPaidByCheckoutSession(
   sessionId: string,
   paymentIntentId?: string | null,
   amountTotalCents?: number | null
 ) {
-  return prisma.$transaction(async (tx) => {
+  const redemptionsToLog: { discountName: string; amountCents: number; orderId: string; orderNumber: string }[] = [];
+
+  const result = await prisma.$transaction(async (tx) => {
     const batch = await tx.weeklyCheckoutBatch.findFirst({
       where: { checkoutSessionId: sessionId },
       include: {
@@ -456,7 +593,8 @@ export async function markWeeklyBatchPaidByCheckoutSession(
           include: {
             parentChild: true,
             school: true,
-            deliveryDate: { include: { school: true } }
+            deliveryDate: { include: { school: true } },
+            discount: { select: { id: true, name: true } }
           }
         }
       }
@@ -470,7 +608,7 @@ export async function markWeeklyBatchPaidByCheckoutSession(
       return { batch, createdOrderIds: [] as string[] };
     }
 
-    const allocatedTotals = distributeExtraCents(
+    const allocatedTotals = allocateActualTotal(
       batch.items.map((item) => item.lineTotalCents),
       amountTotalCents ?? batch.totalCents
     );
@@ -503,6 +641,7 @@ export async function markWeeklyBatchPaidByCheckoutSession(
           parentName: batch.parentUser.name || batch.parentUser.email,
           parentEmail: batch.parentUser.email,
           subtotalCents: item.lineTotalCents,
+          discountCents: item.discountCents,
           totalCents: allocatedTotals[index],
           status: OrderStatus.PAID,
           paidAt,
@@ -530,6 +669,36 @@ export async function markWeeklyBatchPaidByCheckoutSession(
         }
       });
       createdOrderIds.push(order.id);
+
+      // Same redemption-ledger pattern as lib/orders.ts's createPendingOrder:
+      // one DiscountRedemption per Order, inside the same transaction so the
+      // Order's discountCents and the ledger never disagree, plus bumping
+      // the discount's usage counter. The discount decision itself was
+      // already made per-item at batch-creation time (createAdHocCheckoutBatch
+      // / createWeeklyCheckoutBatch) — this just records it now that the
+      // item has become a real Order.
+      if (item.discountId && item.discountCents > 0) {
+        await tx.discountRedemption.create({
+          data: {
+            discountId: item.discountId,
+            orderId: order.id,
+            parentUserId: batch.parentUserId,
+            amountCents: item.discountCents
+          }
+        });
+        await tx.discount.update({
+          where: { id: item.discountId },
+          data: { currentRedemptions: { increment: 1 } }
+        });
+        if (item.discount) {
+          redemptionsToLog.push({
+            discountName: item.discount.name,
+            amountCents: item.discountCents,
+            orderId: order.id,
+            orderNumber: order.orderNumber
+          });
+        }
+      }
     }
 
     const updatedBatch = await tx.weeklyCheckoutBatch.update({
@@ -557,4 +726,22 @@ export async function markWeeklyBatchPaidByCheckoutSession(
 
     return { batch: updatedBatch, createdOrderIds };
   });
+
+  // Best-effort activity-log entries, same as lib/orders.ts — failure here
+  // doesn't roll back the already-committed orders/redemptions above.
+  for (const redemption of redemptionsToLog) {
+    await logActivity({
+      restaurantId: result.batch.restaurantId,
+      parentUserId: result.batch.parentUserId,
+      entityType: "ORDER",
+      entityId: redemption.orderId,
+      action: "DISCOUNT_APPLIED",
+      summary: `${redemption.discountName} applied to order ${redemption.orderNumber} — saved ${formatCurrency(redemption.amountCents)}`,
+      metadata: {
+        amountCents: redemption.amountCents
+      }
+    }).catch(() => {});
+  }
+
+  return result;
 }

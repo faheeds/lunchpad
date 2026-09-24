@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
 import { createWeeklyStripeCheckoutSession } from "@/lib/payments/checkout";
-import { createWeeklyCheckoutBatch } from "@/lib/weekly-checkout";
+import { createWeeklyCheckoutBatch, computeBatchDiscountLabel } from "@/lib/weekly-checkout";
 import { requireMobileAuth, CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
 import { logInfo, logWarn, logException } from "@/lib/log";
 
@@ -35,14 +35,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const batch = await createWeeklyCheckoutBatch(auth.parentUserId);
+    const body = await request.json().catch(() => ({}));
+    const code = typeof body?.code === "string" ? body.code : undefined;
+    const batch = await createWeeklyCheckoutBatch(auth.parentUserId, code);
 
     logInfo("mobile_weekly_checkout_batch_created", {
       parentUserId: auth.parentUserId,
       restaurantId: batch.restaurantId,
       batchId: batch.id,
       itemCount: batch.items.length,
+      discountCents: batch.discountCents,
     });
+
+    const discountLabel = await computeBatchDiscountLabel(batch.items);
 
     // Stripe Connect — route the payment to the restaurant's connected
     // account if onboarded; otherwise the platform collects.
@@ -82,6 +87,8 @@ export async function POST(request: NextRequest) {
           .slice(0, 10)}`,
         amountCents: item.lineTotalCents,
       })),
+      discountCents: batch.discountCents,
+      discountLabel,
     });
 
     await prisma.weeklyCheckoutBatch.update({

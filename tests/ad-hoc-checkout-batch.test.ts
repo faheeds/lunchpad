@@ -8,6 +8,8 @@ const {
   weeklyCheckoutBatchCreateMock,
   restaurantFindUniqueMock,
   orderCountMock,
+  discountFindManyMock,
+  discountRedemptionGroupByMock,
 } = vi.hoisted(() => ({
   deliveryDateFindManyMock: vi.fn(),
   schoolFindManyMock: vi.fn(),
@@ -15,6 +17,8 @@ const {
   weeklyCheckoutBatchCreateMock: vi.fn(),
   restaurantFindUniqueMock: vi.fn(),
   orderCountMock: vi.fn(),
+  discountFindManyMock: vi.fn(),
+  discountRedemptionGroupByMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -28,6 +32,12 @@ vi.mock("@/lib/db", () => ({
     // with plenty of headroom so existing tests don't need to know about it.
     restaurant: { findUnique: restaurantFindUniqueMock },
     order: { count: orderCountMock },
+    // The discount engine (lib/discounts.ts) now runs per-item inside
+    // createAdHocCheckoutBatch. Default to "no active discounts" so
+    // these existing tests, which aren't about discounts, see the exact
+    // same pre-discount-engine behavior (discountId: null, discountCents: 0).
+    discount: { findMany: discountFindManyMock },
+    discountRedemption: { groupBy: discountRedemptionGroupByMock },
   },
 }));
 
@@ -95,6 +105,11 @@ beforeEach(() => {
   weeklyCheckoutBatchCreateMock.mockReset();
   restaurantFindUniqueMock.mockReset();
   orderCountMock.mockReset();
+  discountFindManyMock.mockReset();
+  discountRedemptionGroupByMock.mockReset();
+
+  discountFindManyMock.mockResolvedValue([]);
+  discountRedemptionGroupByMock.mockResolvedValue([]);
 
   deliveryDateFindManyMock.mockResolvedValue([buildDeliveryDate()]);
   schoolFindManyMock.mockResolvedValue([{ id: "school-redmond", restaurantId: "restaurant-1" }]);
