@@ -122,6 +122,7 @@ async function updateMenuItem(formData: FormData) {
   const description = String(formData.get("description") || "").trim() || null;
   const imageUrl = String(formData.get("imageUrl") || "").trim() || null;
   const isActive = formData.get("isActive") === "on";
+  const isUpsell = formData.get("isUpsell") === "on";
 
   const tagsRaw = String(formData.get("dietaryTags") || "");
   const dietaryTags = tagsRaw.split(",").map((s) => s.trim()).filter(Boolean);
@@ -175,6 +176,7 @@ async function updateMenuItem(formData: FormData) {
         description,
         imageUrl,
         isActive,
+        isUpsell,
         dietaryTags,
         category,
         requiredChoices,
@@ -510,6 +512,18 @@ export default async function AdminMenuPage() {
                             className="rounded border-editorial-line text-editorial-green focus:ring-editorial-green"
                           />
                           <span className="text-[12px] text-editorial-ink">Available to order</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer w-fit">
+                          <input
+                            type="checkbox"
+                            name="isUpsell"
+                            defaultChecked={item.isUpsell}
+                            className="rounded border-editorial-line text-editorial-green focus:ring-editorial-green"
+                          />
+                          <span className="text-[12px] text-editorial-ink">
+                            Show in cart upsell
+                            <span className="text-editorial-ink-faint"> (only works for simple items -- no sizes or required choices)</span>
+                          </span>
                         </label>
                       </div>
                     </div>

@@ -348,6 +348,11 @@ model MenuItem {
   // hardcoded map (see lib/menu-config.ts) for backward compatibility.
   requiredChoices     String[]           @default([])
   sortOrder           Int                @default(0)
+  // When true, this item is eligible for the iOS cart's one-tap "Add a
+  // little something?" upsell rail (lunchpad-ios app/(app)/cart.tsx).
+  // Only items with no requiredChoices and no sizes are actually shown
+  // there, since a one-tap add has nowhere to resolve a picker.
+  isUpsell            Boolean            @default(false)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   restaurant          Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
