@@ -110,6 +110,8 @@ export async function GET() {
           category: e.menuItem.category,
           imageUrl: e.menuItem.imageUrl,
           basePriceCents: e.menuItem.basePriceCents,
+          // Drives the cart's one-tap upsell rail -- see cart.tsx on iOS.
+          isUpsell: e.menuItem.isUpsell,
           // Pick-one selections the customer MUST resolve before adding
           // to cart (e.g. Beef / Chicken / Vegan). Empty array = no
           // required choice — the iOS order modal renders a picker
