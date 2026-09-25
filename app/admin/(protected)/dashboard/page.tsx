@@ -7,6 +7,7 @@ import Link from "next/link";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { HomeNudges, type Nudge } from "@/components/admin/home-nudges";
 import { SampleDataBanner } from "@/components/admin/sample-data-banner";
+import { AccessDeniedBanner } from "@/components/admin/access-denied-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -256,6 +257,9 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="bg-editorial-paper min-h-screen space-y-5 pb-10">
+
+      {/* ── Access-denied banner (client reads ?denied=1 itself) ───── */}
+      <AccessDeniedBanner />
 
       {/* ── Ordering URL hero card ────────────────────────────────── */}
       <div className="bg-white border border-editorial-line rounded-[16px] p-5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">

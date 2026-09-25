@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
+import type { AdminRole } from "@/lib/roles";
 import { MfaEnroll } from "@/components/admin/mfa-enroll";
 import { MfaManage } from "@/components/admin/mfa-manage";
 
@@ -65,7 +66,11 @@ export default async function MfaSettingsPage() {
 
   return (
     <div className="space-y-5 pb-10 bg-editorial-paper min-h-screen">
-      <SettingsTabs />
+      {/* This page itself is open to any admin role (everyone manages their
+          own 2FA), but the shared tab bar should still only show tabs this
+          admin's role can actually use -- pass their real role rather than
+          hardcoding OWNER. */}
+      <SettingsTabs adminRole={admin.role as AdminRole} />
 
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-editorial-ink-faint mb-1">

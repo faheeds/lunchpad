@@ -421,8 +421,9 @@ export default async function AdminTeamPage() {
   return (
     <div className="space-y-5 pb-10 bg-editorial-paper min-h-screen">
 
-      {/* Settings tab bar — Team is now a sub-tab of Settings. */}
-      <SettingsTabs />
+      {/* Settings tab bar — Team is rendered under the same umbrella, but
+          unlike the other tabs it's reachable by MANAGER too. */}
+      <SettingsTabs adminRole={currentAdminRole ?? "MANAGER"} />
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div>
