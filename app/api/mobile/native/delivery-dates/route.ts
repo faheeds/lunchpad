@@ -112,6 +112,11 @@ export async function GET() {
           basePriceCents: e.menuItem.basePriceCents,
           // Drives the cart's one-tap upsell rail -- see cart.tsx on iOS.
           isUpsell: e.menuItem.isUpsell,
+          // Operator-curated pick for photo carousels (web homepage grid
+          // AND the iOS home screen's hero carousel -- see heroCarousel.ts
+          // on iOS). sortOrder controls ordering among featured items only.
+          featuredOnLanding: e.menuItem.featuredOnLanding,
+          sortOrder: e.menuItem.sortOrder,
           // Pick-one selections the customer MUST resolve before adding
           // to cart (e.g. Beef / Chicken / Vegan). Empty array = no
           // required choice — the iOS order modal renders a picker
