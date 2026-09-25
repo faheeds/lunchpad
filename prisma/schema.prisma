@@ -99,7 +99,8 @@ model Restaurant {
   stripeCustomerId         String?            @unique
   stripeSubscriptionId     String?            @unique
 
-  // Kitchen sheet automation (0–23 = UTC hour to send; null = disabled)
+  // Kitchen sheet automation (0–23 = hour to send, in the restaurant's own
+  // local timezone per school — see Settings > Notifications; null = disabled)
   kitchenSheetSendHour     Int?
 
   // Onboarding wizard state. Most steps detect completion from existing
@@ -310,6 +311,10 @@ model DeliveryDate {
   // by the cancelDeliveryDate server action before this is set.
   cancelledAt         DateTime?
   cancelledReason     String?
+  // Dedup guard for the hourly kitchen-sheet cron (api/cron/kitchen-sheets) —
+  // set right before the email send so an overlapping/retried cron run
+  // within the same hour never re-sends the same prep sheet.
+  kitchenSheetSentAt  DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   school              School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
