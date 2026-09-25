@@ -20,9 +20,15 @@ export default async function HomePage() {
 
     const itemsWithPhotos = await prisma.menuItem.findMany({
       where: { restaurantId: restaurant.id, isActive: true, imageUrl: { not: null } },
-      select: { name: true, imageUrl: true },
+      select: { name: true, imageUrl: true, featuredOnLanding: true, sortOrder: true },
       orderBy: { name: "asc" },
     });
+
+    // Operator-curated selection takes priority — see MenuItem.featuredOnLanding
+    // in the schema. Only fall back to the old keyword auto-pick when no
+    // items have been explicitly flagged, so existing tenants aren't
+    // affected until they opt in from the admin menu editor.
+    const featured = itemsWithPhotos.filter((i) => i.featuredOnLanding);
 
     const pick = (keywords: string[]) =>
       itemsWithPhotos.find((i) => keywords.some((k) => i.name.toLowerCase().includes(k)));
@@ -36,7 +42,13 @@ export default async function HomePage() {
 
     const pinnedNames = new Set(pinned.map((i) => i.name));
     const rest = itemsWithPhotos.filter((i) => !pinnedNames.has(i.name));
-    const menuGridItems = [...pinned, ...rest].map((i) => ({ src: i.imageUrl!, alt: i.name }));
+
+    const orderedItems =
+      featured.length > 0
+        ? [...featured].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+        : [...pinned, ...rest];
+
+    const menuGridItems = orderedItems.map((i) => ({ src: i.imageUrl!, alt: i.name }));
 
     // Hero image: restaurant upload → first menu photo → gradient fallback
     const heroSrc = restaurant.heroImageUrl ?? (itemsWithPhotos[0]?.imageUrl ?? null);

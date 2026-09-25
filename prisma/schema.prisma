@@ -353,6 +353,13 @@ model MenuItem {
   // Only items with no requiredChoices and no sizes are actually shown
   // there, since a one-tap add has nowhere to resolve a picker.
   isUpsell            Boolean            @default(false)
+  // When true, this item is eligible for the storefront homepage's "This
+  // Week's Menu" grid/carousel (app/page.tsx). Operators opt items in
+  // explicitly from the admin menu editor, ordered by sortOrder then
+  // name. When no items are flagged, the homepage falls back to its
+  // original keyword-based auto-pick (burger/salad/chicken/mac & cheese)
+  // so existing tenants keep working with zero setup.
+  featuredOnLanding   Boolean            @default(false)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   restaurant          Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
