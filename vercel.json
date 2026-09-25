@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/kitchen-sheet",
+      "schedule": "0 11 * * *"
+    },
+    {
       "path": "/api/cron/cutoff-reminder",
       "schedule": "0 11 * * *"
     },

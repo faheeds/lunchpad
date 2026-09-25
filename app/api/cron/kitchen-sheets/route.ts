@@ -1,36 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendKitchenPrepEmail } from "@/lib/email/service";
 import { formatInTimeZone } from "date-fns-tz";
-import { env } from "@/lib/env";
-
-export const runtime = "nodejs";
 
 /**
  * GET /api/cron/kitchen-sheets
- * NOT wired into vercel.json -- Vercel's cron jobs on our current plan can
- * only fire once a day, and this needs to check every restaurant's chosen
- * send hour every hour. Call this from an external scheduler instead (e.g.
- * cron-job.org) hitting this URL once per hour with ?secret=$CRON_SECRET.
- * (If we ever upgrade to a Vercel plan that allows sub-daily cron
- * schedules, this can move to vercel.json with "0 * * * *" -- swap this
- * back to the Authorization: Bearer check other cron routes use.)
- *
+ * Called by an external scheduler (e.g. cron-job.org) once per hour.
  * Finds every delivery date happening TODAY in the restaurant's local timezone
  * whose restaurant has kitchenSheetSendHour == the current LOCAL hour for that
  * restaurant's timezone, and sends the kitchen prep sheet email.
+ *
+ * Protect with ?secret=CRON_SECRET query param.
  */
-async function verifyAuth(request: NextRequest): Promise<boolean> {
-  if (!env.CRON_SECRET) {
-    console.warn("[kitchen-sheets-cron] CRON_SECRET not set, accepting all requests (dev only)");
-    return true;
-  }
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  return searchParams.get("secret") === env.CRON_SECRET;
-}
+  const secret = searchParams.get("secret");
 
-export async function GET(request: NextRequest) {
-  if (!(await verifyAuth(request))) {
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -44,7 +30,6 @@ export async function GET(request: NextRequest) {
   const deliveryDates = await prisma.deliveryDate.findMany({
     where: {
       deliveryDate: { gte: windowStart, lt: windowEnd },
-      kitchenSheetSentAt: null,
       school: {
         restaurant: {
           kitchenSheetSendHour: { not: null },
@@ -82,30 +67,11 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    // Atomic claim: only proceed if we're the run that flips
-    // kitchenSheetSentAt from null -> now. If a late/duplicate/overlapping
-    // cron invocation races this one, exactly one of them updates a row
-    // (count === 1) and sends; the other sees count === 0 and skips.
-    const claim = await prisma.deliveryDate.updateMany({
-      where: { id: dd.id, kitchenSheetSentAt: null },
-      data: { kitchenSheetSentAt: now },
-    });
-    if (claim.count === 0) {
-      results.push({ deliveryDateId: dd.id, sent: false, skipped: "Already sent (race)" });
-      continue;
-    }
-
     try {
       await sendKitchenPrepEmail(dd.id);
       results.push({ deliveryDateId: dd.id, sent: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      // Sending failed after we claimed it -- release the claim so the next
-      // hourly run retries instead of silently never sending this date.
-      await prisma.deliveryDate.update({
-        where: { id: dd.id },
-        data: { kitchenSheetSentAt: null },
-      });
       results.push({ deliveryDateId: dd.id, sent: false, error: message });
     }
   }
