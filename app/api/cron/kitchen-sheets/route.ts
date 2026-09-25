@@ -8,9 +8,14 @@ export const runtime = "nodejs";
 
 /**
  * GET /api/cron/kitchen-sheets
- * Wired into vercel.json to run hourly (0 * * * *) -- Vercel Cron invokes
- * this with `Authorization: Bearer $CRON_SECRET`, same as the other cron
- * routes (see cutoff-reminder/route.ts), not a query-string secret.
+ * NOT wired into vercel.json -- Vercel's cron jobs on our current plan can
+ * only fire once a day, and this needs to check every restaurant's chosen
+ * send hour every hour. Call this from an external scheduler instead (e.g.
+ * cron-job.org) hitting this URL once per hour with ?secret=$CRON_SECRET.
+ * (If we ever upgrade to a Vercel plan that allows sub-daily cron
+ * schedules, this can move to vercel.json with "0 * * * *" -- swap this
+ * back to the Authorization: Bearer check other cron routes use.)
+ *
  * Finds every delivery date happening TODAY in the restaurant's local timezone
  * whose restaurant has kitchenSheetSendHour == the current LOCAL hour for that
  * restaurant's timezone, and sends the kitchen prep sheet email.
@@ -20,10 +25,8 @@ async function verifyAuth(request: NextRequest): Promise<boolean> {
     console.warn("[kitchen-sheets-cron] CRON_SECRET not set, accepting all requests (dev only)");
     return true;
   }
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader) return false;
-  const [scheme, token] = authHeader.split(" ");
-  return scheme === "Bearer" && token === env.CRON_SECRET;
+  const { searchParams } = new URL(request.url);
+  return searchParams.get("secret") === env.CRON_SECRET;
 }
 
 export async function GET(request: NextRequest) {
