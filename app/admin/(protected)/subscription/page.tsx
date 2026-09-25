@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminRole } from "@/lib/admin-auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { prisma } from "@/lib/db";
 import { SubscriptionActions } from "./subscription-actions";
@@ -29,7 +29,11 @@ export const metadata: Metadata = {
   title: "Subscription",
 };
 export default async function SubscriptionPage({ searchParams }: { searchParams: Promise<{ success?: string }> }) {
-  await requireAdmin();
+  // Billing is OWNER-only — cancel/checkout already required OWNER
+  // server-side; the page itself was only checking "any admin", so a
+  // MANAGER or STAFF could browse to /admin/subscription directly and see
+  // plan/billing details before hitting a permission wall on the buttons.
+  await requireAdminRole("OWNER");
   const restaurant = await requireRestaurant();
   const full = await prisma.restaurant.findUnique({ where: { id: restaurant.id } });
   if (!full) return null;
@@ -72,7 +76,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Settings tab bar — Subscription is now a sub-tab of Settings called "Plan". */}
         <div className="mb-6 -mx-4 px-4">
-          <SettingsTabs />
+          <SettingsTabs adminRole="OWNER" />
         </div>
 
         <h1 className="text-xl font-editorial font-semibold text-editorial-ink mb-1">Plan</h1>

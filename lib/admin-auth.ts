@@ -25,7 +25,11 @@ export async function requireAdminRole(minRole: import("@/lib/roles").AdminRole)
     redirect("/admin/login");
   }
   if (!hasRole(session.user.adminRole, minRole)) {
-    redirect("/admin/dashboard");
+    // Previously redirected with no explanation at all -- from the user's
+    // side, clicking a nav item they don't have access to just silently
+    // bounced them back to the dashboard. The `denied` query param lets the
+    // dashboard show a real "you don't have access" banner instead.
+    redirect("/admin/dashboard?denied=1");
   }
 }
 

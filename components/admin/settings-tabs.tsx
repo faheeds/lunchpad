@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { hasRole, type AdminRole } from "@/lib/roles";
 
 /**
  * Settings tab bar — shown above every Settings-area page so the
@@ -24,25 +25,30 @@ type Tab = {
   /** When true, "active" is decided by pathname startsWith; otherwise
    *  active is decided by the `?tab=` query on the current pathname. */
   routeMatch?: boolean;
+  /** Minimum role that can actually use this tab's destination — must match
+   *  that page's own requireAdminRole() call. Team is MANAGER+ (the page
+   *  intentionally lets managers invite staff); everything else here is
+   *  OWNER-only (billing, branding, domain, payouts, danger zone). */
+  minRole: AdminRole;
 };
 
 const TABS: Tab[] = [
-  { id: "general",       label: "General",       href: "/admin/settings?tab=general" },
-  { id: "branding",      label: "Branding",      href: "/admin/settings?tab=branding" },
-  { id: "domain",        label: "Domain",        href: "/admin/settings?tab=domain" },
+  { id: "general",       label: "General",       href: "/admin/settings?tab=general",       minRole: "OWNER" },
+  { id: "branding",      label: "Branding",      href: "/admin/settings?tab=branding",      minRole: "OWNER" },
+  { id: "domain",        label: "Domain",        href: "/admin/settings?tab=domain",        minRole: "OWNER" },
   // Labeled "Payouts", not "Payments" — this tab is Stripe Connect (customer
   // payments flowing OUT to the restaurant's own Stripe account), a distinct
   // relationship from the LunchPad subscription charge on the Plan tab
   // (restaurant paying LunchPad). "Payments" reads as ambiguous next to the
   // Plan page's "add a payment method" trial-expired banner and sent at
   // least one operator looking here for a card-entry form that isn't here.
-  { id: "payments",      label: "Payouts",       href: "/admin/settings?tab=payments" },
-  { id: "notifications", label: "Notifications", href: "/admin/settings?tab=notifications" },
+  { id: "payments",      label: "Payouts",       href: "/admin/settings?tab=payments",      minRole: "OWNER" },
+  { id: "notifications", label: "Notifications", href: "/admin/settings?tab=notifications", minRole: "OWNER" },
   // Team and Plan are their own routes (legacy pages we're keeping in
   // place), but rendered under the same Settings umbrella here.
-  { id: "team",          label: "Team",          href: "/admin/team",         routeMatch: true },
-  { id: "plan",          label: "Plan",          href: "/admin/subscription", routeMatch: true },
-  { id: "danger",        label: "Danger",        href: "/admin/settings?tab=danger" },
+  { id: "team",          label: "Team",          href: "/admin/team",         routeMatch: true, minRole: "MANAGER" },
+  { id: "plan",          label: "Plan",          href: "/admin/subscription", routeMatch: true, minRole: "OWNER"   },
+  { id: "danger",        label: "Danger",        href: "/admin/settings?tab=danger",        minRole: "OWNER" },
 ];
 
 // Kept exported for compatibility with anything importing it elsewhere;
@@ -50,17 +56,19 @@ const TABS: Tab[] = [
 // panel to render.
 export type SettingsTabId = "general" | "branding" | "domain" | "payments" | "notifications" | "danger";
 
-export function SettingsTabs() {
+export function SettingsTabs({ adminRole }: { adminRole: AdminRole }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const tabParam = params.get("tab");
+
+  const visibleTabs = TABS.filter((t) => hasRole(adminRole, t.minRole));
 
   // Active-tab resolution:
   //  - If we're on a routeMatch tab's path (e.g. /admin/team), that wins.
   //  - Otherwise we're on /admin/settings and the `?tab=` query decides;
   //    default to "general".
   const activeId = (() => {
-    const routeTab = TABS.find((t) => t.routeMatch && pathname.startsWith(t.href.split("?")[0]));
+    const routeTab = visibleTabs.find((t) => t.routeMatch && pathname.startsWith(t.href.split("?")[0]));
     if (routeTab) return routeTab.id;
     return tabParam ?? "general";
   })();
@@ -68,7 +76,7 @@ export function SettingsTabs() {
   return (
     <div className="border-b border-editorial-line -mx-1">
       <div className="flex gap-1 px-1 overflow-x-auto no-scrollbar">
-        {TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isActive = tab.id === activeId;
           return (
             <Link

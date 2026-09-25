@@ -265,7 +265,7 @@ export default async function AdminSettingsPage({
         <h1 className="text-[17px] font-editorial font-semibold text-editorial-ink">Settings</h1>
       </div>
 
-      <SettingsTabs />
+      <SettingsTabs adminRole="OWNER" />
 
       {/* Banners */}
       {saved && (
