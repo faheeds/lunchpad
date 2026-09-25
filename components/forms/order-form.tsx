@@ -47,6 +47,12 @@ type MenuItem = {
    *  becomes the line's base price. Items without sizes use basePriceCents. */
   sizes?: MenuItemSize[];
   options: MenuOption[];
+  /** Operator-set via admin Menu page ("Show in cart upsell"). Drives the
+   *  one-tap add-on rail on Step 3 (Recipient), below — mirrors the iOS
+   *  cart's upsell rail. Only items with no requiredChoices and no sizes
+   *  are actually shown there, since a one-tap add has nowhere to
+   *  resolve a picker. */
+  isUpsell?: boolean;
 };
 type CartItem = {
   id: string;
@@ -413,6 +419,63 @@ export function OrderForm({
       if (i.quantity > 1) return [{ ...i, quantity: i.quantity - 1 }];
       return []; // drop the line entirely when stepped down past 1
     }));
+  }
+
+  // Items eligible for the Step 3 "Add a little something?" upsell rail —
+  // operator-flagged, simple (no size/choice picker to resolve), and not
+  // sold out on the selected date. Same eligibility rule as the iOS cart.
+  const upsellItems = useMemo(
+    () =>
+      menuItems.filter(
+        (item) =>
+          item.isUpsell &&
+          !soldOutIds.has(item.id) &&
+          getRequiredChoicesForMenuItem(item).length === 0 &&
+          (item.sizes ?? []).length === 0,
+      ),
+    [menuItems, soldOutIds],
+  );
+
+  /** One-tap add for an upsell item — no picker to go through, so this
+   *  bypasses addToCart's customize-panel state entirely. */
+  function addUpsellItem(item: MenuItem) {
+    const newKey = buildLineKey(item.id, undefined, undefined, [], []);
+    setCartItems((cur) => {
+      const existing = cur.findIndex(
+        (i) => buildLineKey(i.menuItemId, i.size, i.choice, i.additions, i.removals) === newKey,
+      );
+      if (existing >= 0) {
+        const next = [...cur];
+        next[existing] = { ...next[existing], quantity: next[existing].quantity + 1 };
+        return next;
+      }
+      return [
+        ...cur,
+        {
+          id: crypto.randomUUID(),
+          menuItemId: item.id,
+          itemName: item.name,
+          additions: [],
+          removals: [],
+          lineTotalCents: item.basePriceCents,
+          quantity: 1,
+        },
+      ];
+    });
+  }
+  function upsellQty(item: MenuItem): number {
+    const key = buildLineKey(item.id, undefined, undefined, [], []);
+    return cartItems.reduce(
+      (s, c) =>
+        buildLineKey(c.menuItemId, c.size, c.choice, c.additions, c.removals) === key ? s + c.quantity : s,
+      0,
+    );
+  }
+  function upsellCartId(item: MenuItem): string | undefined {
+    const key = buildLineKey(item.id, undefined, undefined, [], []);
+    return cartItems.find(
+      (c) => buildLineKey(c.menuItemId, c.size, c.choice, c.additions, c.removals) === key,
+    )?.id;
   }
 
   // ── Discount state (Step 4) ────────────────────────────────────────────
@@ -895,6 +958,86 @@ export function OrderForm({
               />
             </div>
           </div>
+
+          {/* Add a little something? — one-tap upsell rail, same items and
+              eligibility rule as the iOS cart's upsell rail. Placed after
+              the recipient details, per how this feature was scoped. */}
+          {upsellItems.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2" style={{ color: "#938B78" }}>
+                Add a little something?
+              </p>
+              <div className="flex gap-2.5 overflow-x-auto pb-1">
+                {upsellItems.map((item) => {
+                  const qty = upsellQty(item);
+                  const cartId = upsellCartId(item);
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex-shrink-0 rounded-[14px] border p-2.5 text-center"
+                      style={{ width: 104, backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}
+                    >
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          width={64}
+                          height={64}
+                          className="w-16 h-16 rounded-xl object-cover mx-auto mb-1.5 border"
+                          style={{ borderColor: "#E3DBC6" }}
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <div
+                          className="w-16 h-16 rounded-xl flex items-center justify-center text-2xl mx-auto mb-1.5"
+                          style={{ backgroundColor: "#DEE2CF" }}
+                        >
+                          🍪
+                        </div>
+                      )}
+                      <p className="text-[11.5px] font-semibold leading-tight mb-0.5" style={{ color: "#211D15" }}>
+                        {item.name}
+                      </p>
+                      <p className="text-[11px] mb-1.5" style={{ color: "#938B78" }}>{fmt(item.basePriceCents)}</p>
+                      {qty > 0 && cartId ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => decrementCartItem(cartId)}
+                            aria-label={`Remove one ${item.name}`}
+                            className="w-6 h-6 rounded-full text-[13px] font-semibold flex items-center justify-center"
+                            style={{ backgroundColor: "#2C4031", color: "white" }}
+                          >
+                            −
+                          </button>
+                          <span className="text-[13px] font-semibold" style={{ color: "#211D15" }}>{qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => incrementCartItem(cartId)}
+                            aria-label={`Add one more ${item.name}`}
+                            className="w-6 h-6 rounded-full text-[13px] font-semibold flex items-center justify-center"
+                            style={{ backgroundColor: "#2C4031", color: "white" }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => addUpsellItem(item)}
+                          className="w-full py-1.5 rounded-full text-[11.5px] font-semibold"
+                          style={{ backgroundColor: "#2C4031", color: "white" }}
+                        >
+                          + Add
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <button type="button" onClick={() => {
             // For office self-orders, auto-fill recipient with the orderer's name
             const effectiveStudentName = isOffice && orderForSelf ? parentName : studentName;

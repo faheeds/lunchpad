@@ -295,6 +295,8 @@ export default async function OrderPage({
                     category: item.category,
                     imageUrl: item.imageUrl ?? null,
                     basePriceCents: item.basePriceCents,
+                    // Drives the Step 3 "Add a little something?" upsell rail.
+                    isUpsell: item.isUpsell,
                     // Required-choices and sizes were being stripped here when
                     // mapping the prisma row → wire shape, so the OrderForm
                     // received items without them. The server still validates
