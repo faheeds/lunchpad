@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { mapOrderToLabelRows } from "@/lib/pdf/labels";
 import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
+import { listOrders } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -14,42 +14,59 @@ export const metadata: Metadata = {
 export default async function LabelsPrintPage({
   searchParams
 }: {
-  searchParams: Promise<{ deliveryDateId?: string; orderIds?: string }>;
+  searchParams: Promise<{
+    deliveryDateId?: string;
+    orderIds?: string;
+    schoolId?: string;
+    status?: string;
+    archived?: string;
+    fromDate?: string;
+    toDate?: string;
+    q?: string;
+  }>;
 }) {
   await requireAdminRole("STAFF");
   const restaurant = await requireRestaurant();
   const params = await searchParams;
 
-  let whereCondition: Prisma.OrderWhereInput = {
-    restaurantId: restaurant.id,
-    status: OrderStatus.PAID,
-    archivedAt: null,
-  };
+  let orders;
 
-  // If orderIds is provided, use those; otherwise filter by deliveryDateId
   if (params.orderIds) {
+    // Explicit selection (bulk "Print labels" on hand-picked rows) overrides
+    // every other filter -- the operator chose these orders directly.
     const orderIds = params.orderIds
       .split(",")
       .filter((id) => id.trim())
       .slice(0, 1000);
-    if (orderIds.length > 0) {
-      whereCondition.id = { in: orderIds };
-    }
-  } else if (params.deliveryDateId) {
-    whereCondition.deliveryDateId = params.deliveryDateId;
-  }
 
-  // Tenant-scoped: only show orders for the current restaurant.
-  const orders = await prisma.order.findMany({
-    where: whereCondition,
-    include: {
-      school: true,
-      deliveryDate: true,
-      student: true,
-      items: true
-    },
-    orderBy: { createdAt: "asc" }
-  });
+    orders = orderIds.length > 0
+      ? await prisma.order.findMany({
+          where: { restaurantId: restaurant.id, id: { in: orderIds } },
+          include: { school: true, deliveryDate: true, student: true, items: true },
+          orderBy: { createdAt: "asc" },
+        })
+      : [];
+  } else {
+    // Same filters the orders list and CSV export use (fromDate/toDate,
+    // deliveryDateId, schoolId, status, archived, search). Previously this
+    // page only ever looked at deliveryDateId, so filtering the orders list
+    // by a date range (without ALSO picking one exact date from the
+    // separate "Delivery date" dropdown) had no effect on this print view --
+    // it silently printed every paid order for the restaurant.
+    orders = await listOrders({
+      restaurantId: restaurant.id,
+      deliveryDateId: params.deliveryDateId,
+      schoolId: params.schoolId,
+      // Labels are for kitchen prep, so default to PAID-only (matches the
+      // previous hardcoded behavior) unless the operator explicitly chose
+      // a different status filter on the orders list.
+      status: params.status ?? "PAID",
+      archived: params.archived ?? "exclude",
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      search: params.q,
+    });
+  }
 
   const labels = mapOrderToLabelRows(orders);
 
