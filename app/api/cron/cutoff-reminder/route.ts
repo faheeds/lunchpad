@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
-import { sendWeeklyPlanCutoffReminderEmail } from "@/lib/email/service";
 import { sendPushToParent } from "@/lib/push/service";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { addHours } from "date-fns";
@@ -128,48 +127,10 @@ export async function GET(request: NextRequest) {
               continue;
             }
 
-            // Aggregate all items from all children's weekly plans for this parent
-            const allItems: { itemName: string; choice?: string }[] = [];
-            for (const plan of parentPlans) {
-              const planItems = await prisma.weeklyLunchPlan.findMany({
-                where: {
-                  parentUserId: parentId,
-                  parentChildId: plan.parentChildId,
-                  schoolId: school.id,
-                  weekday: deliveryWeekday,
-                  isActive: true,
-                },
-                include: {
-                  menuItem: true,
-                },
-              });
-
-              for (const p of planItems) {
-                const item: { itemName: string; choice?: string } = {
-                  itemName: p.menuItem.name,
-                };
-                if (p.choice) item.choice = p.choice;
-                allItems.push(item);
-              }
-            }
-
-            const orderUrl = `https://${restaurant.slug}.${env.ROOT_DOMAIN}`;
-
+            // Push-only reminder (no email) -- deliberate: parents found the daily
+            // cutoff email noisy/duplicative with the in-app push, so this cron
+            // now only notifies via push. See lib/push/service.ts.
             if (!dryRun) {
-              await sendWeeklyPlanCutoffReminderEmail({
-                parentEmail,
-                parentName: parentUser.name || "there",
-                childName: parentPlans.length === 1
-                  ? parentPlans[0].parentChild.studentName
-                  : `${parentPlans.length} children`,
-                deliveryDate: deliveryDate.deliveryDate,
-                cutoffAt: deliveryDate.cutoffAt,
-                timezone: school.timezone,
-                schoolName: school.name,
-                items: allItems,
-                orderUrl,
-                restaurantName: restaurant.name,
-              });
               sendPushToParent(parentId, { title: "Last chance to order!", body: "Ordering for this week closes soon.", data: { screen: "order" } }).catch(() => {});
             }
 
