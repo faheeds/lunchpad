@@ -11,6 +11,7 @@ import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { ImageUpload } from "@/components/admin/image-upload";
 import { SettingsTabs, type SettingsTabId } from "@/components/admin/settings-tabs";
 import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
+import { ConfirmButton } from "@/components/admin/confirm-button";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -93,6 +94,34 @@ async function updateKitchenSheetSettings(formData: FormData) {
   }
   if (errorMsg) redirect(`/admin/settings?tab=notifications&error=${encodeURIComponent(errorMsg)}`);
   redirect("/admin/settings?tab=notifications&saved=1");
+}
+
+async function disconnectStripeAccount() {
+  "use server";
+  let errorMsg: string | null = null;
+  try {
+    const restaurant = await requireRestaurant();
+    await requireAdminRole("OWNER");
+
+    // Unlink only -- we deliberately do NOT call stripe.accounts.del() here.
+    // Refunds/adjustments for past orders (lib/orders.ts) look up
+    // restaurant.stripeAccountId live rather than storing a per-order
+    // snapshot, so they'd start failing for old orders regardless of
+    // whether we unlink or fully delete the old account. Leaving the old
+    // Express account intact in Stripe (just unlinked from this restaurant)
+    // means its transaction history stays visible in the Stripe dashboard
+    // if it's ever needed, even though this app can no longer act on it.
+    // stripeAccountId is @unique in the schema, so it must be cleared
+    // before a new account can be connected.
+    await prisma.restaurant.update({
+      where: { id: restaurant.id },
+      data: { stripeAccountId: null, stripeOnboardingComplete: false },
+    });
+  } catch (e: unknown) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong";
+  }
+  if (errorMsg) redirect(`/admin/settings?tab=payments&error=${encodeURIComponent(errorMsg)}`);
+  redirect("/admin/settings?tab=payments&disconnected=1");
 }
 
 async function resetSampleData() {
@@ -214,6 +243,7 @@ export default async function AdminSettingsPage({
     connect_success?: string;
     connect_error?: string;
     reset_success?: string;
+    disconnected?: string;
   }>;
 }) {
   const [params, restaurant, session] = await Promise.all([
@@ -248,6 +278,7 @@ export default async function AdminSettingsPage({
   const connectError = params.connect_error ?? null;
   const error = params.error ?? null;
   const resetSuccess = params.reset_success === "1";
+  const disconnected = params.disconnected === "1";
 
   // Check if sample data exists
   const hasSampleData = await Promise.all([
@@ -298,6 +329,13 @@ export default async function AdminSettingsPage({
       {connectError && (
         <div className="rounded-[12px] bg-[#F4E3DB] border border-[#E2C3B3] px-4 py-3 flex items-center gap-2">
           <p className="text-[13px] font-medium text-[#7C3D24]">Stripe Connect failed: {connectError}</p>
+        </div>
+      )}
+      {disconnected && (
+        <div className="rounded-[12px] bg-editorial-sage border border-editorial-green px-4 py-3 flex items-center gap-2">
+          <p className="text-[13px] font-medium text-editorial-green">
+            Stripe account disconnected. Connect a different account below to resume taking orders.
+          </p>
         </div>
       )}
 
@@ -578,13 +616,36 @@ export default async function AdminSettingsPage({
               className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full text-[13px] font-semibold text-white no-underline transition hover:bg-opacity-90"
               style={{ background: "linear-gradient(135deg, #635bff, #4f46e5)" }}
             >
-              {restaurant.stripeOnboardingComplete ? "Reconnect Stripe account" : "Connect Stripe account"}
+              {restaurant.stripeOnboardingComplete ? "Resume / edit onboarding" : "Connect Stripe account"}
             </a>
             {restaurant.stripeAccountId && (
               <a href={`https://dashboard.stripe.com/${restaurant.stripeAccountId}/dashboard`} target="_blank" rel="noopener noreferrer"
                 className="block text-center text-[11px] text-editorial-green font-medium no-underline hover:underline">
                 Open Stripe dashboard ↗
               </a>
+            )}
+
+            {restaurant.stripeAccountId && (
+              <div className="pt-3 mt-1 border-t border-editorial-line space-y-2">
+                <p className="text-[11px] text-editorial-ink-faint">
+                  Need to take payments through a <strong>different</strong> Stripe account entirely
+                  (not just fix or finish onboarding on this one)? Disconnect it first, then connect
+                  the new one.
+                </p>
+                <p className="text-[11px] text-[#7C3D24] bg-[#F4E3DB] border border-[#E2C3B3] rounded-lg px-3 py-2">
+                  Warning: once disconnected, refunds and adjustments on orders already paid through
+                  this account will stop working — even old ones. Only disconnect once every order
+                  paid on this account is fully settled and won&apos;t need a refund or adjustment.
+                </p>
+                <form action={disconnectStripeAccount}>
+                  <ConfirmButton
+                    message="Disconnect this Stripe account? Refunds and adjustments on orders already paid through it will stop working. Only continue if you're sure every past order is fully settled."
+                    className="w-full py-2 rounded-full text-[12px] font-semibold text-[#7C3D24] border border-[#E2C3B3] hover:bg-[#F4E3DB] transition"
+                  >
+                    Disconnect Stripe account
+                  </ConfirmButton>
+                </form>
+              </div>
             )}
           </div>
         </div>
