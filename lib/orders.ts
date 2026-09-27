@@ -257,13 +257,36 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
     1000 + Math.random() * 9000
   )}`;
 
-  // ── Discount evaluation ─────────────────────────────────────────────────
+// Reject SCHOOL orders that arrive with no grade -- the form normally
+  // enforces this, but the validation schema is permissive so OFFICE
+  // orders pass through. For OFFICE, fall back to "—" so the non-null
+  // DB column stays clean without forcing a meaningless field on the form.
+  // Computed up front (not just inside the transaction below) so the
+  // discount engine sees the SAME grade value that ends up on the Student
+  // row -- see the firstOrderOnly note just below.
+  if (deliveryDate.school.locationType === "SCHOOL" && !parsed.grade) {
+    throw new Error("Grade is required for school orders.");
+  }
+  const gradeValue = parsed.grade || (deliveryDate.school.locationType === "OFFICE" ? "—" : "");
+
+  // ── Discount evaluation ─────────────────────────────────────────────────────
   // Run the discount engine BEFORE the transaction so we have a stable
   // snapshot of what to apply. Re-evaluating inside the transaction would
   // introduce phantom-read complexity (counter increments are write-write
   // serialized anyway, so a race past the cap is harmless and rare). The
   // engine returns whichever single auto-discount won + whichever promo
   // code matched, applying stacking rules.
+  //
+  // Pass `gradeValue` here, NOT the raw `parsed.grade` -- firstOrderOnly
+  // eligibility in lib/discounts.ts is keyed on (studentName, grade), and
+  // it only runs the prior-order lookup when both are non-empty. OFFICE
+  // orders leave `parsed.grade` blank, so passing it straight through made
+  // the engine skip that check entirely and treat every OFFICE order as a
+  // first order -- a welcome/first-order discount could be reused on every
+  // checkout instead of just the first one. `gradeValue` is the same "—"
+  // fallback that lands on the Student row a few lines down, so the key
+  // the discount engine checks against matches the key future orders for
+  // this person will be looked up by.
   const cartLines: CartLine[] = normalizedItems.map((item) => ({
     menuItemId: item.menuItem.id,
     category: item.menuItem.category,
@@ -275,7 +298,7 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       schoolId: parsed.schoolId,
       deliveryDate: deliveryDate.deliveryDate,
       parentUserId: parentUserId ?? parentChild?.parentUserId ?? null,
-      grade: parsed.grade || null,
+      grade: gradeValue || null,
       studentName: parsed.studentName || null,
       lines: cartLines,
     },
@@ -285,15 +308,6 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
   const totalCents = Math.max(0, subtotalCents - discountCentsApplied);
 
   return prisma.$transaction(async (tx) => {
-    // Reject SCHOOL orders that arrive with no grade — the form normally
-    // enforces this, but the validation schema is permissive so OFFICE
-    // orders pass through. For OFFICE, fall back to "—" so the non-null
-    // DB column stays clean without forcing a meaningless field on the form.
-    if (deliveryDate.school.locationType === "SCHOOL" && !parsed.grade) {
-      throw new Error("Grade is required for school orders.");
-    }
-    const gradeValue = parsed.grade || (deliveryDate.school.locationType === "OFFICE" ? "—" : "");
-
     const student = await tx.student.create({
       data: {
         schoolId: parsed.schoolId,
