@@ -143,6 +143,19 @@ export async function POST(request: NextRequest) {
       parentUserId: parentUserId ? "set" : "unset",
     });
 
+    // Best-effort: persist the name they typed at checkout onto their
+    // account. Apple Sign In only hands us a name on the very first
+    // authorization ever (Apple's own privacy design) -- GET /account
+    // returns null for everyone else -- so without this, the iOS app's
+    // "Receipt to" field has no saved name to prefill and the customer
+    // has to retype it on every single order. Non-blocking: a failure
+    // here shouldn't affect an otherwise-successful checkout.
+    if (parentUserId && typeof body.parentName === "string" && body.parentName.trim().length >= 2) {
+      prisma.parentUser
+        .update({ where: { id: parentUserId }, data: { name: body.parentName.trim() } })
+        .catch(() => {});
+    }
+
     if (!stripe) {
       logWarn("mobile_order_stripe_not_configured", {
         restaurantId: restaurant.id,
