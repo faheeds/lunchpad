@@ -87,7 +87,18 @@ export const TEMPLATES: TemplateMeta[] = [
       kind: "PERCENT",
       value: 10,
       firstOrderOnly: true,
-      maxRedemptionsPerUser: 1,
+      // Deliberately no maxRedemptionsPerUser cap here. firstOrderOnly is
+      // already the per-CHILD gate (see lib/discounts.ts -- it's keyed on
+      // studentName + grade, not parentUserId, specifically so each kid in
+      // a family gets the welcome offer once on their own first order).
+      // maxRedemptionsPerUser is a *per-account* cap and is checked before
+      // firstOrderOnly ever runs, so setting it to 1 here silently capped
+      // the whole family to one welcome discount total -- the second,
+      // third, etc. child's genuinely-first order would get rejected with
+      // "You've already used this discount" before the per-child check
+      // even ran. Leave this unset (falls through to COMMON_DEFAULTS'
+      // null) so firstOrderOnly is the only gate, matching the "once per
+      // child" behavior the welcome offer is supposed to have.
     },
   },
   {
