@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { requireRestaurant } from "@/lib/restaurant";
+import { auth } from "@/lib/auth";
+import { hasRole } from "@/lib/roles";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
@@ -17,6 +19,11 @@ export const metadata: Metadata = {
 };
 export default async function AdminDashboardPage() {
   const restaurant = await requireRestaurant();
+  const session = await auth();
+  // Revenue figures are restricted to MANAGER+ -- STAFF can see order
+  // counts/schedule but not dollar amounts (matches /admin/reports, which
+  // already requires MANAGER).
+  const canViewRevenue = hasRole(session?.user?.adminRole, "MANAGER");
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -211,7 +218,12 @@ export default async function AdminDashboardPage() {
         icon: "calendar",
         label: `Cutoff in ${hoursToCutoff}h — only ${d._count.orders} ${d._count.orders === 1 ? "order" : "orders"}`,
         sub: `${d.school.name} · share the URL or send a reminder`,
-        href: `/admin/orders?deliveryDateId=${d.id}`,
+        // schoolId is required alongside deliveryDateId: listOrders() merges
+        // every DeliveryDate row that falls on the same calendar day *across
+        // all schools* (intentional, for the "All dates" view), so without
+        // it this link can silently pull in another school's orders for the
+        // same day and show a bigger count than the tile it was clicked from.
+        href: `/admin/orders?deliveryDateId=${d.id}&schoolId=${d.schoolId}`,
       });
     }
   }
@@ -298,8 +310,10 @@ export default async function AdminDashboardPage() {
           { label: "Orders",  sub: "today",     value: String(todayOrderCount),       color: "text-editorial-green" },
           { label: "Orders",  sub: "this week",  value: String(weekOrderCount),       color: "text-editorial-green" },
           { label: "Orders",  sub: "all time",   value: String(allTimePaid),          color: "text-editorial-clay" },
-          { label: "Revenue", sub: "today",      value: formatCurrency(todayRevenueAmount), color: "text-editorial-gold" },
-          { label: "Revenue", sub: "this week",  value: formatCurrency(weekRevenueAmount),  color: "text-editorial-gold" },
+          ...(canViewRevenue ? [
+            { label: "Revenue", sub: "today",      value: formatCurrency(todayRevenueAmount), color: "text-editorial-gold" },
+            { label: "Revenue", sub: "this week",  value: formatCurrency(weekRevenueAmount),  color: "text-editorial-gold" },
+          ] : []),
           {
             label: "Next delivery",
             sub: nextDelivery ? nextDelivery.school.name : "—",
@@ -327,7 +341,10 @@ export default async function AdminDashboardPage() {
       {/* Reports used to be its own top-level tab. We folded the
           nav entry into Home so operators have one daily landing
           page; the deep analytics view (charts, date breakdowns,
-          CSV export) is still accessible one click away. */}
+          CSV export) is still accessible one click away. Hidden for
+          STAFF since /admin/reports itself requires MANAGER+ -- no
+          point surfacing a link that just bounces them back here. */}
+      {canViewRevenue && (
       <Link href="/admin/reports" className="block rounded-[16px] border border-editorial-line bg-white px-5 py-4 no-underline hover:border-editorial-green transition shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-[10px] flex-shrink-0 bg-editorial-paper-2 flex items-center justify-center">
@@ -342,6 +359,7 @@ export default async function AdminDashboardPage() {
           <span className="text-editorial-ink-faint text-[18px]">›</span>
         </div>
       </Link>
+      )}
 
       {/* ── Next delivery spotlight ───────────────────────────────── */}
       {nextDelivery && (
@@ -364,7 +382,7 @@ export default async function AdminDashboardPage() {
               </p>
               <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-editorial-ink-faint">orders</p>
             </div>
-            <Link href={`/admin/orders?deliveryDateId=${nextDelivery.id}`} className="px-4 py-2 bg-editorial-green text-editorial-paper rounded-full text-[12px] font-bold no-underline hover:bg-editorial-green-deep transition">
+            <Link href={`/admin/orders?deliveryDateId=${nextDelivery.id}&schoolId=${nextDelivery.schoolId}`} className="px-4 py-2 bg-editorial-green text-editorial-paper rounded-full text-[12px] font-bold no-underline hover:bg-editorial-green-deep transition">
               View orders →
             </Link>
           </div>
@@ -520,7 +538,7 @@ export default async function AdminDashboardPage() {
                 </svg>
               ),
             },
-            {
+            ...(canViewRevenue ? [{
               href: "/admin/reports",
               label: "Sales report",
               icon: (
@@ -528,7 +546,7 @@ export default async function AdminDashboardPage() {
                   <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
                 </svg>
               ),
-            },
+            }] : []),
             {
               href: "/admin/kitchen",
               label: "Kitchen sheet",

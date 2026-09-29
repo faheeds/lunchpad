@@ -627,7 +627,7 @@ export default async function DeliveryDatesPage() {
                         </p>
                         {orderCount > 0 && (
                           <div className="flex items-center gap-3">
-                            <Link href={`/admin/orders?deliveryDateId=${date.id}`}
+                            <Link href={`/admin/orders?deliveryDateId=${date.id}&schoolId=${date.schoolId}`}
                               className="text-[11px] text-editorial-green font-medium no-underline hover:underline">
                               View {orderCount} order{orderCount !== 1 ? "s" : ""} →
                             </Link>
@@ -889,7 +889,7 @@ export default async function DeliveryDatesPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {orderCount > 0 && (
                       <>
-                        <Link href={`/admin/orders?deliveryDateId=${date.id}&archived=include`}
+                        <Link href={`/admin/orders?deliveryDateId=${date.id}&schoolId=${date.schoolId}&archived=include`}
                           className="text-[11px] font-semibold no-underline"
                           style={{ color: "#938B78" }}>
                           {orderCount} orders
