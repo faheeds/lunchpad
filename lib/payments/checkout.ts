@@ -2,6 +2,28 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/payments/stripe";
 import { env } from "@/lib/env";
 import { formatCurrency } from "@/lib/utils";
+import { logException } from "@/lib/log";
+
+/**
+ * Wraps a Stripe API call so its raw error never reaches a customer-facing
+ * response. Every order/weekly-checkout route ultimately catches whatever
+ * this throws and forwards `err.message` straight back to the browser/app
+ * as JSON -- so an unsanitized Stripe error (e.g. an expired/revoked secret
+ * key: "Expired API Key provided: sk_live_...1iCU3t") was showing up
+ * verbatim in an alert dialog on a customer's phone, key fragment and all.
+ * The real error still goes to Sentry/logs in full for us to act on; the
+ * customer just sees a safe, generic message.
+ */
+async function callStripe<T>(fn: () => Promise<T>, event: string): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    logException(err, event);
+    throw new Error(
+      "We couldn't start checkout right now. Please try again in a few minutes, or contact the restaurant if this keeps happening."
+    );
+  }
+}
 
 type SharedLineItem = {
   name: string;
@@ -63,6 +85,9 @@ async function createSession(args: SharedCheckoutArgs) {
   if (!stripe) {
     throw new Error("Stripe is not configured. Add STRIPE_SECRET_KEY to continue.");
   }
+  // Rebind to a local const -- TS doesn't narrow the imported `stripe`
+  // binding through the closures passed to callStripe() below.
+  const client = stripe;
 
   const grossCents = args.lineItems.reduce((sum, item) => sum + item.amountCents, 0);
   const discountCents = args.discountCents && args.discountCents > 0 ? args.discountCents : 0;
@@ -94,17 +119,21 @@ async function createSession(args: SharedCheckoutArgs) {
   // (`max_redemptions: 1`) so it can't be reused outside this session.
   let discountStripeArg: Stripe.Checkout.SessionCreateParams["discounts"] | undefined;
   if (safeDiscountCents > 0) {
-    const coupon = await stripe.coupons.create({
-      amount_off: safeDiscountCents,
-      currency: "usd",
-      duration: "once",
-      max_redemptions: 1,
-      name: args.discountLabel ?? "Discount",
-    });
+    const coupon = await callStripe(
+      () =>
+        client.coupons.create({
+          amount_off: safeDiscountCents,
+          currency: "usd",
+          duration: "once",
+          max_redemptions: 1,
+          name: args.discountLabel ?? "Discount",
+        }),
+      "stripe_coupon_create_failed"
+    );
     discountStripeArg = [{ coupon: coupon.id }];
   }
 
-  return stripe.checkout.sessions.create({
+  return callStripe(() => client.checkout.sessions.create({
     mode: "payment",
     customer_email: args.parentEmail,
     billing_address_collection: "required",
@@ -133,7 +162,7 @@ async function createSession(args: SharedCheckoutArgs) {
         unit_amount: item.amountCents,
       },
     })),
-  });
+  }), "stripe_checkout_session_create_failed");
 }
 
 export async function createStripeCheckoutSession(args: OrderCheckoutArgs) {
