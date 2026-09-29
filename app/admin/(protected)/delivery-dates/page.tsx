@@ -631,7 +631,7 @@ export default async function DeliveryDatesPage() {
                               className="text-[11px] text-editorial-green font-medium no-underline hover:underline">
                               View {orderCount} order{orderCount !== 1 ? "s" : ""} →
                             </Link>
-                            <a href={`/api/admin/labels?deliveryDateId=${date.id}`}
+                            <a href={`/api/admin/labels?deliveryDateId=${date.id}&schoolId=${date.schoolId}`}
                               target="_blank" rel="noopener noreferrer"
                               className="text-[11px] text-editorial-ink-soft font-medium no-underline hover:underline flex items-center gap-1">
                               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -894,7 +894,7 @@ export default async function DeliveryDatesPage() {
                           style={{ color: "#938B78" }}>
                           {orderCount} orders
                         </Link>
-                        <a href={`/api/admin/labels?deliveryDateId=${date.id}`}
+                        <a href={`/api/admin/labels?deliveryDateId=${date.id}&schoolId=${date.schoolId}`}
                           target="_blank" rel="noopener noreferrer"
                           className="text-[11px] font-medium no-underline hover:underline flex items-center gap-1"
                           style={{ color: "#938B78" }}>

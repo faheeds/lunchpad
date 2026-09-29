@@ -165,6 +165,35 @@ export default async function AdminDashboardPage() {
   const weekRevenueAmount = weekRevenue._sum.amountCents ?? 0;
   const nextDelivery = upcomingDeliveryDates[0] ?? null;
 
+  // ── Next-delivery-day group (one bar per location) ──────────────────
+  // `nextDelivery` above is just whichever DeliveryDate row happens to sort
+  // first -- with multiple schools/locations, two+ of them can have their
+  // own DeliveryDate row for the very same calendar day (each location's
+  // schedule is its own set of rows), and this used to only ever surface
+  // one of them. Mirrors the same calendar-day merge listOrders() uses so
+  // "next delivery" always shows every location delivering that day, not
+  // just the one row that won the sort.
+  type NextDeliveryRow = (typeof upcomingDeliveryDates)[number];
+  let nextDeliveryGroup: NextDeliveryRow[] = [];
+  if (nextDelivery) {
+    const anchorDay = formatInTimeZone(nextDelivery.deliveryDate, nextDelivery.school.timezone, "yyyy-MM-dd");
+    const windowStart = new Date(nextDelivery.deliveryDate.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const windowEnd = new Date(nextDelivery.deliveryDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const candidates = await prisma.deliveryDate.findMany({
+      where: {
+        school: { restaurantId: restaurant.id },
+        deliveryDate: { gte: windowStart, lte: windowEnd },
+      },
+      include: {
+        school: true,
+        _count: { select: { orders: { where: { status: "PAID" } } } },
+      },
+    });
+    nextDeliveryGroup = candidates
+      .filter((c) => formatInTimeZone(c.deliveryDate, c.school.timezone, "yyyy-MM-dd") === anchorDay)
+      .sort((a, b) => a.school.name.localeCompare(b.school.name));
+  }
+
   const orderingUrl = `https://${restaurant.slug}.lunchpad.us`;
 
   // Build the inbox feed.
@@ -362,29 +391,46 @@ export default async function AdminDashboardPage() {
       )}
 
       {/* ── Next delivery spotlight ───────────────────────────────── */}
+      {/* One bar per location delivering that day -- with multiple schools
+          it's common for two+ to share the same next calendar day, each
+          with its own order count, "View orders", and "Download labels". */}
       {nextDelivery && (
-        <div className="bg-white border border-editorial-line rounded-[16px] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint mb-2">
-              Next delivery
-            </p>
-            <p className="text-[20px] font-bold font-editorial text-editorial-ink mb-1 tracking-tight">
-              {formatInTimeZone(nextDelivery.deliveryDate, nextDelivery.school.timezone, "EEEE, MMMM d")}
-            </p>
-            <p className="text-[12px] text-editorial-ink-soft">
-              {nextDelivery.school.name} · Cutoff {formatInTimeZone(nextDelivery.cutoffAt, nextDelivery.school.timezone, "MMM d h:mm a zzz")}
-            </p>
-          </div>
-          <div className="flex items-center gap-4 flex-shrink-0">
-            <div className="text-center">
-              <p className="text-[28px] font-bold font-editorial text-editorial-clay tracking-tight">
-                {nextDelivery._count.orders}
-              </p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-editorial-ink-faint">orders</p>
-            </div>
-            <Link href={`/admin/orders?deliveryDateId=${nextDelivery.id}&schoolId=${nextDelivery.schoolId}`} className="px-4 py-2 bg-editorial-green text-editorial-paper rounded-full text-[12px] font-bold no-underline hover:bg-editorial-green-deep transition">
-              View orders →
-            </Link>
+        <div className="bg-white border border-editorial-line rounded-[16px] p-5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint mb-3">
+            Next delivery · {formatInTimeZone(nextDelivery.deliveryDate, nextDelivery.school.timezone, "EEEE, MMMM d")}
+          </p>
+          <div className="divide-y divide-editorial-line">
+            {nextDeliveryGroup.map((row) => (
+              <div key={row.id} className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[14px] font-bold font-editorial text-editorial-ink tracking-tight truncate">
+                    {row.school.name}
+                  </p>
+                  <p className="text-[12px] text-editorial-ink-soft">
+                    Cutoff {formatInTimeZone(row.cutoffAt, row.school.timezone, "MMM d h:mm a zzz")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4 flex-shrink-0">
+                  <div className="text-center">
+                    <p className="text-[22px] font-bold font-editorial text-editorial-clay tracking-tight leading-none">
+                      {row._count.orders}
+                    </p>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.06em] text-editorial-ink-faint">orders</p>
+                  </div>
+                  <a href={`/api/admin/labels?deliveryDateId=${row.id}&schoolId=${row.schoolId}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="px-3 py-2 rounded-full text-[12px] font-medium border border-editorial-line text-editorial-ink hover:border-editorial-green hover:text-editorial-green no-underline transition flex items-center gap-1.5">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                    </svg>
+                    Labels
+                  </a>
+                  <Link href={`/admin/orders?deliveryDateId=${row.id}&schoolId=${row.schoolId}`} className="px-4 py-2 bg-editorial-green text-editorial-paper rounded-full text-[12px] font-bold no-underline hover:bg-editorial-green-deep transition">
+                    View orders →
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
