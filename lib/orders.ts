@@ -779,6 +779,9 @@ export async function listOrders(filters: {
   deliveryDateId?: string;
   schoolId?: string;
   schoolIds?: string[];
+  /** Exact match against Student.grade -- the same free-text values as
+   *  School.grades (e.g. "5th Grade"). */
+  grade?: string;
   status?: string;
   archived?: string;
   /** Free-text search across student name, parent name, parent email, order
@@ -823,6 +826,9 @@ export async function listOrders(filters: {
     where.schoolId = { in: filters.schoolIds };
   } else if (filters.schoolId) {
     where.schoolId = filters.schoolId;
+  }
+  if (filters.grade) {
+    where.student = { grade: filters.grade };
   }
   if (filters.status && filters.status !== "ALL") {
     where.status = filters.status as OrderStatus;
