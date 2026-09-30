@@ -43,6 +43,7 @@ export async function GET(request: Request) {
       restaurantId,
       deliveryDateId: searchParams.get("deliveryDateId") ?? undefined,
       schoolId: searchParams.get("schoolId") ?? undefined,
+      grade: searchParams.get("grade") ?? undefined,
       // Labels are for kitchen prep, so default to PAID-only (matches the
       // previous hardcoded behavior) unless the operator explicitly chose
       // a different status filter on the orders list.

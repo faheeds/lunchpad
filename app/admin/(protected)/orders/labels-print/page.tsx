@@ -18,6 +18,7 @@ export default async function LabelsPrintPage({
     deliveryDateId?: string;
     orderIds?: string;
     schoolId?: string;
+    grade?: string;
     status?: string;
     archived?: string;
     fromDate?: string;
@@ -57,6 +58,7 @@ export default async function LabelsPrintPage({
       restaurantId: restaurant.id,
       deliveryDateId: params.deliveryDateId,
       schoolId: params.schoolId,
+      grade: params.grade,
       // Labels are for kitchen prep, so default to PAID-only (matches the
       // previous hardcoded behavior) unless the operator explicitly chose
       // a different status filter on the orders list.

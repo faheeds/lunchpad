@@ -17,6 +17,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const deliveryDateId = searchParams.get("deliveryDateId") ?? undefined;
   const schoolId = searchParams.get("schoolId") ?? undefined;
+  const grade = searchParams.get("grade") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
   const archived = searchParams.get("archived") ?? "exclude";
   // Pass through the same date-range and search params the orders page uses,
@@ -30,6 +31,7 @@ export async function GET(request: Request) {
     restaurantId: restaurant.id,
     deliveryDateId,
     schoolIds: schoolId ? [schoolId] : [],
+    grade,
     status,
     archived,
     fromDate,

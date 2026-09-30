@@ -8,6 +8,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 import type { AdminRole } from "@/lib/roles";
+import { STANDARD_GRADES } from "@/lib/grades";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export default async function AdminOrdersPage({
   searchParams: Promise<{
     deliveryDateId?: string;
     schoolId?: string;
+    grade?: string;
     status?: string;
     archived?: string;
     q?: string;
@@ -67,6 +69,7 @@ export default async function AdminOrdersPage({
       restaurantId: restaurant.id,
       deliveryDateId: params.deliveryDateId,
       schoolIds: params.schoolId ? [params.schoolId] : [],
+      grade: params.grade,
       status: params.status,
       archived: params.archived,
       search: params.q,
@@ -95,6 +98,12 @@ export default async function AdminOrdersPage({
     return true;
   });
 
+  // Grade options for the filter dropdown — union of every active school's
+  // configured grade list, falling back to the generic K-12 list when no
+  // school has configured grades yet.
+  const gradeUnion = Array.from(new Set(schools.flatMap((s) => s.grades)));
+  const gradeOptions = gradeUnion.length ? gradeUnion : STANDARD_GRADES;
+
   // Summary stats from returned orders
   const paidOrders    = orders.filter((o) => o.status === "PAID");
   const pendingOrders = orders.filter((o) => o.status === "PENDING");
@@ -103,6 +112,7 @@ export default async function AdminOrdersPage({
   const exportParams = new URLSearchParams();
   if (params.deliveryDateId) exportParams.set("deliveryDateId", params.deliveryDateId);
   if (params.schoolId) exportParams.set("schoolId", params.schoolId);
+  if (params.grade) exportParams.set("grade", params.grade);
   if (params.status && params.status !== "ALL") exportParams.set("status", params.status);
   if (params.archived) exportParams.set("archived", params.archived);
   if (params.fromDate) exportParams.set("fromDate", params.fromDate);
@@ -126,6 +136,7 @@ export default async function AdminOrdersPage({
       href: stripParam(exportParams, "deliveryDateId"),
     });
   }
+  if (params.grade) activeFilterChips.push({ label: params.grade, href: stripParam(exportParams, "grade") });
   if (params.fromDate) activeFilterChips.push({ label: `From ${params.fromDate}`, href: stripParam(exportParams, "fromDate") });
   if (params.toDate) activeFilterChips.push({ label: `Through ${params.toDate}`, href: stripParam(exportParams, "toDate") });
   if (params.status && params.status !== "ALL") activeFilterChips.push({ label: params.status, href: stripParam(exportParams, "status") });
@@ -270,7 +281,7 @@ export default async function AdminOrdersPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
           <div>
             <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Location</label>
             <select name="schoolId" defaultValue={params.schoolId ?? ""}
@@ -290,6 +301,16 @@ export default async function AdminOrdersPage({
                 <option key={d.id} value={d.id}>
                   {formatInTimeZone(d.deliveryDate, d.school.timezone, "EEE, MMM d")}
                 </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Grade</label>
+            <select name="grade" defaultValue={params.grade ?? ""}
+              className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
+              <option value="">All grades</option>
+              {gradeOptions.map((g) => (
+                <option key={g} value={g}>{g}</option>
               ))}
             </select>
           </div>
