@@ -25,6 +25,22 @@ function stripParam(base: URLSearchParams, key: string): string {
   return qs ? `/admin/orders?${qs}` : "/admin/orders";
 }
 
+/**
+ * Same idea as stripParam, but removes just one value of a multi-value
+ * parameter (e.g. one grade out of several checked) instead of the whole
+ * key -- used by the grade filter chips, since a chip represents a single
+ * selected grade among possibly many.
+ */
+function stripParamValue(base: URLSearchParams, key: string, value: string): string {
+  const next = new URLSearchParams();
+  for (const [k, v] of base.entries()) {
+    if (k === key && v === value) continue;
+    next.append(k, v);
+  }
+  const qs = next.toString();
+  return qs ? `/admin/orders?${qs}` : "/admin/orders";
+}
+
 type OrderSortKey = "delivery-asc" | "delivery-desc" | "created-desc" | "amount-desc" | "amount-asc";
 
 const SORT_OPTIONS: { value: OrderSortKey; label: string }[] = [
@@ -45,7 +61,7 @@ export default async function AdminOrdersPage({
   searchParams: Promise<{
     deliveryDateId?: string;
     schoolId?: string;
-    grade?: string;
+    grade?: string | string[];
     status?: string;
     archived?: string;
     q?: string;
@@ -59,6 +75,12 @@ export default async function AdminOrdersPage({
   // side so STAFF don't see buttons they can't actually click.
   const myRole = ((session?.user as { adminRole?: AdminRole } | undefined)?.adminRole ?? "STAFF") as AdminRole;
 
+  // Grade filter is multi-select -- Next.js gives us a string when exactly
+  // one "grade" query param is present and a string[] when there are
+  // several (or none at all when absent), so normalize to an array once
+  // up front for everything below.
+  const selectedGrades = params.grade ? (Array.isArray(params.grade) ? params.grade : [params.grade]) : [];
+
   const sortKey: OrderSortKey =
     SORT_OPTIONS.some((o) => o.value === params.sort)
       ? (params.sort as OrderSortKey)
@@ -69,7 +91,7 @@ export default async function AdminOrdersPage({
       restaurantId: restaurant.id,
       deliveryDateId: params.deliveryDateId,
       schoolIds: params.schoolId ? [params.schoolId] : [],
-      grade: params.grade,
+      grade: selectedGrades,
       status: params.status,
       archived: params.archived,
       search: params.q,
@@ -112,7 +134,7 @@ export default async function AdminOrdersPage({
   const exportParams = new URLSearchParams();
   if (params.deliveryDateId) exportParams.set("deliveryDateId", params.deliveryDateId);
   if (params.schoolId) exportParams.set("schoolId", params.schoolId);
-  if (params.grade) exportParams.set("grade", params.grade);
+  selectedGrades.forEach((g) => exportParams.append("grade", g));
   if (params.status && params.status !== "ALL") exportParams.set("status", params.status);
   if (params.archived) exportParams.set("archived", params.archived);
   if (params.fromDate) exportParams.set("fromDate", params.fromDate);
@@ -136,7 +158,7 @@ export default async function AdminOrdersPage({
       href: stripParam(exportParams, "deliveryDateId"),
     });
   }
-  if (params.grade) activeFilterChips.push({ label: params.grade, href: stripParam(exportParams, "grade") });
+  selectedGrades.forEach((g) => activeFilterChips.push({ label: g, href: stripParamValue(exportParams, "grade", g) }));
   if (params.fromDate) activeFilterChips.push({ label: `From ${params.fromDate}`, href: stripParam(exportParams, "fromDate") });
   if (params.toDate) activeFilterChips.push({ label: `Through ${params.toDate}`, href: stripParam(exportParams, "toDate") });
   if (params.status && params.status !== "ALL") activeFilterChips.push({ label: params.status, href: stripParam(exportParams, "status") });
@@ -305,14 +327,27 @@ export default async function AdminOrdersPage({
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Grade</label>
-            <select name="grade" defaultValue={params.grade ?? ""}
-              className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
-              <option value="">All grades</option>
+            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">
+              Grade {selectedGrades.length > 0 ? `(${selectedGrades.length})` : ""}
+            </label>
+            {/* Multi-select: check any number of grades to match orders in
+                ANY of them (e.g. check every grade in the "2-5" wing to
+                print just that level's labels). Leave all unchecked for
+                every grade. */}
+            <div className="w-full rounded-lg border border-editorial-line text-[12px] px-2 py-1.5 max-h-[74px] overflow-y-auto flex flex-wrap gap-x-2.5 gap-y-1 focus-within:border-editorial-green focus-within:ring-1 focus-within:ring-editorial-green">
               {gradeOptions.map((g) => (
-                <option key={g} value={g}>{g}</option>
+                <label key={g} className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-editorial-ink">
+                  <input
+                    type="checkbox"
+                    name="grade"
+                    value={g}
+                    defaultChecked={selectedGrades.includes(g)}
+                    className="accent-editorial-green"
+                  />
+                  {g}
+                </label>
               ))}
-            </select>
+            </div>
           </div>
           <div>
             <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Status</label>

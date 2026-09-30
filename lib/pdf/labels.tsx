@@ -1,6 +1,7 @@
 import React from "react";
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import { Order, OrderItem, School, Student, DeliveryDate } from "@prisma/client";
+import { STANDARD_GRADES } from "@/lib/grades";
 
 type LabelOrder = Order & {
   school: School;
@@ -8,6 +9,44 @@ type LabelOrder = Order & {
   deliveryDate: DeliveryDate;
   items: OrderItem[];
 };
+
+// ---------------------------------------------------------------------------
+// Delivery-route ordering
+//
+// The driver drops food building-by-building, and within a building
+// level-by-level (e.g. a toddler/preschool wing serving ages 2-5, then an
+// elementary wing serving 6+). Grades aren't alphabetical order ("1st Grade"
+// sorts before "Pre-K" as a string), so we sort by each school's own
+// configured grade order (School.grades, the same list that drives the
+// admin dropdowns) when available, falling back to the generic K-12 order
+// for schools that haven't configured one. This is the default label order
+// everywhere labels are produced -- the print page, the PDF, and JSON --
+// so drivers always get one location fully sorted before the next.
+// ---------------------------------------------------------------------------
+function gradeSortIndex(grade: string, configuredGrades: string[]): number {
+  const configuredIndex = configuredGrades.indexOf(grade);
+  if (configuredIndex !== -1) return configuredIndex;
+  const standardIndex = STANDARD_GRADES.indexOf(grade);
+  if (standardIndex !== -1) return configuredGrades.length + standardIndex;
+  // Unrecognized grade values (e.g. free-typed text) sort last within their
+  // school rather than disappearing or crashing the sort.
+  return configuredGrades.length + STANDARD_GRADES.length;
+}
+
+function sortLabelOrders<T extends LabelOrder>(orders: T[]): T[] {
+  return [...orders].sort((a, b) => {
+    // Group by location first, so the driver finishes one building before
+    // moving to the next.
+    const schoolCompare = a.school.name.localeCompare(b.school.name);
+    if (schoolCompare !== 0) return schoolCompare;
+    // Within a location, order by grade/level rather than alphabetically.
+    const gradeCompare =
+      gradeSortIndex(a.student.grade, a.school.grades) - gradeSortIndex(b.student.grade, b.school.grades);
+    if (gradeCompare !== 0) return gradeCompare;
+    // Stable, easy-to-scan tiebreaker within the same grade.
+    return a.student.studentName.localeCompare(b.student.studentName);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Sheet geometry
@@ -282,11 +321,11 @@ function LabelsDocument({ orders }: { orders: LabelOrder[] }) {
 }
 
 export async function generateLabelsPdfBuffer(orders: LabelOrder[]) {
-  return renderToBuffer(<LabelsDocument orders={orders} />);
+  return renderToBuffer(<LabelsDocument orders={sortLabelOrders(orders)} />);
 }
 
 export function mapOrderToLabelRows(orders: LabelOrder[]) {
-  return orders.map((order) => {
+  return sortLabelOrders(orders).map((order) => {
     const isLate = getIsLate(order);
     const allergy = getAllergyText(order);
     const alert = [isLate ? "LATE ORDER" : "", allergy].filter(Boolean).join(" | ");

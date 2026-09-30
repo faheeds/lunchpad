@@ -18,7 +18,7 @@ export default async function LabelsPrintPage({
     deliveryDateId?: string;
     orderIds?: string;
     schoolId?: string;
-    grade?: string;
+    grade?: string | string[];
     status?: string;
     archived?: string;
     fromDate?: string;
