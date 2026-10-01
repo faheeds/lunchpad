@@ -27,6 +27,15 @@
  * per-timezone) -- a school on the other side of an international date
  * line from Pacific time still gets asked about the correct calendar
  * date for their own delivery, not Pacific's.
+ *
+ * One push per parent per run, not per school: a parent with children at
+ * more than one school (or more than one pending delivery) used to get
+ * one identical "Order lunch for tomorrow" push per school iteration --
+ * indistinguishable duplicates, since the push text never mentions which
+ * school it's about. We now collect every pending (unpaid) delivery per
+ * parent across all schools first, then send a single push each, with the
+ * school name(s) and actual cutoff time(s) in the message instead of the
+ * old one-size-fits-all "before tomorrow's cutoff" text.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -59,6 +68,33 @@ interface ReminderResult {
   error?: string;
 }
 
+// How many schools' names we're willing to list out in the body before
+// collapsing the rest into "and N more" -- keeps the push readable for a
+// parent with kids spread across many schools instead of an endless line.
+const MAX_SCHOOLS_IN_BODY = 3;
+
+function buildReminderPush(
+  pending: { schoolName: string; cutoffLabel: string }[]
+): { title: string; body: string; data: Record<string, unknown> } {
+  if (pending.length === 1) {
+    return {
+      title: `Order lunch for tomorrow — ${pending[0].schoolName}`,
+      body: `Cutoff: ${pending[0].cutoffLabel}`,
+      data: { screen: "order" },
+    };
+  }
+
+  const shown = pending.slice(0, MAX_SCHOOLS_IN_BODY).map((p) => `${p.schoolName} by ${p.cutoffLabel}`);
+  const remaining = pending.length - shown.length;
+  const body = remaining > 0 ? `${shown.join("; ")}; and ${remaining} more` : shown.join("; ");
+
+  return {
+    title: `Order lunch for tomorrow (${pending.length} schools)`,
+    body,
+    data: { screen: "order" },
+  };
+}
+
 export async function GET(request: NextRequest) {
   const dryRun = request.nextUrl.searchParams.get("dryRun") === "1";
 
@@ -69,6 +105,20 @@ export async function GET(request: NextRequest) {
   const results: ReminderResult[] = [];
   const errors: string[] = [];
   const now = new Date();
+
+  // One entry per (parent, pending delivery) -- gathered across every
+  // school before any push goes out, so we can collapse to a single send
+  // per parent below instead of sending once per school.
+  type PendingReminder = {
+    restaurantSlug: string;
+    schoolId: string;
+    schoolName: string;
+    deliveryDateId: string;
+    /** Formatted for the push body, e.g. "Thu 8:00 PM" -- the school's own
+     *  cutoff time in the school's own timezone, not an assumed "tonight". */
+    cutoffLabel: string;
+  };
+  const pendingByParent = new Map<string, PendingReminder[]>();
 
   try {
     const activeSchools = await prisma.school.findMany({
@@ -91,13 +141,15 @@ export async function GET(request: NextRequest) {
             cancelledAt: null,
             orderingOpen: true,
           },
-          select: { id: true, deliveryDate: true },
+          select: { id: true, deliveryDate: true, cutoffAt: true },
         });
         const targetDate = candidateDates.find(
           (d) => formatInTimeZone(d.deliveryDate, school.timezone, "yyyy-MM-dd") === tomorrowLocalStr
         );
 
         if (!targetDate) continue; // no delivery scheduled tomorrow at this school -- nothing to remind about
+
+        const cutoffLabel = formatInTimeZone(targetDate.cutoffAt, school.timezone, "EEE h:mm a");
 
         // Every parent with at least one active child at this school.
         const parents = await prisma.parentUser.findMany({
@@ -123,24 +175,18 @@ export async function GET(request: NextRequest) {
 
             if (existingOrder) continue; // already ordered -- no need to remind
 
-            if (!dryRun) {
-              await sendPushToParent(parent.id, {
-                title: "Order lunch for tomorrow",
-                body: "Don't forget to place your order before tomorrow's cutoff.",
-                data: { screen: "order" },
-              });
+            if (!pendingByParent.has(parent.id)) {
+              pendingByParent.set(parent.id, []);
             }
-
-            results.push({
+            pendingByParent.get(parent.id)!.push({
               restaurantSlug: restaurant.slug,
               schoolId: school.id,
               schoolName: school.name,
               deliveryDateId: targetDate.id,
-              parentUserId: parent.id,
-              sent: !dryRun,
+              cutoffLabel,
             });
           } catch (err) {
-            const errMsg = err instanceof Error ? err.message : "Unknown error sending reminder";
+            const errMsg = err instanceof Error ? err.message : "Unknown error checking existing order";
             errors.push(`[${restaurant.slug}/${school.id}/${parent.id}] ${errMsg}`);
             results.push({
               restaurantSlug: restaurant.slug,
@@ -159,6 +205,27 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Now send exactly one push per parent, however many schools/pending
+    // deliveries they showed up under above -- naming the school(s) and
+    // actual cutoff time(s) instead of a generic "before tomorrow's
+    // cutoff" that gave no indication of which child/school it was about.
+    for (const [parentId, pending] of pendingByParent) {
+      try {
+        if (!dryRun) {
+          await sendPushToParent(parentId, buildReminderPush(pending));
+        }
+        for (const p of pending) {
+          results.push({ ...p, parentUserId: parentId, sent: !dryRun });
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "Unknown error sending reminder";
+        errors.push(`[${parentId}] ${errMsg}`);
+        for (const p of pending) {
+          results.push({ ...p, parentUserId: parentId, sent: false, error: errMsg });
+        }
+      }
+    }
+
     if (errors.length > 0) {
       console.error("[nightly-order-reminder-cron] Errors:", errors);
     }
@@ -167,6 +234,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       dryRun,
       schoolsChecked: activeSchools.length,
+      parentsNotified: pendingByParent.size,
       processed: results.length,
       results,
       errors,
