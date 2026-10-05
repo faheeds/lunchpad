@@ -3,9 +3,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { updateOrderAsAdmin } from "@/lib/orders";
+import { updateOrderAsAdmin, swapOrderItemAsAdmin } from "@/lib/orders";
 import { sendOrderModifiedEmail } from "@/lib/email/service";
-import { requireAdminRole } from "@/lib/admin-auth";
+import { requireAdminRole, hasRole } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { requireRestaurant } from "@/lib/restaurant";
 import { listActivity } from "@/lib/activity";
@@ -15,6 +15,7 @@ import { getLabels } from "@/lib/location-labels";
 import { issueOrderRefund } from "@/lib/refund";
 import { sendRefundEmail } from "@/lib/email/service";
 import { RefundModalClient } from "@/components/admin/refund-modal-client";
+import { SwapItemClient, type SwapPayload } from "@/components/admin/swap-item-client";
 
 export const dynamic = "force-dynamic";
 
@@ -126,6 +127,90 @@ export default async function AdminOrderDetailPage({
       return { success: false, error: message };
     }
   }
+
+  async function performSwap(payload: SwapPayload) {
+    "use server";
+    // Re-checked server-side on every call — hiding the UI from STAFF is not
+    // the security boundary, this is.
+    await requireAdminRole("MANAGER");
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string })?.adminUserId;
+
+    try {
+      const result = await swapOrderItemAsAdmin({
+        orderId,
+        restaurantId: restaurant.id,
+        adminUserId,
+        orderItemId: payload.orderItemId,
+        newMenuItemId: payload.newMenuItemId,
+        size: payload.size,
+        choice: payload.choice,
+        additions: payload.additions ?? [],
+        removals: payload.removals ?? [],
+        adminNote: payload.adminNote,
+        adjustmentMode:
+          payload.adjustment === "stripe_link"
+            ? { kind: "stripe_link" }
+            : payload.adjustment === "manual"
+              ? { kind: "manual", method: payload.manualMethod || "manual" }
+              : { kind: "comped" },
+      });
+      revalidatePath(`/admin/orders/${orderId}`);
+      revalidatePath("/admin/orders");
+      if (result.action === "checkout_required") {
+        return { success: true, checkoutUrl: result.checkoutUrl };
+      }
+      // Best-effort "your order was updated" email to the parent.
+      sendOrderModifiedEmail(orderId, restaurant.id).catch(() => {});
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Swap failed." };
+    }
+  }
+
+  // Swap is MANAGER+ only (it can move money) — STAFF never sees the panel.
+  const swapSession = await auth();
+  const canSwap =
+    hasRole((swapSession?.user as { adminRole?: string } | undefined)?.adminRole, "MANAGER") &&
+    order.status === "PAID" &&
+    !order.archivedAt &&
+    order.refundAmountCents === 0 &&
+    !order.pendingEditCheckoutSession &&
+    order.items.length > 0;
+
+  const swapMenuItems = canSwap
+    ? (
+        await prisma.deliveryMenuItem.findMany({
+          where: {
+            deliveryDateId: order.deliveryDateId,
+            isAvailable: true,
+            menuItem: { restaurantId: restaurant.id, isActive: true },
+          },
+          include: {
+            menuItem: {
+              include: {
+                options: { orderBy: { sortOrder: "asc" } },
+                sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+              },
+            },
+          },
+        })
+      )
+        .map((e) => e.menuItem)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((m) => ({
+          id: m.id,
+          name: m.name,
+          category: m.category,
+          basePriceCents: m.basePriceCents,
+          sizes: m.sizes.map((s) => ({ name: s.name, priceCents: s.priceCents })),
+          requiredChoices: m.requiredChoices ?? [],
+          addOns: m.options
+            .filter((o) => o.optionType === "ADD_ON")
+            .map((o) => ({ name: o.name, priceDeltaCents: o.priceDeltaCents })),
+          removals: m.options.filter((o) => o.optionType === "REMOVAL").map((o) => o.name),
+        }))
+    : [];
 
   const badge = statusStyle[order.status] ?? { bg: "#F4E3DB", color: "#7C3D24" };
 
@@ -257,6 +342,16 @@ export default async function AdminOrderDetailPage({
               </div>
             </div>
           ))}
+          {canSwap && (
+            <SwapItemClient
+              orderItemId={order.items[0].id}
+              currentItemLabel={`${order.items[0].itemNameSnapshot}${order.items[0].sizeName ? ` · ${order.items[0].sizeName}` : ""}`}
+              currentLineTotalCents={order.items[0].lineTotalCents}
+              currentTotalCents={order.totalCents}
+              menuItems={swapMenuItems}
+              swapAction={performSwap}
+            />
+          )}
         </div>
       </div>
 

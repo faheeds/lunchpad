@@ -219,10 +219,16 @@ export async function POST(request: Request) {
             let pendingItems: {
               additions: string[];
               removals: string[];
-              allergyNotes: string | null;
-              dietaryNotes: string | null;
-              specialInstructions: string | null;
+              allergyNotes?: string | null;
+              dietaryNotes?: string | null;
+              specialInstructions?: string | null;
               lineTotalCents: number;
+              // Present only for an admin item swap (swapOrderItemAsAdmin).
+              orderItemId?: string;
+              menuItemId?: string;
+              itemNameSnapshot?: string;
+              basePriceCents?: number;
+              sizeName?: string | null;
             } | null = null;
             try {
               pendingItems = JSON.parse(newItemsJson ?? "null");
@@ -230,7 +236,10 @@ export async function POST(request: Request) {
 
             const oldTotalCents = order.totalCents;
             const deltaCents = newTotalCents - oldTotalCents;
-            const item = order.items[0];
+            const isSwap = !!pendingItems?.orderItemId;
+            const item = isSwap
+              ? order.items.find((i) => i.id === pendingItems!.orderItemId)
+              : order.items[0];
 
             await prisma.$transaction(async (tx) => {
               if (pendingItems && item) {
@@ -243,6 +252,15 @@ export async function POST(request: Request) {
                     dietaryNotes: pendingItems.dietaryNotes,
                     specialInstructions: pendingItems.specialInstructions,
                     lineTotalCents: pendingItems.lineTotalCents,
+                    // Item swap: also replace the menu item itself.
+                    ...(isSwap && pendingItems.menuItemId
+                      ? {
+                          menuItemId: pendingItems.menuItemId,
+                          itemNameSnapshot: pendingItems.itemNameSnapshot,
+                          basePriceCents: pendingItems.basePriceCents,
+                          sizeName: pendingItems.sizeName ?? null,
+                        }
+                      : {}),
                   },
                 });
               }
@@ -250,7 +268,8 @@ export async function POST(request: Request) {
               await tx.order.update({
                 where: { id: order.id },
                 data: {
-                  subtotalCents: newTotalCents,
+                  // A swap keeps any order-level discount, so subtotal = total + discount.
+                  subtotalCents: isSwap ? newTotalCents + order.discountCents : newTotalCents,
                   totalCents: newTotalCents,
                   pendingEditTotalCents: null,
                   pendingEditCheckoutSession: null,
