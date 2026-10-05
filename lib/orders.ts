@@ -1431,6 +1431,280 @@ export async function updateOrderAsAdmin(args: {
 }
 
 /**
+ * Admin-only: swap the menu item on an order line for a different one
+ * (e.g. a parent calls to say "change Tuesday's burger to the chicken bowl").
+ *
+ * Bypasses the cutoff, like updateOrderAsAdmin. The new item must be on the
+ * menu for this order's delivery date. The line is re-priced from the new
+ * item (size + add-ons), any existing order-level discount is kept as-is, and
+ * the difference is handled the same three ways as updateOrderAsAdmin:
+ *   decrease        — partial Stripe refund of the difference
+ *   increase        — stripe_link (delta Checkout) / manual / comped
+ *   same price      — applied immediately
+ *
+ * Callers MUST gate this at MANAGER+ (it can move money).
+ */
+export async function swapOrderItemAsAdmin(args: {
+  orderId: string;
+  /** REQUIRED — multi-tenant scoping. The admin's restaurantId. */
+  restaurantId: string;
+  adminUserId?: string;
+  /** Which line to swap. Defaults to the first line. */
+  orderItemId?: string;
+  newMenuItemId: string;
+  /** Size name — required when the new item has sizes. */
+  size?: string;
+  /** Required top-level choice — required when the new item has requiredChoices. */
+  choice?: string;
+  additions?: string[];
+  removals?: string[];
+  adminNote?: string;
+  adjustmentMode?: AdminAdjustmentMode;
+}): Promise<OrderUpdateResult> {
+  const adjustmentMode: AdminAdjustmentMode = args.adjustmentMode ?? { kind: "comped" };
+  const additions = args.additions ?? [];
+  const removals = args.removals ?? [];
+
+  const order = await prisma.order.findFirst({
+    where: { id: args.orderId, restaurantId: args.restaurantId },
+    include: {
+      deliveryDate: true,
+      items: true,
+      payment: true,
+      restaurant: { select: { stripeAccountId: true } },
+    },
+  });
+  if (!order) throw new Error("Order not found.");
+
+  if (order.status !== OrderStatus.PAID) {
+    throw new Error("Only paid orders can be swapped. Cancel or refund this order instead.");
+  }
+  if (order.archivedAt) throw new Error("This order is archived.");
+  if (order.pendingEditCheckoutSession) {
+    throw new Error("This order has a payment link outstanding. Wait for it to be paid or expire before swapping.");
+  }
+
+  const item = args.orderItemId
+    ? order.items.find((i) => i.id === args.orderItemId)
+    : order.items[0];
+  if (!item) throw new Error("Order item not found.");
+  if (item.refundedAt) throw new Error("This item has already been refunded.");
+  if (order.refundAmountCents > 0) {
+    throw new Error("This order has a partial refund. Swapping it isn't supported — cancel and re-create instead.");
+  }
+
+  // The new item must belong to this restaurant AND be on the menu for this
+  // delivery date (tenant-scoped; blocks swapping to arbitrary/inactive items).
+  const availability = await prisma.deliveryMenuItem.findFirst({
+    where: {
+      deliveryDateId: order.deliveryDateId,
+      menuItemId: args.newMenuItemId,
+      isAvailable: true,
+      menuItem: { restaurantId: args.restaurantId, isActive: true },
+    },
+    include: {
+      menuItem: {
+        include: {
+          options: true,
+          sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+        },
+      },
+    },
+  });
+  if (!availability) {
+    throw new Error("That item isn't available on this order's delivery date.");
+  }
+  const newItem = availability.menuItem;
+
+  const addOnSet = new Set(newItem.options.filter((o) => o.optionType === "ADD_ON").map((o) => o.name));
+  const removalSet = new Set(newItem.options.filter((o) => o.optionType === "REMOVAL").map((o) => o.name));
+  if (!additions.every((v) => addOnSet.has(v))) throw new Error(`One or more add-ons are invalid for ${newItem.name}.`);
+  if (!removals.every((v) => removalSet.has(v))) throw new Error(`One or more removals are invalid for ${newItem.name}.`);
+
+  const requiredChoices = getRequiredChoicesForMenuItem(newItem);
+  if (requiredChoices.length && (!args.choice || !requiredChoices.includes(args.choice))) {
+    throw new Error(`Choose a required option for ${newItem.name}.`);
+  }
+
+  let basePriceCents: number;
+  let sizeName: string | null = null;
+  if (newItem.sizes.length > 0) {
+    const size = newItem.sizes.find((s) => s.name === args.size);
+    if (!size) throw new Error(`Choose a valid size for ${newItem.name}.`);
+    basePriceCents = size.priceCents;
+    sizeName = size.name;
+  } else {
+    basePriceCents = newItem.basePriceCents;
+  }
+
+  const newLineTotalCents = resolveLineItemPrice({
+    basePriceCents,
+    additions: newItem.options.filter((o) => additions.includes(o.name)),
+  });
+
+  // Keep the order's existing discount amount; only the subtotal moves.
+  const newSubtotalCents = order.subtotalCents - item.lineTotalCents + newLineTotalCents;
+  const newTotalCents = Math.max(0, newSubtotalCents - order.discountCents);
+  const deltaCents = newTotalCents - order.totalCents;
+
+  const storedAdditions = args.choice ? [args.choice, ...additions] : additions;
+  const itemData = {
+    menuItemId: newItem.id,
+    itemNameSnapshot: newItem.name,
+    basePriceCents,
+    sizeName,
+    additions: storedAdditions,
+    removals,
+    lineTotalCents: newLineTotalCents,
+  };
+
+  const specialInstructions = args.adminNote
+    ? `[Admin note: ${args.adminNote}]${order.specialInstructions ? `\n${order.specialInstructions}` : ""}`
+    : order.specialInstructions;
+
+  const fromLabel = `${item.itemNameSnapshot}${item.sizeName ? ` (${item.sizeName})` : ""}`;
+  const toLabel = `${newItem.name}${sizeName ? ` (${sizeName})` : ""}`;
+
+  // ── Increase via Stripe link: nothing changes until the parent pays ──
+  if (deltaCents > 0 && adjustmentMode.kind === "stripe_link") {
+    if (order.deltaPaymentIntentId) {
+      throw new Error("This order has already been increased once and cannot be increased again.");
+    }
+    const now = new Date();
+    const cutoffAt = order.deliveryDate.cutoffAt;
+    if (cutoffAt.getTime() - now.getTime() < 30 * 60 * 1000) {
+      throw new Error("Too close to cutoff for a payment link — use manual or comped instead.");
+    }
+    const expiresAt = Math.floor(
+      Math.min(cutoffAt.getTime(), now.getTime() + 24 * 60 * 60 * 1000 - 60_000) / 1000
+    );
+
+    // Stripe caps a metadata value at 500 chars, so this payload is kept
+    // minimal (notes/allergies are left untouched by the webhook when absent).
+    const newItemsJson = JSON.stringify({
+      orderItemId: item.id,
+      menuItemId: newItem.id,
+      itemNameSnapshot: newItem.name,
+      basePriceCents,
+      sizeName,
+      additions: storedAdditions,
+      removals,
+      lineTotalCents: newLineTotalCents,
+    });
+    if (newItemsJson.length > 480) {
+      throw new Error("This swap has too many customizations for a payment link — use manual or comped instead.");
+    }
+
+    const session = await createOrderEditCheckoutSession({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      parentEmail: order.parentEmail,
+      deltaCents,
+      newTotalCents,
+      newItemsJson,
+      stripeAccountId: order.restaurant.stripeAccountId,
+      expiresAt,
+    });
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        pendingEditTotalCents: newTotalCents,
+        pendingEditCheckoutSession: session.id,
+        pendingEditCreatedAt: now,
+      },
+    });
+
+    await logActivity({
+      restaurantId: order.restaurantId,
+      adminUserId: args.adminUserId,
+      entityType: "ORDER",
+      entityId: order.id,
+      action: "MODIFIED",
+      summary: `Admin started item swap on order ${order.orderNumber}: ${fromLabel} → ${toLabel} — awaiting payment of ${formatCurrency(deltaCents)}`,
+      metadata: { orderNumber: order.orderNumber, fromItem: fromLabel, toItem: toLabel, deltaCents, adjustmentMode: "stripe_link" },
+    });
+
+    return { action: "checkout_required", checkoutUrl: session.url! };
+  }
+
+  // ── Decrease: refund the difference first, then apply ──
+  let refundCents = 0;
+  if (deltaCents < 0) {
+    refundCents = -deltaCents;
+    const isStripePayment = order.payment?.provider === "stripe" || order.payment?.provider === "stripe_checkout_link";
+    if (isStripePayment) {
+      const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+      if (!paymentIntentId) {
+        throw new Error("Cannot issue refund: Stripe order is missing a payment intent. Contact support.");
+      }
+      if (!stripe) throw new Error("Stripe is not configured — cannot issue the refund.");
+      await stripe.refunds.create(
+        {
+          payment_intent: paymentIntentId,
+          amount: refundCents,
+          metadata: {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            itemSwap: "true",
+            adminUserId: args.adminUserId ?? "unknown",
+          },
+        },
+        // updatedAt changes after every applied change, so a later swap with
+        // the same numbers gets a fresh key; a retry of this one reuses it.
+        { idempotencyKey: `swap-decrease-${order.id}-${item.id}-${newItem.id}-${newTotalCents}-${item.updatedAt.getTime()}` }
+      );
+    }
+    // Non-Stripe (manual/comped) payments: no refund call — admin settles offline.
+  }
+
+  // ── Apply the swap (decrease after refund, increase manual/comped, or same price) ──
+  await prisma.$transaction(async (tx) => {
+    await tx.orderItem.update({ where: { id: item.id }, data: itemData });
+    await tx.order.update({
+      where: { id: order.id },
+      data: {
+        subtotalCents: newSubtotalCents,
+        totalCents: newTotalCents,
+        specialInstructions,
+        ...(order.payment ? { payment: { update: { amountCents: newTotalCents } } } : {}),
+      },
+    });
+  });
+
+  const noteFragment = args.adminNote ? ` · note: "${args.adminNote.slice(0, 80)}"` : "";
+  const moneyFragment =
+    deltaCents < 0
+      ? ` (${formatCurrency(refundCents)} refunded)`
+      : deltaCents > 0
+        ? adjustmentMode.kind === "comped"
+          ? ` (+${formatCurrency(deltaCents)} comped${adjustmentMode.reason ? `: ${adjustmentMode.reason}` : ""})`
+          : ` (+${formatCurrency(deltaCents)} recorded as ${adjustmentMode.kind === "manual" ? adjustmentMode.method : "manual"})`
+        : "";
+
+  await logActivity({
+    restaurantId: order.restaurantId,
+    adminUserId: args.adminUserId,
+    entityType: "ORDER",
+    entityId: order.id,
+    action: "MODIFIED",
+    summary: `Admin swapped item on order ${order.orderNumber}: ${fromLabel} → ${toLabel}${moneyFragment}${noteFragment}`,
+    metadata: {
+      orderNumber: order.orderNumber,
+      fromItem: fromLabel,
+      toItem: toLabel,
+      newTotalCents,
+      deltaCents,
+      refundCents,
+      adjustmentMode: adjustmentMode.kind,
+      adminNote: args.adminNote ?? null,
+    },
+  });
+
+  return { action: "updated", order: { id: order.id, orderNumber: order.orderNumber, restaurantId: order.restaurantId } };
+}
+
+/**
  * Customer-initiated cancel + refund.
  *
  * Auth model: caller must prove ownership of the order via ONE of:
