@@ -473,8 +473,8 @@ function WeeklyTiersEditor({ state, update }: { state: BuilderState; update: (pa
   return (
     <div className="mt-2 space-y-2">
       <p className="text-[13px] text-editorial-ink-soft leading-snug">
-        Families who order on several days of the same week (Mon–Sun) save more on each extra day.
-        We check their earlier days automatically — including days already paid for.
+        Each student who orders on several days of the same week (Mon–Sun) saves more on each extra day.
+        We count each student's own days automatically — including days already paid for. Siblings are tracked separately.
       </p>
       {tiers.map((tier, i) => {
         const isLast = i === tiers.length - 1;
@@ -513,7 +513,7 @@ function WeeklyTiersEditor({ state, update }: { state: BuilderState; update: (pa
         + Add a tier
       </button>
       <p className="text-[11px] text-editorial-ink-faint">
-        Example: day 3 → 25% and day 4 → 50% means a family ordering four days pays full price on days 1–2,
+        Example: day 3 → 25% and day 4 → 50% means a student ordering four days pays full price on days 1–2,
         25% off day 3, and 50% off day 4. Each day's discount is fixed when it is paid.
       </p>
     </div>
@@ -1140,7 +1140,7 @@ function MultiDayPreview({ state }: { state: BuilderState }) {
           />
         ))}
         <div className="border-t border-editorial-line my-1" />
-        <ReceiptRow label={`Family saves (${maxDay} days)`} value={fmt(total)} bold />
+        <ReceiptRow label={`Student saves (${maxDay} days)`} value={fmt(total)} bold />
       </div>
     </div>
   );

@@ -276,9 +276,13 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       schoolId: parsed.schoolId,
       deliveryDate: deliveryDate.deliveryDate,
       parentUserId: parentUserId ?? parentChild?.parentUserId ?? null,
-      // Lets multi-day tiers recognise this family's earlier paid days
+      // Lets multi-day tiers recognise this student's earlier paid days
       // even when they checked out as a guest on a previous day.
       parentEmail: parsed.parentEmail,
+      // Multi-day tiers count each student's own days (name + grade), however
+      // those days were ordered. Same grade fallback the Student row gets below.
+      studentName: parsed.studentName,
+      grade: parsed.grade || (deliveryDate.school.locationType === "OFFICE" ? "—" : null),
       lines: cartLines,
     },
     code: parsed.discountCode,
@@ -1715,6 +1719,7 @@ type CancellationQuoteOrder = {
   parentEmail: string | null;
   deliveryDate: { deliveryDate: Date };
   school: { timezone: string };
+  student: { studentName: string; grade: string | null };
 };
 
 export type CancellationAdjustment = RepriceAdjustment & {
@@ -1725,7 +1730,7 @@ export type CancellationAdjustment = RepriceAdjustment & {
 };
 
 /**
- * Multi-day ("weekly streak") discounts depend on how many days a family
+ * Multi-day ("weekly streak") discounts depend on how many days a student
  * orders in a week. If a parent cancels an earlier paid day and that makes a
  * later day drop a tier, the discount that day no longer earns is withheld
  * from this cancellation's refund (tax-grossed, because tax was charged on
@@ -1747,6 +1752,13 @@ export async function buildCancellationQuote(order: CancellationQuoteOrder & { t
         status: { in: [OrderStatus.PAID, OrderStatus.PARTIALLY_REFUNDED] },
         archivedAt: null,
         OR: familyMatch,
+        // Streaks are per student: a sibling's days never count.
+        student: {
+          studentName: { equals: order.student.studentName.trim(), mode: "insensitive" },
+          ...(order.student.grade?.trim()
+            ? { grade: { equals: order.student.grade.trim(), mode: "insensitive" } }
+            : {}),
+        },
         deliveryDate: { deliveryDate: { gte: start, lt: end } },
       },
       select: {
@@ -1831,7 +1843,7 @@ async function findWeeklyBatchPaymentIntent(order: {
 export async function getCancellationQuote(args: { orderId: string; parentUserId?: string; guestToken?: string }) {
   const order = await prisma.order.findUnique({
     where: { id: args.orderId },
-    include: { school: true, deliveryDate: true },
+    include: { school: true, deliveryDate: true, student: true },
   });
   if (!order) throw new Error("Order not found.");
   let authorized = false;
