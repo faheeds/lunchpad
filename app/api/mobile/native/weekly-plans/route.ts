@@ -18,7 +18,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireMobileAuth, CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
-import { getUpcomingSchoolWeekRange } from "@/lib/weekly-week";
+import {
+  getUpcomingOrderingWindowRange,
+  getUpcomingSchoolWeekRange,
+  parseWeekScope,
+  pickWeekScope,
+} from "@/lib/weekly-week";
 import { sortCategoryNames } from "@/lib/menu-config";
 
 export { corsOptions as OPTIONS };
@@ -53,7 +58,12 @@ export async function GET(request: NextRequest) {
     // timezone. Falls back to LA time if the parent has no children yet.
     const now = new Date();
     const primaryTimezone = parent.children[0]?.school.timezone ?? "America/Los_Angeles";
-    const range = getUpcomingSchoolWeekRange(now, primaryTimezone);
+    // `?week=current|next` opts in to one-week-at-a-time scoping (newer app
+    // versions). Without it the response is unchanged: next week only.
+    const requestedWeek = parseWeekScope(new URL(request.url).searchParams.get("week"));
+    const range = requestedWeek
+      ? getUpcomingOrderingWindowRange(now, primaryTimezone)
+      : getUpcomingSchoolWeekRange(now, primaryTimezone);
 
     const schoolIds = [...new Set(parent.children.map((c) => c.schoolId))];
 
@@ -84,6 +94,21 @@ export async function GET(request: NextRequest) {
         })
       : [];
 
+    let weekMeta: { scope: "current" | "next"; hasCurrent: boolean; hasNext: boolean } | null = null;
+    let visibleDeliveryDates = deliveryDates;
+    if (requestedWeek) {
+      const picked = pickWeekScope({
+        requested: requestedWeek,
+        now,
+        timezone: primaryTimezone,
+        dates: deliveryDates.map((d) => d.deliveryDate),
+      });
+      weekMeta = { scope: picked.scope, hasCurrent: picked.hasCurrent, hasNext: picked.hasNext };
+      visibleDeliveryDates = deliveryDates.filter(
+        (d) => d.deliveryDate >= picked.range.start && d.deliveryDate <= picked.range.end
+      );
+    }
+
     // Precompute a category-position lookup once, then sort each date's
     // flat menuItems array by it below -- same pattern as
     // /api/mobile/native/delivery-dates, so category order stays
@@ -109,7 +134,8 @@ export async function GET(request: NextRequest) {
           studentName: c.studentName,
           grade: c.grade,
         })),
-        deliveryDates: deliveryDates.map((d) => ({
+        week: weekMeta,
+        deliveryDates: visibleDeliveryDates.map((d) => ({
           id: d.id,
           schoolId: d.schoolId,
           deliveryDate: d.deliveryDate.toISOString(),
