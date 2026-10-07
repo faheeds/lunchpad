@@ -106,6 +106,22 @@ export default async function CheckoutSuccessPage({
 
   const isWeekly = !!batch && !order;
 
+  // Names of the discount(s) applied to the weekly batch's days, for the
+  // receipt ("Multi-day savings"). Items only store the discount id.
+  const batchDiscountIds = batch
+    ? [...new Set(batch.items.map((i) => i.discountId).filter((id): id is string => Boolean(id)))]
+    : [];
+  const batchDiscountNames = new Map<string, string>(
+    batchDiscountIds.length
+      ? (
+          await prisma.discount.findMany({
+            where: { id: { in: batchDiscountIds } },
+            select: { id: true, name: true },
+          })
+        ).map((d) => [d.id, d.name] as [string, string])
+      : []
+  );
+
   return (
     <>
       <SiteHeaderServer />
@@ -322,11 +338,58 @@ export default async function CheckoutSuccessPage({
                       </p>
                     </div>
                   </div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#211D15", flexShrink: 0 }}>
-                    {formatCurrency(item.lineTotalCents)}
-                  </p>
+                  <div style={{ flexShrink: 0, textAlign: "right" }}>
+                    {item.discountCents > 0 ? (
+                      <>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "#2C4031" }}>
+                          <span style={{ textDecoration: "line-through", color: "#938B78", fontWeight: 500, marginRight: 6 }}>
+                            {formatCurrency(item.lineTotalCents)}
+                          </span>
+                          {formatCurrency(item.lineTotalCents - item.discountCents)}
+                        </p>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: "#2C4031", marginTop: 2 }}>
+                          {(item.discountId && batchDiscountNames.get(item.discountId)) || "Discount"} −{formatCurrency(item.discountCents)}
+                        </p>
+                      </>
+                    ) : (
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "#211D15" }}>
+                        {formatCurrency(item.lineTotalCents)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
+
+              {/* Savings summary + receipt math. Sales tax is whatever Stripe
+                  added on top of (subtotal - discount). */}
+              {batch.discountCents > 0 && (() => {
+                const afterDiscount = batch.subtotalCents - batch.discountCents;
+                const taxCents = Math.max(0, batch.totalCents - afterDiscount);
+                return (
+                  <div style={{ padding: "12px 18px 0", fontSize: 14, color: "#938B78" }}>
+                    <p style={{
+                      background: "#E7F3EA", color: "#1F5130", fontWeight: 700,
+                      borderRadius: 10, padding: "8px 12px", marginBottom: 10,
+                    }}>
+                      🎉 You saved {formatCurrency(batch.discountCents)} this week
+                    </p>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Subtotal</span>
+                      <span>{formatCurrency(batch.subtotalCents)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600, color: "#2C4031", marginTop: 4 }}>
+                      <span>Discount</span>
+                      <span>−{formatCurrency(batch.discountCents)}</span>
+                    </div>
+                    {taxCents > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                        <span>Sales tax</span>
+                        <span>{formatCurrency(taxCents)}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Total */}
               <div style={{ padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
