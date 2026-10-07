@@ -16,6 +16,7 @@
  *    customer-facing automatic-discount surface refreshes too.
  */
 
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -107,6 +108,7 @@ export async function createDiscount(payload: string): Promise<ActionResult> {
       schoolIds: data.schoolIds,
       grades: data.grades,
       weekdays: data.weekdays,
+      weeklyTiers: data.templateKind === "MULTI_DAY" ? data.weeklyTiers : Prisma.DbNull,
       startsAt: data.startsAt ?? null,
       endsAt: data.endsAt ?? null,
       maxRedemptionsTotal: data.maxRedemptionsTotal ?? null,
@@ -183,6 +185,7 @@ export async function updateDiscount(discountId: string, payload: string): Promi
       schoolIds: data.schoolIds,
       grades: data.grades,
       weekdays: data.weekdays,
+      weeklyTiers: data.templateKind === "MULTI_DAY" ? data.weeklyTiers : Prisma.DbNull,
       startsAt: data.startsAt ?? null,
       endsAt: data.endsAt ?? null,
       maxRedemptionsTotal: data.maxRedemptionsTotal ?? null,

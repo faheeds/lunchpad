@@ -153,6 +153,18 @@ async function createSession(args: SharedCheckoutArgs) {
     },
     ...(paymentIntentData ? { payment_intent_data: paymentIntentData } : {}),
     ...(discountStripeArg ? { discounts: discountStripeArg } : {}),
+    // Stripe collapses the coupon line behind a small arrow on the order
+    // summary, so a discount is easy to miss. Say it out loud next to the
+    // Pay button too.
+    ...(safeDiscountCents > 0
+      ? {
+          custom_text: {
+            submit: {
+              message: `You're saving ${formatCurrency(safeDiscountCents)} with ${args.discountLabel ?? "your discount"} — already applied to your total.`,
+            },
+          },
+        }
+      : {}),
     ...(args.expiresAt ? { expires_at: args.expiresAt } : {}),
     line_items: args.lineItems.map((item) => ({
       quantity: 1,
@@ -160,6 +172,14 @@ async function createSession(args: SharedCheckoutArgs) {
         currency: "usd",
         product_data: { name: item.name, description: item.description },
         unit_amount: item.amountCents,
+        // Without an explicit tax_code, Stripe Tax falls back to the
+        // account's preset product category — which for this account is
+        // "Digital products > Software > SaaS" (set up for F5H's other,
+        // non-food business). That misclassification was silently zeroing
+        // out sales tax on every LunchPad order despite a valid WA
+        // registration. txcd_40060000 is Stripe's tax code for prepared/
+        // ready-to-eat food, which is what's actually being sold here.
+        tax_code: "txcd_40060000",
       },
     })),
   }), "stripe_checkout_session_create_failed");

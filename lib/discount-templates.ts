@@ -20,6 +20,7 @@ export type TemplateSlug =
   | "sibling"
   | "day-of-week"
   | "volume"
+  | "multi-day"
   | "item-discount"
   | "bogo"
   | "bundle"
@@ -33,6 +34,7 @@ export interface TemplateMeta {
     | "SIBLING"
     | "DAY_OF_WEEK"
     | "VOLUME"
+    | "MULTI_DAY"
     | "ITEM_DISCOUNT"
     | "BOGO"
     | "BUNDLE"
@@ -59,6 +61,8 @@ export interface TemplateDefaults {
   minOrderCents: number | null;
   weekdays: number[];
   maxRedemptionsPerUser: number | null;
+  /** Multi-day tiers (MULTI_DAY template only). */
+  weeklyTiers?: { dayNumber: number; percent: number }[];
 }
 
 const COMMON_DEFAULTS: TemplateDefaults = {
@@ -167,6 +171,24 @@ export const TEMPLATES: TemplateMeta[] = [
     example: "$30 → 10% off",
     available: true,
     defaults: { ...COMMON_DEFAULTS, minOrderCents: 3000 },
+  },
+  {
+    slug: "multi-day",
+    kind: "MULTI_DAY",
+    title: "Multi-day savings",
+    description: "Reward families who order several days in a week — a bigger discount on each extra day.",
+    example: "3rd day 25% off · 4th day 50% off",
+    available: true,
+    defaults: {
+      ...COMMON_DEFAULTS,
+      name: "Multi-day savings",
+      kind: "PERCENT",
+      value: 50,
+      weeklyTiers: [
+        { dayNumber: 3, percent: 25 },
+        { dayNumber: 4, percent: 50 },
+      ],
+    },
   },
   {
     slug: "item-discount",

@@ -77,7 +77,7 @@ const isoDateOrUndefined = z.preprocess((v) => {
 export const discountInputSchema = z.object({
   templateKind: z.enum([
     "WELCOME", "PROMO_CODE", "SIBLING", "DAY_OF_WEEK",
-    "VOLUME", "ITEM_DISCOUNT", "BOGO", "BUNDLE", "CUSTOM",
+    "VOLUME", "MULTI_DAY", "ITEM_DISCOUNT", "BOGO", "BUNDLE", "CUSTOM",
   ]),
 
   // Identity
@@ -110,6 +110,15 @@ export const discountInputSchema = z.object({
   schoolIds: z.array(z.string()).default([]),
   grades: z.array(z.string()).default([]),
   weekdays: z.array(z.coerce.number().int().min(1).max(7)).default([]),
+  // Multi-day tiers — "the Nth delivery day this week gets X% off".
+  weeklyTiers: z
+    .array(
+      z.object({
+        dayNumber: z.coerce.number().int().min(2, "Tiers start at the 2nd day.").max(7),
+        percent: z.coerce.number().int().min(1).max(100),
+      }),
+    )
+    .default([]),
 
   // Window
   startsAt: isoDateOrUndefined,
@@ -168,6 +177,23 @@ export const discountInputSchema = z.object({
       path: ["minOrderCents"],
       message: "Spend & save discounts need a minimum order amount.",
     });
+  }
+
+  // MULTI_DAY needs at least one tier, with no duplicate day numbers.
+  if (data.templateKind === "MULTI_DAY") {
+    if (data.weeklyTiers.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["weeklyTiers"],
+        message: "Add at least one tier (e.g. day 3 → 25% off).",
+      });
+    } else if (new Set(data.weeklyTiers.map((t) => t.dayNumber)).size !== data.weeklyTiers.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["weeklyTiers"],
+        message: "Each day number can only appear once.",
+      });
+    }
   }
 
   // DAY_OF_WEEK needs at least one weekday selected.

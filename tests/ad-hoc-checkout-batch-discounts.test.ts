@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Discount } from "@prisma/client";
+import { fromZonedTime } from "date-fns-tz";
 
 // Same hoisted-mock pattern as tests/ad-hoc-checkout-batch.test.ts — this
 // file exists specifically to verify the discount engine is now actually
@@ -17,6 +18,8 @@ const {
   orderCountMock,
   discountFindManyMock,
   discountRedemptionGroupByMock,
+  schoolFindUniqueMock,
+  orderFindManyMock,
 } = vi.hoisted(() => ({
   deliveryDateFindManyMock: vi.fn(),
   schoolFindManyMock: vi.fn(),
@@ -26,16 +29,18 @@ const {
   orderCountMock: vi.fn(),
   discountFindManyMock: vi.fn(),
   discountRedemptionGroupByMock: vi.fn(),
+  schoolFindUniqueMock: vi.fn(),
+  orderFindManyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     deliveryDate: { findMany: deliveryDateFindManyMock },
-    school: { findMany: schoolFindManyMock },
+    school: { findMany: schoolFindManyMock, findUnique: schoolFindUniqueMock },
     parentChild: { findMany: parentChildFindManyMock },
     weeklyCheckoutBatch: { create: weeklyCheckoutBatchCreateMock },
     restaurant: { findUnique: restaurantFindUniqueMock },
-    order: { count: orderCountMock },
+    order: { count: orderCountMock, findMany: orderFindManyMock },
     discount: { findMany: discountFindManyMock },
     discountRedemption: { groupBy: discountRedemptionGroupByMock },
   },
@@ -66,6 +71,7 @@ function createDiscount(overrides: Partial<Discount> = {}): Discount {
     schoolIds: [],
     grades: [],
     weekdays: [],
+    weeklyTiers: null,
     startsAt: null,
     endsAt: null,
     maxRedemptionsTotal: null,
@@ -200,6 +206,55 @@ describe("createAdHocCheckoutBatch — discount engine integration", () => {
     expect(batch.subtotalCents).toBe(1099 + 999);
     expect(batch.discountCents).toBe(300);
     expect(batch.totalCents).toBe(1099 + 999 - 300);
+  });
+
+  it("scores multi-day tiers across the whole cart: day 3 = 25%, day 4 = 50%", async () => {
+    // One lunch on each of Mon-Thu, nothing paid yet. Every item must see
+    // the OTHER days in the same checkout to know which day of the week it is.
+    discountFindManyMock.mockResolvedValue([
+      createDiscount({
+        id: "discount-multi",
+        name: "Multi-day savings",
+        templateKind: "MULTI_DAY",
+        kind: "PERCENT",
+        value: 50,
+        weeklyTiers: [
+          { dayNumber: 3, percent: 25 },
+          { dayNumber: 4, percent: 50 },
+        ],
+      }),
+    ]);
+    schoolFindUniqueMock.mockResolvedValue({ timezone: "America/Los_Angeles" });
+    orderFindManyMock.mockResolvedValue([]);
+
+    const ymds = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08"];
+    deliveryDateFindManyMock.mockResolvedValue(
+      ymds.map((ymd, i) =>
+        buildDeliveryDate({ id: `date-${i}`, deliveryDate: fromZonedTime(`${ymd} 00:00:00`, "America/Los_Angeles") })
+      )
+    );
+
+    const batch = await createAdHocCheckoutBatch(
+      "parent-1",
+      ymds.map((_, i) => ({
+        parentChildId: "child-hana",
+        deliveryDateId: `date-${i}`,
+        menuItemId: "item-burger",
+        additions: [],
+        removals: [],
+      }))
+    );
+
+    const created = weeklyCheckoutBatchCreateMock.mock.calls[0][0].data.items.create;
+    expect(created.map((i: { discountCents: number }) => i.discountCents)).toEqual([
+      0,
+      0,
+      Math.floor(1099 * 0.25),
+      Math.floor(1099 * 0.5),
+    ]);
+    expect(batch.discountCents).toBe(Math.floor(1099 * 0.25) + Math.floor(1099 * 0.5));
+    // The persisted item rows carry no scoring scratch data.
+    expect(created[0]).not.toHaveProperty("_score");
   });
 
   it("applies a promo code discount when a valid code is passed", async () => {
