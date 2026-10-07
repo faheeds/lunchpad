@@ -533,7 +533,7 @@ export async function previewWeeklyCheckoutBatch(
  * three different kids in one cart produces three Orders, correctly
  * attributed, from one payment.
  */
-export async function createAdHocCheckoutBatch(
+async function prepareAdHocBatch(
   parentUserId: string,
   cartItems: {
     parentChildId: string;
@@ -544,7 +544,8 @@ export async function createAdHocCheckoutBatch(
     additions: string[];
     removals: string[];
   }[],
-  code?: string | null
+  code: string | null | undefined,
+  preview: boolean
 ) {
   if (!cartItems.length) {
     throw new Error("Cart is empty.");
@@ -591,7 +592,7 @@ export async function createAdHocCheckoutBatch(
   // Same monthly order cap as a regular checkout — see the comment in
   // createWeeklyCheckoutBatch above for why this is a soft, count-as-of-now
   // check rather than reserving capacity for every item in the cart.
-  await assertOrderCapacity(restaurantId);
+  if (!preview) await assertOrderCapacity(restaurantId);
 
   // Verify every referenced child actually belongs to the authenticated
   // parent, not just that a parentChildId string was supplied. This is
@@ -693,7 +694,7 @@ export async function createAdHocCheckoutBatch(
     throw new Error(`Checkout could not continue. ${skippedItems.join(" ")}`);
   }
 
-  const { items: batchItems } = await applyBatchDiscounts(unscoredItems, {
+  const { items: batchItems, scores, discountNames } = await applyBatchDiscounts(unscoredItems, {
     restaurantId,
     parentUserId,
     code,
@@ -702,6 +703,17 @@ export async function createAdHocCheckoutBatch(
   const subtotalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
   const discountCents = batchItems.reduce((sum, item) => sum + item.discountCents, 0);
   const totalCents = Math.max(0, subtotalCents - discountCents);
+
+  return { restaurantId, batchItems, scores, discountNames, subtotalCents, discountCents, totalCents };
+}
+
+export async function createAdHocCheckoutBatch(
+  parentUserId: string,
+  cartItems: Parameters<typeof prepareAdHocBatch>[1],
+  code?: string | null
+) {
+  const { restaurantId, batchItems, subtotalCents, discountCents, totalCents } =
+    await prepareAdHocBatch(parentUserId, cartItems, code, false);
 
   return prisma.weeklyCheckoutBatch.create({
     data: {
@@ -722,6 +734,41 @@ export async function createAdHocCheckoutBatch(
       parentUser: true
     }
   });
+}
+
+/**
+ * Read-only price preview of a live cart (same builder + discount engine as
+ * createAdHocCheckoutBatch, writes nothing) so the iOS cart can show the
+ * multi-day savings before the parent is sent to Stripe. Sales tax is added
+ * on Stripe's page and is not included.
+ */
+export async function previewAdHocCheckout(
+  parentUserId: string,
+  cartItems: Parameters<typeof prepareAdHocBatch>[1],
+  code?: string | null
+): Promise<WeeklyCheckoutPreview> {
+  const built = await prepareAdHocBatch(parentUserId, cartItems, code, true);
+  const lines: WeeklyCheckoutPreviewLine[] = built.batchItems.map((item, i) => {
+    const score = built.scores[i];
+    return {
+      date: formatInTimeZone(score.deliveryDate, score.timezone, "yyyy-MM-dd"),
+      weekdayLabel: formatInTimeZone(score.deliveryDate, score.timezone, "EEE, MMM d"),
+      studentName: score.studentName,
+      itemName: item.itemNameSnapshot,
+      lineTotalCents: item.lineTotalCents,
+      discountCents: item.discountCents,
+      discountName: built.discountNames[i],
+    };
+  });
+  lines.sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    lines,
+    subtotalCents: built.subtotalCents,
+    discountCents: built.discountCents,
+    totalCents: built.totalCents,
+    discountNames: [...new Set(built.discountNames.filter((n): n is string => Boolean(n)))],
+    skipped: [],
+  };
 }
 
 /**

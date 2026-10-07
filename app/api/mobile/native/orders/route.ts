@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
         deliveryDate: o.deliveryDate.deliveryDate.toISOString(),
         schoolName: o.school.name,
         totalCents: o.totalCents,
+        // Pre-discount price + what multi-day / other discounts took off.
+        subtotalCents: o.subtotalCents,
+        discountCents: o.discountCents,
         createdAt: o.createdAt.toISOString(),
         parentChildId: o.parentChildId,
         deliveryDateId: o.deliveryDateId,
