@@ -774,7 +774,7 @@ export async function markWeeklyBatchPaidByCheckoutSession(
     }
 
     const allocatedTotals = allocateActualTotal(
-      batch.items.map((item) => item.lineTotalCents),
+      batch.items.map((item) => item.lineTotalCents - item.discountCents),
       amountTotalCents ?? batch.totalCents
     );
 

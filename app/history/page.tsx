@@ -122,6 +122,11 @@ export default async function HistoryPage() {
                         <p style={{ fontSize: 15, fontWeight: 700, color: "#211D15", marginTop: 4 }}>
                           {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(order.totalCents / 100)}
                         </p>
+                        {order.discountCents > 0 && (
+                          <p style={{ fontSize: 12, fontWeight: 600, color: "#2F7D4F", marginTop: 2 }}>
+                            Saved {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(order.discountCents / 100)}
+                          </p>
+                        )}
                       </div>
                     </div>
 

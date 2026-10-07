@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface CancelOrderButtonProps {
@@ -15,10 +15,26 @@ export function CancelOrderButton({ orderId, orderNumber, amountCents }: CancelO
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const formatted = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amountCents / 100);
+  const [quote, setQuote] = useState<{
+    refundCents: number;
+    withheldCents: number;
+    adjustments: { orderNumber: string; discountName: string }[];
+  } | null>(null);
+
+  const money = (cents: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+  const refundCents = quote?.refundCents ?? amountCents;
+  const formatted = money(refundCents);
+
+  useEffect(() => {
+    if (!showConfirm) return;
+    let cancelled = false;
+    fetch(`/api/orders/${orderId}/cancel`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((q) => { if (!cancelled && q) setQuote(q); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [showConfirm, orderId]);
 
   async function handleCancel() {
     setLoading(true);
@@ -68,6 +84,16 @@ export function CancelOrderButton({ orderId, orderNumber, amountCents }: CancelO
             <strong>{formatted}</strong> will be refunded to your original payment
             method within 5-10 business days.
           </p>
+          {quote && quote.withheldCents > 0 && (
+            <p style={{
+              fontSize: 12, color: "#92400e", textAlign: "center", lineHeight: 1.5,
+              marginBottom: 6, padding: "8px 12px", background: "#fffbeb", borderRadius: 8,
+            }}>
+              Your multi-day savings on a later day this week ({quote.adjustments.map((a) => a.orderNumber).join(", ")})
+              depend on this order, so {money(quote.withheldCents)} of your {money(amountCents)} is kept to cover
+              that discount. Cancel the later day too if you don&apos;t want it.
+            </p>
+          )}
 
           {error && (
             <p style={{
