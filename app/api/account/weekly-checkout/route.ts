@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createWeeklyStripeCheckoutSession } from "@/lib/payments/checkout";
 import { createWeeklyCheckoutBatch, computeBatchDiscountLabel } from "@/lib/weekly-checkout";
+import { parseWeekScope } from "@/lib/weekly-week";
 import { assertParentApiRequest } from "@/lib/parent-auth";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
 import { logInfo, logWarn, logException } from "@/lib/log";
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const code = typeof body?.code === "string" ? body.code : undefined;
-    const batch = await createWeeklyCheckoutBatch(parentUserId, code);
+    const batch = await createWeeklyCheckoutBatch(parentUserId, code, parseWeekScope(body?.week));
 
     logInfo("weekly_checkout_batch_created", {
       parentUserId,

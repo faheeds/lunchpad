@@ -5,7 +5,8 @@ import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { signOut } from "@/lib/auth";
 import { requireParent, requireParentTenant } from "@/lib/parent-auth";
-import { getUpcomingOrderingWindowRange } from "@/lib/weekly-week";
+import { getUpcomingOrderingWindowRange, parseWeekScope, pickWeekScope } from "@/lib/weekly-week";
+import { WeekToggle } from "@/components/account/week-toggle";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import { AppNav } from "@/components/app-nav";
 import { SubmitButton } from "@/components/forms/submit-button";
@@ -15,7 +16,12 @@ import { WeeklyPlanPlanner } from "@/components/account/weekly-plan-planner";
 import { getLabels } from "@/lib/location-labels";
 import { getOrderStatusColors } from "@/lib/order-status-colors";
 
-export default async function ParentAccountPage() {
+export default async function ParentAccountPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ week?: string }>;
+}) {
+  const weekParam = (await searchParams)?.week;
   const session = await requireParent();
   const parentUserId = session.user?.parentUserId;
   if (!parentUserId) redirect("/account/sign-in");
@@ -139,6 +145,18 @@ export default async function ParentAccountPage() {
         orderBy: { deliveryDate: "asc" },
       })
     : [];
+
+  // One week at a time: the window above spans the rest of this week plus
+  // next week, but a plan/checkout covers a single week (?week=current|next).
+  const { scope: weekScope, hasCurrent, hasNext, range: weekRange } = pickWeekScope({
+    requested: parseWeekScope(weekParam),
+    now,
+    timezone: primaryTimezone,
+    dates: deliveryDates.map((d) => d.deliveryDate),
+  });
+  const weekDeliveryDates = deliveryDates.filter(
+    (d) => d.deliveryDate >= weekRange.start && d.deliveryDate <= weekRange.end
+  );
 
   const activeWeeklyPlanCount = parent.weeklyPlans.filter((p) => p.isActive).length;
 
@@ -293,8 +311,9 @@ export default async function ParentAccountPage() {
               <p style={{ fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#938B78", marginBottom: 8 }}>Weekly lunch plan</p>
               <div style={{ borderRadius: 18, border: "1px solid #E3DBC6", background: "#FCFAF3", padding: 16 }}>
                 <p style={{ fontSize: 14, color: "#938B78", lineHeight: 1.5, marginBottom: 12 }}>
-                  Set a default meal per weekday. One checkout covers the whole week.
+                  Set a default meal per weekday. One checkout covers one week at a time.
                 </p>
+                <WeekToggle basePath="/account" scope={weekScope} show={hasCurrent && hasNext} />
                 <WeeklyPlanPlanner
                   children={parent.children.map((c) => ({
                     id: c.id,
@@ -305,7 +324,7 @@ export default async function ParentAccountPage() {
                     grade: c.grade,
                     locationType: c.school.locationType,
                   }))}
-                  deliveryDates={deliveryDates.map((date) => ({
+                  deliveryDates={weekDeliveryDates.map((date) => ({
                     id: date.id,
                     schoolId: date.schoolId,
                     deliveryDate: date.deliveryDate.toISOString(),
@@ -416,13 +435,13 @@ export default async function ParentAccountPage() {
           }} className="pointer-events-auto flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-on-white)" }}>
-                Upcoming week
+                {weekScope === "current" ? "This week" : "Next week"}
               </p>
               <p style={{ fontSize: 14, color: "#938B78", marginTop: 2 }}>
                 {activeWeeklyPlanCount} planned item{activeWeeklyPlanCount === 1 ? "" : "s"} ready for checkout
               </p>
             </div>
-            <WeeklyCheckoutButton label="Checkout week" fullWidth={false} />
+            <WeeklyCheckoutButton label="Checkout week" fullWidth={false} week={weekScope} />
           </div>
         </div>
       )}

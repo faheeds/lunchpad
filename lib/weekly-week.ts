@@ -31,6 +31,51 @@ export function getUpcomingSchoolWeekRange(now: Date, timezone: string) {
   };
 }
 
+export type WeekScope = "current" | "next";
+
+export function parseWeekScope(value: unknown): WeekScope | null {
+  return value === "current" || value === "next" ? value : null;
+}
+
+/**
+ * Range for ONE lunch week. "current" = now through this Sunday (the days
+ * still left this week); "next" = next Monday through next Sunday. A weekly
+ * checkout covers exactly one of these so days from different weeks are never
+ * bundled (or discount-counted) together.
+ */
+export function getWeekScopeRange(now: Date, timezone: string, scope: WeekScope) {
+  if (scope === "next") return getUpcomingSchoolWeekRange(now, timezone);
+  const weekday = getWeekdayNumber(now, timezone);
+  const sunday = new Date(now);
+  sunday.setDate(sunday.getDate() + (7 - weekday));
+  return {
+    start: buildLocalDayStart(now, timezone),
+    end: buildLocalDayEnd(sunday, timezone)
+  };
+}
+
+/**
+ * Decide which single week to show/check out. Honors `requested` when that
+ * week has dates; otherwise defaults to next week, falling back to the rest
+ * of this week when next week has nothing open.
+ */
+export function pickWeekScope(args: {
+  requested?: WeekScope | null;
+  now: Date;
+  timezone: string;
+  dates: Date[];
+}) {
+  const current = getWeekScopeRange(args.now, args.timezone, "current");
+  const next = getWeekScopeRange(args.now, args.timezone, "next");
+  const within = (d: Date, r: { start: Date; end: Date }) => d >= r.start && d <= r.end;
+  const hasCurrent = args.dates.some((d) => within(d, current));
+  const hasNext = args.dates.some((d) => within(d, next));
+  let scope: WeekScope = args.requested ?? (hasNext ? "next" : "current");
+  if (scope === "current" && !hasCurrent && hasNext) scope = "next";
+  if (scope === "next" && !hasNext && hasCurrent) scope = "current";
+  return { scope, hasCurrent, hasNext, range: scope === "next" ? next : current };
+}
+
 export function getSchoolWeekRangeForDate(date: Date, timezone: string) {
   const weekday = getWeekdayNumber(date, timezone);
   const daysSinceMonday = weekday - 1;

@@ -22,7 +22,7 @@ type Preview = {
   skipped: string[];
 };
 
-export function WeeklyCheckoutButton({ label = "Checkout upcoming week", className, fullWidth = false }: { label?: string; className?: string; fullWidth?: boolean }) {
+export function WeeklyCheckoutButton({ label = "Checkout upcoming week", className, fullWidth = false, week }: { label?: string; className?: string; fullWidth?: boolean; week?: "current" | "next" }) {
   const [error, setError] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -32,7 +32,8 @@ export function WeeklyCheckoutButton({ label = "Checkout upcoming week", classNa
   // or empty preview just hides the summary; the checkout button still works.
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/account/weekly-checkout/preview")
+    setPreview(null);
+    fetch(`/api/account/weekly-checkout/preview${week ? `?week=${week}` : ""}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data?.preview?.lines?.length) setPreview(data.preview as Preview);
@@ -41,12 +42,16 @@ export function WeeklyCheckoutButton({ label = "Checkout upcoming week", classNa
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [week]);
 
   async function handleClick() {
     setIsPending(true);
     setError("");
-    const response = await fetch("/api/account/weekly-checkout", { method: "POST" });
+    const response = await fetch("/api/account/weekly-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week }),
+    });
     const data = await response.json();
     setIsPending(false);
     if (!response.ok) { setError(data.error || "Unable to start weekly checkout."); return; }
