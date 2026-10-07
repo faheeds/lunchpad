@@ -82,6 +82,7 @@ type WeeklyBatchCheckoutArgs = {
 };
 
 async function createSession(args: SharedCheckoutArgs) {
+  const foodTaxCode = process.env.STRIPE_FOOD_TAX_CODE?.trim() || undefined;
   if (!stripe) {
     throw new Error("Stripe is not configured. Add STRIPE_SECRET_KEY to continue.");
   }
@@ -170,19 +171,16 @@ async function createSession(args: SharedCheckoutArgs) {
       quantity: 1,
       price_data: {
         currency: "usd",
-        // tax_code belongs on product_data (NOT price_data) - Stripe rejects
-        // price_data.tax_code with "unknown parameter".
-        // Without an explicit tax_code, Stripe Tax falls back to the
-        // account's preset product category - which for this account is
-        // "Digital products > Software > SaaS" (set up for F5H's other,
-        // non-food business). That misclassification was silently zeroing
-        // out sales tax on every LunchPad order despite a valid WA
-        // registration. txcd_40060000 is Stripe's tax code for prepared/
-        // ready-to-eat food, which is what's actually being sold here.
+        // Optional Stripe tax code for what is actually sold (prepared food).
+        // Without one, Stripe Tax uses the account's preset product category,
+        // which is currently a SaaS category and zeroes out sales tax. Set
+        // STRIPE_FOOD_TAX_CODE to a code verified against `stripe tax_codes
+        // list` (an invalid code makes Stripe reject the whole checkout, so
+        // it is never hardcoded). It goes on product_data, NOT price_data.
         product_data: {
           name: item.name,
           description: item.description,
-          tax_code: "txcd_40060000",
+          ...(foodTaxCode ? { tax_code: foodTaxCode } : {}),
         },
         unit_amount: item.amountCents,
       },
