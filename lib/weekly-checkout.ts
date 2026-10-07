@@ -80,7 +80,7 @@ type ScoreInput = {
 /**
  * Scores every item's discount once the whole checkout is known. Each item
  * is still scored independently (per child), but now also sees the delivery
- * dates of its siblings in the same cart — required for multi-day tiers
+ * dates of the same student's other days in the same cart — required for multi-day tiers
  * ("3rd day of the week = 25% off"), since none of those orders are paid
  * (and so none are in the DB) yet.
  */
@@ -93,9 +93,15 @@ async function applyBatchDiscounts<T extends { _score: ScoreInput }>(
     code?: string | null;
   }
 ) {
-  const sameCheckoutDeliveryDates = items.map((item) => item._score.deliveryDate);
+  // Multi-day tiers are per student: only the same child's other days in this
+  // cart count toward their streak, never a sibling's.
+  const studentKey = (score: ScoreInput) =>
+    `${score.studentName.trim().toLowerCase()}|${(score.grade ?? "").trim().toLowerCase()}`;
   const scored = await Promise.all(
     items.map(async ({ _score, ...rest }) => {
+      const sameCheckoutDeliveryDates = items
+        .filter((other) => studentKey(other._score) === studentKey(_score))
+        .map((other) => other._score.deliveryDate);
       const result = await scoreItemDiscount({
         restaurantId: common.restaurantId,
         parentUserId: common.parentUserId,

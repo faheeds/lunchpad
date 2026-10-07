@@ -53,11 +53,12 @@ export interface CartContext {
    *  caps). */
   parentUserId: string | null;
   /** Parent's email, when known. Used with `parentUserId` to recognise a
-   *  family's earlier orders (incl. guest checkouts) for multi-day tiers. */
+   *  earlier orders (incl. guest checkouts) for multi-day tiers. */
   parentEmail?: string | null;
-  /** Delivery dates of the OTHER items in this same checkout (weekly /
-   *  multi-day carts). Those orders aren't paid yet, so they can't be found
-   *  in the DB, but they still count toward "the Nth day this week". */
+  /** Delivery dates of the OTHER items in this same checkout that are for
+   *  THE SAME STUDENT (weekly / multi-day carts). Those orders aren't paid
+   *  yet, so they can't be found in the DB, but they still count toward
+   *  "this student's Nth day this week". */
   sameCheckoutDeliveryDates?: Date[];
   /** Resolved Student/ParentChild.grade value for this order (e.g.
    *  "5th Grade", or an operator-added value like "Teacher/Admin").
@@ -315,14 +316,19 @@ export interface EvalContext {
   cart: CartContext;
   priorOrderCount: number;
   perUserCounts: Map<string, number>;
-  /** 1-based delivery-day-of-week for this family; null when not computed
+  /** 1-based delivery-day-of-week for this student; null when not computed
    *  (no multi-day discounts exist). Treated as 1 (no discount) when null. */
   dayNumberInWeek?: number | null;
 }
 
-/** Day number of this cart's delivery date within the family's week:
+/** Day number of this cart's delivery date within the STUDENT's week:
  *  1 + distinct earlier delivery days from (a) already-paid orders for the
- *  same parent (by account or email) and (b) the rest of this checkout. */
+ *  same student (matched by name + grade, case-insensitive) under the same parent
+ *  (by account or email) and (b) the rest of this checkout, which callers
+ *  pass already narrowed to this student. Without a student name we can't
+ *  tell whose days are whose, so no paid days are counted — the live
+ *  preview then under-promises rather than over-promises, and the real
+ *  order (which always carries the name) is priced correctly. */
 async function resolveDayNumberInWeek(cart: CartContext): Promise<number> {
   const school = await prisma.school.findUnique({
     where: { id: cart.schoolId },
@@ -335,8 +341,10 @@ async function resolveDayNumberInWeek(cart: CartContext): Promise<number> {
   const email = cart.parentEmail?.trim();
   if (email) familyMatch.push({ parentEmail: { equals: email, mode: "insensitive" } });
 
+  const studentName = cart.studentName?.trim();
+  const studentGrade = cart.grade?.trim();
   let paidDates: Date[] = [];
-  if (familyMatch.length > 0) {
+  if (familyMatch.length > 0 && studentName) {
     const { start, end } = weekWindow(cart.deliveryDate, timezone);
     const paid = await prisma.order.findMany({
       where: {
@@ -344,6 +352,12 @@ async function resolveDayNumberInWeek(cart: CartContext): Promise<number> {
         status: { in: ["PAID", "PARTIALLY_REFUNDED"] },
         archivedAt: null,
         OR: familyMatch,
+        // A student is the (name, grade) pair. Every paid order counts no
+        // matter how it was placed (single order, weekly checkout, admin).
+        student: {
+          studentName: { equals: studentName, mode: "insensitive" },
+          ...(studentGrade ? { grade: { equals: studentGrade, mode: "insensitive" } } : {}),
+        },
         deliveryDate: { deliveryDate: { gte: start, lt: end } },
       },
       select: { deliveryDate: { select: { deliveryDate: true } } },
@@ -432,7 +446,7 @@ export function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
     return evaluateBogo(d, ctx);
   }
 
-  // Multi-day branch — percent comes from the tier table for this family's
+  // Multi-day branch — percent comes from the tier table for this student's
   // Nth delivery day of the week, not from `value`. Item scoping still applies.
   const weeklyTiers = parseWeeklyTiers(d.weeklyTiers);
   if (weeklyTiers.length > 0) {

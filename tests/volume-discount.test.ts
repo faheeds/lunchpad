@@ -89,6 +89,8 @@ function cart(ymd: string, extra: Partial<CartContext> = {}): CartContext {
     schoolId: "s1",
     deliveryDate: day(ymd),
     parentUserId: "p1",
+    studentName: "Ava",
+    grade: "5th Grade",
     lines: [{ menuItemId: "m1", lineTotalCents: 1200 }],
     ...extra,
   };
@@ -182,7 +184,7 @@ describe("pickApplicableDiscounts() with weekly tiers", () => {
     orderCountMock.mockResolvedValue(0);
   });
 
-  it("counts the family's already-paid days", async () => {
+  it("counts the student's already-paid days", async () => {
     discountFindManyMock.mockResolvedValue([discount()]);
     orderFindManyMock.mockResolvedValue([
       { deliveryDate: { deliveryDate: day(MON) } },
@@ -204,6 +206,23 @@ describe("pickApplicableDiscounts() with weekly tiers", () => {
   it("gives nothing on a first day", async () => {
     discountFindManyMock.mockResolvedValue([discount()]);
     const result = await pickApplicableDiscounts({ cart: cart(MON, { sameCheckoutDeliveryDates: [day(MON), day(TUE)] }) });
+    expect(result.auto).toBeNull();
+  });
+
+  it("only counts the same student's paid days", async () => {
+    discountFindManyMock.mockResolvedValue([discount()]);
+    await pickApplicableDiscounts({ cart: cart(WED) });
+    const where = orderFindManyMock.mock.calls[0][0].where;
+    expect(where.student).toEqual({
+      studentName: { equals: "Ava", mode: "insensitive" },
+      grade: { equals: "5th Grade", mode: "insensitive" },
+    });
+  });
+
+  it("does not count paid days when the student is unknown", async () => {
+    discountFindManyMock.mockResolvedValue([discount()]);
+    const result = await pickApplicableDiscounts({ cart: cart(WED, { studentName: null }) });
+    expect(orderFindManyMock).not.toHaveBeenCalled();
     expect(result.auto).toBeNull();
   });
 

@@ -3,9 +3,9 @@
  *
  * A multi-day discount carries a tier table on the Discount row, e.g.
  *   [{ dayNumber: 3, percent: 25 }, { dayNumber: 4, percent: 50 }]
- * meaning: the family's 3rd distinct delivery day in a Mon-Sun week gets 25%
+ * meaning: the student's 3rd distinct delivery day in a Mon-Sun week gets 25%
  * off, and their 4th (and any later) day gets 50% off. The "Nth day" is the
- * order's rank by delivery date among every distinct delivery day the family
+ * order's rank by delivery date among every distinct delivery day that student
  * has that week — already-paid orders plus the other days in the same
  * checkout. Kept free of Prisma so it is trivially unit-testable.
  */
@@ -75,10 +75,10 @@ export function weekWindow(date: Date, timezone: string): { start: Date; end: Da
 }
 
 /**
- * Which delivery day of the week is `targetDate` for this family?
+ * Which delivery day of the week is `targetDate` for this student?
  * = 1 + the number of DISTINCT earlier delivery days in the same Mon-Sun
  * week among `otherDates` (paid orders + other days in the same checkout).
- * Several orders on the same day (e.g. siblings) count as one day.
+ * Several orders on the same day count as one day.
  */
 export function dayNumberInWeek(args: {
   targetDate: Date;
@@ -130,9 +130,9 @@ export interface RepriceAdjustment {
 }
 
 /**
- * When `cancelledId` is cancelled, which of the family's other multi-day
+ * When `cancelledId` is cancelled, which of the student's other multi-day
  * discounted orders in the same Mon-Sun week fall to a lower tier (or lose
- * it)? Pure: callers pass the family's active orders for the week
+ * it)? Pure: callers pass the student's active orders for the week
  * (including the one being cancelled) and get back the repricing.
  *
  * The discount base is derived from the stored discount and its old tier

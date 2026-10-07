@@ -176,7 +176,7 @@ export const TEMPLATES: TemplateMeta[] = [
     slug: "multi-day",
     kind: "MULTI_DAY",
     title: "Multi-day savings",
-    description: "Reward families who order several days in a week — a bigger discount on each extra day.",
+    description: "Reward students who order several days in a week — a bigger discount on each extra day.",
     example: "3rd day 25% off · 4th day 50% off",
     available: true,
     defaults: {
