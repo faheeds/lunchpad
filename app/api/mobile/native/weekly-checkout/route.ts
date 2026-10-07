@@ -16,6 +16,7 @@ import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
 import { createWeeklyStripeCheckoutSession } from "@/lib/payments/checkout";
 import { createWeeklyCheckoutBatch, computeBatchDiscountLabel } from "@/lib/weekly-checkout";
+import { parseWeekScope } from "@/lib/weekly-week";
 import { requireMobileAuth, CORS_HEADERS, options as corsOptions } from "@/lib/mobile-bearer";
 import { logInfo, logWarn, logException } from "@/lib/log";
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const code = typeof body?.code === "string" ? body.code : undefined;
-    const batch = await createWeeklyCheckoutBatch(auth.parentUserId, code);
+    const batch = await createWeeklyCheckoutBatch(auth.parentUserId, code, parseWeekScope(body?.week));
 
     logInfo("mobile_weekly_checkout_batch_created", {
       parentUserId: auth.parentUserId,

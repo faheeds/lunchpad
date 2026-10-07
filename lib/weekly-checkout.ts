@@ -3,7 +3,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { resolveLineItemPrice } from "@/lib/pricing";
-import { getUpcomingOrderingWindowRange, getWeekdayNumber } from "@/lib/weekly-week";
+import { getUpcomingOrderingWindowRange, getWeekdayNumber, pickWeekScope, type WeekScope } from "@/lib/weekly-week";
 import { assertOrderCapacity } from "@/lib/orders";
 import { pickApplicableDiscounts } from "@/lib/discounts";
 import { logActivity } from "@/lib/activity";
@@ -177,7 +177,7 @@ function allocateActualTotal(baseAmounts: number[], actualTotalCents: number) {
 async function buildWeeklyBatch(
   parentUserId: string,
   code: string | null | undefined,
-  options: { preview: boolean }
+  options: { preview: boolean; week?: WeekScope | null }
 ) {
   const parent = await prisma.parentUser.findUnique({
     where: { id: parentUserId },
@@ -226,7 +226,7 @@ async function buildWeeklyBatch(
   const targetRange = getUpcomingOrderingWindowRange(now, primaryTimezone);
   const schoolIds = [...new Set(parent.weeklyPlans.map((plan) => plan.schoolId))];
 
-  const allWeekDeliveryDates = await prisma.deliveryDate.findMany({
+  const windowDeliveryDates = await prisma.deliveryDate.findMany({
     where: {
       deliveryDate: {
         gte: targetRange.start,
@@ -247,6 +247,22 @@ async function buildWeeklyBatch(
     },
     orderBy: { deliveryDate: "asc" }
   });
+
+  // One checkout = one lunch week. The window above spans the rest of this
+  // week plus all of next week; narrow it to the chosen week so days from
+  // different weeks are never bundled into one payment (or counted together
+  // for multi-day discounts).
+  const { range: weekRange } = pickWeekScope({
+    requested: options.week,
+    now,
+    timezone: primaryTimezone,
+    dates: windowDeliveryDates
+      .filter((d) => d.orderingOpen && d.cutoffAt > now)
+      .map((d) => d.deliveryDate)
+  });
+  const allWeekDeliveryDates = windowDeliveryDates.filter(
+    (d) => d.deliveryDate >= weekRange.start && d.deliveryDate <= weekRange.end
+  );
 
   if (!allWeekDeliveryDates.length) {
     throw new Error("No upcoming delivery dates are available for the saved children on this plan.");
@@ -394,8 +410,12 @@ async function buildWeeklyBatch(
   return { restaurantId, batchItems, scores, discountNames, skippedItems, subtotalCents, discountCents, totalCents };
 }
 
-export async function createWeeklyCheckoutBatch(parentUserId: string, code?: string | null) {
-  const built = await buildWeeklyBatch(parentUserId, code, { preview: false });
+export async function createWeeklyCheckoutBatch(
+  parentUserId: string,
+  code?: string | null,
+  week?: WeekScope | null
+) {
+  const built = await buildWeeklyBatch(parentUserId, code, { preview: false, week });
 
   return prisma.weeklyCheckoutBatch.create({
     data: {
@@ -450,9 +470,10 @@ export interface WeeklyCheckoutPreview {
  */
 export async function previewWeeklyCheckoutBatch(
   parentUserId: string,
-  code?: string | null
+  code?: string | null,
+  week?: WeekScope | null
 ): Promise<WeeklyCheckoutPreview> {
-  const built = await buildWeeklyBatch(parentUserId, code, { preview: true });
+  const built = await buildWeeklyBatch(parentUserId, code, { preview: true, week });
 
   const lines: WeeklyCheckoutPreviewLine[] = built.batchItems.map((item, i) => {
     const score = built.scores[i];
