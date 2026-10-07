@@ -9,6 +9,7 @@ import { stripe } from "@/lib/payments/stripe";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
 import { pickApplicableDiscounts, type CartLine } from "@/lib/discounts";
+import { parseWeeklyTiers, planMultiDayReprice, weekWindow, type RepriceAdjustment } from "@/lib/volume-discount";
 import { resolveLineItemPrice } from "@/lib/pricing";
 import { createOrderEditCheckoutSession } from "@/lib/payments/checkout";
 import { checkLimit, PlanLimitError } from "@/lib/plans";
@@ -1707,6 +1708,153 @@ export async function swapOrderItemAsAdmin(args: {
   return { action: "updated", order: { id: order.id, orderNumber: order.orderNumber, restaurantId: order.restaurantId } };
 }
 
+type CancellationQuoteOrder = {
+  id: string;
+  restaurantId: string;
+  parentUserId: string | null;
+  parentEmail: string | null;
+  deliveryDate: { deliveryDate: Date };
+  school: { timezone: string };
+};
+
+export type CancellationAdjustment = RepriceAdjustment & {
+  orderNumber: string;
+  discountId: string;
+  discountName: string;
+  redemptionId: string;
+};
+
+/**
+ * Multi-day ("weekly streak") discounts depend on how many days a family
+ * orders in a week. If a parent cancels an earlier paid day and that makes a
+ * later day drop a tier, the discount that day no longer earns is withheld
+ * from this cancellation's refund (tax-grossed, because tax was charged on
+ * the discounted price) and moved onto the later order so every order's
+ * recorded discount matches what the family really bought.
+ */
+export async function buildCancellationQuote(order: CancellationQuoteOrder & { totalCents: number }) {
+  const adjustments: CancellationAdjustment[] = [];
+  const familyMatch: Prisma.OrderWhereInput[] = [];
+  if (order.parentUserId) familyMatch.push({ parentUserId: order.parentUserId });
+  const email = order.parentEmail?.trim();
+  if (email) familyMatch.push({ parentEmail: { equals: email, mode: "insensitive" } });
+
+  if (familyMatch.length > 0) {
+    const { start, end } = weekWindow(order.deliveryDate.deliveryDate, order.school.timezone);
+    const rows = await prisma.order.findMany({
+      where: {
+        restaurantId: order.restaurantId,
+        status: { in: [OrderStatus.PAID, OrderStatus.PARTIALLY_REFUNDED] },
+        archivedAt: null,
+        OR: familyMatch,
+        deliveryDate: { deliveryDate: { gte: start, lt: end } },
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        subtotalCents: true,
+        discountCents: true,
+        totalCents: true,
+        deliveryDate: { select: { deliveryDate: true } },
+        discountRedemption: {
+          select: { id: true, discountId: true, discount: { select: { id: true, name: true, templateKind: true, weeklyTiers: true } } },
+        },
+      },
+    });
+
+    if (rows.some((r) => r.id === order.id)) {
+      const groups = new Map<string, (typeof rows)[number]["discountRedemption"]>();
+      for (const r of rows) {
+        const red = r.discountRedemption;
+        if (red && red.discount.templateKind === "MULTI_DAY") groups.set(red.discountId, red);
+      }
+      for (const red of groups.values()) {
+        if (!red) continue;
+        const tiers = parseWeeklyTiers(red.discount.weeklyTiers);
+        if (tiers.length === 0) continue;
+        const plan = planMultiDayReprice({
+          tiers,
+          timezone: order.school.timezone,
+          cancelledId: order.id,
+          orders: rows.map((r) => ({
+            id: r.id,
+            deliveryDate: r.deliveryDate.deliveryDate,
+            subtotalCents: r.subtotalCents,
+            totalCents: r.totalCents,
+            // Only this discount's own orders are repriced; others count for days only.
+            discountCents: r.discountRedemption?.discountId === red.discountId ? r.discountCents : 0,
+          })),
+        });
+        for (const adj of plan) {
+          const row = rows.find((r) => r.id === adj.orderId);
+          if (!row?.discountRedemption) continue;
+          adjustments.push({
+            ...adj,
+            orderNumber: row.orderNumber,
+            discountId: red.discountId,
+            discountName: red.discount.name,
+            redemptionId: row.discountRedemption.id,
+          });
+        }
+      }
+    }
+  }
+
+  const withheldCents = Math.min(
+    order.totalCents,
+    adjustments.reduce((sum, a) => sum + a.addCents, 0)
+  );
+  return { withheldCents, refundCents: Math.max(0, order.totalCents - withheldCents), adjustments };
+}
+
+/** Weekly-checkout orders don't carry their own PaymentIntent — the whole
+ *  week was one Stripe charge. Find it through the batch item they came from. */
+async function findWeeklyBatchPaymentIntent(order: {
+  parentUserId: string | null;
+  parentChildId: string | null;
+  deliveryDateId: string;
+}) {
+  if (!order.parentUserId || !order.parentChildId) return null;
+  const item = await prisma.weeklyCheckoutBatchItem.findFirst({
+    where: {
+      deliveryDateId: order.deliveryDateId,
+      parentChildId: order.parentChildId,
+      weeklyCheckoutBatch: { parentUserId: order.parentUserId, status: "PAID", paymentIntentId: { not: null } },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { weeklyCheckoutBatch: { select: { paymentIntentId: true } } },
+  });
+  return item?.weeklyCheckoutBatch.paymentIntentId ?? null;
+}
+
+/** Read-only preview shown to the parent before they confirm a cancel. */
+export async function getCancellationQuote(args: { orderId: string; parentUserId?: string; guestToken?: string }) {
+  const order = await prisma.order.findUnique({
+    where: { id: args.orderId },
+    include: { school: true, deliveryDate: true },
+  });
+  if (!order) throw new Error("Order not found.");
+  let authorized = false;
+  if (args.parentUserId && order.parentUserId === args.parentUserId) authorized = true;
+  else if (args.guestToken) {
+    const { verifyOrderCancelToken } = await import("@/lib/order-tokens");
+    if (verifyOrderCancelToken(args.guestToken, order.id)) authorized = true;
+  }
+  if (!authorized) throw new Error("Not authorized to view this order.");
+  const quote = await buildCancellationQuote(order);
+  return {
+    totalCents: order.totalCents,
+    refundCents: quote.refundCents,
+    withheldCents: quote.withheldCents,
+    adjustments: quote.adjustments.map((a) => ({
+      orderNumber: a.orderNumber,
+      discountName: a.discountName,
+      lostDiscountCents: a.lostDiscountCents,
+      addCents: a.addCents,
+    })),
+  };
+}
+
 /**
  * Customer-initiated cancel + refund.
  *
@@ -1764,8 +1912,10 @@ export async function cancelOrderWithRefund(args: {
     order.school.timezone
   );
 
-  const paymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
-  const { stripeAccountId } = order.restaurant;
+  const ownPaymentIntentId = order.paymentIntentId ?? order.payment?.providerPaymentIntent ?? null;
+  const batchPaymentIntentId = ownPaymentIntentId ? null : await findWeeklyBatchPaymentIntent(order);
+  const paymentIntentId = ownPaymentIntentId ?? batchPaymentIntentId;
+  const quote = await buildCancellationQuote(order);
   let stripeRefundIssued = false;
 
   if (stripe) {
@@ -1779,11 +1929,20 @@ export async function cancelOrderWithRefund(args: {
     }
 
     if (paymentIntentId) {
-      await stripe.refunds.create({
-        payment_intent: paymentIntentId,
-        reason: "requested_by_customer",
-      });
-      stripeRefundIssued = true;
+      // Weekly-batch orders share one PaymentIntent, so they must be refunded
+      // by amount (never the whole charge). A withheld multi-day clawback also
+      // forces a partial refund.
+      const paidOnMain = (order.payment?.amountCents ?? order.totalCents) - (order.deltaPaymentIntentId ? order.deltaAmountCents ?? 0 : 0);
+      const mainRefund = Math.max(0, (batchPaymentIntentId ? order.totalCents : paidOnMain) - quote.withheldCents);
+      const needsAmount = Boolean(batchPaymentIntentId) || quote.withheldCents > 0;
+      if (mainRefund > 0) {
+        await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          ...(needsAmount ? { amount: mainRefund } : {}),
+          reason: "requested_by_customer",
+        });
+        stripeRefundIssued = true;
+      }
     }
   }
 
@@ -1794,6 +1953,28 @@ export async function cancelOrderWithRefund(args: {
       where: { orderId: order.id },
       data: { status: PaymentStatus.REFUNDED, refundedAt: now },
     });
+
+    // Move the discount the later days no longer earn onto those orders so
+    // discountCents / totalCents / the redemption ledger stay truthful.
+    for (const adj of quote.adjustments) {
+      await tx.order.update({
+        where: { id: adj.orderId },
+        data: { discountCents: adj.newDiscountCents, totalCents: adj.newTotalCents },
+      });
+      await tx.payment.updateMany({
+        where: { orderId: adj.orderId },
+        data: {
+          amountCents: adj.newTotalCents,
+          notes: `Includes ${formatCurrency(adj.addCents)} kept from cancelled order ${order.orderNumber} (multi-day discount no longer earned)`,
+        },
+      });
+      if (adj.newDiscountCents > 0) {
+        await tx.discountRedemption.update({ where: { id: adj.redemptionId }, data: { amountCents: adj.newDiscountCents } });
+      } else {
+        await tx.discountRedemption.delete({ where: { id: adj.redemptionId } });
+        await tx.discount.update({ where: { id: adj.discountId }, data: { currentRedemptions: { decrement: 1 } } });
+      }
+    }
 
     return tx.order.update({
       where: { id: order.id },
@@ -1812,7 +1993,7 @@ export async function cancelOrderWithRefund(args: {
   }).then(async (cancelled) => {
     const actorTag = parentUserId ? "Customer" : "Guest customer";
     const refundedDescription = stripeRefundIssued
-      ? `${actorTag} cancelled order ${cancelled.orderNumber} — ${formatCurrency(cancelled.totalCents)} refunded via Stripe`
+      ? `${actorTag} cancelled order ${cancelled.orderNumber} — ${formatCurrency(quote.refundCents)} refunded via Stripe${quote.withheldCents > 0 ? ` (${formatCurrency(quote.withheldCents)} multi-day discount withheld)` : ""}`
       : `${actorTag} cancelled order ${cancelled.orderNumber} (no payment intent — manual refund may be required)`;
     await logActivity({
       restaurantId: cancelled.restaurantId,
@@ -1824,6 +2005,9 @@ export async function cancelOrderWithRefund(args: {
       metadata: {
         orderNumber: cancelled.orderNumber,
         totalCents: cancelled.totalCents,
+        refundCents: quote.refundCents,
+        withheldCents: quote.withheldCents,
+        adjustedOrders: quote.adjustments.map((a) => ({ orderId: a.orderId, addCents: a.addCents, newDiscountCents: a.newDiscountCents })),
         refundIssued: stripeRefundIssued,
         deltaRefundIssued: Boolean(order.deltaPaymentIntentId),
         viaGuestToken: !parentUserId && Boolean(guestToken),

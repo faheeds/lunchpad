@@ -1,9 +1,33 @@
 import { NextResponse } from "next/server";
 import { assertParentApiRequest } from "@/lib/parent-auth";
-import { cancelOrderWithRefund } from "@/lib/orders";
+import { cancelOrderWithRefund, getCancellationQuote } from "@/lib/orders";
 import { sendCancellationEmail } from "@/lib/email/service";
 import { logInfo, logWarn, logException } from "@/lib/log";
 import { formatApiError } from "@/lib/format-api-error";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ orderId: string }> }
+) {
+  const { orderId } = await params;
+  let parentUserId: string | undefined;
+  try {
+    const session = await assertParentApiRequest();
+    parentUserId = session.user?.parentUserId;
+  } catch {
+    // guests use ?token=
+  }
+  const token = new URL(request.url).searchParams.get("token") ?? undefined;
+  if (!parentUserId && !token) {
+    return NextResponse.json({ error: "Sign in to cancel this order." }, { status: 401 });
+  }
+  try {
+    const quote = await getCancellationQuote({ orderId, parentUserId, guestToken: token });
+    return NextResponse.json(quote);
+  } catch (error) {
+    return NextResponse.json({ error: formatApiError(error, "Unable to load refund details.") }, { status: 400 });
+  }
+}
 
 export async function POST(
   request: Request,

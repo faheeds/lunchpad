@@ -108,3 +108,83 @@ export function describeWeeklyTiers(tiers: WeeklyTier[]): string {
     .map((t, i) => `${t.percent}% off your ${ord(t.dayNumber)}${i === tiers.length - 1 ? "+" : ""} day`)
     .join(" and ") + " each week";
 }
+
+export interface RepriceOrderInput {
+  id: string;
+  deliveryDate: Date;
+  subtotalCents: number;
+  /** Discount currently recorded on the order (0 = none). */
+  discountCents: number;
+  /** What the parent actually paid for this order, incl. sales tax. */
+  totalCents: number;
+}
+
+export interface RepriceAdjustment {
+  orderId: string;
+  newDiscountCents: number;
+  /** Discount that is no longer earned (> 0). */
+  lostDiscountCents: number;
+  /** Extra the parent now owes on this order = lost discount grossed up for tax. */
+  addCents: number;
+  newTotalCents: number;
+}
+
+/**
+ * When `cancelledId` is cancelled, which of the family's other multi-day
+ * discounted orders in the same Mon-Sun week fall to a lower tier (or lose
+ * it)? Pure: callers pass the family's active orders for the week
+ * (including the one being cancelled) and get back the repricing.
+ *
+ * The discount base is derived from the stored discount and its old tier
+ * percent so item-scoped discounts reprice correctly too. The lost amount
+ * is grossed up by the order's own tax ratio (total / (subtotal - discount))
+ * because tax is charged on the discounted price.
+ */
+export function planMultiDayReprice(args: {
+  tiers: WeeklyTier[];
+  timezone: string;
+  cancelledId: string;
+  orders: RepriceOrderInput[];
+}): RepriceAdjustment[] {
+  const { tiers, timezone, cancelledId, orders } = args;
+  const cancelled = orders.find((o) => o.id === cancelledId);
+  if (!cancelled) return [];
+  const cancelledKey = localDateKey(cancelled.deliveryDate, timezone);
+  const remaining = orders.filter((o) => o.id !== cancelledId);
+  // A sibling order on the same day keeps that delivery day alive.
+  if (remaining.some((o) => localDateKey(o.deliveryDate, timezone) === cancelledKey)) return [];
+
+  const out: RepriceAdjustment[] = [];
+  for (const order of remaining) {
+    if (order.discountCents <= 0) continue;
+    const key = localDateKey(order.deliveryDate, timezone);
+    if (key <= cancelledKey) continue;
+    const before = dayNumberInWeek({
+      targetDate: order.deliveryDate,
+      otherDates: orders.filter((o) => o.id !== order.id).map((o) => o.deliveryDate),
+      timezone,
+    });
+    const after = dayNumberInWeek({
+      targetDate: order.deliveryDate,
+      otherDates: remaining.filter((o) => o.id !== order.id).map((o) => o.deliveryDate),
+      timezone,
+    });
+    const oldPercent = tierPercentForDay(tiers, before);
+    const newPercent = tierPercentForDay(tiers, after);
+    if (oldPercent <= 0 || newPercent >= oldPercent) continue;
+    const base = Math.round((order.discountCents * 100) / oldPercent);
+    const newDiscount = newPercent > 0 ? Math.min(base, Math.floor((base * newPercent) / 100)) : 0;
+    const lost = order.discountCents - newDiscount;
+    if (lost <= 0) continue;
+    const net = order.subtotalCents - order.discountCents;
+    const addCents = net > 0 ? Math.round((lost * order.totalCents) / net) : lost;
+    out.push({
+      orderId: order.id,
+      newDiscountCents: newDiscount,
+      lostDiscountCents: lost,
+      addCents,
+      newTotalCents: order.totalCents + addCents,
+    });
+  }
+  return out;
+}

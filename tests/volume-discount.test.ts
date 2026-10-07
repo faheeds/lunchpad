@@ -27,6 +27,7 @@ import {
   mondayKeyOf,
   parseWeeklyTiers,
   tierPercentForDay,
+  planMultiDayReprice,
 } from "@/lib/volume-discount";
 import { evaluate, pickApplicableDiscounts, type CartContext } from "@/lib/discounts";
 
@@ -219,5 +220,43 @@ describe("pickApplicableDiscounts() with weekly tiers", () => {
     expect(result.auto?.amountCents).toBe(120);
     expect(schoolFindUniqueMock).not.toHaveBeenCalled();
     expect(orderFindManyMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("planMultiDayReprice", () => {
+  const tiers = [
+    { dayNumber: 3, percent: 25 },
+    { dayNumber: 4, percent: 50 },
+  ];
+  const tz = "America/Los_Angeles";
+  const d = (iso: string) => new Date(`${iso}T19:00:00Z`);
+  // Mon Oct 12 .. Thu Oct 15 2026; $9.99 each, 10% tax on the net price.
+  const mk = (id: string, day: string, discount: number) => ({
+    id,
+    deliveryDate: d(day),
+    subtotalCents: 999,
+    discountCents: discount,
+    totalCents: Math.round((999 - discount) * 1.1),
+  });
+  const week = [mk("mon", "2026-10-12", 0), mk("tue", "2026-10-13", 0), mk("wed", "2026-10-14", 249), mk("thu", "2026-10-15", 499)];
+
+  it("cancelling Monday drops Wed to no discount and Thu to 25%", () => {
+    const plan = planMultiDayReprice({ tiers, timezone: tz, cancelledId: "mon", orders: week });
+    const wed = plan.find((p) => p.orderId === "wed")!;
+    const thu = plan.find((p) => p.orderId === "thu")!;
+    expect(wed.newDiscountCents).toBe(0);
+    expect(wed.lostDiscountCents).toBe(249);
+    expect(wed.addCents).toBe(Math.round((249 * week[2].totalCents) / (999 - 249)));
+    expect(thu.newDiscountCents).toBe(249);
+    expect(thu.lostDiscountCents).toBe(250);
+  });
+
+  it("cancelling the last day changes nothing", () => {
+    expect(planMultiDayReprice({ tiers, timezone: tz, cancelledId: "thu", orders: week })).toEqual([]);
+  });
+
+  it("a sibling order on the same day keeps the day alive", () => {
+    const sibling = { ...mk("mon2", "2026-10-12", 0) };
+    expect(planMultiDayReprice({ tiers, timezone: tz, cancelledId: "mon", orders: [...week, sibling] })).toEqual([]);
   });
 });
