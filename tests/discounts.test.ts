@@ -23,6 +23,7 @@ function createDiscount(overrides: Partial<Discount> = {}): Discount {
     schoolIds: [],
     grades: [],
     weekdays: [],
+    weeklyTiers: null,
     startsAt: null,
     endsAt: null,
     maxRedemptionsTotal: null,

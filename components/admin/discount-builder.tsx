@@ -69,6 +69,8 @@ export interface BuilderState {
   allowStackingWithCode: boolean;
   bogoBuyItemIds: string[];
   bogoGetItemIds: string[];
+  /** Multi-day tiers as typed in the editor: Nth delivery day → percent off. */
+  weeklyTiers: { dayNumber: string; percent: string }[];
   isActive: boolean;
 }
 
@@ -214,10 +216,16 @@ export function DiscountBuilder({ template, initial, schools, menuItems, gradeOp
       {/* The sentence */}
       <div className="rounded-[16px] border border-editorial-line bg-white p-5 mb-5 text-[15px] leading-[2.2] text-editorial-ink shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
         {/* Amount + main clause */}
-        <AmountPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
-        {" off "}
+        {template.kind === "MULTI_DAY" ? null : (
+          <>
+            <AmountPill state={state} update={update} openPillId={openPillId} setOpenPillId={setOpenPillId} />
+            {" off "}
+          </>
+        )}
 
-        {template.kind === "PROMO_CODE" ? (
+        {template.kind === "MULTI_DAY" ? (
+          <WeeklyTiersEditor state={state} update={update} />
+        ) : template.kind === "PROMO_CODE" ? (
           <>{"when customers enter the code at checkout."}</>
         ) : template.kind === "WELCOME" ? (
           <>
@@ -444,6 +452,71 @@ function AmountPill({ state, update, openPillId, setOpenPillId }: PillSharedProp
         )}
       </div>
     </DiscountPill>
+  );
+}
+
+// ─── Multi-day tier editor ──────────────────────────────────────────────────
+
+/** "The Nth delivery day this week gets X% off" rows. The last row also
+ *  covers every later day (e.g. 4 → 50% means day 4, 5, 6, 7 all get 50%). */
+function WeeklyTiersEditor({ state, update }: { state: BuilderState; update: (patch: Partial<BuilderState>) => void }) {
+  const tiers = state.weeklyTiers;
+  const setTier = (i: number, patch: Partial<{ dayNumber: string; percent: string }>) =>
+    update({ weeklyTiers: tiers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) });
+  const addTier = () => {
+    const last = tiers[tiers.length - 1];
+    const nextDay = Math.min(7, (parseInt(last?.dayNumber ?? "2", 10) || 2) + 1);
+    update({ weeklyTiers: [...tiers, { dayNumber: String(nextDay), percent: last?.percent ?? "25" }] });
+  };
+  const inputCls =
+    "w-16 border border-editorial-line rounded-[10px] px-2 py-1 text-[14px] focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green";
+  return (
+    <div className="mt-2 space-y-2">
+      <p className="text-[13px] text-editorial-ink-soft leading-snug">
+        Families who order on several days of the same week (Mon–Sun) save more on each extra day.
+        We check their earlier days automatically — including days already paid for.
+      </p>
+      {tiers.map((tier, i) => {
+        const isLast = i === tiers.length - 1;
+        return (
+          <div key={i} className="flex flex-wrap items-center gap-2 text-[14px]">
+            <span>Delivery day</span>
+            <input
+              type="number" min={2} max={7} value={tier.dayNumber}
+              onChange={(e) => setTier(i, { dayNumber: e.target.value })}
+              className={inputCls} aria-label="Delivery day number"
+            />
+            {isLast && tiers.length > 0 && <span className="text-editorial-ink-faint">and later</span>}
+            <span>gets</span>
+            <input
+              type="number" min={1} max={100} value={tier.percent}
+              onChange={(e) => setTier(i, { percent: e.target.value })}
+              className={inputCls} aria-label="Percent off"
+            />
+            <span>% off</span>
+            <button
+              type="button"
+              onClick={() => update({ weeklyTiers: tiers.filter((_, idx) => idx !== i) })}
+              className="text-[12px] text-editorial-ink-soft underline bg-transparent border-0 cursor-pointer"
+            >
+              Remove
+            </button>
+          </div>
+        );
+      })}
+      <button
+        type="button"
+        onClick={addTier}
+        disabled={tiers.length >= 6}
+        className="text-[13px] font-semibold text-editorial-green bg-transparent border-0 cursor-pointer disabled:opacity-40"
+      >
+        + Add a tier
+      </button>
+      <p className="text-[11px] text-editorial-ink-faint">
+        Example: day 3 → 25% and day 4 → 50% means a family ordering four days pays full price on days 1–2,
+        25% off day 3, and 50% off day 4. Each day's discount is fixed when it is paid.
+      </p>
+    </div>
   );
 }
 
@@ -1005,6 +1078,7 @@ function MinItemCountPill({ state, update, openPillId, setOpenPillId }: PillShar
 // ─── Live preview (mini-receipt) ───────────────────────────────────────────
 
 function LivePreview({ state }: { state: BuilderState }) {
+  if (state.templateKind === "MULTI_DAY") return <MultiDayPreview state={state} />;
   // Mock cart subtotal for the preview. We pick something sensible
   // ($24 = a typical 2-kid order) so percent and fixed both show
   // numbers that read clearly.
@@ -1030,6 +1104,43 @@ function LivePreview({ state }: { state: BuilderState }) {
         />
         <div className="border-t border-editorial-line my-1" />
         <ReceiptRow label="Customer pays" value={fmt(finalCents)} bold />
+      </div>
+    </div>
+  );
+}
+
+/** Sample week: one $12 lunch per day, to show what each tier is worth. */
+function MultiDayPreview({ state }: { state: BuilderState }) {
+  const lunch = 1200;
+  const tiers = state.weeklyTiers
+    .map((t) => ({ dayNumber: parseInt(t.dayNumber, 10), percent: parseInt(t.percent, 10) }))
+    .filter((t) => t.dayNumber >= 2 && t.percent > 0 && t.percent <= 100)
+    .sort((a, b) => a.dayNumber - b.dayNumber);
+  const maxDay = Math.min(7, Math.max(4, ...tiers.map((t) => t.dayNumber)));
+  const rows = Array.from({ length: maxDay }, (_, i) => {
+    const day = i + 1;
+    let percent = 0;
+    for (const t of tiers) if (t.dayNumber <= day) percent = t.percent;
+    return { day, percent, off: Math.floor((lunch * percent) / 100) };
+  });
+  const total = rows.reduce((s, r) => s + r.off, 0);
+  return (
+    <div className="rounded-[16px] border border-editorial-line bg-editorial-paper-2 p-5 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-editorial-ink-faint mb-3">
+        Live preview · one {fmt(lunch)} lunch per day
+      </p>
+      <div className="space-y-1.5 max-w-xs">
+        {rows.map((r) => (
+          <ReceiptRow
+            key={r.day}
+            label={`Day ${r.day}`}
+            value={r.percent > 0 ? `${fmt(lunch - r.off)}  (−${r.percent}%)` : fmt(lunch)}
+            accent={r.percent > 0}
+            muted={r.percent === 0}
+          />
+        ))}
+        <div className="border-t border-editorial-line my-1" />
+        <ReceiptRow label={`Family saves (${maxDay} days)`} value={fmt(total)} bold />
       </div>
     </div>
   );
@@ -1081,17 +1192,26 @@ function generateCode(): string {
  *  keeps the wire format honest (no stale "" strings, no display-vs-cents
  *  confusion). */
 function serialize(s: BuilderState): string {
+  const weeklyTiers =
+    s.templateKind === "MULTI_DAY"
+      ? s.weeklyTiers.map((t) => ({ dayNumber: parseInt(t.dayNumber, 10), percent: parseInt(t.percent, 10) }))
+      : [];
+  // Multi-day discounts take their percent from the tier table; `value` is
+  // kept as the best tier so lists/validation still have a sensible number.
   const valueAsInt =
-    s.kind === "PERCENT"
-      ? Math.round(Number(s.valueDisplay) || 0)
-      : Math.round((Number(s.valueDisplay) || 0) * 100);
+    s.templateKind === "MULTI_DAY"
+      ? Math.max(0, ...weeklyTiers.map((t) => (Number.isFinite(t.percent) ? t.percent : 0)))
+      : s.kind === "PERCENT"
+        ? Math.round(Number(s.valueDisplay) || 0)
+        : Math.round((Number(s.valueDisplay) || 0) * 100);
   return JSON.stringify({
     templateKind: s.templateKind,
     name: s.name,
     description: s.description || undefined,
     code: s.code || undefined,
-    kind: s.kind,
+    kind: s.templateKind === "MULTI_DAY" ? "PERCENT" : s.kind,
     value: valueAsInt,
+    weeklyTiers,
     scope: s.scope,
     itemIds: s.itemIds,
     categories: s.categories,

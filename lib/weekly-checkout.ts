@@ -30,12 +30,15 @@ async function scoreItemDiscount(args: {
   schoolId: string;
   deliveryDate: Date;
   parentUserId: string;
+  parentEmail?: string | null;
   studentName: string;
   grade: string | null;
   menuItemId: string;
   category: string | null;
   lineTotalCents: number;
   code?: string | null;
+  /** Delivery dates of the other items in this checkout (for multi-day tiers). */
+  sameCheckoutDeliveryDates?: Date[];
 }) {
   const result = await pickApplicableDiscounts({
     cart: {
@@ -43,6 +46,8 @@ async function scoreItemDiscount(args: {
       schoolId: args.schoolId,
       deliveryDate: args.deliveryDate,
       parentUserId: args.parentUserId,
+      parentEmail: args.parentEmail ?? null,
+      sameCheckoutDeliveryDates: args.sameCheckoutDeliveryDates,
       grade: args.grade,
       studentName: args.studentName,
       lines: [{ menuItemId: args.menuItemId, category: args.category, lineTotalCents: args.lineTotalCents }],
@@ -54,6 +59,62 @@ async function scoreItemDiscount(args: {
     discountId: winning?.discount.id ?? null,
     discountCents: winning?.amountCents ?? 0,
     discountName: winning?.discount.name ?? null,
+  };
+}
+
+/** Everything scoreItemDiscount needs about one batch item, stashed on the
+ *  item while the batch is assembled so discounts can be scored AFTER all
+ *  items (and therefore every delivery date in the checkout) are known. */
+type ScoreInput = {
+  schoolId: string;
+  /** School's IANA timezone — for local-date display in previews. */
+  timezone: string;
+  deliveryDate: Date;
+  studentName: string;
+  grade: string | null;
+  menuItemId: string;
+  category: string | null;
+  lineTotalCents: number;
+};
+
+/**
+ * Scores every item's discount once the whole checkout is known. Each item
+ * is still scored independently (per child), but now also sees the delivery
+ * dates of its siblings in the same cart — required for multi-day tiers
+ * ("3rd day of the week = 25% off"), since none of those orders are paid
+ * (and so none are in the DB) yet.
+ */
+async function applyBatchDiscounts<T extends { _score: ScoreInput }>(
+  items: T[],
+  common: {
+    restaurantId: string;
+    parentUserId: string;
+    parentEmail?: string | null;
+    code?: string | null;
+  }
+) {
+  const sameCheckoutDeliveryDates = items.map((item) => item._score.deliveryDate);
+  const scored = await Promise.all(
+    items.map(async ({ _score, ...rest }) => {
+      const result = await scoreItemDiscount({
+        restaurantId: common.restaurantId,
+        parentUserId: common.parentUserId,
+        parentEmail: common.parentEmail,
+        code: common.code,
+        sameCheckoutDeliveryDates,
+        ..._score,
+      });
+      return {
+        item: { ...rest, discountId: result.discountId, discountCents: result.discountCents },
+        score: _score,
+        discountName: result.discountName,
+      };
+    })
+  );
+  return {
+    items: scored.map((s) => s.item),
+    scores: scored.map((s) => s.score),
+    discountNames: scored.map((s) => s.discountName),
   };
 }
 
@@ -106,7 +167,18 @@ function allocateActualTotal(baseAmounts: number[], actualTotalCents: number) {
   });
 }
 
-export async function createWeeklyCheckoutBatch(parentUserId: string, code?: string | null) {
+/**
+ * Shared by the real weekly checkout and the read-only preview, so the
+ * numbers a parent sees before paying are produced by exactly the same
+ * code that later prices the batch. `preview: true` skips the monthly
+ * capacity guard and reports unavailable days as `skippedItems` instead of
+ * throwing; it never writes.
+ */
+async function buildWeeklyBatch(
+  parentUserId: string,
+  code: string | null | undefined,
+  options: { preview: boolean }
+) {
   const parent = await prisma.parentUser.findUnique({
     where: { id: parentUserId },
     include: {
@@ -145,7 +217,9 @@ export async function createWeeklyCheckoutBatch(parentUserId: string, code?: str
   // right now (not reserving capacity for every day in the batch), same
   // tolerance the discount engine below documents: a race past the cap
   // is harmless and rare for a usage-based SaaS limit like this one.
-  await assertOrderCapacity(parent.weeklyPlans[0].school.restaurantId);
+  if (!options.preview) {
+    await assertOrderCapacity(parent.weeklyPlans[0].school.restaurantId);
+  }
 
   const now = new Date();
   const primaryTimezone = parent.weeklyPlans[0]?.school.timezone ?? "America/Los_Angeles";
@@ -266,21 +340,18 @@ export async function createWeeklyCheckoutBatch(parentUserId: string, code?: str
       ),
     });
 
-    const { discountId, discountCents } = await scoreItemDiscount({
-      restaurantId,
-      schoolId: plan.schoolId,
-      deliveryDate: matchingDeliveryDate.deliveryDate,
-      parentUserId,
-      studentName: plan.parentChild.studentName,
-      grade: plan.parentChild.grade ?? null,
-      menuItemId: plan.menuItemId,
-      category: plan.menuItem.category ?? null,
-      lineTotalCents,
-      code,
-    });
-
     return [
       {
+        _score: {
+          schoolId: plan.schoolId,
+          timezone: matchingDeliveryDate.school.timezone,
+          deliveryDate: matchingDeliveryDate.deliveryDate,
+          studentName: plan.parentChild.studentName,
+          grade: plan.parentChild.grade ?? null,
+          menuItemId: plan.menuItemId,
+          category: plan.menuItem.category ?? null,
+          lineTotalCents,
+        } satisfies ScoreInput,
         parentChildId: plan.parentChildId,
         schoolId: plan.schoolId,
         deliveryDateId: matchingDeliveryDate.id,
@@ -292,35 +363,49 @@ export async function createWeeklyCheckoutBatch(parentUserId: string, code?: str
         itemNameSnapshot: plan.menuItem.name,
         basePriceCents: resolvedBaseCents,
         lineTotalCents,
-        discountId,
-        discountCents
       }
     ];
   }));
 
-  const batchItems = batchItemGroups.flat();
+  const unscoredItems = batchItemGroups.flat();
 
-  if (skippedItems.length) {
+  if (skippedItems.length && !options.preview) {
     throw new Error(`Weekly checkout could not continue. ${skippedItems.join(" ")}`);
   }
 
-  if (!batchItems.length) {
+  if (!unscoredItems.length) {
+    if (options.preview) {
+      return { restaurantId, batchItems: [], scores: [], discountNames: [], skippedItems, subtotalCents: 0, discountCents: 0, totalCents: 0 };
+    }
     throw new Error("No delivery dates in the upcoming lunch week matched the planned items.");
   }
+
+  const { items: batchItems, scores, discountNames } = await applyBatchDiscounts(unscoredItems, {
+    restaurantId,
+    parentUserId,
+    parentEmail: parent.email,
+    code,
+  });
 
   const subtotalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
   const discountCents = batchItems.reduce((sum, item) => sum + item.discountCents, 0);
   const totalCents = Math.max(0, subtotalCents - discountCents);
 
+  return { restaurantId, batchItems, scores, discountNames, skippedItems, subtotalCents, discountCents, totalCents };
+}
+
+export async function createWeeklyCheckoutBatch(parentUserId: string, code?: string | null) {
+  const built = await buildWeeklyBatch(parentUserId, code, { preview: false });
+
   return prisma.weeklyCheckoutBatch.create({
     data: {
       parentUserId,
-      restaurantId,
-      subtotalCents,
-      discountCents,
-      totalCents,
+      restaurantId: built.restaurantId,
+      subtotalCents: built.subtotalCents,
+      discountCents: built.discountCents,
+      totalCents: built.totalCents,
       items: {
-        create: batchItems
+        create: built.batchItems
       }
     },
     include: {
@@ -333,6 +418,64 @@ export async function createWeeklyCheckoutBatch(parentUserId: string, code?: str
       parentUser: true
     }
   });
+}
+
+export interface WeeklyCheckoutPreviewLine {
+  /** yyyy-MM-dd local delivery date. */
+  date: string;
+  weekdayLabel: string;
+  studentName: string;
+  itemName: string;
+  lineTotalCents: number;
+  discountCents: number;
+  discountName: string | null;
+}
+
+export interface WeeklyCheckoutPreview {
+  lines: WeeklyCheckoutPreviewLine[];
+  subtotalCents: number;
+  discountCents: number;
+  /** Before sales tax — Stripe adds tax on its page. */
+  totalCents: number;
+  /** Distinct discount names that applied (for the summary headline). */
+  discountNames: string[];
+  /** Planned days that can't be included (closed / unavailable). */
+  skipped: string[];
+}
+
+/**
+ * Read-only: prices the upcoming week exactly as createWeeklyCheckoutBatch
+ * would (same builder, same discount engine) but writes nothing, so the web
+ * cart can show the savings BEFORE the parent is sent to Stripe.
+ */
+export async function previewWeeklyCheckoutBatch(
+  parentUserId: string,
+  code?: string | null
+): Promise<WeeklyCheckoutPreview> {
+  const built = await buildWeeklyBatch(parentUserId, code, { preview: true });
+
+  const lines: WeeklyCheckoutPreviewLine[] = built.batchItems.map((item, i) => {
+    const score = built.scores[i];
+    return {
+      date: formatInTimeZone(score.deliveryDate, score.timezone, "yyyy-MM-dd"),
+      weekdayLabel: formatInTimeZone(score.deliveryDate, score.timezone, "EEE, MMM d"),
+      studentName: score.studentName,
+      itemName: item.itemNameSnapshot,
+      lineTotalCents: item.lineTotalCents,
+      discountCents: item.discountCents,
+      discountName: built.discountNames[i],
+    };
+  });
+  lines.sort((a, b) => a.date.localeCompare(b.date));
+
+  return {
+    lines,
+    subtotalCents: built.subtotalCents,
+    discountCents: built.discountCents,
+    totalCents: built.totalCents,
+    discountNames: [...new Set(built.discountNames.filter((n): n is string => Boolean(n)))],
+    skipped: built.skippedItems,
+  };
 }
 
 /**
@@ -490,21 +633,18 @@ export async function createAdHocCheckoutBatch(
       )
     });
 
-    const { discountId, discountCents } = await scoreItemDiscount({
-      restaurantId,
-      schoolId: deliveryDate.schoolId,
-      deliveryDate: deliveryDate.deliveryDate,
-      parentUserId,
-      studentName: child.studentName,
-      grade: child.grade ?? null,
-      menuItemId: cartItem.menuItemId,
-      category: menuItem.category ?? null,
-      lineTotalCents,
-      code,
-    });
-
     return [
       {
+        _score: {
+          schoolId: deliveryDate.schoolId,
+          timezone: deliveryDate.school.timezone,
+          deliveryDate: deliveryDate.deliveryDate,
+          studentName: child.studentName,
+          grade: child.grade ?? null,
+          menuItemId: cartItem.menuItemId,
+          category: menuItem.category ?? null,
+          lineTotalCents,
+        } satisfies ScoreInput,
         parentChildId: cartItem.parentChildId,
         schoolId: deliveryDate.schoolId,
         deliveryDateId: deliveryDate.id,
@@ -516,17 +656,21 @@ export async function createAdHocCheckoutBatch(
         itemNameSnapshot: menuItem.name,
         basePriceCents: resolvedBaseCents,
         lineTotalCents,
-        discountId,
-        discountCents
       }
     ];
   }));
 
-  const batchItems = batchItemGroups.flat();
+  const unscoredItems = batchItemGroups.flat();
 
   if (skippedItems.length) {
     throw new Error(`Checkout could not continue. ${skippedItems.join(" ")}`);
   }
+
+  const { items: batchItems } = await applyBatchDiscounts(unscoredItems, {
+    restaurantId,
+    parentUserId,
+    code,
+  });
 
   const subtotalCents = batchItems.reduce((sum, item) => sum + item.lineTotalCents, 0);
   const discountCents = batchItems.reduce((sum, item) => sum + item.discountCents, 0);

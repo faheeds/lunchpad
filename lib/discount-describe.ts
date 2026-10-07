@@ -16,12 +16,14 @@
  */
 
 import type { Discount } from "@prisma/client";
+import { describeWeeklyTiers, parseWeeklyTiers } from "@/lib/volume-discount";
 
 export function describeDiscount(d: Discount): string {
   const parts: string[] = [];
 
   // 1. Amount + what (the verb)
-  parts.push(`${formatAmount(d)} off`);
+  const weeklyTiers = parseWeeklyTiers(d.weeklyTiers);
+  parts.push(weeklyTiers.length > 0 ? describeWeeklyTiers(weeklyTiers) : `${formatAmount(d)} off`);
 
   // 2. Item scope (if narrowed)
   if (d.scope === "ITEMS") {

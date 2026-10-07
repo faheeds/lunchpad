@@ -275,6 +275,9 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
       schoolId: parsed.schoolId,
       deliveryDate: deliveryDate.deliveryDate,
       parentUserId: parentUserId ?? parentChild?.parentUserId ?? null,
+      // Lets multi-day tiers recognise this family's earlier paid days
+      // even when they checked out as a guest on a previous day.
+      parentEmail: parsed.parentEmail,
       lines: cartLines,
     },
     code: parsed.discountCode,

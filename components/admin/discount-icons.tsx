@@ -151,6 +151,7 @@ export type DiscountIconName =
   | "BOGO"
   | "BUNDLE"
   | "VOLUME"
+  | "MULTI_DAY"
   | "ITEM_DISCOUNT"
   | "LOYALTY"
   | "CUSTOM";
@@ -163,6 +164,7 @@ export const TEMPLATE_PALETTE: Record<DiscountIconName, { bg: string; fg: string
   BOGO:          { bg: "#f0fdfa", fg: "#0d9488" }, // teal
   BUNDLE:        { bg: "#ecfdf5", fg: "#059669" }, // emerald
   VOLUME:        { bg: "#f7fee7", fg: "#65a30d" }, // lime
+  MULTI_DAY:     { bg: "#fff1f2", fg: "#e11d48" }, // rose
   ITEM_DISCOUNT: { bg: "#eef2ff", fg: "#4f46e5" }, // indigo
   LOYALTY:       { bg: "#fefce8", fg: "#ca8a04" }, // gold
   CUSTOM:        { bg: "#f8fafc", fg: "#475569" }, // slate
@@ -176,6 +178,7 @@ const ICON_BY_KIND: Record<DiscountIconName, (props: IconBaseProps) => ReactNode
   BOGO:          LayersIcon,
   BUNDLE:        PackageIcon,
   VOLUME:        CoinsIcon,
+  MULTI_DAY:     CalendarIcon,
   ITEM_DISCOUNT: TagsIcon,
   LOYALTY:       StarIcon,
   CUSTOM:        SlidersIcon,

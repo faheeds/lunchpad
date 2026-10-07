@@ -851,6 +851,13 @@ model Discount {
   // to just that value.
   grades                String[]            @default([])
   weekdays              Int[]               @default([])   // ISO 1..7, empty = all days
+  // Multi-day (weekly streak) tiers, e.g. [{"dayNumber":3,"percent":25},
+  // {"dayNumber":4,"percent":50}]. "dayNumber" is the Nth distinct delivery
+  // day in the same Mon-Sun week for the same family; the highest tier whose
+  // dayNumber is <= the order's day number wins (so the last tier also covers
+  // every later day). Null/empty = not a multi-day discount. See
+  // lib/volume-discount.ts.
+  weeklyTiers           Json?
   startsAt              DateTime?
   endsAt                DateTime?
 
@@ -930,6 +937,7 @@ enum DiscountTemplate {
   SIBLING
   DAY_OF_WEEK
   VOLUME
+  MULTI_DAY
   ITEM_DISCOUNT
   BOGO
   BUNDLE

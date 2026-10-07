@@ -17,6 +17,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { templateForKind } from "@/lib/discount-templates";
 import { describeDiscount } from "@/lib/discount-describe";
+import { parseWeeklyTiers } from "@/lib/volume-discount";
 import { DiscountBuilder, type BuilderState } from "@/components/admin/discount-builder";
 import { toggleDiscountActive, deleteDiscount } from "../actions";
 
@@ -104,6 +105,7 @@ export default async function DiscountDetailPage({
     allowStackingWithCode: discount.allowStackingWithCode,
     bogoBuyItemIds: discount.bogoBuyItemIds,
     bogoGetItemIds: discount.bogoGetItemIds,
+    weeklyTiers: parseWeeklyTiers(discount.weeklyTiers).map((t) => ({ dayNumber: String(t.dayNumber), percent: String(t.percent) })),
     isActive: discount.isActive,
   };
 

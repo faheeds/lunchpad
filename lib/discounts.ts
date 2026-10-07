@@ -19,6 +19,13 @@
 
 import { prisma } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
+import {
+  dayNumberInWeek,
+  parseWeeklyTiers,
+  tierPercentForDay,
+  weekWindow,
+} from "@/lib/volume-discount";
 import type {
   Discount,
   DiscountKind,
@@ -45,6 +52,13 @@ export interface CartContext {
    *  honor automatic order-level discounts but skip per-user redemption
    *  caps). */
   parentUserId: string | null;
+  /** Parent's email, when known. Used with `parentUserId` to recognise a
+   *  family's earlier orders (incl. guest checkouts) for multi-day tiers. */
+  parentEmail?: string | null;
+  /** Delivery dates of the OTHER items in this same checkout (weekly /
+   *  multi-day carts). Those orders aren't paid yet, so they can't be found
+   *  in the DB, but they still count toward "the Nth day this week". */
+  sameCheckoutDeliveryDates?: Date[];
   /** Resolved Student/ParentChild.grade value for this order (e.g.
    *  "5th Grade", or an operator-added value like "Teacher/Admin").
    *  Null when not yet known (e.g. the live cart preview fires before
@@ -83,6 +97,9 @@ export interface DiscountEvaluation {
   /** Computed $ amount this discount would deduct. 0 means it didn't
    *  apply (either ineligible or the math came out to nothing). */
   amountCents: number;
+  /** Extra detail for multi-day discounts: which day of the week this was
+   *  and the tier percent applied. Lets UIs say "Day 3 · 25% off". */
+  meta?: { dayNumber: number; percent: number };
   /** Human-readable reason this discount was rejected. Empty when
    *  amountCents > 0 (i.e. the discount applied). */
   reason: string | null;
@@ -181,10 +198,19 @@ export async function pickApplicableDiscounts(args: {
     for (const row of grouped) perUserCounts.set(row.discountId, row._count._all);
   }
 
+  // Multi-day discounts: work out which delivery day of the (Mon-Sun) week
+  // this order is for the family. Only queries when such a discount exists,
+  // so every other checkout pays nothing for this feature.
+  let dayNumber: number | null = null;
+  if (activeDiscounts.some((d) => parseWeeklyTiers(d.weeklyTiers).length > 0)) {
+    dayNumber = await resolveDayNumberInWeek(cart);
+  }
+
   const evalContext: EvalContext = {
     cart,
     priorOrderCount,
     perUserCounts,
+    dayNumberInWeek: dayNumber,
   };
 
   // Auto: evaluate all, pick the single highest discount $ amount.
@@ -289,6 +315,47 @@ export interface EvalContext {
   cart: CartContext;
   priorOrderCount: number;
   perUserCounts: Map<string, number>;
+  /** 1-based delivery-day-of-week for this family; null when not computed
+   *  (no multi-day discounts exist). Treated as 1 (no discount) when null. */
+  dayNumberInWeek?: number | null;
+}
+
+/** Day number of this cart's delivery date within the family's week:
+ *  1 + distinct earlier delivery days from (a) already-paid orders for the
+ *  same parent (by account or email) and (b) the rest of this checkout. */
+async function resolveDayNumberInWeek(cart: CartContext): Promise<number> {
+  const school = await prisma.school.findUnique({
+    where: { id: cart.schoolId },
+    select: { timezone: true },
+  });
+  const timezone = school?.timezone ?? DEFAULT_TIMEZONE;
+
+  const familyMatch: Array<Record<string, unknown>> = [];
+  if (cart.parentUserId) familyMatch.push({ parentUserId: cart.parentUserId });
+  const email = cart.parentEmail?.trim();
+  if (email) familyMatch.push({ parentEmail: { equals: email, mode: "insensitive" } });
+
+  let paidDates: Date[] = [];
+  if (familyMatch.length > 0) {
+    const { start, end } = weekWindow(cart.deliveryDate, timezone);
+    const paid = await prisma.order.findMany({
+      where: {
+        restaurantId: cart.restaurantId,
+        status: { in: ["PAID", "PARTIALLY_REFUNDED"] },
+        archivedAt: null,
+        OR: familyMatch,
+        deliveryDate: { deliveryDate: { gte: start, lt: end } },
+      },
+      select: { deliveryDate: { select: { deliveryDate: true } } },
+    });
+    paidDates = paid.map((o) => o.deliveryDate.deliveryDate);
+  }
+
+  return dayNumberInWeek({
+    targetDate: cart.deliveryDate,
+    otherDates: [...paidDates, ...(cart.sameCheckoutDeliveryDates ?? [])],
+    timezone,
+  });
 }
 
 /** Walk every eligibility rule, then compute the $ amount the discount
@@ -363,6 +430,24 @@ export function evaluate(d: Discount, ctx: EvalContext): DiscountEvaluation {
   const isBogo = d.bogoBuyItemIds.length > 0 && d.bogoGetItemIds.length > 0;
   if (isBogo) {
     return evaluateBogo(d, ctx);
+  }
+
+  // Multi-day branch — percent comes from the tier table for this family's
+  // Nth delivery day of the week, not from `value`. Item scoping still applies.
+  const weeklyTiers = parseWeeklyTiers(d.weeklyTiers);
+  if (weeklyTiers.length > 0) {
+    const dayNumber = ctx.dayNumberInWeek ?? 1;
+    const percent = tierPercentForDay(weeklyTiers, dayNumber);
+    if (percent <= 0) {
+      return reject(d, "Order on more days this week to unlock this discount.");
+    }
+    const tierLines = filterApplicableLines(d, ctx.cart.lines);
+    const tierSubtotal = tierLines.reduce((s, l) => s + l.lineTotalCents, 0);
+    const tierAmount = Math.min(tierSubtotal, Math.floor((tierSubtotal * percent) / 100));
+    if (tierAmount <= 0) {
+      return reject(d, "Discount amount is zero.");
+    }
+    return { discount: d, amountCents: tierAmount, meta: { dayNumber, percent }, reason: null };
   }
 
   // Determine the "applicable subtotal" — what portion of the cart this

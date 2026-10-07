@@ -88,6 +88,7 @@ function seedState(t: TemplateMeta): BuilderState {
     allowStackingWithCode: false,
     bogoBuyItemIds: [],
     bogoGetItemIds: [],
+    weeklyTiers: (d.weeklyTiers ?? []).map((t) => ({ dayNumber: String(t.dayNumber), percent: String(t.percent) })),
     isActive: true,
   };
 }
