@@ -170,16 +170,21 @@ async function createSession(args: SharedCheckoutArgs) {
       quantity: 1,
       price_data: {
         currency: "usd",
-        product_data: { name: item.name, description: item.description },
-        unit_amount: item.amountCents,
+        // tax_code belongs on product_data (NOT price_data) - Stripe rejects
+        // price_data.tax_code with "unknown parameter".
         // Without an explicit tax_code, Stripe Tax falls back to the
-        // account's preset product category — which for this account is
+        // account's preset product category - which for this account is
         // "Digital products > Software > SaaS" (set up for F5H's other,
         // non-food business). That misclassification was silently zeroing
         // out sales tax on every LunchPad order despite a valid WA
         // registration. txcd_40060000 is Stripe's tax code for prepared/
         // ready-to-eat food, which is what's actually being sold here.
-        tax_code: "txcd_40060000",
+        product_data: {
+          name: item.name,
+          description: item.description,
+          tax_code: "txcd_40060000",
+        },
+        unit_amount: item.amountCents,
       },
     })),
   }), "stripe_checkout_session_create_failed");
