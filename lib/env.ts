@@ -25,10 +25,10 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   // Application fee on each destination charge = percent of the post-discount,
   // pre-tax subtotal + a flat amount. Sized to cover Stripe's processing
-  // (2.9% + 30c on the taxed total) and Stripe Tax (0.5%), which the platform
+  // (2.9% + 30c on the taxed total) and Stripe Tax (0.5%), plus a 10c LunchPad margin (flat = 30c Stripe + 10c LunchPad), which the platform
   // pays on destination charges. See lib/payments/platform-fee.ts.
   PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(100).default(3.8),
-  PLATFORM_FEE_FIXED_CENTS: z.coerce.number().int().min(0).max(1000).default(30),
+  PLATFORM_FEE_FIXED_CENTS: z.coerce.number().int().min(0).max(1000).default(40),
   CRON_SECRET: z.string().optional(),
   // 32-byte AES-256-GCM key (64 hex chars) used to encrypt admin MFA TOTP
   // secrets at rest. Optional during phase 1 (foundation only — no runtime

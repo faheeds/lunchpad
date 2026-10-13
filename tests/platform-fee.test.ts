@@ -15,9 +15,15 @@ describe("computePlatformFeeCents", () => {
     }
   });
 
+  it("leaves LunchPad a positive margin over Stripe's cost at default settings", () => {
+    for (const net of [699, 1400, 2698]) {
+      expect(computePlatformFeeCents(net)).toBeGreaterThan(stripeCostCents(net));
+    }
+  });
+
   it("includes the flat component on small orders", () => {
-    expect(computePlatformFeeCents(400, 0, 30)).toBe(30);
-    expect(computePlatformFeeCents(1400, 3.8, 30)).toBe(83);
+    expect(computePlatformFeeCents(400, 0, 40)).toBe(40);
+    expect(computePlatformFeeCents(1400, 3.8, 40)).toBe(93);
   });
 
   it("never exceeds the net and never charges on a zero order", () => {
