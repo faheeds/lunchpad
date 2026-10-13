@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { getRequestBaseUrl } from "@/lib/request-base-url";
 import { logInfo, logWarn, logException } from "@/lib/log";
 import { formatApiError } from "@/lib/format-api-error";
+import { PARENT_CHECKOUT_TTL_SECONDS, resolveDuplicatePendingOrder } from "@/lib/pending-orders";
 
 export async function POST(request: Request) {
   try {
@@ -48,30 +49,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // Rate-limit: block if the same parent already has a PENDING order for this
-    // delivery date created in the last 5 minutes (prevents accidental double-orders)
+    // If this parent already has a PENDING order for the same student and
+    // date, settle it against Stripe rather than blocking: an abandoned
+    // checkout is cancelled so they can start over, a paid one is reported.
     const parentUserId =
       authSession?.user?.role === "PARENT" ? authSession.user.parentUserId : undefined;
     if (parentUserId) {
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      const duplicate = await prisma.order.findFirst({
-        where: {
-          parentUserId,
-          deliveryDateId: parsed.deliveryDateId,
-          status: "PENDING",
-          createdAt: { gte: fiveMinutesAgo },
-        },
-        select: { id: true },
+      const dup = await resolveDuplicatePendingOrder({
+        parentUserId,
+        deliveryDateId: parsed.deliveryDateId,
+        studentName: parsed.studentName,
       });
-      if (duplicate) {
+      if (!dup.ok) {
         logWarn("order_duplicate_pending", {
           parentUserId,
           deliveryDateId: parsed.deliveryDateId,
-          duplicateOrderId: duplicate.id,
+          reason: dup.reason,
         });
         return NextResponse.json(
-          { error: "You already have a pending order for this date. Complete or cancel it before placing another." },
-          { status: 429 }
+          { error: dup.message },
+          { status: dup.reason === "already_paid" ? 409 : 429 }
         );
       }
     }
@@ -141,6 +138,7 @@ export async function POST(request: Request) {
       })),
       discountCents: provisionalOrder.discountCents,
       discountLabel: redemption?.discount.name,
+      expiresAt: Math.floor(Date.now() / 1000) + PARENT_CHECKOUT_TTL_SECONDS,
     });
 
     await prisma.order.update({

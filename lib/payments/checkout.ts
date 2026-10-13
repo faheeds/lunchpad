@@ -66,6 +66,8 @@ type OrderCheckoutArgs = {
   /** See discountCents on SharedCheckoutArgs. */
   discountCents?: number;
   discountLabel?: string;
+  /** Unix seconds; see SharedCheckoutArgs.expiresAt. */
+  expiresAt?: number;
 };
 
 type WeeklyBatchCheckoutArgs = {
@@ -202,6 +204,7 @@ export async function createStripeCheckoutSession(args: OrderCheckoutArgs) {
     stripeAccountId: args.stripeAccountId,
     discountCents: args.discountCents,
     discountLabel: args.discountLabel,
+    expiresAt: args.expiresAt,
   });
 }
 
