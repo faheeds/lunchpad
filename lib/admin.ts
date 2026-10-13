@@ -1,6 +1,7 @@
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
+import { createRefund } from "@/lib/payments/refund-params";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
 
@@ -83,14 +84,14 @@ export async function adminCancelOrderWithRefund(
   if (stripe) {
     // Multi-PI: refund delta charge first (if an increase-edit was finalized).
     if (order.deltaPaymentIntentId && (order.deltaAmountCents ?? 0) > 0) {
-      await stripe.refunds.create({
+      await createRefund({
         payment_intent: order.deltaPaymentIntentId,
         reason: "requested_by_customer",
       });
     }
 
     if (paymentIntentId) {
-      await stripe.refunds.create({
+      await createRefund({
         payment_intent: paymentIntentId,
         reason: "requested_by_customer",
       });

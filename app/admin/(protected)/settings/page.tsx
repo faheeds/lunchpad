@@ -601,7 +601,7 @@ export default async function AdminSettingsPage({
               <p className="text-[11px] font-semibold text-editorial-ink-soft">How payouts work</p>
               {[
                 "Customers pay at checkout — money goes directly to your Stripe account",
-                `LunchPad retains a ${env.PLATFORM_FEE_PERCENT}% platform fee automatically`,
+                `LunchPad retains a platform fee of ${env.PLATFORM_FEE_PERCENT}% + $${(env.PLATFORM_FEE_FIXED_CENTS / 100).toFixed(2)} per payment automatically`,
                 "Stripe deposits funds to your bank on a rolling 2-day schedule",
               ].map((line) => (
                 <div key={line} className="flex items-start gap-2">

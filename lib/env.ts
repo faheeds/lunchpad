@@ -23,7 +23,12 @@ const envSchema = z.object({
   STRIPE_PRICE_GROWTH: z.string().optional(),
   STRIPE_PRICE_SCALE: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
-  PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(100).default(2.9), // LunchPad's cut %
+  // Application fee on each destination charge = percent of the post-discount,
+  // pre-tax subtotal + a flat amount. Sized to cover Stripe's processing
+  // (2.9% + 30c on the taxed total) and Stripe Tax (0.5%), which the platform
+  // pays on destination charges. See lib/payments/platform-fee.ts.
+  PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(100).default(3.8),
+  PLATFORM_FEE_FIXED_CENTS: z.coerce.number().int().min(0).max(1000).default(30),
   CRON_SECRET: z.string().optional(),
   // 32-byte AES-256-GCM key (64 hex chars) used to encrypt admin MFA TOTP
   // secrets at rest. Optional during phase 1 (foundation only — no runtime
@@ -59,6 +64,7 @@ export const env = envSchema.parse({
   STRIPE_PRICE_SCALE: process.env.STRIPE_PRICE_SCALE,
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   PLATFORM_FEE_PERCENT: process.env.PLATFORM_FEE_PERCENT,
+  PLATFORM_FEE_FIXED_CENTS: process.env.PLATFORM_FEE_FIXED_CENTS,
   CRON_SECRET: process.env.CRON_SECRET,
   MFA_ENCRYPTION_KEY: process.env.MFA_ENCRYPTION_KEY,
 });

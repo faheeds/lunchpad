@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { stripe } from "@/lib/payments/stripe";
+import { createRefund } from "@/lib/payments/refund-params";
 import { markOrderPaidByCheckoutSession } from "@/lib/orders";
 import {
   sendOrderConfirmationEmail,
@@ -172,7 +173,7 @@ export async function POST(request: Request) {
             let orphanRefundError: string | null = null;
             if (stripe && paymentIntentId) {
               try {
-                await stripe.refunds.create(
+                await createRefund(
                   { payment_intent: paymentIntentId },
                   { idempotencyKey: `edit-orphan-${session.id}` }
                 );
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
             let orphanRefundError: string | null = null;
             if (stripe && paymentIntentId) {
               try {
-                await stripe.refunds.create(
+                await createRefund(
                   { payment_intent: paymentIntentId },
                   { idempotencyKey: `edit-orphan-${session.id}` }
                 );
