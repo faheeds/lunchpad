@@ -28,6 +28,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { PARENT_CHECKOUT_TTL_SECONDS, resolveDuplicatePendingOrder } from "@/lib/pending-orders";
 import { createPendingOrder } from "@/lib/orders";
 import { createStripeCheckoutSession } from "@/lib/payments/checkout";
 import { stripe } from "@/lib/payments/stripe";
@@ -72,28 +73,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Duplicate order guard (same parent, same date, PENDING in last 5 min)
+    // Duplicate order guard: settle an earlier PENDING checkout for the same
+    // student and date against Stripe instead of blocking the parent.
     if (parentUserId) {
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      const duplicate = await prisma.order.findFirst({
-        where: {
-          parentUserId,
-          deliveryDateId: body.deliveryDateId,
-          status: "PENDING",
-          createdAt: { gte: fiveMinutesAgo },
-        },
-        select: { id: true },
+      const dup = await resolveDuplicatePendingOrder({
+        parentUserId,
+        deliveryDateId: body.deliveryDateId,
+        studentName: typeof body.studentName === "string" ? body.studentName : "",
       });
-      if (duplicate) {
+      if (!dup.ok) {
         logWarn("mobile_order_duplicate_pending", {
           restaurantId: restaurant.id,
           parentUserId,
           deliveryDateId: body.deliveryDateId,
-          duplicateOrderId: duplicate.id,
+          reason: dup.reason,
         });
         return NextResponse.json(
-          { error: "You already have a pending order for this date." },
-          { status: 429, headers: CORS_HEADERS }
+          { error: dup.message },
+          { status: dup.reason === "already_paid" ? 409 : 429, headers: CORS_HEADERS }
         );
       }
     }
@@ -201,6 +198,7 @@ export async function POST(request: NextRequest) {
       })),
       discountCents: provisionalOrder.discountCents,
       discountLabel: redemption?.discount.name,
+      expiresAt: Math.floor(Date.now() / 1000) + PARENT_CHECKOUT_TTL_SECONDS,
     });
 
     await prisma.order.update({

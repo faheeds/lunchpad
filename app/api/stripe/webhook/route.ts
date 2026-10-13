@@ -15,6 +15,7 @@ import { markWeeklyBatchPaidByCheckoutSession } from "@/lib/weekly-checkout";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushForOrder, sendPushToParent } from "@/lib/push/service";
+import { cancelAbandonedOrder } from "@/lib/pending-orders";
 
 export async function POST(request: Request) {
   if (!stripe || !env.STRIPE_WEBHOOK_SECRET) {
@@ -106,6 +107,21 @@ export async function POST(request: Request) {
             stripeSubscriptionId: null,
           },
         });
+      }
+    }
+
+    // A parent-facing checkout expired (31-min TTL) or was abandoned: release
+    // the PENDING order so it doesn't linger or hold a discount. Edit/weekly/
+    // subscription sessions never match an Order.checkoutSessionId, so they
+    // are untouched.
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const pendingOrder = await prisma.order.findFirst({
+        where: { checkoutSessionId: session.id, status: "PENDING" },
+        select: { id: true },
+      });
+      if (pendingOrder) {
+        await cancelAbandonedOrder(pendingOrder.id, "checkout_session_expired_webhook");
       }
     }
 
