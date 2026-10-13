@@ -1,6 +1,7 @@
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
+import { createRefund } from "@/lib/payments/refund-params";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
 
@@ -66,7 +67,7 @@ export async function issueOrderRefund(args: {
   // Issue the Stripe refund.
   if (stripe && paymentIntentId) {
     try {
-      await stripe.refunds.create(
+      await createRefund(
         {
           payment_intent: paymentIntentId,
           amount: amountCents,

@@ -6,6 +6,7 @@ import { getRequiredChoicesForMenuItem } from "@/lib/menu-config";
 import { orderFormSchema } from "@/lib/validation/order";
 import type { OrderDraftInput } from "@/types/order";
 import { stripe } from "@/lib/payments/stripe";
+import { createRefund } from "@/lib/payments/refund-params";
 import { logActivity } from "@/lib/activity";
 import { formatCurrency } from "@/lib/utils";
 import { pickApplicableDiscounts, type CartLine } from "@/lib/discounts";
@@ -1050,7 +1051,7 @@ export async function updateOrderBeforeCutoff(args: {
       throw new Error("Cannot issue refund: no Stripe payment intent found for this order. Contact support.");
     }
     if (stripe) {
-      await stripe.refunds.create(
+      await createRefund(
         {
           payment_intent: paymentIntentId,
           amount: refundCents,
@@ -1253,7 +1254,7 @@ export async function updateOrderAsAdmin(args: {
         throw new Error("Cannot issue refund: Stripe order is missing a payment intent. Contact support.");
       }
       if (stripe) {
-        await stripe.refunds.create(
+        await createRefund(
           {
             payment_intent: paymentIntentId,
             amount: refundCents,
@@ -1647,7 +1648,7 @@ export async function swapOrderItemAsAdmin(args: {
         throw new Error("Cannot issue refund: Stripe order is missing a payment intent. Contact support.");
       }
       if (!stripe) throw new Error("Stripe is not configured — cannot issue the refund.");
-      await stripe.refunds.create(
+      await createRefund(
         {
           payment_intent: paymentIntentId,
           amount: refundCents,
@@ -1934,7 +1935,7 @@ export async function cancelOrderWithRefund(args: {
     // Multi-PI: refund delta charge first (if an increase-edit was finalized),
     // then refund the original charge. Both calls outside any DB transaction.
     if (order.deltaPaymentIntentId && (order.deltaAmountCents ?? 0) > 0) {
-      await stripe.refunds.create({
+      await createRefund({
         payment_intent: order.deltaPaymentIntentId,
         reason: "requested_by_customer",
       });
@@ -1948,7 +1949,7 @@ export async function cancelOrderWithRefund(args: {
       const mainRefund = Math.max(0, (batchPaymentIntentId ? order.totalCents : paidOnMain) - quote.withheldCents);
       const needsAmount = Boolean(batchPaymentIntentId) || quote.withheldCents > 0;
       if (mainRefund > 0) {
-        await stripe.refunds.create({
+        await createRefund({
           payment_intent: paymentIntentId,
           ...(needsAmount ? { amount: mainRefund } : {}),
           reason: "requested_by_customer",

@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { stripe } from "@/lib/payments/stripe";
 import { env } from "@/lib/env";
+import { computePlatformFeeCents } from "@/lib/payments/platform-fee";
 import { formatCurrency } from "@/lib/utils";
 import { logException } from "@/lib/log";
 
@@ -106,8 +107,7 @@ async function createSession(args: SharedCheckoutArgs) {
   // doesn't eat a fee on dollars they never received.
   let paymentIntentData: Stripe.Checkout.SessionCreateParams["payment_intent_data"] | undefined;
   if (args.stripeAccountId) {
-    const feePercent = env.PLATFORM_FEE_PERCENT / 100;
-    const feeCents = Math.max(1, Math.round(netCents * feePercent));
+    const feeCents = Math.max(1, computePlatformFeeCents(netCents));
     paymentIntentData = {
       application_fee_amount: feeCents,
       transfer_data: { destination: args.stripeAccountId },
