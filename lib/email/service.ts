@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import {
   buildConfirmationEmail,
   buildCancellationEmail,
+  buildAbandonedCheckoutEmail,
   buildCutoffReminderEmail,
   buildKitchenPrepEmail,
   buildWelcomeRestaurantEmail,
@@ -168,6 +169,73 @@ export async function sendCancellationEmail(orderId: string, restaurantId: strin
       data: {
         orderId: order.id,
         emailType: "ORDER_CANCELLATION",
+        recipient: order.parentEmail,
+        status: EmailStatus.FAILED,
+        errorMessage: messageText,
+      },
+    });
+    throw error;
+  }
+}
+
+export async function sendAbandonedCheckoutEmail(orderId: string, restaurantId: string) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
+    include: { school: true, deliveryDate: true, student: true, restaurant: true },
+  });
+
+  if (!order) throw new Error("Order not found.");
+
+  const message = buildAbandonedCheckoutEmail({
+    parentName: order.parentName,
+    studentName: order.student.studentName,
+    deliveryDate: order.deliveryDate.deliveryDate,
+    timezone: order.school.timezone,
+    orderNumber: order.orderNumber,
+    restaurantName: order.restaurant.name,
+    restaurantLogoUrl: order.restaurant.logoUrl,
+    restaurantPrimaryColor: order.restaurant.primaryColor,
+    restaurantContactEmail: order.restaurant.contactEmail,
+    restaurantContactPhone: order.restaurant.contactPhone,
+    reorderUrl: `https://${order.restaurant.slug}.${env.ROOT_DOMAIN}/`,
+  });
+
+  try {
+    let providerId: string | undefined;
+
+    if (resend && env.EMAIL_FROM) {
+      const result = await resend.emails.send({
+        from: `${order.restaurant.name} <${env.EMAIL_FROM}>`,
+        to: order.parentEmail,
+        replyTo: order.restaurant.contactEmail || undefined,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+      });
+      if (result.error) throw new Error(result.error.message || "Resend email delivery failed.");
+      providerId = result.data?.id;
+    } else {
+      throw new Error("Email delivery is not configured.");
+    }
+
+    await prisma.emailLog.create({
+      data: {
+        orderId: order.id,
+        emailType: "ORDER_CHECKOUT_EXPIRED",
+        recipient: order.parentEmail,
+        providerId,
+        status: EmailStatus.SENT,
+        sentAt: new Date(),
+      },
+    });
+
+    return { ok: true };
+  } catch (error) {
+    const messageText = error instanceof Error ? error.message : "Unknown email error";
+    await prisma.emailLog.create({
+      data: {
+        orderId: order.id,
+        emailType: "ORDER_CHECKOUT_EXPIRED",
         recipient: order.parentEmail,
         status: EmailStatus.FAILED,
         errorMessage: messageText,

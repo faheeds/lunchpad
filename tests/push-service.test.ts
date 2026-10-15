@@ -89,6 +89,17 @@ describe("sendPushToParent", () => {
     expect(deleteManyTokensMock).not.toHaveBeenCalled();
   });
 
+  it("duplicate token rows for a parent are sent only once", async () => {
+    const tokens = [{ token: "ExponentPushToken[dup]" }, { token: "ExponentPushToken[dup]" }];
+    findManyTokensMock.mockResolvedValue(tokens);
+    mockFetchOk(expoSuccess([tokens[0]]));
+
+    await sendPushToParent("parent-1", PAYLOAD);
+
+    const sent = JSON.parse((fetch as unknown as { mock: { calls: [string, { body: string }][] } }).mock.calls[0][1].body);
+    expect(sent).toHaveLength(1);
+  });
+
   // 3. Single token, DeviceNotRegistered → token pruned
   it("single token, Expo returns DeviceNotRegistered → token deleted", async () => {
     const tokens = tokenRows(1);

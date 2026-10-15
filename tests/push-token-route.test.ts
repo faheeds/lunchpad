@@ -94,6 +94,13 @@ describe("POST /api/mobile/native/push-token", () => {
     );
   });
 
+  it("removes the same device token from other parent accounts before upserting", async () => {
+    await POST(makePostRequest({ token: VALID_TOKEN, platform: "ios" }) as never);
+    expect(deleteManyMock).toHaveBeenCalledWith({
+      where: { token: VALID_TOKEN, parentUserId: { not: "parent-1" } },
+    });
+  });
+
   it("valid token + platform 'android' → 200 { ok: true }", async () => {
     const res = await POST(makePostRequest({ token: VALID_TOKEN, platform: "android" }) as never);
     const body = await res.json();

@@ -22,10 +22,12 @@ export async function sendPushToParent(
   parentUserId: string,
   payload: PushPayload
 ): Promise<void> {
-  const tokens = await prisma.pushToken.findMany({
+  const rows = await prisma.pushToken.findMany({
     where: { parentUserId },
     select: { token: true },
   });
+  // Never send the same token twice in one call.
+  const tokens = Array.from(new Set(rows.map((r) => r.token))).map((token) => ({ token }));
   if (tokens.length === 0) return;
 
   const messages = tokens.map(({ token }) => ({

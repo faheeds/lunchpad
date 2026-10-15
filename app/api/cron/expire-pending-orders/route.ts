@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   const counts = { paid: 0, cancelled: 0, still_open: 0, unknown: 0 };
   for (const order of stale) {
-    counts[await settlePendingOrder(order)]++;
+    counts[await settlePendingOrder(order, { notify: true })]++;
   }
   return NextResponse.json({ checked: stale.length, ...counts });
 }

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/payments/stripe";
 import { logInfo, logWarn, logException } from "@/lib/log";
 import { markOrderPaidByCheckoutSession } from "@/lib/orders";
-import { sendOrderConfirmationEmail } from "@/lib/email/service";
+import { sendOrderConfirmationEmail, sendAbandonedCheckoutEmail } from "@/lib/email/service";
 import { sendPushForOrder } from "@/lib/push/service";
 
 /**
@@ -28,7 +28,11 @@ export function normalizeStudentName(name: string | null | undefined): string {
  * parent's multi-day streak) isn't consumed by a checkout that never happened.
  * Idempotent: returns false if the order is no longer PENDING.
  */
-export async function cancelAbandonedOrder(orderId: string, reason: string): Promise<boolean> {
+export async function cancelAbandonedOrder(
+  orderId: string,
+  reason: string,
+  opts: { notify?: boolean } = {}
+): Promise<boolean> {
   const cancelled = await prisma.$transaction(async (tx) => {
     const res = await tx.order.updateMany({
       where: { id: orderId, status: OrderStatus.PENDING },
@@ -54,8 +58,48 @@ export async function cancelAbandonedOrder(orderId: string, reason: string): Pro
     }
     return true;
   });
-  if (cancelled) logInfo("pending_order_cancelled", { orderId, reason });
+  if (cancelled) {
+    logInfo("pending_order_cancelled", { orderId, reason });
+    if (opts.notify) await notifyAbandonedCheckout(orderId);
+  }
   return cancelled;
+}
+
+/**
+ * Tell the parent their unpaid checkout was released ("you were not charged").
+ * Best-effort, and skipped when it would only confuse: the parent already has a
+ * PAID order for the same student and date, or the cutoff has passed.
+ */
+async function notifyAbandonedCheckout(orderId: string): Promise<void> {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        restaurantId: true,
+        parentUserId: true,
+        studentId: true,
+        deliveryDateId: true,
+        deliveryDate: { select: { cutoffAt: true } },
+      },
+    });
+    if (!order) return;
+    if (order.deliveryDate.cutoffAt.getTime() <= Date.now()) return;
+
+    const paidSibling = await prisma.order.findFirst({
+      where: {
+        parentUserId: order.parentUserId,
+        studentId: order.studentId,
+        deliveryDateId: order.deliveryDateId,
+        status: { in: [OrderStatus.PAID, OrderStatus.PARTIALLY_REFUNDED] },
+      },
+      select: { id: true },
+    });
+    if (paidSibling) return;
+
+    await sendAbandonedCheckoutEmail(orderId, order.restaurantId);
+  } catch (err) {
+    logException(err, "abandoned_checkout_email_failed", { orderId });
+  }
 }
 
 export type SettleResult = "paid" | "cancelled" | "still_open" | "unknown";
@@ -90,10 +134,10 @@ async function healPaid(sessionId: string, paymentIntent: unknown, amountTotal: 
  */
 export async function settlePendingOrder(
   order: { id: string; checkoutSessionId: string | null },
-  opts: { expireOpen?: boolean } = {}
+  opts: { expireOpen?: boolean; notify?: boolean } = {}
 ): Promise<SettleResult> {
   if (!order.checkoutSessionId) {
-    return (await cancelAbandonedOrder(order.id, "no_checkout_session")) ? "cancelled" : "unknown";
+    return (await cancelAbandonedOrder(order.id, "no_checkout_session", { notify: opts.notify })) ? "cancelled" : "unknown";
   }
   if (!stripe) return "unknown";
 
@@ -121,7 +165,7 @@ export async function settlePendingOrder(
     }
 
     if (session.status === "expired") {
-      return (await cancelAbandonedOrder(order.id, "checkout_session_expired")) ? "cancelled" : "unknown";
+      return (await cancelAbandonedOrder(order.id, "checkout_session_expired", { notify: opts.notify })) ? "cancelled" : "unknown";
     }
     // status "complete" but not paid: an async payment method is still settling.
     return "unknown";
