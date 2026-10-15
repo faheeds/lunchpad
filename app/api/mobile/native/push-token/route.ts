@@ -22,6 +22,15 @@ export async function POST(request: NextRequest) {
       return jsonErr("platform must be ios or android", 400);
     }
 
+    // An Expo push token identifies one physical device. If the same device
+    // was previously registered under another parent account (switching
+    // accounts, a second restaurant/tenant login, a test account), drop those
+    // rows -- otherwise every push to either account lands on this device
+    // and shows up as an identical duplicate notification.
+    await prisma.pushToken.deleteMany({
+      where: { token, parentUserId: { not: auth.parentUserId } },
+    });
+
     await prisma.pushToken.upsert({
       where: { parentUserId_token: { parentUserId: auth.parentUserId, token } },
       create: { parentUserId: auth.parentUserId, token, platform },

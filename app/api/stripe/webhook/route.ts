@@ -122,7 +122,7 @@ export async function POST(request: Request) {
         select: { id: true },
       });
       if (pendingOrder) {
-        await cancelAbandonedOrder(pendingOrder.id, "checkout_session_expired_webhook");
+        await cancelAbandonedOrder(pendingOrder.id, "checkout_session_expired_webhook", { notify: true });
       }
     }
 

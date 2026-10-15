@@ -221,6 +221,60 @@ export function buildCancellationEmail(args: CancellationTemplateArgs) {
   };
 }
 
+type AbandonedCheckoutTemplateArgs = {
+  parentName: string;
+  studentName: string;
+  deliveryDate: Date;
+  timezone: string;
+  orderNumber: string;
+  restaurantName: string;
+  restaurantLogoUrl?: string | null;
+  restaurantPrimaryColor?: string | null;
+  restaurantContactEmail?: string | null;
+  restaurantContactPhone?: string | null;
+  reorderUrl: string;
+};
+
+export function buildAbandonedCheckoutEmail(args: AbandonedCheckoutTemplateArgs) {
+  const deliveryDateStr = formatInTimeZone(args.deliveryDate, args.timezone, "EEEE, MMMM d");
+  const help = helpBlock({
+    restaurantName: args.restaurantName,
+    contactEmail: args.restaurantContactEmail,
+    contactPhone: args.restaurantContactPhone,
+  });
+
+  return {
+    subject: `${args.restaurantName} — your checkout expired, no charge made (${args.orderNumber})`,
+    text: [
+      `Hi ${args.parentName},`,
+      "",
+      `Your checkout for ${args.studentName}'s lunch on ${deliveryDateStr} was not completed, so we released it. You were not charged.`,
+      "",
+      `Order number: ${args.orderNumber}`,
+      "",
+      `If you still want to order, you can start again here: ${args.reorderUrl}`,
+      "",
+      `If you did complete payment, please reply to this email and the ${args.restaurantName} team will help.`
+    ].join("\n"),
+    html: `
+      <div style="${base}">
+        ${brandHeader(args.restaurantName, args.restaurantLogoUrl, args.restaurantPrimaryColor)}
+        <div style="${card};border-top:none;border-radius:0 0 10px 10px;margin-top:0">
+          <h2 style="margin:0 0 12px;font-size:20px;color:#1c2a35">Checkout expired</h2>
+          <p style="margin:0 0 8px">Hi ${args.parentName},</p>
+          <p style="margin:0 0 16px">Your checkout for <strong>${args.studentName}</strong> on <strong>${deliveryDateStr}</strong> was not completed, so we released it. <strong>You were not charged.</strong></p>
+          <p style="margin:0 0 16px;color:#64748b;font-size:13px">Order number: ${args.orderNumber}</p>
+          <a href="${args.reorderUrl}" style="display:inline-block;background:#1c2a35;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;padding:10px 20px">
+            Order again
+          </a>
+          ${help.html}
+          <p style="color:#64748b;font-size:13px;margin:8px 0 0">If you did complete payment, please contact the ${args.restaurantName} team using the info above.</p>
+        </div>
+      </div>
+    `
+  };
+}
+
 type RefundTemplateArgs = {
   parentName: string;
   studentName: string;
