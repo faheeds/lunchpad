@@ -6,7 +6,7 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { formatCurrency } from "@/lib/utils";
 import { formatInTimeZone } from "date-fns-tz";
-import { ReportsCharts } from "@/components/admin/reports-charts";
+import { ReportsCharts, type RevenueDay } from "@/components/admin/reports-charts";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,35 @@ function normalizeMultiValue(value: string | string[] | undefined) {
 export const metadata: Metadata = {
   title: "Reports",
 };
+/**
+ * One point per calendar day, split by school, so two schools delivering on
+ * the same day show as one stacked bar instead of two separate points.
+ */
+function buildRevenueByDay(
+  rows: { schoolName: string; orders: number; revenue: number; sortKey: number }[]
+): { days: RevenueDay[]; schoolNames: string[] } {
+  const byDay = new Map<string, RevenueDay>();
+  const totals = new Map<string, number>();
+  for (const r of rows) {
+    const dayKey = formatInTimeZone(new Date(r.sortKey), "UTC", "yyyy-MM-dd");
+    const day = byDay.get(dayKey) ?? {
+      date: formatInTimeZone(new Date(r.sortKey), "UTC", "MMM d"),
+      sortKey: dayKey,
+      total: 0,
+      orders: 0,
+      bySchool: {},
+    };
+    day.total += r.revenue;
+    day.orders += r.orders;
+    day.bySchool[r.schoolName] = (day.bySchool[r.schoolName] ?? 0) + r.revenue;
+    byDay.set(dayKey, day);
+    totals.set(r.schoolName, (totals.get(r.schoolName) ?? 0) + r.revenue);
+  }
+  const days = [...byDay.values()].sort((a, b) => a.sortKey.localeCompare(b.sortKey)).slice(-30);
+  const schoolNames = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+  return { days, schoolNames };
+}
+
 export default async function AdminReportsPage({
   searchParams,
 }: {
@@ -103,15 +132,7 @@ export default async function AdminReportsPage({
     const all = [...map.values()];
     return {
       dateBreakdown: all.slice().sort((a, b) => b.revenue - a.revenue).slice(0, 20),
-      revenueSeries: all
-        .slice()
-        .sort((a, b) => a.sortKey - b.sortKey)
-        .slice(-30)
-        .map((d) => ({
-          date: formatInTimeZone(new Date(d.sortKey), "UTC", "MMM d"),
-          revenue: d.revenue,
-          orders: d.orders,
-        })),
+      revenueSeries: buildRevenueByDay(all),
     };
   })();
 
@@ -210,7 +231,7 @@ export default async function AdminReportsPage({
       </div>
 
       {/* ── Charts ──────────────────────────────────────────────────── */}
-      <ReportsCharts revenue={revenueSeries} topItems={topItemsSeries} />
+      <ReportsCharts revenue={revenueSeries.days} schoolNames={revenueSeries.schoolNames} topItems={topItemsSeries} />
 
       {/* ── Two-up on desktop: by-date + by-school side by side ───── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
