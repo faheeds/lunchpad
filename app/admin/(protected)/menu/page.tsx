@@ -115,6 +115,11 @@ async function updateMenuItem(formData: FormData) {
   if (!item) throw new Error("Item not found");
 
   // ── Simple fields ──────────────────────────────────────────────────────
+  // Name is editable. The slug is intentionally left alone so existing
+  // links and references keep working after a rename.
+  const name = String(formData.get("name") || "").trim();
+  if (!name) throw new Error("Item name is required");
+  if (name.length > 120) throw new Error("Item name is too long");
   const dollars = parseFloat(String(formData.get("price") || "0"));
   if (isNaN(dollars) || dollars < 0) throw new Error("Invalid price");
   const basePriceCents = Math.round(dollars * 100);
@@ -173,6 +178,7 @@ async function updateMenuItem(formData: FormData) {
     prisma.menuItem.update({
       where: { id },
       data: {
+        name,
         basePriceCents,
         description,
         imageUrl,
@@ -504,7 +510,14 @@ export default async function AdminMenuPage() {
                       <div className="flex flex-col gap-3">
                         <div>
                           <label className="text-[12px] text-editorial-ink-soft block mb-1">Name</label>
-                          <p className="text-[13px] text-editorial-ink font-medium">{item.name}</p>
+                          <input
+                            name="name"
+                            type="text"
+                            required
+                            maxLength={120}
+                            defaultValue={item.name}
+                            className="w-full rounded-lg border border-editorial-line text-editorial-ink text-[13px] font-medium px-3 py-1.5 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green"
+                          />
                         </div>
                         <label className="flex items-center gap-2 cursor-pointer w-fit">
                           <input
