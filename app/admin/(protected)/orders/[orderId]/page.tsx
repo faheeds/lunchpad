@@ -8,7 +8,7 @@ import { sendOrderModifiedEmail } from "@/lib/email/service";
 import { requireAdminRole, hasRole } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { requireRestaurant } from "@/lib/restaurant";
-import { listActivity } from "@/lib/activity";
+import { listActivity, logActivity } from "@/lib/activity";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
 import { getLabels } from "@/lib/location-labels";
@@ -45,6 +45,7 @@ export default async function AdminOrderDetailPage({
       school: true,
       deliveryDate: true,
       student: true,
+      payment: true,
       items: {
         include: { menuItem: { include: { options: { orderBy: { sortOrder: "asc" } } } } },
       },
@@ -52,6 +53,13 @@ export default async function AdminOrderDetailPage({
   });
 
   if (!order) notFound();
+
+  // Offline (cash / Zelle) orders are confirmed for the kitchen straight
+  // away but the money is collected by the operator — flag them until paid.
+  const unpaidOffline =
+    order.status === "PAID" &&
+    order.payment?.provider === "manual" &&
+    order.payment.status === "PENDING";
 
   // Per-order timeline — every audited mutation tied to this order in
   // reverse-chronological order. Pulled in parallel-ready but kept simple
@@ -94,6 +102,67 @@ export default async function AdminOrderDetailPage({
     revalidatePath(`/admin/orders/${orderId}`);
     revalidatePath("/admin/orders");
     redirect("/admin/orders");
+  }
+
+  async function markOfflinePaid(formData: FormData) {
+    "use server";
+    await requireAdminRole("MANAGER");
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string })?.adminUserId ?? null;
+    const method = String(formData.get("method") || "cash").trim().slice(0, 40) || "cash";
+    const reference = String(formData.get("reference") || "").trim().slice(0, 200) || null;
+    const paidOrder = await prisma.order.findFirst({
+      where: { id: orderId, restaurantId: restaurant.id },
+      include: { payment: true },
+    });
+    if (!paidOrder?.payment || paidOrder.payment.provider !== "manual" || paidOrder.payment.status !== "PENDING") {
+      redirect(`/admin/orders/${orderId}`);
+    }
+    await prisma.payment.update({
+      where: { id: paidOrder.payment.id },
+      data: { status: "PAID", paidAt: new Date(), method, notes: reference },
+    });
+    await logActivity({
+      restaurantId: restaurant.id,
+      adminUserId,
+      entityType: "ORDER",
+      entityId: orderId,
+      action: "PAID",
+      summary: `Marked order ${paidOrder.orderNumber} paid (${method}) — ${formatCurrency(paidOrder.totalCents)}`,
+      metadata: { method, reference },
+    });
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
+    redirect(`/admin/orders/${orderId}`);
+  }
+
+  async function cancelUnpaidOffline() {
+    "use server";
+    await requireAdminRole("MANAGER");
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string })?.adminUserId ?? null;
+    const target = await prisma.order.findFirst({
+      where: { id: orderId, restaurantId: restaurant.id },
+      include: { payment: true },
+    });
+    if (!target?.payment || target.payment.provider !== "manual" || target.payment.status !== "PENDING") {
+      redirect(`/admin/orders/${orderId}`);
+    }
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status: "CANCELLED", cancelledAt: new Date() },
+    });
+    await logActivity({
+      restaurantId: restaurant.id,
+      adminUserId,
+      entityType: "ORDER",
+      entityId: orderId,
+      action: "CANCELLED",
+      summary: `Cancelled unpaid order ${target.orderNumber} — ${formatCurrency(target.totalCents)} never collected`,
+    });
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
+    redirect(`/admin/orders/${orderId}`);
   }
 
   async function performRefund(refundOrderId: string, amountCents: number, itemIds: string[]) {
@@ -273,12 +342,83 @@ export default async function AdminOrderDetailPage({
           <p className="text-[11px] text-editorial-ink-soft mb-1">{labels.orderer}</p>
           <p className="text-sm text-editorial-ink">{order.parentName}</p>
           <p className="text-[11px] text-editorial-ink-soft">{order.parentEmail}</p>
+          {order.customerPhone && (
+            <p className="text-[11px] text-editorial-ink-soft">
+              <a href={`tel:${order.customerPhone}`} className="underline">{order.customerPhone}</a>
+            </p>
+          )}
         </div>
+        {order.fulfillmentType && (
+          <div className="px-4 py-3 border-t border-editorial-line">
+            <p className="text-[11px] text-editorial-ink-soft mb-1">
+              {order.fulfillmentType === "DELIVERY" ? "Deliver to" : "Pickup"}
+            </p>
+            <p className="text-sm text-editorial-ink">
+              {order.fulfillmentType === "DELIVERY" ? order.deliveryAddress : order.school.name}
+            </p>
+            {order.deliveryNotes && (
+              <p className="text-[11px] text-editorial-ink-soft mt-0.5">Notes: {order.deliveryNotes}</p>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Offline payment (cash / Zelle) */}
+      {order.payment?.provider === "manual" && order.payment.method && order.status !== "CANCELLED" && (
+        <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <div className="px-4 py-3 border-b border-editorial-line flex items-center justify-between">
+            <p className="text-sm font-semibold text-editorial-ink">Payment</p>
+            <span
+              className="px-2.5 py-1 text-[10px] font-semibold rounded-full"
+              style={unpaidOffline ? { background: "#F6EED9", color: "#6E5C2C" } : { background: "#DEE2CF", color: "#2C4031" }}
+            >
+              {unpaidOffline ? "AWAITING PAYMENT" : "PAID"}
+            </span>
+          </div>
+          <div className="px-4 py-3 space-y-3">
+            <p className="text-[12px] text-editorial-ink-soft">
+              {unpaidOffline
+                ? `Customer chose to pay by ${order.payment.method}. Collect ${formatCurrency(order.totalCents)}, then mark it paid.`
+                : `Paid by ${order.payment.method}${order.payment.notes ? ` — ${order.payment.notes}` : ""}.`}
+            </p>
+            {unpaidOffline && (
+              <>
+                <form action={markOfflinePaid} className="flex flex-wrap gap-2 items-end">
+                  <div>
+                    <label className="text-[11px] text-editorial-ink-soft block mb-1">Received via</label>
+                    <select name="method" defaultValue={order.payment.method}
+                      className="rounded-lg border border-editorial-line text-[13px] px-3 py-2">
+                      <option value="cash">Cash</option>
+                      <option value="zelle">Zelle</option>
+                      <option value="venmo">Venmo</option>
+                      <option value="check">Check</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="text-[11px] text-editorial-ink-soft block mb-1">Reference (optional)</label>
+                    <input name="reference" type="text" placeholder="Zelle confirmation, check #…"
+                      className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2" />
+                  </div>
+                  <button type="submit"
+                    className="px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                    Mark as paid
+                  </button>
+                </form>
+                <form action={cancelUnpaidOffline}>
+                  <button type="submit" className="text-[12px] font-medium underline" style={{ color: "#7C3D24" }}>
+                    Cancel this unpaid order
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
 
       {/* Refund section */}
-      {(order.status === "PAID" || order.status === "PARTIALLY_REFUNDED") && (
+      {(order.status === "PAID" || order.status === "PARTIALLY_REFUNDED") && !unpaidOffline && (
         <div className="rounded-[16px] border border-editorial-line bg-white overflow-hidden shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
           <div className="px-4 py-3 border-b border-editorial-line">
             <p className="text-sm font-semibold text-editorial-ink">Refund</p>

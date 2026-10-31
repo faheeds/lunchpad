@@ -113,7 +113,18 @@ type OrderFormProps = {
    *  the office-appropriate equivalents. Defaults to school for legacy
    *  restaurants whose operatorType isn't set yet. */
   operatorType?: string | null;
+  /** Which ways the customer can pay + fulfilment options (caterer flow).
+   *  Omitted/all-false offline = the classic Stripe-only experience. */
+  payment?: {
+    stripe: boolean;
+    cash: boolean;
+    zelle: boolean;
+    deliveryEnabled: boolean;
+    pickupInstructions: string | null;
+  };
 };
+
+type PayMethod = "stripe" | "cash" | "zelle";
 
 function fmt(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
@@ -175,6 +186,7 @@ export function OrderForm({
   initialParentProfile, initialSchoolId, initialDeliveryDateId, initialCartItems = [],
   initialItemSlug, unavailableReorderItems = [], needsSelectionItems = [], soldOutByDeliveryDate = {},
   categoryOrder = [],
+  payment,
 }: OrderFormProps) {
   const defaultSchoolId = initialSchoolId || "";
   const defaultDeliveryDateId = initialDeliveryDateId || "";
@@ -204,6 +216,22 @@ export function OrderForm({
   const [orderForSelf, setOrderForSelf] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── Caterer / offline-payment state ────────────────────────────────────
+  const isCaterer = operatorType === "caterer";
+  const offlineOn = Boolean(payment?.cash || payment?.zelle);
+  const showContactBlock = isCaterer || offlineOn;
+  const payOptions: PayMethod[] = [
+    ...(payment?.stripe !== false ? (["stripe"] as PayMethod[]) : []),
+    ...(payment?.cash ? (["cash"] as PayMethod[]) : []),
+    ...(payment?.zelle ? (["zelle"] as PayMethod[]) : []),
+  ];
+  const [payMethod, setPayMethod] = useState<PayMethod>(payOptions[0] ?? "stripe");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [fulfillment, setFulfillment] = useState<"PICKUP" | "DELIVERY">("PICKUP");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
+  const [offlineResult, setOfflineResult] = useState<{ orderNumber: string; totalCents: number; instructions: string[] } | null>(null);
   const menuScrollRef = useRef<HTMLDivElement>(null);
   const customizePanelRef = useRef<HTMLDivElement>(null);
   const itemSlugAutoSelected = useRef(false);
@@ -496,7 +524,7 @@ export function OrderForm({
   // live preview and the real submission never drift out of sync (e.g.
   // a grade-scoped discount previewing as ineligible but then applying
   // at checkout, or vice versa).
-  const effectiveStudentName = isOffice && orderForSelf ? parentName : studentName;
+  const effectiveStudentName = isCaterer || (isOffice && orderForSelf) ? parentName : studentName;
   const effectiveGrade = labels.showGrade ? grade : "";
 
   /** Fetches the current discount preview from the server. Pass the
@@ -605,6 +633,25 @@ export function OrderForm({
     };
     setIsSubmitting(true);
     try {
+      if (payMethod !== "stripe") {
+        const res = await fetch("/api/checkout/offline-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            paymentMethod: payMethod,
+            fulfillmentType: fulfillment,
+            customerPhone,
+            deliveryAddress: fulfillment === "DELIVERY" ? deliveryAddress : "",
+            deliveryNotes,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) { setError(result.error || "Unable to place your order."); return; }
+        setOfflineResult(result);
+        window.scrollTo({ top: 0 });
+        return;
+      }
       const response = await fetch("/api/checkout/create-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) { setError(data.error || "Unable to start checkout."); return; }
@@ -616,6 +663,29 @@ export function OrderForm({
 
   // Progress steps are: Date, Menu, Recipient, Review
   const progressSteps = ["Date", "Menu", "Recipient", "Review"];
+
+  if (offlineResult) {
+    return (
+      <div className="space-y-4 pb-10">
+        <div className="rounded-[18px] border p-5 text-center" style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}>
+          <p className="text-[28px] mb-1">✓</p>
+          <h2 className="text-[18px] font-semibold" style={{ color: "#211D15" }}>Order placed!</h2>
+          <p className="text-[13px] mt-1" style={{ color: "#938B78" }}>
+            Order {offlineResult.orderNumber} · {fmt(offlineResult.totalCents)}
+          </p>
+        </div>
+        <div className="rounded-[18px] border p-4 space-y-2" style={{ backgroundColor: "#F6F1E6", borderColor: "#E3DBC6" }}>
+          <p className="text-[10px] uppercase tracking-wide" style={{ color: "#938B78" }}>How to pay</p>
+          {offlineResult.instructions.map((line, i) => (
+            <p key={i} className="text-[14px]" style={{ color: "#211D15" }}>{line}</p>
+          ))}
+        </div>
+        <p className="text-[12px] text-center" style={{ color: "#938B78" }}>
+          We've emailed your confirmation and payment details to {parentEmail}.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-48">
@@ -887,7 +957,7 @@ export function OrderForm({
               recipient name field and mirror parentName → studentName on
               submit. Toggling it off lets the orderer place an order for a
               coworker. */}
-          {isOffice && (
+          {isOffice && !isCaterer && (
             <label className="flex items-center gap-2 rounded-[14px] border px-3 py-2.5 cursor-pointer" style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}>
               <input
                 type="checkbox"
@@ -917,7 +987,7 @@ export function OrderForm({
               </div>
 
               {/* Recipient name — hidden for office self-orders, shown otherwise */}
-              {!(isOffice && orderForSelf) && (
+              {!(isCaterer || (isOffice && orderForSelf)) && (
                 <div>
                   <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>{labels.unitName}</label>
                   <input
@@ -958,6 +1028,72 @@ export function OrderForm({
               />
             </div>
           </div>
+
+          {/* Caterer / offline-payment block: phone + pickup or delivery */}
+          {showContactBlock && (
+            <div className="rounded-[18px] border p-4 space-y-3" style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}>
+              <div>
+                <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>Phone number</label>
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  className="w-full rounded-xl text-[13px] px-3 py-2"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                  style={{ backgroundColor: "white", borderColor: "#E3DBC6" }}
+                />
+              </div>
+              <div>
+                <p className="text-[12px] mb-1.5" style={{ color: "#938B78" }}>How would you like to get your order?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["PICKUP", ...(payment?.deliveryEnabled ? ["DELIVERY"] : [])] as ("PICKUP" | "DELIVERY")[]).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setFulfillment(opt)}
+                      className="rounded-xl border px-3 py-2.5 text-[13px] font-semibold"
+                      style={{
+                        borderColor: fulfillment === opt ? "#2C4031" : "#E3DBC6",
+                        backgroundColor: fulfillment === opt ? "#DEE2CF" : "white",
+                        color: "#211D15",
+                      }}
+                    >
+                      {opt === "PICKUP" ? "Pick up" : "Deliver to me"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {fulfillment === "PICKUP" && payment?.pickupInstructions && (
+                <p className="text-[12px]" style={{ color: "#938B78" }}>{payment.pickupInstructions}</p>
+              )}
+              {fulfillment === "DELIVERY" && (
+                <>
+                  <div>
+                    <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>Delivery address</label>
+                    <textarea
+                      className="w-full rounded-xl text-[13px] px-3 py-2 resize-none"
+                      rows={2}
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      placeholder="Street, apartment, city, ZIP"
+                      style={{ backgroundColor: "white", borderColor: "#E3DBC6" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>Delivery notes (optional)</label>
+                    <input
+                      className="w-full rounded-xl text-[13px] px-3 py-2"
+                      value={deliveryNotes}
+                      onChange={(e) => setDeliveryNotes(e.target.value)}
+                      placeholder="Gate code, leave at door, etc."
+                      style={{ backgroundColor: "white", borderColor: "#E3DBC6" }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Add a little something? — one-tap upsell rail, same items and
               eligibility rule as the iOS cart's upsell rail. Placed after
@@ -1040,7 +1176,7 @@ export function OrderForm({
 
           <button type="button" onClick={() => {
             // For office self-orders, auto-fill recipient with the orderer's name
-            const effectiveStudentName = isOffice && orderForSelf ? parentName : studentName;
+            const effectiveStudentName = isCaterer || (isOffice && orderForSelf) ? parentName : studentName;
             if (!parentName || !parentEmail) {
               setError("Fill in your name and email.");
               return;
@@ -1056,6 +1192,16 @@ export function OrderForm({
             if (labels.showGrade && !grade) {
               setError(`Select a ${labels.grade.toLowerCase()}.`);
               return;
+            }
+            if (showContactBlock) {
+              if (customerPhone.replace(/\D/g, "").length < 7) {
+                setError("Enter a phone number we can reach you on.");
+                return;
+              }
+              if (fulfillment === "DELIVERY" && deliveryAddress.trim().length < 8) {
+                setError("Enter your full delivery address.");
+                return;
+              }
             }
             if (isOffice && orderForSelf) setStudentName(parentName);
             setError("");
@@ -1371,11 +1517,17 @@ export function OrderForm({
             <div className="p-4 border-b" style={{ borderColor: "#E3DBC6" }}>
               <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: "#938B78" }}>Delivery</p>
               <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{selectedDelivery && formatInTimeZone(selectedDelivery.deliveryDate, selectedDelivery.school.timezone, "EEEE, MMMM d")}</p>
-              <p className="text-[12px]" style={{ color: "#938B78" }}>{selectedDelivery?.school.name}</p>
+              <p className="text-[12px]" style={{ color: "#938B78" }}>
+                {showContactBlock && fulfillment === "DELIVERY"
+                  ? `Delivery to ${deliveryAddress}`
+                  : showContactBlock
+                    ? `Pickup · ${selectedDelivery?.school.name ?? ""}`
+                    : selectedDelivery?.school.name}
+              </p>
             </div>
             <div className="p-4 border-b" style={{ borderColor: "#E3DBC6" }}>
               <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: "#938B78" }}>{labels.unit}</p>
-              <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{studentName || (isOffice && orderForSelf ? parentName : "")}</p>
+              <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{isCaterer ? parentName : studentName || (isOffice && orderForSelf ? parentName : "")}</p>
               <p className="text-[12px]" style={{ color: "#938B78" }}>
                 {labels.showGrade && grade ? `${labels.grade} ${grade}` : ""}
                 {labels.showGrade && grade && allergyNotes ? " · " : ""}
@@ -1402,7 +1554,7 @@ export function OrderForm({
                   so the receipt-style "Subtotal / Discount / Total" stack
                   reads naturally. With no discount we keep the original
                   single "Order total" row to avoid visual noise. */}
-              {totalDiscountCents > 0 && (
+              {payMethod === "stripe" && totalDiscountCents > 0 && (
                 <div className="flex justify-between pt-3 mt-1 text-[12px]" style={{ borderTopColor: "#E3DBC6", borderTopWidth: "1px", color: "#938B78" }}>
                   <span>Subtotal</span>
                   <span>{fmt(totalCents)}</span>
@@ -1410,7 +1562,7 @@ export function OrderForm({
               )}
 
               {/* Auto-applied discount line */}
-              {previewAuto && (
+              {payMethod === "stripe" && previewAuto && (
                 <div className="flex justify-between mt-1 text-[12px]" style={{ color: "#2C4031", fontWeight: "600" }}>
                   <span>🎁 {previewAuto.name}</span>
                   <span>−{fmt(previewAuto.amountCents)}</span>
@@ -1418,7 +1570,7 @@ export function OrderForm({
               )}
 
               {/* Code discount line */}
-              {previewCode && (
+              {payMethod === "stripe" && previewCode && (
                 <div className="flex justify-between mt-1 text-[12px]" style={{ color: "#2C4031", fontWeight: "600" }}>
                   <span>🏷️ {previewCode.name}{codeApplied ? ` (${codeApplied})` : ""}</span>
                   <span>−{fmt(previewCode.amountCents)}</span>
@@ -1429,7 +1581,10 @@ export function OrderForm({
                   we replace the input with a "Remove" affordance so the
                   customer can clear the code without retyping. */}
               <div className="pt-3 mt-3" style={{ borderTopColor: "#E3DBC6", borderTopWidth: "1px" }}>
-                {!previewCode && !codeInputOpen && (
+                {payMethod !== "stripe" && (
+                  <p className="text-[11px]" style={{ color: "#938B78" }}>Promo codes and automatic discounts apply to card payments only.</p>
+                )}
+                {payMethod === "stripe" && !previewCode && !codeInputOpen && (
                   <button
                     type="button"
                     onClick={() => setCodeInputOpen(true)}
@@ -1439,7 +1594,7 @@ export function OrderForm({
                     Have a promo code?
                   </button>
                 )}
-                {!previewCode && codeInputOpen && (
+                {payMethod === "stripe" && !previewCode && codeInputOpen && (
                   <div className="flex gap-2 items-stretch">
                     <input
                       value={codeInput}
@@ -1482,7 +1637,7 @@ export function OrderForm({
 
               <div className="flex justify-between pt-3 mt-3" style={{ borderTopColor: "#E3DBC6", borderTopWidth: "1px" }}>
                 <span className="text-[14px] font-semibold" style={{ color: "#211D15" }}>Order total</span>
-                <span className="text-[18px] font-semibold" style={{ color: "#211D15" }}>{fmt(finalTotalCents)}</span>
+                <span className="text-[18px] font-semibold" style={{ color: "#211D15" }}>{fmt(payMethod === "stripe" ? finalTotalCents : totalCents)}</span>
               </div>
             </div>
             <div className="p-4">
@@ -1492,9 +1647,31 @@ export function OrderForm({
             </div>
           </div>
 
+          {payOptions.length > 1 && (
+            <div className="rounded-[18px] border p-4 space-y-2" style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6" }}>
+              <p className="text-[10px] uppercase tracking-wide" style={{ color: "#938B78" }}>How would you like to pay?</p>
+              {payOptions.map((opt) => (
+                <label key={opt} className="flex items-center gap-2 rounded-xl border px-3 py-2.5 cursor-pointer" style={{ borderColor: payMethod === opt ? "#2C4031" : "#E3DBC6", backgroundColor: payMethod === opt ? "#DEE2CF" : "white" }}>
+                  <input type="radio" name="payMethod" checked={payMethod === opt} onChange={() => setPayMethod(opt)} />
+                  <span className="text-[13px] font-semibold" style={{ color: "#211D15" }}>
+                    {opt === "stripe" ? "Card (secure, online)" : opt === "cash" ? "Cash on pickup / delivery" : "Zelle"}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+
           <div className="rounded-xl px-3 py-2.5 text-[13px] flex gap-2" style={{ backgroundColor: "#F6F1E6", color: "#211D15" }}>
-            <span>🔒</span>
-            <span>You'll be redirected to <strong>Stripe</strong> for secure payment. Confirmation sent by email.</span>
+            {payMethod === "stripe" ? (
+              <>
+                <span>🔒</span>
+                <span>You'll be redirected to <strong>Stripe</strong> for secure payment. Confirmation sent by email.</span>
+              </>
+            ) : payMethod === "zelle" ? (
+              <span>Your order is confirmed right away. You'll get Zelle payment details on the next screen and by email.</span>
+            ) : (
+              <span>Your order is confirmed right away. Please pay in cash when you receive your order.</span>
+            )}
           </div>
 
           {error && <p className="text-[13px] rounded-xl px-3 py-2" style={{ color: "#C0673E", backgroundColor: "#F6F1E6" }}>{error}</p>}
@@ -1502,7 +1679,7 @@ export function OrderForm({
           <button type="button" onClick={handleSubmit} disabled={isSubmitting}
             className="w-full py-3.5 rounded-xl text-white text-[14px] font-semibold disabled:opacity-50"
             style={{ backgroundColor: "#2C4031" }}>
-            {isSubmitting ? "Processing..." : "Pay with Stripe →"}
+            {isSubmitting ? "Processing..." : payMethod === "stripe" ? "Pay with Stripe →" : "Place order →"}
           </button>
         </div>
       )}

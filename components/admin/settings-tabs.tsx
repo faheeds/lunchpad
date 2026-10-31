@@ -43,6 +43,8 @@ const TABS: Tab[] = [
   // Plan page's "add a payment method" trial-expired banner and sent at
   // least one operator looking here for a card-entry form that isn't here.
   { id: "payments",      label: "Payouts",       href: "/admin/settings?tab=payments",      minRole: "OWNER" },
+  // Cash / Zelle and pickup-vs-delivery options for caterers who deal offline.
+  { id: "offline",       label: "Cash & delivery", href: "/admin/settings?tab=offline",     minRole: "OWNER" },
   { id: "notifications", label: "Notifications", href: "/admin/settings?tab=notifications", minRole: "OWNER" },
   // Team and Plan are their own routes (legacy pages we're keeping in
   // place), but rendered under the same Settings umbrella here.
@@ -54,7 +56,7 @@ const TABS: Tab[] = [
 // Kept exported for compatibility with anything importing it elsewhere;
 // the in-page tabs on settings/page.tsx use these IDs to decide which
 // panel to render.
-export type SettingsTabId = "general" | "branding" | "domain" | "payments" | "notifications" | "danger";
+export type SettingsTabId = "general" | "branding" | "domain" | "payments" | "offline" | "notifications" | "danger";
 
 export function SettingsTabs({ adminRole }: { adminRole: AdminRole }) {
   const pathname = usePathname();

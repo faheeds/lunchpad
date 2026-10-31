@@ -23,7 +23,7 @@ async function saveOperatorType(formData: FormData) {
   const restaurant = await requireRestaurant();
   await requireAdminRole("OWNER");
   const operatorType = String(formData.get("operatorType") || "").trim();
-  if (!["school", "office", "hybrid"].includes(operatorType)) {
+  if (!["school", "office", "hybrid", "caterer"].includes(operatorType)) {
     redirect("/admin/onboarding?step=1&error=invalid");
   }
 
@@ -468,6 +468,7 @@ export default async function OnboardingPage({
                   { value: "school",  label: "School caterer",    blurb: "Lunches for K-12 schools. Students, classrooms, allergy notes." },
                   { value: "office",  label: "Corporate cafeteria", blurb: "Meals for office buildings. Employees, teams, recurring orders." },
                   { value: "hybrid",  label: "Both",                blurb: "You serve schools and offices. Defaults won't auto-pick either." },
+                  { value: "caterer", label: "Caterer / individual orders", blurb: "Orders from individual customers for pickup or delivery. Cash and Zelle supported." },
                 ].map((opt) => (
                   <label key={opt.value}
                     className="cursor-pointer rounded-[16px] border border-editorial-line p-4 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
@@ -659,14 +660,14 @@ export default async function OnboardingPage({
                 <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Type</label>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-editorial-line px-3 py-2.5 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
-                    <input type="radio" name="locationType" value="SCHOOL" defaultChecked={restaurant.operatorType !== "office"} className="mt-0.5" />
+                    <input type="radio" name="locationType" value="SCHOOL" defaultChecked={restaurant.operatorType !== "office" && restaurant.operatorType !== "caterer"} className="mt-0.5" />
                     <div>
                       <p className="text-[12px] font-editorial font-[500] text-editorial-ink">School</p>
                       <p className="text-[10px] text-editorial-ink-faint">Students, classrooms, teachers</p>
                     </div>
                   </label>
                   <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-editorial-line px-3 py-2.5 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
-                    <input type="radio" name="locationType" value="OFFICE" defaultChecked={restaurant.operatorType === "office"} className="mt-0.5" />
+                    <input type="radio" name="locationType" value="OFFICE" defaultChecked={restaurant.operatorType === "office" || restaurant.operatorType === "caterer"} className="mt-0.5" />
                     <div>
                       <p className="text-[12px] font-editorial font-[500] text-editorial-ink">Office</p>
                       <p className="text-[10px] text-editorial-ink-faint">Employees, teams, floors</p>

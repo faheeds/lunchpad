@@ -431,7 +431,20 @@ export async function createPendingOrder(input: OrderDraftInput, checkoutSession
 export type AdminOrderPaymentMode =
   | { kind: "stripe_link" }
   | { kind: "manual"; method: string; reference?: string; notes?: string }
-  | { kind: "comped"; reason?: string };
+  | { kind: "comped"; reason?: string }
+  /**
+   * Customer chose to pay cash / Zelle / etc. directly to the operator.
+   * The order is confirmed immediately (so it shows on kitchen sheets and
+   * labels) but the Payment stays PENDING until the operator marks it paid.
+   */
+  | { kind: "offline_pending"; method: string };
+
+export type OrderFulfillment = {
+  fulfillmentType: "PICKUP" | "DELIVERY";
+  customerPhone?: string;
+  deliveryAddress?: string;
+  deliveryNotes?: string;
+};
 
 /**
  * Create an order on behalf of a customer. Used by the admin "+ New order"
@@ -450,8 +463,13 @@ export async function createAdminOrder(args: {
   /** Restaurant the admin belongs to — enforced against the delivery date. */
   restaurantId: string;
   /** Admin who's creating the order. Stored on Order.createdByAdminId for
-   *  audit. */
-  adminUserId: string;
+   *  audit. Omitted for guest (customer self-service) offline orders. */
+  adminUserId?: string;
+  /** Pickup / delivery details (caterer flow). */
+  fulfillment?: OrderFulfillment;
+  /** Apply the customer-facing cutoff rules. Set for guest orders; admin
+   *  orders may go past the cutoff. */
+  enforceCutoff?: boolean;
 }) {
   const parsed = orderFormSchema.parse(args.input);
 
@@ -480,6 +498,12 @@ export async function createAdminOrder(args: {
   // tenant or we'd be writing across tenants.
   if (deliveryDate.school.restaurantId !== args.restaurantId) {
     throw new Error("Delivery date belongs to a different restaurant.");
+  }
+  if (args.enforceCutoff) {
+    if (!deliveryDate.orderingOpen || deliveryDate.cancelledAt) {
+      throw new Error("Ordering is closed for this date.");
+    }
+    assertOrderingOpen(new Date(), deliveryDate.cutoffAt, deliveryDate.deliveryDate, deliveryDate.school.timezone);
   }
 
   // Same monthly order cap as the customer checkout flow — an admin
@@ -592,6 +616,14 @@ export async function createAdminOrder(args: {
   let compedReason: string | null = null;
 
   switch (args.paymentMode.kind) {
+    case "offline_pending":
+      // Confirmed for the kitchen right away; money still to be collected.
+      orderStatus = OrderStatus.PAID;
+      paidAt = new Date();
+      paymentStatus = PaymentStatus.PENDING;
+      paymentProvider = "manual";
+      paymentMethod = args.paymentMode.method;
+      break;
     case "stripe_link":
       paymentProvider = "stripe_checkout_link";
       // Stays PENDING until the parent pays via the link. The Stripe
@@ -642,13 +674,17 @@ export async function createAdminOrder(args: {
         parentName: parsed.parentName,
         parentEmail: parsed.parentEmail,
         specialInstructions: parsed.specialInstructions || null,
+        fulfillmentType: args.fulfillment?.fulfillmentType ?? null,
+        customerPhone: args.fulfillment?.customerPhone?.trim() || null,
+        deliveryAddress: args.fulfillment?.deliveryAddress?.trim() || null,
+        deliveryNotes: args.fulfillment?.deliveryNotes?.trim() || null,
         subtotalCents: totalCents,
         totalCents,
         status: orderStatus,
         paidAt,
         compedAt,
         compedReason,
-        createdByAdminId: args.adminUserId,
+        createdByAdminId: args.adminUserId ?? null,
         items: {
           create: normalizedItems.map((item) => ({
             menuItemId: item.menuItem.id,
@@ -668,7 +704,7 @@ export async function createAdminOrder(args: {
             provider: paymentProvider,
             amountCents: paymentAmountCents,
             status: paymentStatus,
-            paidAt,
+            paidAt: paymentStatus === PaymentStatus.PAID ? paidAt : null,
             method: paymentMethod,
             notes: paymentNotes,
           },
@@ -696,6 +732,8 @@ export async function createAdminOrder(args: {
       summary = `Admin comped order ${order.orderNumber} for ${order.student.studentName} (${formatCurrency(order.totalCents)} value)${
         args.paymentMode.reason ? ` — ${args.paymentMode.reason}` : ""
       }`;
+    } else if (args.paymentMode.kind === "offline_pending") {
+      summary = `${order.parentName} placed order ${order.orderNumber} — ${formatCurrency(order.totalCents)}, pay by ${args.paymentMode.method} (awaiting payment)`;
     } else if (args.paymentMode.kind === "manual") {
       action = "PAID";
       summary = `Admin recorded ${args.paymentMode.method} payment for order ${order.orderNumber} — ${formatCurrency(order.totalCents)}`;
@@ -704,7 +742,7 @@ export async function createAdminOrder(args: {
     }
     await logActivity({
       restaurantId: args.restaurantId,
-      adminUserId: args.adminUserId,
+      adminUserId: args.adminUserId ?? null,
       entityType: "ORDER",
       entityId: order.id,
       action,

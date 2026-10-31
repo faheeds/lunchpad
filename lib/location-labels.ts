@@ -116,7 +116,9 @@ export function getLabels(type: LocationType | null | undefined): LocationLabels
  */
 export function getLabelsForOperator(operatorType: string | null | undefined): LocationLabels {
   const t = (operatorType ?? "").toLowerCase();
-  if (t === "office") return OFFICE_LABELS;
+  // Caterers serve individuals; their "locations" are pickup points / service
+  // areas modeled as OFFICE locations (no grade, classroom or teacher).
+  if (t === "office" || t === "caterer") return OFFICE_LABELS;
   if (t === "hybrid") return getMergedLabels(["SCHOOL", "OFFICE"]);
   return SCHOOL_LABELS;
 }
