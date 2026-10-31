@@ -46,13 +46,13 @@ export async function generateMetadata(): Promise<Metadata> {
       // any ambiguity about which image to use for restaurant vs platform context.
       images: restaurant
         ? undefined  // each restaurant page can opt into its own og:image later
-        : [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "LunchPad — built for lunch operators." }],
+        : [{ url: "/opengraph-image.png?v=2", width: 1200, height: 630, alt: "LunchPad — Lunch, finally handled." }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: restaurant ? undefined : ["/twitter-image.png"],
+      images: restaurant ? undefined : ["/twitter-image.png?v=2"],
     },
   };
 }
