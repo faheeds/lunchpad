@@ -88,6 +88,17 @@ model Restaurant {
   contactPhone             String?
   isActive                 Boolean        @default(true)
 
+  // Offline / caterer settings. Lets a restaurant take orders without
+  // Stripe: customers pick cash or Zelle at checkout, the order is
+  // confirmed immediately and the operator marks it paid when the money
+  // arrives. All default off so existing tenants are unaffected.
+  acceptCash               Boolean        @default(false)
+  acceptZelle              Boolean        @default(false)
+  zelleHandle              String?        // phone or email customers send Zelle to
+  offlinePaymentInstructions String?      // free text shown after checkout
+  deliveryEnabled          Boolean        @default(false) // offer home/address delivery
+  pickupInstructions       String?        // where/when to collect, shown for pickup orders
+
   // Stripe Connect
   stripeAccountId          String?        @unique
   stripeOnboardingComplete Boolean        @default(false)
@@ -601,6 +612,11 @@ model Order {
   parentName          String
   parentEmail         String
   specialInstructions String?
+  /// "PICKUP" | "DELIVERY". Null for legacy school/office orders.
+  fulfillmentType     String?
+  customerPhone       String?
+  deliveryAddress     String?
+  deliveryNotes       String?
   subtotalCents       Int
   /// Total dollar value (in cents) deducted by any applied discount.
   /// Denormalized off DiscountRedemption for fast list / report queries.

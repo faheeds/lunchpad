@@ -33,8 +33,12 @@ export default async function OrderPage({
   }
   const params = await searchParams;
 
+  // Caterers can take orders without Stripe by accepting cash / Zelle.
+  const offlineEnabled = Boolean(restaurant.acceptCash || restaurant.acceptZelle);
+
   // Block ordering if restaurant hasn't completed Stripe onboarding
-  if (!restaurant.stripeOnboardingComplete) {
+  // (unless they accept offline payments instead).
+  if (!restaurant.stripeOnboardingComplete && !offlineEnabled) {
     return (
       <>
         <SiteHeaderServer />
@@ -270,6 +274,13 @@ export default async function OrderPage({
           {deliveryDates.length ? (
             <OrderForm
               operatorType={restaurant.operatorType}
+              payment={{
+                stripe: restaurant.stripeOnboardingComplete,
+                cash: Boolean(restaurant.acceptCash),
+                zelle: Boolean(restaurant.acceptZelle),
+                deliveryEnabled: Boolean(restaurant.deliveryEnabled),
+                pickupInstructions: restaurant.pickupInstructions ?? null,
+              }}
               deliveryDates={deliveryDates.map((date) => ({
                 id: date.id,
                 schoolId: date.schoolId,

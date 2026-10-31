@@ -133,6 +133,15 @@ const styles = StyleSheet.create({
 
 export function getLabelMetaLines(order: LabelOrder): { line1: string; line2: string | null } {
   const isOffice = order.school.locationType === "OFFICE";
+  if (order.fulfillmentType) {
+    // Caterer orders: show how it gets to the customer, plus a phone to call.
+    const where =
+      order.fulfillmentType === "DELIVERY"
+        ? `Deliver: ${order.deliveryAddress ?? "address n/a"}`
+        : `Pickup | ${order.school.name}`;
+    const line2 = [order.customerPhone, order.deliveryNotes].filter(Boolean).join(" | ");
+    return { line1: where, line2: line2 || null };
+  }
   if (isOffice) {
     return { line1: order.school.name, line2: null };
   }

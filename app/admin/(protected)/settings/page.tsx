@@ -77,6 +77,37 @@ async function updateBranding(formData: FormData) {
   redirect("/admin/settings?tab=branding&saved=1");
 }
 
+async function updateOfflineSettings(formData: FormData) {
+  "use server";
+  let errorMsg: string | null = null;
+  try {
+    const restaurant = await requireRestaurant();
+    await requireAdminRole("OWNER");
+    const acceptCash = formData.get("acceptCash") === "on";
+    const acceptZelle = formData.get("acceptZelle") === "on";
+    const zelleHandle = String(formData.get("zelleHandle") || "").trim().slice(0, 120) || null;
+    if (acceptZelle && !zelleHandle) {
+      throw new Error("Enter the phone number or email customers should send Zelle to.");
+    }
+    await prisma.restaurant.update({
+      where: { id: restaurant.id },
+      data: {
+        acceptCash,
+        acceptZelle,
+        zelleHandle,
+        offlinePaymentInstructions:
+          String(formData.get("offlinePaymentInstructions") || "").trim().slice(0, 500) || null,
+        deliveryEnabled: formData.get("deliveryEnabled") === "on",
+        pickupInstructions: String(formData.get("pickupInstructions") || "").trim().slice(0, 500) || null,
+      },
+    });
+  } catch (e: unknown) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong";
+  }
+  if (errorMsg) redirect(`/admin/settings?tab=offline&error=${encodeURIComponent(errorMsg)}`);
+  redirect("/admin/settings?tab=offline&saved=1");
+}
+
 async function updateKitchenSheetSettings(formData: FormData) {
   "use server";
   let errorMsg: string | null = null;
@@ -649,6 +680,57 @@ export default async function AdminSettingsPage({
             )}
           </div>
         </div>
+      )}
+
+      {/* ── CASH, ZELLE & DELIVERY ──────────────────────────────────── */}
+      {tab === "offline" && (
+        <form action={updateOfflineSettings} className="rounded-[16px] border border-editorial-line bg-white overflow-hidden max-w-2xl shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+          <div className="px-4 py-3 border-b border-editorial-line">
+            <p className="text-[13px] font-semibold text-editorial-ink">Cash, Zelle &amp; delivery</p>
+            <p className="text-[11px] text-editorial-ink-faint mt-0.5">
+              Take orders without Stripe. Customers place the order, you collect payment yourself and mark it paid.
+            </p>
+          </div>
+          <div className="px-4 py-4 space-y-4">
+            <label className="flex items-center gap-2 cursor-pointer w-fit">
+              <input type="checkbox" name="acceptCash" defaultChecked={restaurant.acceptCash} className="rounded border-editorial-line" />
+              <span className="text-[13px] text-editorial-ink">Accept cash (on pickup / delivery)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer w-fit">
+              <input type="checkbox" name="acceptZelle" defaultChecked={restaurant.acceptZelle} className="rounded border-editorial-line" />
+              <span className="text-[13px] text-editorial-ink">Accept Zelle</span>
+            </label>
+            <div>
+              <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Zelle phone or email</label>
+              <input type="text" name="zelleHandle" defaultValue={restaurant.zelleHandle ?? ""} placeholder="(555) 123-4567 or you@email.com"
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+            </div>
+            <div>
+              <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Extra payment instructions (optional)</label>
+              <textarea name="offlinePaymentInstructions" rows={2} defaultValue={restaurant.offlinePaymentInstructions ?? ""}
+                placeholder="e.g. Please pay within 24 hours to hold your order."
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer w-fit">
+              <input type="checkbox" name="deliveryEnabled" defaultChecked={restaurant.deliveryEnabled} className="rounded border-editorial-line" />
+              <span className="text-[13px] text-editorial-ink">Offer delivery to the customer&apos;s address</span>
+            </label>
+            <div>
+              <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Pickup instructions (optional)</label>
+              <textarea name="pickupInstructions" rows={2} defaultValue={restaurant.pickupInstructions ?? ""}
+                placeholder="e.g. Pickup at 123 Main St, Bellevue between 4–6pm. Ring the bell."
+                className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+            </div>
+            <p className="text-[11px] text-editorial-ink-faint">
+              Tip: create a &ldquo;location&rdquo; (type: Office) for each pickup spot or service area, then add dates under Delivery dates.
+              Promo codes apply to card payments only.
+            </p>
+            <button type="submit"
+              className="px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+              Save
+            </button>
+          </div>
+        </form>
       )}
 
       {/* ── NOTIFICATIONS ───────────────────────────────────────────── */}

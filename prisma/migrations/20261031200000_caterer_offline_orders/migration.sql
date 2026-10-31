@@ -1,0 +1,10 @@
+ALTER TABLE "Restaurant" ADD COLUMN "acceptCash" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Restaurant" ADD COLUMN "acceptZelle" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Restaurant" ADD COLUMN "zelleHandle" TEXT;
+ALTER TABLE "Restaurant" ADD COLUMN "offlinePaymentInstructions" TEXT;
+ALTER TABLE "Restaurant" ADD COLUMN "deliveryEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Restaurant" ADD COLUMN "pickupInstructions" TEXT;
+ALTER TABLE "Order" ADD COLUMN "fulfillmentType" TEXT;
+ALTER TABLE "Order" ADD COLUMN "customerPhone" TEXT;
+ALTER TABLE "Order" ADD COLUMN "deliveryAddress" TEXT;
+ALTER TABLE "Order" ADD COLUMN "deliveryNotes" TEXT;
