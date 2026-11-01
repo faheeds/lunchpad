@@ -399,8 +399,8 @@ export default async function OnboardingPage({
   const caps = profile?.capabilities ?? null;
   const offlineOnly = Boolean(caps && !caps.cards);
   // Tenants created before the questionnaire have no profile, but one that
-  // picked "Caterer / individual orders" in step 1 serves individuals: no
-  // school/office choice, just a pickup spot.
+  // picked "Caterer / individual orders" in step 1 serves individuals: the
+  // Office-type choice is worded "Pickup spot"; School stays available.
   const legacyCaterer = !profile && restaurant.operatorType === "caterer";
   const planStep = (key: string) => plan?.steps.find((x) => x.key === key);
   // Location types this operator can actually create. School appears only if
@@ -410,9 +410,7 @@ export default async function OnboardingPage({
         ...(caps.servesSchools ? (["SCHOOL"] as const) : []),
         ...(caps.servesOffices || caps.servesGroups || caps.servesIndividuals || !caps.servesSchools ? (["OFFICE"] as const) : []),
       ]
-    : legacyCaterer
-      ? ["OFFICE"]
-      : ["SCHOOL", "OFFICE"];
+    : ["SCHOOL", "OFFICE"];
   const officeAudience = caps?.servesOffices ? "offices" : "individuals";
   const placeVocab = profile
     ? getVocabulary(profile, caps?.servesSchools && allowedLocationTypes.length === 1 ? "schools" : officeAudience)
@@ -781,7 +779,7 @@ export default async function OnboardingPage({
                           <span className="text-[13px] font-medium text-editorial-ink truncate">{loc.name}</span>
                         </span>
                         <span className="text-[11px] text-editorial-ink-faint shrink-0">
-                          {allowedLocationTypes.length > 1 ? `${loc.locationType === "SCHOOL" ? "School" : (profile ? (placeVocab?.place ?? "Office") : "Office")} · ` : ""}
+                          {allowedLocationTypes.length > 1 ? `${loc.locationType === "SCHOOL" ? "School" : ((profile || legacyCaterer) ? (placeVocab?.place ?? "Office") : "Office")} · ` : ""}
                           {(loc.timezone ?? "").split("/").pop()?.replace(/_/g, " ")}
                         </span>
                       </li>
@@ -809,8 +807,8 @@ export default async function OnboardingPage({
                   <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-editorial-line px-3 py-2.5 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
                     <input type="radio" name="locationType" value="OFFICE" defaultChecked={restaurant.operatorType === "office" || restaurant.operatorType === "caterer"} className="mt-0.5" />
                     <div>
-                      <p className="text-[12px] font-editorial font-[500] text-editorial-ink">{profile ? (placeVocab?.place ?? "Office") : "Office"}</p>
-                      <p className="text-[10px] text-editorial-ink-faint">{profile ? (officeAudience === "individuals" ? "Where customers collect" : "Employees, teams, members") : "Employees, teams, floors"}</p>
+                      <p className="text-[12px] font-editorial font-[500] text-editorial-ink">{(profile || legacyCaterer) ? (placeVocab?.place ?? "Office") : "Office"}</p>
+                      <p className="text-[10px] text-editorial-ink-faint">{(profile || legacyCaterer) ? (officeAudience === "individuals" ? "Where customers collect" : "Employees, teams, members") : "Employees, teams, floors"}</p>
                     </div>
                   </label>
                 </div>
