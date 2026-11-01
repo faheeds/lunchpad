@@ -128,6 +128,11 @@ export default async function AdminOrdersPage({
   const showSchoolFields =
     restaurant.operatorType !== "caterer" && schools.some((s) => s.locationType === "SCHOOL");
 
+  const moreFiltersActive = Boolean(
+    params.fromDate || params.toDate || params.deliveryDateId || selectedGrades.length ||
+    (params.archived && params.archived !== "exclude") || params.sort,
+  );
+
   const gradeUnion = Array.from(new Set(schools.flatMap((s) => s.grades)));
   const gradeOptions = gradeUnion.length ? gradeUnion : STANDARD_GRADES;
 
@@ -269,7 +274,8 @@ export default async function AdminOrdersPage({
 
       {/* ── Filter bar ─────────────────────────────────────────────── */}
       <form className="rounded-[16px] border border-editorial-line bg-white p-3 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
-        <div className="mb-2">
+        <div className="flex flex-wrap items-end gap-2">
+        <div className="flex-1 min-w-[200px]">
           <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Search</label>
           <div className="relative">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#938B78" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -285,12 +291,44 @@ export default async function AdminOrdersPage({
             />
           </div>
         </div>
+          <div className="w-full sm:w-[170px]">
+            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Location</label>
+            <select name="schoolId" defaultValue={params.schoolId ?? ""}
+              className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
+              <option value="">All locations</option>
+              {schools.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-full sm:w-[150px]">
+            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Status</label>
+            <select name="status" defaultValue={params.status ?? "ALL"}
+              className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
+              <option value="ALL">All statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="PAID">Paid</option>
+              <option value="REFUNDED">Refunded</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
+          <button type="submit" className="px-5 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
+            Apply
+          </button>
+          <Link href="/admin/orders"
+            className="px-4 py-1.5 rounded-full border border-editorial-line text-editorial-ink text-[12px] font-medium no-underline hover:border-editorial-green hover:text-editorial-green transition whitespace-nowrap">
+            Clear
+          </Link>
+        </div>
 
+        <details className="mt-2" open={moreFiltersActive}>
+          <summary className="cursor-pointer select-none text-[12px] font-semibold text-editorial-green">More filters (dates, delivery date, show, sort)</summary>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
         {/* Date range — operators looking at a week or month of orders need
             a span, not just a single calendar day. fromDate/toDate are
             inclusive on both ends. The single-date dropdown below still
             works for picking one specific delivery date. */}
-        <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="grid grid-cols-2 gap-2 sm:col-span-2">
           <div>
             <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">From date</label>
             <input
@@ -311,17 +349,6 @@ export default async function AdminOrdersPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
-          <div>
-            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Location</label>
-            <select name="schoolId" defaultValue={params.schoolId ?? ""}
-              className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
-              <option value="">All locations</option>
-              {schools.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
           <div>
             <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Delivery date</label>
             <select name="deliveryDateId" defaultValue={params.deliveryDateId ?? ""}
@@ -360,17 +387,6 @@ export default async function AdminOrdersPage({
           </div>
           )}
           <div>
-            <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Status</label>
-            <select name="status" defaultValue={params.status ?? "ALL"}
-              className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
-              <option value="ALL">All statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="PAID">Paid</option>
-              <option value="REFUNDED">Refunded</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
-          </div>
-          <div>
             <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Show</label>
             <select name="archived" defaultValue={params.archived ?? "exclude"}
               className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
@@ -379,9 +395,7 @@ export default async function AdminOrdersPage({
               <option value="only">Archived only</option>
             </select>
           </div>
-        </div>
-
-        <div className="mb-2">
+        <div className="sm:col-span-2">
           <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Sort by</label>
           <select name="sort" defaultValue={sortKey}
             className="w-full rounded-lg border border-editorial-line text-[12px] py-1.5 px-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green">
@@ -391,15 +405,8 @@ export default async function AdminOrdersPage({
           </select>
         </div>
 
-        <div className="flex gap-2">
-          <button type="submit" className="flex-1 py-2 rounded-full bg-editorial-green text-editorial-paper text-[12px] font-semibold hover:bg-editorial-green-deep transition">
-            Apply filters
-          </button>
-          <Link href="/admin/orders"
-            className="px-4 py-2 rounded-full border border-editorial-line text-editorial-ink text-[12px] font-medium no-underline hover:border-editorial-green hover:text-editorial-green transition whitespace-nowrap">
-            Clear
-          </Link>
-        </div>
+          </div>
+        </details>
       </form>
 
       {/* ── Orders list ────────────────────────────────────────────── */}
