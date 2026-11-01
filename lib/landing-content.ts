@@ -22,7 +22,8 @@ const url = z
   .trim()
   .max(500)
   .optional()
-  .transform((v) => (v && /^https?:\/\//i.test(v) ? v : undefined));
+  // Absolute http(s) URL, or a site-relative path ("/tenants/x/photo.jpg").
+  .transform((v) => (v && /^(https?:\/\/|\/(?!\/))/i.test(v) ? v : undefined));
 
 export const landingContentSchema = z.object({
   /** Small uppercase line above the headline, e.g. "Medina Academy · Bellevue & Redmond". */

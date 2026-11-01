@@ -9,6 +9,22 @@ import type { LandingView } from "@/lib/landing-content";
  * share one layout. Colors come from the tenant's brand settings.
  */
 
+/**
+ * next/image only accepts hosts allow-listed in next.config (Vercel Blob).
+ * Anything else (e.g. a photo served from the tenant's own /public folder
+ * by absolute URL) falls back to a plain <img> so it can never crash the page.
+ */
+function LandingImage({
+  src, alt, sizes, priority,
+}: { src: string; alt: string; sizes?: string; priority?: boolean }) {
+  const optimizable = src.startsWith("/") || /^https:\/\/[^/]+\.public\.blob\.vercel-storage\.com\//.test(src);
+  if (optimizable) {
+    return <Image src={src} alt={alt} fill priority={priority} sizes={sizes} style={{ objectFit: "cover" }} />;
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt={alt} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />;
+}
+
 function dateChip(iso: string): string {
   return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }).format(
     new Date(`${iso}T12:00:00Z`),
@@ -59,6 +75,12 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
         .lp-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:640px}
         .lp-hero-photo{position:relative;min-height:380px}
         .lp-h1{font-size:clamp(2.6rem,7vw,5.5rem)}
+        .lp-chip{display:inline-flex;align-items:center;gap:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:10px 16px;max-width:100%;font-size:15px;line-height:1.35}
+        .lp-chip-dot{width:10px;height:10px;border-radius:50%;background:#59D186;flex-shrink:0}
+        .lp-chip-text{display:flex;flex-wrap:wrap;align-items:baseline;row-gap:2px}
+        .lp-chip-text>span{white-space:nowrap}
+        .lp-chip-text>span+span::before{content:"\\00b7";margin:0 8px;opacity:.7}
+        .lp-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px}
         .lp-mosaic{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
         .lp-tile{position:relative;border-radius:18px;overflow:hidden;display:block;min-height:260px;color:#fff;text-decoration:none}
         .lp-t1{grid-column:span 6;grid-row:span 2;min-height:540px}
@@ -67,6 +89,7 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
         .lp-only1 .lp-t1,.lp-only2 .lp-t1{grid-column:span 12;grid-row:auto;min-height:420px}
         .lp-only2 .lp-t2{grid-column:span 12}
         @media (max-width:860px){
+          .lp-steps{grid-template-columns:repeat(2,minmax(0,1fr))}
           .lp-hero{grid-template-columns:1fr}
           .lp-hero-photo{order:-1;min-height:300px}
           .lp-mosaic{grid-template-columns:1fr 1fr}
@@ -74,6 +97,13 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
           .lp-t2{grid-column:span 2;min-height:240px}
           .lp-t3,.lp-t4{grid-column:span 1;min-height:200px}
           .lp-only1 .lp-t1,.lp-only2 .lp-t1,.lp-only2 .lp-t2{grid-column:span 2}
+        }
+        @media (max-width:520px){
+          .lp-steps{grid-template-columns:1fr}
+          .lp-chip{align-items:flex-start;border-radius:16px}
+          .lp-chip-dot{margin-top:6px}
+          .lp-chip-text{flex-direction:column}
+          .lp-chip-text>span+span::before{content:none}
         }
       `}</style>
 
@@ -90,18 +120,19 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
             )}
           </div>
           {status && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 999, padding: "9px 16px", width: "fit-content", maxWidth: "100%", flexWrap: "wrap", fontSize: 15 }}>
-              <span aria-hidden style={{ width: 10, height: 10, borderRadius: "50%", background: "#59D186" }} />
-              <span>
-                Ordering open &middot; Next day <strong>{dateChip(status.nextDate)}</strong>
-                {status.cutoffLabel ? <> &middot; Order by {status.cutoffLabel}</> : null}
+            <div className="lp-chip">
+              <span aria-hidden className="lp-chip-dot" />
+              <span className="lp-chip-text">
+                <span>Ordering open</span>
+                <span>Next day <strong>{dateChip(status.nextDate)}</strong></span>
+                {status.cutoffLabel ? <span>Order by {status.cutoffLabel}</span> : null}
               </span>
             </div>
           )}
         </div>
         <div className="lp-hero-photo">
           {hero.imageUrl ? (
-            <Image src={hero.imageUrl} alt={restaurant.name} fill priority sizes="(max-width:860px) 100vw, 50vw" style={{ objectFit: "cover" }} />
+            <LandingImage src={hero.imageUrl} alt={restaurant.name} priority sizes="(max-width:860px) 100vw, 50vw" />
           ) : (
             <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${restaurant.primaryColor ?? dark}, ${accent})` }} />
           )}
@@ -112,7 +143,7 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
       <section id="how" style={{ background: "#FAF7F2", color: "#1A1412", padding: "72px clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 40 }}>
           <h2 style={{ ...h2, fontSize: "clamp(2rem,4.5vw,3.2rem)" }}>How it works</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(200px,100%),1fr))", gap: 32 }}>
+          <div className="lp-steps">
             {steps.map((s, i) => (
               <div key={s.title} style={{ borderTop: "3px solid #1A1412", paddingTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
                 <span style={{ fontFamily: display, fontWeight: 800, fontSize: 14, letterSpacing: "0.14em", color: accent }}>{String(i + 1).padStart(2, "0")}</span>
@@ -150,7 +181,7 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
             <div className={`lp-mosaic ${featured.length === 1 ? "lp-only1" : featured.length === 2 ? "lp-only2" : ""}`}>
               {featured.map((f, i) => (
                 <Link key={f.slug} href={`/order?item=${encodeURIComponent(f.slug)}`} className={`lp-tile lp-t${i + 1}`}>
-                  <Image src={f.imageUrl} alt={f.name} fill sizes="(max-width:860px) 100vw, 50vw" style={{ objectFit: "cover" }} />
+                  <LandingImage src={f.imageUrl} alt={f.name} sizes="(max-width:860px) 100vw, 50vw" />
                   <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "70px 20px 18px", background: "linear-gradient(to top, rgba(20,14,12,0.9), rgba(20,14,12,0))" }}>
                     <p style={{ margin: 0, fontFamily: display, fontWeight: 800, fontSize: i === 0 ? 30 : 21, lineHeight: 1.1 }}>{f.name}</p>
                     <p style={{ margin: "4px 0 0", fontSize: 15 }}>{f.priceLabel}</p>
@@ -223,7 +254,7 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
             </div>
             {story.imageUrl && (
               <div style={{ position: "relative", minHeight: 400, borderRadius: 20, overflow: "hidden" }}>
-                <Image src={story.imageUrl} alt={restaurant.name} fill sizes="(max-width:860px) 100vw, 50vw" style={{ objectFit: "cover" }} />
+                <LandingImage src={story.imageUrl} alt={restaurant.name} sizes="(max-width:860px) 100vw, 50vw" />
               </div>
             )}
           </div>
