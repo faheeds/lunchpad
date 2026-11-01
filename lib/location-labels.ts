@@ -96,6 +96,34 @@ const OFFICE_LABELS: LocationLabels = {
 };
 
 /**
+ * Individual customers (caterers who sell to people directly). No school or
+ * office concepts: a "location" is a pickup spot and nobody has a grade,
+ * classroom, teacher or parent account.
+ */
+const INDIVIDUAL_LABELS: LocationLabels = {
+  type: "Pickup spot",
+  typePlural: "Pickup spots",
+  location: "Location",
+  locationPlural: "Locations",
+  unit: "Customer",
+  unitPlural: "Customers",
+  unitName: "Your name",
+  group: "Group",
+  groupPlural: "Groups",
+  groupPlaceholder: "Group",
+  grade: "Tier",
+  gradePlaceholder: "",
+  showGrade: false,
+  supervisor: "Contact",
+  supervisorPlaceholder: "",
+  showSupervisor: false,
+  orderer: "Customer",
+  ordererPlural: "Customers",
+  ordererPossessive: "your",
+  ordererRefersToUnit: "yourself",
+};
+
+/**
  * Returns the canonical label set for a location type.
  * Falls back to school labels if type is null/undefined (legacy rows).
  */
@@ -117,8 +145,9 @@ export function getLabels(type: LocationType | null | undefined): LocationLabels
 export function getLabelsForOperator(operatorType: string | null | undefined): LocationLabels {
   const t = (operatorType ?? "").toLowerCase();
   // Caterers serve individuals; their "locations" are pickup points / service
-  // areas modeled as OFFICE locations (no grade, classroom or teacher).
-  if (t === "office" || t === "caterer") return OFFICE_LABELS;
+  // areas (stored as OFFICE rows) and carry no school or office vocabulary.
+  if (t === "caterer") return INDIVIDUAL_LABELS;
+  if (t === "office") return OFFICE_LABELS;
   if (t === "hybrid") return getMergedLabels(["SCHOOL", "OFFICE"]);
   return SCHOOL_LABELS;
 }

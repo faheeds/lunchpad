@@ -122,6 +122,11 @@ model Restaurant {
   testOrderPlacedAt        DateTime?     // step 8 of wizard — operator placed a test order
   onboardingShareAcked     Boolean       @default(false) // step 10 — operator confirmed they shared the URL
 
+  // Onboarding questionnaire (see lib/business-profile.ts). Null for tenants
+  // created before the questionnaire existed; they keep the legacy wizard.
+  businessProfile          Json?
+  questionnaireCompletedAt DateTime?
+
   // AI menu extraction quota — caps Claude usage per tenant so a runaway
   // operator can't burn the platform's API budget. Counter increments on
   // every successful extract call; resets on the first call after

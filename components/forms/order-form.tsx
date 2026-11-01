@@ -282,10 +282,12 @@ export function OrderForm({
   // selection — including the very first stepper render — fall back to the
   // restaurant-wide operator labels so an office-only tenant doesn't briefly
   // see "Student" copy in the stepper title.
-  const labels = selectedSchool
+  // Caterers selling to individuals never see school/office wording, whatever
+  // type their pickup spots happen to be stored as.
+  const labels = !isCaterer && selectedSchool
     ? getLabels(selectedSchool.locationType)
     : getLabelsForOperator(operatorType);
-  const isOffice = selectedSchool?.locationType === "OFFICE";
+  const isOffice = !isCaterer && selectedSchool?.locationType === "OFFICE";
   const gradeOptions = selectedSchool?.grades?.length ? selectedSchool.grades : STANDARD_GRADES;
 
   // Group locations by type for the dropdown — when the tenant has both
@@ -787,6 +789,7 @@ export function OrderForm({
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#938B78" }}>
               {/* "School" / "Office" — or "Location" when the tenant mixes both */}
               {(() => {
+                if (isCaterer) return "Pickup spot";
                 const types = new Set(schools.map((s) => s.locationType));
                 if (types.size > 1) return "Location";
                 if (types.has("OFFICE")) return "Office";
@@ -806,7 +809,7 @@ export function OrderForm({
                 className="w-full rounded-[14px] border p-3.5 text-[14px] font-semibold"
                 style={{ backgroundColor: "#FCFAF3", borderColor: "#E3DBC6", color: "#211D15" }}
               >
-                <option value="" disabled>Select a location</option>
+                <option value="" disabled>{isCaterer ? "Select a pickup spot" : "Select a location"}</option>
                 {groupedSchools.school.length > 0 && groupedSchools.office.length > 0 ? (
                   <>
                     <optgroup label="Schools">
@@ -840,7 +843,7 @@ export function OrderForm({
                 >
                   <p className="text-[14px] font-semibold" style={{ color: "#211D15" }}>{school.name}</p>
                   <p className="text-[12px] mt-0.5" style={{ color: selectedSchoolId === school.id ? "#2C4031" : "#938B78" }}>
-                    {school.locationType === "OFFICE" ? "Office" : "School"}
+                    {isCaterer ? "Pickup spot" : school.locationType === "OFFICE" ? "Office" : "School"}
                   </p>
                 </button>
               ))
@@ -850,7 +853,7 @@ export function OrderForm({
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2" style={{ color: "#938B78" }}>Delivery date</p>
             {!selectedSchoolId && (
               <p className="text-[13px] rounded-xl px-3 py-2.5" style={{ backgroundColor: "#F6F1E6", color: "#938B78" }}>
-                Choose {schools.some((s) => s.locationType === "OFFICE") && schools.some((s) => s.locationType === "SCHOOL") ? "a location" : isOffice ? "an office" : "a school"} above to see available dates.
+                Choose {isCaterer ? "a pickup spot" : schools.some((s) => s.locationType === "OFFICE") && schools.some((s) => s.locationType === "SCHOOL") ? "a location" : isOffice ? "an office" : "a school"} above to see available dates.
               </p>
             )}
             <div className="flex gap-2 overflow-x-auto pb-1">

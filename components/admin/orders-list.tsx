@@ -19,6 +19,7 @@ type OrderListItem = {
   specialInstructions: string | null;
   parentName: string;
   parentEmail: string;
+  payment?: { provider: string | null; status: string; method: string | null } | null;
   school: { name: string; timezone: string };
   deliveryDate: { deliveryDate: string | Date; originalCutoffAt: string | Date | null };
   student: {
@@ -63,6 +64,17 @@ function fmtDate(value: string | Date, timezone: string) {
   }).format(new Date(value));
 }
 
+// Cash / Zelle orders are confirmed for the kitchen right away (status PAID)
+// but the money is still to be collected — show that instead of "Paid".
+function badgeFor(order: OrderListItem, adaptive: boolean) {
+  const p = order.payment;
+  if (adaptive && order.status === "PAID" && p?.provider === "manual" && p.status === "PENDING") {
+    const how = p.method === "zelle" ? "Zelle" : p.method === "cash" ? "cash" : "payment";
+    return { bg: "#F6EED9", text: "#6E5C2C", label: `Awaiting ${how}` };
+  }
+  return STATUS_CONFIG[order.status] ?? STATUS_CONFIG.CANCELLED;
+}
+
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   PAID:      { bg: "#DEE2CF", text: "#2C4031", label: "Paid" },
   PENDING:   { bg: "#F6EED9", text: "#6E5C2C", label: "Pending" },
@@ -98,11 +110,17 @@ const BULK_ACTIONS: BulkAction[] = [
 export function OrdersList({
   orders,
   myRole = "STAFF",
+  showSchoolFields = true,
+  adaptive = false,
 }: {
   orders: OrderListItem[];
   /** Current admin's role — controls which bulk actions are shown. Defaults
    *  to STAFF so a missing prop fails closed. */
   myRole?: AdminRoleClient;
+  /** False for caterers / office-only operators: hides grade, teacher, classroom and "Parent". */
+  showSchoolFields?: boolean;
+  /** True only for operators onboarded via the questionnaire (awaiting-payment badge, hidden Refund). */
+  adaptive?: boolean;
 }) {
   const [selectedIds, setSelectedIds]  = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds]  = useState<Set<string>>(new Set());
@@ -263,7 +281,8 @@ export function OrdersList({
 
       {/* Order cards */}
       {orders.map((order) => {
-        const badge    = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.CANCELLED;
+        const badge    = badgeFor(order, adaptive);
+        const awaitingPayment = adaptive && order.status === "PAID" && order.payment?.provider === "manual" && order.payment.status === "PENDING";
         const isOpen   = expandedIds.has(order.id);
         const allergy  = order.items.map((i) => i.allergyNotes).find(Boolean) || order.student.allergyNotes;
         const addons   = order.items.flatMap((i) => i.additions);
@@ -310,8 +329,8 @@ export function OrdersList({
                   )}
                 </div>
                 <p className="text-[11px] text-editorial-ink-soft mt-0.5">
-                  {order.school.name} · Gr {order.student.grade}
-                  {order.student.teacherName ? ` · ${order.student.teacherName}` : ""}
+                  {order.school.name}{showSchoolFields ? ` · Gr ${order.student.grade}` : ""}
+                  {showSchoolFields && order.student.teacherName ? ` · ${order.student.teacherName}` : ""}
                   {" · "}{fmtDate(order.deliveryDate.deliveryDate, order.school.timezone)}
                 </p>
               </div>
@@ -360,9 +379,9 @@ export function OrdersList({
                   </div>
                   <div className="flex flex-col gap-1 text-sm text-editorial-ink-soft">
                     <p><span className="text-editorial-ink-faint font-semibold">Order #: </span>{order.orderNumber}</p>
-                    <p><span className="text-editorial-ink-faint font-semibold">Parent: </span>{order.parentName}</p>
+                    <p><span className="text-editorial-ink-faint font-semibold">{showSchoolFields ? "Parent" : "Customer"}: </span>{order.parentName}</p>
                     <p><span className="text-editorial-ink-faint font-semibold">Email: </span>{order.parentEmail}</p>
-                    {order.student.classroom && (
+                    {showSchoolFields && order.student.classroom && (
                       <p><span className="text-editorial-ink-faint font-semibold">Classroom: </span>{order.student.classroom}</p>
                     )}
                   </div>
@@ -374,7 +393,13 @@ export function OrdersList({
                     className="text-sm text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
                     Edit order →
                   </Link>
-                  <OrderRefundAction
+                  {awaitingPayment && (
+                    <Link href={`/admin/orders/${order.id}`}
+                      className="px-3.5 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold no-underline hover:bg-editorial-green-deep transition">
+                      Mark {order.payment?.method === "zelle" ? "Zelle received" : order.payment?.method === "cash" ? "cash received" : "as paid"} →
+                    </Link>
+                  )}
+                  {!awaitingPayment && <OrderRefundAction
                     orderId={order.id}
                     orderStatus={order.status}
                     items={order.items.map((item) => ({
@@ -389,7 +414,7 @@ export function OrdersList({
                     parentName={order.parentName}
                     studentName={order.student.studentName}
                     myRole={myRole}
-                  />
+                  />}
                   <OrderStatusActions orderId={order.id} isArchived={Boolean(order.archivedAt)} />
                 </div>
               </div>
