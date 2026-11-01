@@ -344,7 +344,7 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
           {/* Item cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 440, overflowY: "auto", paddingRight: 2 }}>
             {items.map((item, idx) => (
-              <div key={idx} style={{ border: "1px solid #E3DBC6", borderRadius: 12, background: "white", overflow: "hidden", boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)" }}>
+              <div key={idx} className="glass-card" style={{ border: "1px solid #E3DBC6", borderRadius: 12, background: "white", overflow: "hidden", boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)" }}>
 
                 {/* Item row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px" }}>

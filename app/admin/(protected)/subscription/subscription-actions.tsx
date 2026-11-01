@@ -89,7 +89,7 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
   if (!showUpgrade) {
     return (
       <>
-        <div style={{
+        <div className="glass-card" style={{
           background: "white", borderRadius: 16, padding: "20px 24px",
           border: "1px solid #E3DBC6", boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
         }}>
@@ -124,7 +124,7 @@ export function SubscriptionActions({ currentPlan, subscriptionStatus, hasActive
 
   return (
     <>
-      <div style={{
+      <div className="glass-card" style={{
         background: "white", borderRadius: 16, padding: "24px",
         border: "1px solid #E3DBC6", boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
       }}>

@@ -129,7 +129,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
       )}
 
       {/* Usage meter */}
-      <div style={{
+      <div className="glass-card" style={{
         background: "white", borderRadius: 16, padding: "20px 22px",
         border: "1px solid #E3DBC6", marginBottom: 24,
         boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",

@@ -345,7 +345,7 @@ function ItemRow({
   };
 
   return (
-    <div style={{
+    <div className="glass-card" style={{
       border: "1px solid #E3DBC6", borderRadius: 12, padding: 10,
       background: "white", display: "flex", flexDirection: "column", gap: 8, boxShadow: "0 18px 44px -22px rgba(33,29,21,0.20)",
     }}>
