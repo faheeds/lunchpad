@@ -97,6 +97,8 @@ type OrderFormProps = {
   initialDeliveryDateId?: string;
   initialCartItems?: CartItem[];
   initialItemSlug?: string;
+  /** Size picked on the public menu card; applied when the item auto-selects. */
+  initialSize?: string;
   /** Items from a reorder that aren't on the current date's menu — shown as a warning banner */
   unavailableReorderItems?: string[];
   /** Items from a reorder that are on the menu but need a manual choice/size before adding */
@@ -184,7 +186,7 @@ function getTimeToDeadline(cutoffAt: string, timezone: string): { days: number; 
 export function OrderForm({
   deliveryDates, menuItemsByDeliveryDate, savedChildren = [], operatorType,
   initialParentProfile, initialSchoolId, initialDeliveryDateId, initialCartItems = [],
-  initialItemSlug, unavailableReorderItems = [], needsSelectionItems = [], soldOutByDeliveryDate = {},
+  initialItemSlug, initialSize, unavailableReorderItems = [], needsSelectionItems = [], soldOutByDeliveryDate = {},
   categoryOrder = [],
   payment,
 }: OrderFormProps) {
@@ -348,10 +350,10 @@ export function OrderForm({
     itemSlugAutoSelected.current = true;
     setSelectedMenuItemId(match.id);
     setSelectedChoice("");
-    setSelectedSize("");
+    setSelectedSize(initialSize && (match.sizes ?? []).some((z) => z.name === initialSize) ? initialSize : "");
     setSelectedAdditions([]);
     setSelectedRemovals([]);
-  }, [step, initialItemSlug, menuItems]);
+  }, [step, initialItemSlug, initialSize, menuItems]);
 
   // Sized items with more than one size start with NO size selected, so
   // the customer is always asked.

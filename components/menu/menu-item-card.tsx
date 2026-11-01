@@ -44,6 +44,9 @@ export function MenuItemCard({ item }: Props) {
   const description = stripCategoryPrefix(item.description);
   const addons = item.options.filter((o) => o.optionType === "ADD_ON");
   const sizes = item.sizes ?? [];
+  // Multi-size items: the customer picks the size on the card before ordering.
+  const [pickedSize, setPickedSize] = useState("");
+  const needsSize = sizes.length > 1 && !pickedSize;
 
   return (
     <div style={{
@@ -105,17 +108,26 @@ export function MenuItemCard({ item }: Props) {
           </p>
         )}
 
-        {/* Sizes — shown so customers see every size and price up front */}
+        {/* Sizes — customer picks one here; the choice carries into the order form */}
         {sizes.length > 1 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {sizes.map((z) => (
-              <span key={z.id} style={{
-                fontSize: 11, padding: "3px 8px", borderRadius: 20,
-                background: "#EFE8D7", color: "#211D15", fontWeight: 600,
-              }}>
-                {z.name} {fmt(z.priceCents)}
-              </span>
-            ))}
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#211D15", margin: "0 0 4px" }}>
+              Choose a size{!pickedSize && <span style={{ color: "#C0673E" }}> (required)</span>}
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {sizes.map((z) => {
+                const active = pickedSize === z.name;
+                return (
+                  <button key={z.id} type="button" onClick={() => setPickedSize(z.name)} style={{
+                    fontSize: 11, padding: "3px 8px", borderRadius: 20, cursor: "pointer",
+                    background: active ? "#2C4031" : "#EFE8D7", color: active ? "#F6F1E6" : "#211D15",
+                    border: "1px solid " + (active ? "#2C4031" : "#E3DBC6"), fontWeight: 600,
+                  }}>
+                    {z.name} {fmt(z.priceCents)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -161,7 +173,18 @@ export function MenuItemCard({ item }: Props) {
 
       {/* Order CTA */}
       <div style={{ padding: "0 16px 16px" }}>
-        <Link href={`/order?item=${item.slug}`} style={{
+        {needsSize ? (
+          <div style={{
+            display: "block", textAlign: "center",
+            background: "#E3DBC6", color: "#938B78",
+            borderRadius: 10, padding: "10px 16px",
+            fontSize: 13, fontWeight: 600,
+            fontFamily: "Fraunces, Georgia, serif",
+          }}>
+            Choose a size to order
+          </div>
+        ) : (
+        <Link href={`/order?item=${item.slug}${pickedSize ? `&size=${encodeURIComponent(pickedSize)}` : ""}`} style={{
           display: "block", textAlign: "center",
           background: "#C0673E", color: "#F6F1E6",
           borderRadius: 10, padding: "10px 16px",
@@ -171,6 +194,7 @@ export function MenuItemCard({ item }: Props) {
         }}>
           Order this item →
         </Link>
+        )}
       </div>
     </div>
   );
