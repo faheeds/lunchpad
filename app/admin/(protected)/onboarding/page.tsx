@@ -752,13 +752,36 @@ export default async function OnboardingPage({
             <form action={createFirstLocation} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 3 of 5 · Menu & locations · Add a location</p>
-                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">{placeVocab && allowedLocationTypes.length === 1 && allowedLocationTypes[0] === "OFFICE" ? `Add your first ${placeVocab.place.toLowerCase()}` : "Add your first location"}</h2>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">{placeVocab && allowedLocationTypes.length === 1 && allowedLocationTypes[0] === "OFFICE" ? `Add ${locationCount > 0 ? "another" : "your first"} ${placeVocab.place.toLowerCase()}` : `Add ${locationCount > 0 ? "another" : "your first"} location`}</h2>
                 <p className="text-[12px] text-editorial-ink-soft mt-1">
                   {locationCount > 0
                     ? `You already have ${locationCount} location${locationCount === 1 ? "" : "s"}. Add another below or continue.`
                     : allowedLocationTypes.length === 1 ? "Pick a name and timezone. You can add more later." : "Pick a name, type, and timezone. You can add more locations later."}
                 </p>
               </div>
+
+              {schools.length > 0 && (
+                <div className="rounded-[12px] border border-editorial-line bg-editorial-paper-2/50 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint mb-2">Added so far</p>
+                  <ul className="space-y-1.5">
+                    {schools.map((loc) => (
+                      <li key={loc.id} className="flex items-center justify-between gap-3 rounded-lg bg-white border border-editorial-line px-3 py-2">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2C4031" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none"><path d="M20 6L9 17l-5-5"/></svg>
+                          <span className="text-[13px] font-medium text-editorial-ink truncate">{loc.name}</span>
+                        </span>
+                        <span className="text-[11px] text-editorial-ink-faint shrink-0">
+                          {allowedLocationTypes.length > 1 ? `${loc.locationType === "SCHOOL" ? "School" : (profile ? (placeVocab?.place ?? "Office") : "Office")} · ` : ""}
+                          {(loc.timezone ?? "").split("/").pop()?.replace(/_/g, " ")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/admin/locations" className="inline-block mt-2 text-[11px] text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
+                    Edit or remove in Locations →
+                  </Link>
+                </div>
+              )}
 
               {allowedLocationTypes.length === 1 ? (
                 <input type="hidden" name="locationType" value={allowedLocationTypes[0]} />
