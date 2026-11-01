@@ -18,6 +18,7 @@ type MenuItem = {
   imageUrl: string | null;
   basePriceCents: number;
   options: MenuOption[];
+  sizes?: { id: string; name: string; priceCents: number }[];
 };
 
 type Props = {
@@ -42,6 +43,7 @@ export function MenuItemCard({ item }: Props) {
   const imageUrl = item.imageUrl ?? null;
   const description = stripCategoryPrefix(item.description);
   const addons = item.options.filter((o) => o.optionType === "ADD_ON");
+  const sizes = item.sizes ?? [];
 
   return (
     <div style={{
@@ -87,7 +89,7 @@ export function MenuItemCard({ item }: Props) {
           letterSpacing: "0.01em",
           fontFamily: "Fraunces, Georgia, serif",
         }}>
-          {fmt(item.basePriceCents)}
+          {sizes.length > 1 ? `From ${fmt(Math.min(...sizes.map((z) => z.priceCents)))}` : fmt(sizes.length === 1 ? sizes[0].priceCents : item.basePriceCents)}
         </div>
       </div>
 
@@ -101,6 +103,20 @@ export function MenuItemCard({ item }: Props) {
           <p style={{ fontSize: 14, color: "#938B78", lineHeight: 1.55, margin: 0 }}>
             {description}
           </p>
+        )}
+
+        {/* Sizes — shown so customers see every size and price up front */}
+        {sizes.length > 1 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {sizes.map((z) => (
+              <span key={z.id} style={{
+                fontSize: 11, padding: "3px 8px", borderRadius: 20,
+                background: "#EFE8D7", color: "#211D15", fontWeight: 600,
+              }}>
+                {z.name} {fmt(z.priceCents)}
+              </span>
+            ))}
+          </div>
         )}
 
         {/* Add-ons — collapsible */}

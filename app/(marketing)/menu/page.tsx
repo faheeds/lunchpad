@@ -25,6 +25,7 @@ export default async function MenuPage() {
           where: { restaurantId: restaurant.id, isActive: true },
           include: {
             options: { orderBy: [{ optionType: "asc" }, { sortOrder: "asc" }] },
+            sizes: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
           },
           orderBy: { name: "asc" },
         }),
@@ -156,6 +157,7 @@ export default async function MenuPage() {
                         description: item.description,
                         imageUrl: item.imageUrl ?? null,
                         basePriceCents: item.basePriceCents,
+                        sizes: item.sizes.map((z) => ({ id: z.id, name: z.name, priceCents: z.priceCents })),
                         options: item.options.map((o) => ({
                           id: o.id,
                           name: o.name,

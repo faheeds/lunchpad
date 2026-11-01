@@ -353,14 +353,14 @@ export function OrderForm({
     setSelectedRemovals([]);
   }, [step, initialItemSlug, menuItems]);
 
-  // Auto-pick the first size when a sized item is opened in the customize
-  // panel so the Add-to-cart button isn't disabled by default. The
-  // operator-set sortOrder is preserved, so the first size is whatever
-  // they wanted as the default.
+  // Sized items with more than one size start with NO size selected, so
+  // the customer is always asked.
   useEffect(() => {
     if (!selectedMenuItem) return;
     const sizes = selectedMenuItem.sizes ?? [];
-    if (sizes.length > 0 && !selectedSize) {
+    // Only a single-size item is auto-picked (nothing to ask). With 2+
+    // sizes the customer must choose explicitly.
+    if (sizes.length === 1 && !selectedSize) {
       setSelectedSize(sizes[0].name);
     }
   }, [selectedMenuItem, selectedSize]);
@@ -1327,7 +1327,7 @@ export function OrderForm({
                   first (since size drives the total price). */}
               {(selectedMenuItem.sizes ?? []).length > 0 && (
                 <div>
-                  <p className="text-[12px] font-semibold mb-2" style={{ color: "#211D15" }}>Size — choose one</p>
+                  <p className="text-[12px] font-semibold mb-2" style={{ color: "#211D15" }}>Size — choose one{!selectedSize && <span style={{ color: "#C0673E" }}> (required)</span>}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {(selectedMenuItem.sizes ?? []).map((size) => {
                       const active = selectedSize === size.name;
@@ -1429,9 +1429,12 @@ export function OrderForm({
 
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={addToCart}
-                  className="flex-1 py-2.5 rounded-xl text-white text-[14px] font-semibold"
+                  disabled={(selectedMenuItem.sizes ?? []).length > 0 && !selectedSize}
+                  className="flex-1 py-2.5 rounded-xl text-white text-[14px] font-semibold disabled:opacity-60"
                   style={{ backgroundColor: "#2C4031" }}>
-                  Add to cart — {fmt(selectedItemTotalCents)}
+                  {(selectedMenuItem.sizes ?? []).length > 0 && !selectedSize
+                    ? "Choose a size to add"
+                    : `Add to cart — ${fmt(selectedItemTotalCents)}`}
                 </button>
                 <button type="button" onClick={() => setSelectedMenuItemId("")}
                   className="px-4 py-2.5 rounded-xl border text-[13px]"
