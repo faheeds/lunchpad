@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useId } from "react";
 import { useRouter } from "next/navigation";
+import { findHeader, groupSizeVariants, parseSizesCell } from "@/lib/menu-import";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,8 @@ export interface MenuItemDraft {
    *  (e.g. Beef / Chicken / Vegan for a Build-Your-Own-Burger). Empty
    *  array = no required choice. */
   requiredChoices: string[];
+  /** Size variants (each with its own price). Empty = single price. */
+  sizes: { name: string; priceCents: number }[];
   options: MenuOptionDraft[];
   _expanded: boolean;
 }
@@ -46,20 +49,20 @@ async function parseExcelFile(file: File): Promise<MenuItemDraft[]> {
   const itemsSheet = wb.Sheets["Menu Items"] ?? wb.Sheets[wb.SheetNames[0]];
   const itemRows = XLSX.utils.sheet_to_json<string[]>(itemsSheet, { header: 1, defval: "" });
 
-  let headerIdx = 0;
-  for (let i = 0; i < Math.min(itemRows.length, 5); i++) {
-    if (String(itemRows[i][0]).toLowerCase().includes("name")) { headerIdx = i; break; }
-  }
+  // Columns are found by their header text (so a different column order still
+  // reads correctly); files without a recognisable header use the template order.
+  const { headerIdx, columns: col } = findHeader(itemRows);
+  const cell = (row: string[], key: keyof typeof col) => (col[key] >= 0 ? row[col[key]] : undefined);
 
   const itemMap = new Map<string, MenuItemDraft>();
   for (const row of itemRows.slice(headerIdx + 1)) {
-    const name = String(row[0] ?? "").trim();
+    const name = String(cell(row, "name") ?? "").trim();
     if (!name) continue;
-    const activeStr = String(row[4] ?? "yes").toLowerCase();
-    // Required Choices column (index 5) — comma OR newline separated
+    const activeStr = String(cell(row, "active") ?? "yes").toLowerCase();
+    // Required Choices column — comma OR newline separated
     // since Excel cells can hold multi-line text. Dedupe case-insensitively
     // so "Beef" and "beef" don't both end up on the cart picker.
-    const rawChoices = String(row[5] ?? "");
+    const rawChoices = String(cell(row, "choices") ?? "");
     const seen = new Set<string>();
     const requiredChoices: string[] = [];
     for (const piece of rawChoices.split(/[\n,]+/)) {
@@ -70,13 +73,16 @@ async function parseExcelFile(file: File): Promise<MenuItemDraft[]> {
       seen.add(key);
       requiredChoices.push(trimmed);
     }
+    const sizes = parseSizesCell(String(cell(row, "sizes") ?? ""));
+    const priceCents = parseDollars(String(cell(row, "price") ?? "0"));
     itemMap.set(name.toLowerCase(), {
       name,
-      description: String(row[2] ?? "").trim(),
-      basePriceCents: parseDollars(String(row[1] ?? "0")),
-      category: String(row[3] ?? "").trim(),
+      description: String(cell(row, "description") ?? "").trim(),
+      basePriceCents: priceCents > 0 || sizes.length === 0 ? priceCents : Math.min(...sizes.map((z) => z.priceCents)),
+      category: String(cell(row, "category") ?? "").trim(),
       isActive: activeStr !== "no" && activeStr !== "false",
       requiredChoices,
+      sizes,
       options: [],
       _expanded: false,
     });
@@ -129,6 +135,9 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
   const inputId = useId();
 
   const [items, setItems] = useState<MenuItemDraft[]>([]);
+  // Rows exactly as read from the file, and what grouping size rows combined.
+  const [ungrouped, setUngrouped] = useState<MenuItemDraft[]>([]);
+  const [groupInfo, setGroupInfo] = useState<{ groups: number; merged: number } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -149,7 +158,11 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
       if (parsed.length === 0) {
         setError("No menu items found. Make sure you're using the LunchPad template format.");
       } else {
-        setItems(parsed);
+        // Rows like "Pizza - Small 7"" / "Pizza - Large 16"" become one item with sizes.
+        const grouped = groupSizeVariants(parsed);
+        setUngrouped(parsed);
+        setItems(grouped.items);
+        setGroupInfo(grouped.merged > 0 ? { groups: grouped.groups, merged: grouped.merged } : null);
       }
     } catch (err) {
       setError(`Could not parse file: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -193,6 +206,8 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
       if (errors?.length > 0) msg += ` ${errors.length} failed.`;
       setSuccess(msg);
       setItems([]);
+      setUngrouped([]);
+      setGroupInfo(null);
       router.refresh();
       onImported?.();
     } catch (err) {
@@ -326,7 +341,7 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
               {items.length} item{items.length !== 1 ? "s" : ""} ready to import
             </p>
             <div style={{ display: "flex", gap: 6 }}>
-              <button type="button" onClick={() => { setItems([]); setError(""); setSuccess(""); }}
+              <button type="button" onClick={() => { setItems([]); setUngrouped([]); setGroupInfo(null); setError(""); setSuccess(""); }}
                 style={smallBtnCss("#5B5446", "white", "#E3DBC6")}>
                 Clear
               </button>
@@ -340,6 +355,19 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
               </button>
             </div>
           </div>
+
+          {groupInfo && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", background: "#DEE2CF", border: "1px solid #D0D5C0", borderRadius: 10, padding: "8px 12px", marginBottom: 10 }}>
+              <p style={{ fontSize: 12, color: "#2C4031", lineHeight: 1.4 }}>
+                Combined {groupInfo.merged} size rows into {groupInfo.groups} item{groupInfo.groups !== 1 ? "s" : ""} with sizes (like &ldquo;Pizza - Small&rdquo; + &ldquo;Pizza - Large&rdquo;).
+              </p>
+              <button type="button"
+                onClick={() => { setItems(ungrouped); setGroupInfo(null); }}
+                style={smallBtnCss("#5B5446", "white", "#E3DBC6")}>
+                Keep as separate items
+              </button>
+            </div>
+          )}
 
           {/* Item cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 440, overflowY: "auto", paddingRight: 2 }}>
@@ -371,13 +399,26 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                     <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#6b7280" }}>$</span>
                     <input
                       value={dollars(item.basePriceCents)}
+                      readOnly={item.sizes.length > 0}
+                      title={item.sizes.length > 0 ? "Lowest size price. Edit the sizes to change prices." : undefined}
                       onChange={(e) => updateItem(idx, { basePriceCents: parseDollars(e.target.value) })}
-                      style={{ ...inputCss, paddingLeft: 18 }} />
+                      style={{ ...inputCss, paddingLeft: 18, ...(item.sizes.length > 0 ? { background: "#EFE8D7" } : {}) }} />
                   </div>
 
                   {/* Category */}
                   <input value={item.category} onChange={(e) => updateItem(idx, { category: e.target.value })}
                     placeholder="Category" style={{ ...inputCss, width: 86, flexShrink: 0 }} />
+
+                  {/* Sizes badge — only shown when the item has sizes */}
+                  {item.sizes.length > 0 && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, flexShrink: 0,
+                      color: "#2C4031", background: "#DEE2CF", border: "1px solid #D0D5C0",
+                      borderRadius: 100, padding: "2px 8px", whiteSpace: "nowrap",
+                    }}>
+                      {item.sizes.length} size{item.sizes.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
 
                   {/* Options badge */}
                   <span style={{
@@ -437,6 +478,40 @@ export function BulkMenuUpload({ onImported }: { onImported?: () => void }) {
                         placeholder="Optional description shown to parents"
                         style={{ ...inputCss, fontSize: 12 }} />
                     </div>
+
+                    {item.sizes.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <label style={{ fontSize: 10, fontWeight: 600, color: "#5B5446", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}>
+                          Sizes (customers pick one; the price replaces the base price)
+                        </label>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          {item.sizes.map((sz, si) => (
+                            <div key={si} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <input value={sz.name}
+                                onChange={(e) => updateItem(idx, { sizes: item.sizes.map((x, i) => i === si ? { ...x, name: e.target.value } : x) })}
+                                style={{ ...inputCss, flex: 1, minWidth: 0 }} />
+                              <div style={{ position: "relative", width: 84, flexShrink: 0 }}>
+                                <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#6b7280" }}>$</span>
+                                <input value={dollars(sz.priceCents)}
+                                  onChange={(e) => {
+                                    const sizes = item.sizes.map((x, i) => i === si ? { ...x, priceCents: parseDollars(e.target.value) } : x);
+                                    updateItem(idx, { sizes, basePriceCents: Math.min(...sizes.map((x) => x.priceCents)) });
+                                  }}
+                                  style={{ ...inputCss, paddingLeft: 18 }} />
+                              </div>
+                              <button type="button" aria-label={`Remove ${sz.name}`}
+                                onClick={() => {
+                                  const sizes = item.sizes.filter((_, i) => i !== si);
+                                  updateItem(idx, { sizes, ...(sizes.length > 0 ? { basePriceCents: Math.min(...sizes.map((x) => x.priceCents)) } : {}) });
+                                }}
+                                style={smallBtnCss("#7C3D24", "#F4E3DB", "#E2C3B3")}>
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Required choices — pick-one selector. Edit as comma-separated
                         for brevity inside this row, since multi-line textarea would
