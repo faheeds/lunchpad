@@ -123,6 +123,11 @@ export default async function AdminOrdersPage({
   // Grade options for the filter dropdown — union of every active school's
   // configured grade list, falling back to the generic K-12 list when no
   // school has configured grades yet.
+  // Grades, classrooms and "Parent" only make sense when this operator actually
+  // serves schools. Caterers and office-only operators never see them.
+  const showSchoolFields =
+    restaurant.operatorType !== "caterer" && schools.some((s) => s.locationType === "SCHOOL");
+
   const gradeUnion = Array.from(new Set(schools.flatMap((s) => s.grades)));
   const gradeOptions = gradeUnion.length ? gradeUnion : STANDARD_GRADES;
 
@@ -329,6 +334,7 @@ export default async function AdminOrdersPage({
               ))}
             </select>
           </div>
+          {showSchoolFields && (
           <div>
             <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">
               Grade {selectedGrades.length > 0 ? `(${selectedGrades.length})` : ""}
@@ -352,6 +358,7 @@ export default async function AdminOrdersPage({
               ))}
             </div>
           </div>
+          )}
           <div>
             <label className="text-[10px] font-semibold text-editorial-ink-faint uppercase tracking-wide block mb-1">Status</label>
             <select name="status" defaultValue={params.status ?? "ALL"}
@@ -396,7 +403,7 @@ export default async function AdminOrdersPage({
       </form>
 
       {/* ── Orders list ────────────────────────────────────────────── */}
-      <OrdersList orders={orders} myRole={myRole} />
+      <OrdersList orders={orders} myRole={myRole} showSchoolFields={showSchoolFields} />
     </div>
   );
 }

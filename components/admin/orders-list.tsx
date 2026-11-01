@@ -110,11 +110,14 @@ const BULK_ACTIONS: BulkAction[] = [
 export function OrdersList({
   orders,
   myRole = "STAFF",
+  showSchoolFields = true,
 }: {
   orders: OrderListItem[];
   /** Current admin's role — controls which bulk actions are shown. Defaults
    *  to STAFF so a missing prop fails closed. */
   myRole?: AdminRoleClient;
+  /** False for caterers / office-only operators: hides grade, teacher, classroom and "Parent". */
+  showSchoolFields?: boolean;
 }) {
   const [selectedIds, setSelectedIds]  = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds]  = useState<Set<string>>(new Set());
@@ -323,8 +326,8 @@ export function OrdersList({
                   )}
                 </div>
                 <p className="text-[11px] text-editorial-ink-soft mt-0.5">
-                  {order.school.name} · Gr {order.student.grade}
-                  {order.student.teacherName ? ` · ${order.student.teacherName}` : ""}
+                  {order.school.name}{showSchoolFields ? ` · Gr ${order.student.grade}` : ""}
+                  {showSchoolFields && order.student.teacherName ? ` · ${order.student.teacherName}` : ""}
                   {" · "}{fmtDate(order.deliveryDate.deliveryDate, order.school.timezone)}
                 </p>
               </div>
@@ -373,9 +376,9 @@ export function OrdersList({
                   </div>
                   <div className="flex flex-col gap-1 text-sm text-editorial-ink-soft">
                     <p><span className="text-editorial-ink-faint font-semibold">Order #: </span>{order.orderNumber}</p>
-                    <p><span className="text-editorial-ink-faint font-semibold">Parent: </span>{order.parentName}</p>
+                    <p><span className="text-editorial-ink-faint font-semibold">{showSchoolFields ? "Parent" : "Customer"}: </span>{order.parentName}</p>
                     <p><span className="text-editorial-ink-faint font-semibold">Email: </span>{order.parentEmail}</p>
-                    {order.student.classroom && (
+                    {showSchoolFields && order.student.classroom && (
                       <p><span className="text-editorial-ink-faint font-semibold">Classroom: </span>{order.student.classroom}</p>
                     )}
                   </div>
