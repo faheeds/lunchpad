@@ -13,6 +13,7 @@ import { ThemePicker } from "@/components/admin/theme-picker";
 import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { WizardStepper, type WizardStep } from "@/components/admin/wizard-stepper";
+import { isQuestionnaireEnabled } from "@/lib/onboarding-flag";
 
 export const dynamic = "force-dynamic";
 
@@ -346,6 +347,12 @@ export default async function OnboardingPage({
     requireRestaurant(),
   ]);
   await requireAdminRole("OWNER");
+
+  // New operators answer the questionnaire first (behind ONBOARDING_QUESTIONNAIRE).
+  // Existing tenants and anyone who already finished onboarding are unaffected.
+  if (isQuestionnaireEnabled() && !restaurant.questionnaireCompletedAt && !restaurant.onboardingComplete) {
+    redirect("/admin/onboarding/questions");
+  }
 
   const today = new Date();
   const twoWeeksFromNow = new Date(today);
