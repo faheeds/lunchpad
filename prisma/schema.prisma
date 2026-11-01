@@ -97,6 +97,15 @@ model Restaurant {
   zelleHandle              String?        // phone or email customers send Zelle to
   offlinePaymentInstructions String?      // free text shown after checkout
   deliveryEnabled          Boolean        @default(false) // offer home/address delivery
+  weeklyPlanningEnabled    Boolean        @default(true) // show "Plan the week" (multi-day ordering); operators can turn it off
+
+  // Storefront landing page. "classic" = the original page (existing tenants
+  // are untouched); "v2" = the data-driven restaurant landing template.
+  // New signups default to v2 in app/api/signup/route.ts.
+  landingTemplate          String         @default("classic")
+  // Operator-authored landing copy (tagline, story, hours, address,
+  // socials). Shape + fallbacks live in lib/landing-content.ts.
+  landingContent           Json?
   pickupInstructions       String?        // where/when to collect, shown for pickup orders
 
   // Stripe Connect

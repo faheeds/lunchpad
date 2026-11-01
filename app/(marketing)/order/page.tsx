@@ -400,7 +400,7 @@ export default async function OrderPage({
                       </Link>
                     </div>
                   </div>
-                  {session?.user?.role === "PARENT" && (
+                  {restaurant.weeklyPlanningEnabled && session?.user?.role === "PARENT" && (
                     <div className="rounded-[16px] border border-editorial-line bg-editorial-card p-4 shadow-card">
                       <p className="text-sm font-medium text-editorial-ink mb-2">Plan ahead</p>
                       <p className="text-sm text-editorial-ink-soft mb-4">

@@ -72,6 +72,7 @@ export async function POST(request: Request) {
         contactEmail: contactEmail.trim().toLowerCase(),
         plan: selectedPlan as "STARTER" | "GROWTH" | "SCALE",
         subscriptionStatus: "TRIAL",
+        landingTemplate: "v2",
         trialEndsAt,
         admins: {
           create: {
