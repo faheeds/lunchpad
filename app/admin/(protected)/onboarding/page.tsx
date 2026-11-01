@@ -14,6 +14,7 @@ import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { WizardStepper, type WizardStep } from "@/components/admin/wizard-stepper";
 import { isQuestionnaireEnabled } from "@/lib/onboarding-flag";
+import { buildPlan, getVocabulary, parseStoredProfile } from "@/lib/business-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,21 @@ async function createFirstLocation(formData: FormData) {
     });
   }
   redirect("/admin/onboarding?step=5");
+}
+
+async function saveOfflinePayments(formData: FormData) {
+  "use server";
+  const restaurant = await requireRestaurant();
+  await requireAdminRole("OWNER");
+  const zelleHandle = String(formData.get("zelleHandle") || "").trim().slice(0, 120) || null;
+  const offlinePaymentInstructions = String(formData.get("offlinePaymentInstructions") || "").trim().slice(0, 1000) || null;
+  const pickupInstructions = String(formData.get("pickupInstructions") || "").trim().slice(0, 500) || null;
+  await prisma.restaurant.update({
+    where: { id: restaurant.id },
+    data: { zelleHandle, offlinePaymentInstructions, pickupInstructions },
+  });
+  revalidatePath("/admin/onboarding");
+  redirect("/admin/onboarding?step=4");
 }
 
 async function generateRecurringForWizard(formData: FormData) {
@@ -377,11 +393,30 @@ export default async function OnboardingPage({
     }),
   ]);
 
+  // Questionnaire answers (null for tenants created before the questionnaire).
+  const profile = parseStoredProfile(restaurant.businessProfile);
+  const plan = profile ? buildPlan(profile) : null;
+  const caps = profile?.capabilities ?? null;
+  const offlineOnly = Boolean(caps && !caps.cards);
+  const planStep = (key: string) => plan?.steps.find((x) => x.key === key);
+  // Location types this operator can actually create. School appears only if
+  // they serve schools; everything else is stored as an OFFICE row.
+  const allowedLocationTypes: ("SCHOOL" | "OFFICE")[] = caps
+    ? [
+        ...(caps.servesSchools ? (["SCHOOL"] as const) : []),
+        ...(caps.servesOffices || caps.servesGroups || caps.servesIndividuals || !caps.servesSchools ? (["OFFICE"] as const) : []),
+      ]
+    : ["SCHOOL", "OFFICE"];
+  const officeAudience = caps?.servesOffices ? "offices" : "individuals";
+  const placeVocab = profile ? getVocabulary(profile, caps?.servesSchools && allowedLocationTypes.length === 1 ? "schools" : officeAudience) : null;
+
   // Step status detection (10 steps total — share + launch are one combined final step)
   const status = {
     1: restaurant.operatorType ? "done" : "todo",
     2: restaurant.logoUrl || restaurant.heroImageUrl ? "done" : "todo",
-    3: restaurant.stripeOnboardingComplete ? "done" : "todo",
+    3: offlineOnly
+      ? (restaurant.zelleHandle || restaurant.offlinePaymentInstructions ? "done" : "todo")
+      : restaurant.stripeOnboardingComplete ? "done" : "todo",
     4: locationCount > 0 ? "done" : "todo",
     5: menuItemCount >= 3 ? "done" : "todo",
     6: deliveryDateCount > 0 ? "done" : "todo",
@@ -424,10 +459,25 @@ export default async function OnboardingPage({
     "todo" as const;
 
   const steps: WizardStep[] = [
-    { id: 1,  title: "About you",          blurb: "Operator type + branding",      status: groupStatus([1, 2]) },
-    { id: 3,  title: "Connect Stripe",     blurb: "Get paid by customers",          status: groupStatus([3]) },
-    { id: 4,  title: "Menu & locations",   blurb: "What you sell, where",           status: groupStatus([4, 5]) },
-    { id: 6,  title: "Delivery schedule",  blurb: "When you deliver",               status: groupStatus([6]) },
+    { id: 1,  title: "About you",          blurb: profile ? "Contact + branding" : "Operator type + branding", status: groupStatus([1, 2]) },
+    {
+      id: 3,
+      title: offlineOnly ? "Get paid" : caps && (caps.zelle || caps.cash) ? "Payments" : "Connect Stripe",
+      blurb: offlineOnly ? "Zelle and cash instructions" : caps && (caps.zelle || caps.cash) ? "Stripe is optional" : "Get paid by customers",
+      status: groupStatus([3]),
+    },
+    {
+      id: 4,
+      title: profile ? `${planStep("places")?.title ?? "Locations"} & menu` : "Menu & locations",
+      blurb: profile ? (planStep("places")?.blurb ?? "What you sell, where") : "What you sell, where",
+      status: groupStatus([4, 5]),
+    },
+    {
+      id: 6,
+      title: profile ? (planStep("schedule")?.title ?? "Order days") : "Delivery schedule",
+      blurb: profile ? (planStep("schedule")?.blurb ?? "When you deliver") : "When you deliver",
+      status: groupStatus([6]),
+    },
     { id: 8,  title: "Go live",            blurb: "Test order, share — finish at your pace", status: groupStatus([8, 9, 10]) },
   ];
 
@@ -470,11 +520,12 @@ export default async function OnboardingPage({
             <form action={saveOperatorType} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 1 of 5 · About you · Choose type</p>
-                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">What kind of operation are you?</h2>
-                <p className="text-[12px] text-editorial-ink-soft mt-1">We&apos;ll seed sensible defaults for you. You can change this later.</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">{profile ? "How can customers reach you?" : "What kind of operation are you?"}</h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">{profile ? "We already have your answers from the questionnaire. Just add your contact details." : "We\u2019ll seed sensible defaults for you. You can change this later."}</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {profile && <input type="hidden" name="operatorType" value={restaurant.operatorType ?? "caterer"} />}
+              <div className={profile ? "hidden" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"}>
                 {[
                   { value: "school",  label: "School caterer",    blurb: "Lunches for K-12 schools. Students, classrooms, allergy notes." },
                   { value: "office",  label: "Corporate cafeteria", blurb: "Meals for office buildings. Employees, teams, recurring orders." },
@@ -483,7 +534,7 @@ export default async function OnboardingPage({
                 ].map((opt) => (
                   <label key={opt.value}
                     className="cursor-pointer rounded-[16px] border border-editorial-line p-4 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
-                    <input type="radio" name="operatorType" value={opt.value} required defaultChecked={restaurant.operatorType === opt.value} className="sr-only" />
+                    <input type="radio" name="operatorType" value={opt.value} required={!profile} disabled={Boolean(profile)} defaultChecked={restaurant.operatorType === opt.value} className="sr-only" />
                     <p className="text-[13px] font-editorial font-[500] text-editorial-ink">{opt.label}</p>
                     <p className="text-[11px] text-editorial-ink-soft mt-1.5 leading-relaxed">{opt.blurb}</p>
                   </label>
@@ -614,8 +665,50 @@ export default async function OnboardingPage({
             </div>
           )}
 
+          {/* ── STEP 3 (offline-only operators): Zelle / cash ─────── */}
+          {activeStep === 3 && offlineOnly && (
+            <form action={saveOfflinePayments} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 2 of 5 · Get paid</p>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">
+                  {caps?.zelle && caps?.cash ? "How should customers pay you by Zelle or cash?" : caps?.zelle ? "How should customers pay you by Zelle?" : "How should customers pay you in cash?"}
+                </h2>
+                <p className="text-[12px] text-editorial-ink-soft mt-1">
+                  Customers see this after they order. You mark each order as paid when the money arrives. You can connect cards later in Settings.
+                </p>
+              </div>
+              {caps?.zelle && (
+                <div>
+                  <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Zelle phone or email</label>
+                  <input type="text" name="zelleHandle" defaultValue={restaurant.zelleHandle ?? ""} placeholder="orders@yourkitchen.com"
+                    className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                </div>
+              )}
+              <div>
+                <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Payment instructions</label>
+                <textarea name="offlinePaymentInstructions" rows={3} defaultValue={restaurant.offlinePaymentInstructions ?? ""}
+                  placeholder={caps?.zelle ? "Please send payment within 24 hours and include your order number." : "Please have exact cash ready at pickup."}
+                  className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+              </div>
+              {caps?.pickup && (
+                <div>
+                  <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Pickup instructions</label>
+                  <textarea name="pickupInstructions" rows={2} defaultValue={restaurant.pickupInstructions ?? ""}
+                    placeholder="Side door, ring the bell. Pickup 4:00 to 6:30 pm."
+                    className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-2">
+                <Link href="/admin/onboarding?step=2" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
+                <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                  Save and continue →
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* ── STEP 3: Stripe Connect ───────────────────────────── */}
-          {activeStep === 3 && (
+          {activeStep === 3 && !offlineOnly && (
             <div className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 2 of 5 · Connect Stripe</p>
@@ -659,14 +752,17 @@ export default async function OnboardingPage({
             <form action={createFirstLocation} className="rounded-[16px] border border-editorial-line bg-white p-5 space-y-4 shadow-[0_18px_44px_-22px_rgba(33,29,21,0.20)]">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-ink-faint">Step 3 of 5 · Menu & locations · Add a location</p>
-                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">Add your first location</h2>
+                <h2 className="text-[18px] font-editorial font-[500] text-editorial-ink mt-1">{placeVocab && allowedLocationTypes.length === 1 && allowedLocationTypes[0] === "OFFICE" ? `Add your first ${placeVocab.place.toLowerCase()}` : "Add your first location"}</h2>
                 <p className="text-[12px] text-editorial-ink-soft mt-1">
                   {locationCount > 0
                     ? `You already have ${locationCount} location${locationCount === 1 ? "" : "s"}. Add another below or continue.`
-                    : "Pick a name, type, and timezone. You can add more locations later."}
+                    : allowedLocationTypes.length === 1 ? "Pick a name and timezone. You can add more later." : "Pick a name, type, and timezone. You can add more locations later."}
                 </p>
               </div>
 
+              {allowedLocationTypes.length === 1 ? (
+                <input type="hidden" name="locationType" value={allowedLocationTypes[0]} />
+              ) : (
               <div>
                 <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Type</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -680,17 +776,18 @@ export default async function OnboardingPage({
                   <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-editorial-line px-3 py-2.5 has-[:checked]:bg-editorial-paper-2 has-[:checked]:border-editorial-green transition">
                     <input type="radio" name="locationType" value="OFFICE" defaultChecked={restaurant.operatorType === "office" || restaurant.operatorType === "caterer"} className="mt-0.5" />
                     <div>
-                      <p className="text-[12px] font-editorial font-[500] text-editorial-ink">Office</p>
-                      <p className="text-[10px] text-editorial-ink-faint">Employees, teams, floors</p>
+                      <p className="text-[12px] font-editorial font-[500] text-editorial-ink">{profile ? (placeVocab?.place ?? "Office") : "Office"}</p>
+                      <p className="text-[10px] text-editorial-ink-faint">{profile ? (officeAudience === "individuals" ? "Where customers collect" : "Employees, teams, members") : "Employees, teams, floors"}</p>
                     </div>
                   </label>
                 </div>
               </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Location name</label>
-                  <input type="text" name="name" required placeholder="HQ — Main Office"
+                  <input type="text" name="name" required placeholder={profile && allowedLocationTypes.length === 1 ? (allowedLocationTypes[0] === "SCHOOL" ? "Lincoln Elementary" : officeAudience === "individuals" ? "Home kitchen pickup" : "Main office") : "HQ — Main Office"}
                     className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                 </div>
                 <div>
