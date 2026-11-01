@@ -127,7 +127,10 @@ export default async function AdminOrdersPage({
   const gradeOptions = gradeUnion.length ? gradeUnion : STANDARD_GRADES;
 
   // Summary stats from returned orders
-  const paidOrders    = orders.filter((o) => o.status === "PAID");
+  // Cash/Zelle orders still awaiting payment are confirmed but not paid yet.
+  const paidOrders    = orders.filter(
+    (o) => o.status === "PAID" && !(o.payment?.provider === "manual" && o.payment.status === "PENDING"),
+  );
   const pendingOrders = orders.filter((o) => o.status === "PENDING");
   const revenue       = paidOrders.reduce((sum, o) => sum + o.totalCents, 0);
 
