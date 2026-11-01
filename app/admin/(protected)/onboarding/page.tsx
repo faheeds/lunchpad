@@ -835,15 +835,15 @@ export default async function OnboardingPage({
                 <Link href="/admin/onboarding?step=3" className="text-[12px] text-editorial-ink-soft no-underline hover:text-editorial-ink">← Back</Link>
                 <div className="flex gap-2">
                   {locationCount > 0 && (
-                    <Link href="/admin/onboarding?step=5" className="px-4 py-2 rounded-full border border-editorial-line text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
-                      Skip →
+                    <Link href="/admin/onboarding?step=5" className="px-4 py-2.5 rounded-full border border-editorial-line text-[13px] font-semibold text-editorial-ink no-underline hover:border-editorial-green hover:text-editorial-green">
+                      Done, continue →
                     </Link>
                   )}
-                  {status[4] !== "done" && (
-                    <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-                      {placeVocab && allowedLocationTypes.length === 1 && allowedLocationTypes[0] === "OFFICE" ? `Add ${placeVocab.place.toLowerCase()} →` : "Add location →"}
-                    </button>
-                  )}
+                  <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                    {placeVocab && allowedLocationTypes.length === 1 && allowedLocationTypes[0] === "OFFICE"
+                      ? `${locationCount > 0 ? "Add another" : "Add"} ${placeVocab.place.toLowerCase()} →`
+                      : locationCount > 0 ? "Add another location →" : "Add location →"}
+                  </button>
                 </div>
               </div>
             </form>
