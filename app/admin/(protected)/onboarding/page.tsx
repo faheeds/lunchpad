@@ -329,7 +329,11 @@ export default async function OnboardingPage({
   // session-fallback resolves restaurant context.
   const headerList = await headers();
   const slugHeader = headerList.get("x-restaurant-slug");
-  if (!slugHeader) {
+  // Vercel preview deployments live on their own *.vercel.app host and have no
+  // tenant subdomain; bouncing to {slug}.lunchpad.us would leave the preview
+  // (and its test database) and land on production.
+  const isPreviewDeployment = process.env.VERCEL_ENV === "preview";
+  if (!slugHeader && !isPreviewDeployment) {
     const subdomainRestaurant = await getCurrentRestaurant();
     if (!subdomainRestaurant) {
       // Fall back to session — find the operator's restaurant via requireRestaurant().
