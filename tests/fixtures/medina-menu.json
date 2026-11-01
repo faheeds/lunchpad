@@ -1,0 +1,722 @@
+[
+ {
+  "name": "4pc Chicken Wings",
+  "category": "Comfort Favorites",
+  "price": 999,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Bacon Cheddar Burger",
+  "category": "Burgers & Sandwiches",
+  "price": 1399,
+  "active": false,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Extra Patty",
+    "t": "ADD_ON",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "Bacon",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Cheese",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 2
+   },
+   {
+    "n": "Lettuce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 3
+   },
+   {
+    "n": "Tomato",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 4
+   },
+   {
+    "n": "Onions",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 5
+   },
+   {
+    "n": "Pickles",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 6
+   }
+  ]
+ },
+ {
+  "name": "Beef Quesadilla",
+  "category": "Comfort Favorites",
+  "price": 899,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Beef Salad Bowl",
+  "category": "Salads with Protein",
+  "price": 1199,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Extra Meat",
+    "t": "ADD_ON",
+    "p": 0,
+    "s": 0
+   }
+  ]
+ },
+ {
+  "name": "Build-Your-Own Burger",
+  "category": "Burgers & Sandwiches",
+  "price": 1099,
+  "active": true,
+  "choices": [
+   "Beef",
+   "Crispy Chicken",
+   "Grilled Chicken",
+   "Beyond Vegan Meat"
+  ],
+  "opts": [
+   {
+    "n": "Cheddar",
+    "t": "ADD_ON",
+    "p": 100,
+    "s": 0
+   },
+   {
+    "n": "Bacon",
+    "t": "ADD_ON",
+    "p": 200,
+    "s": 1
+   },
+   {
+    "n": "Avocado",
+    "t": "ADD_ON",
+    "p": 150,
+    "s": 2
+   },
+   {
+    "n": "Gluten Free Bun",
+    "t": "ADD_ON",
+    "p": 149,
+    "s": 3
+   },
+   {
+    "n": "Extra patty",
+    "t": "ADD_ON",
+    "p": 399,
+    "s": 4
+   },
+   {
+    "n": "Fried egg",
+    "t": "ADD_ON",
+    "p": 199,
+    "s": 5
+   },
+   {
+    "n": "Jalapenos",
+    "t": "ADD_ON",
+    "p": 49,
+    "s": 6
+   },
+   {
+    "n": "Lettuce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "Tomato",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Pickles",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 2
+   },
+   {
+    "n": "Sauce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 3
+   },
+   {
+    "n": "Onions",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 4
+   }
+  ]
+ },
+ {
+  "name": "Chicken Quesadilla",
+  "category": "Comfort Favorites",
+  "price": 899,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Chicken Salad Bowl",
+  "category": "Salads with Protein",
+  "price": 1199,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Extra Meat",
+    "t": "ADD_ON",
+    "p": 0,
+    "s": 0
+   }
+  ]
+ },
+ {
+  "name": "Chicken Tenders (2 PC with Fries)",
+  "category": "Comfort Favorites",
+  "price": 999,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Chicken Tenders (3PC without Fries)",
+  "category": "Comfort Favorites",
+  "price": 999,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Churro Cake",
+  "category": "Sides & Snacks",
+  "price": 499,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Classic Cheeseburger",
+  "category": "Burgers & Sandwiches",
+  "price": 1099,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Extra Cheese",
+    "t": "ADD_ON",
+    "p": 100,
+    "s": 0
+   },
+   {
+    "n": "Bacon",
+    "t": "ADD_ON",
+    "p": 200,
+    "s": 1
+   },
+   {
+    "n": "Gluten Free Bun",
+    "t": "ADD_ON",
+    "p": 149,
+    "s": 2
+   },
+   {
+    "n": "Extra patty",
+    "t": "ADD_ON",
+    "p": 399,
+    "s": 3
+   },
+   {
+    "n": "Lettuce",
+    "t": "ADD_ON",
+    "p": 49,
+    "s": 4
+   },
+   {
+    "n": "Tomato",
+    "t": "ADD_ON",
+    "p": 49,
+    "s": 5
+   },
+   {
+    "n": "Pickles",
+    "t": "ADD_ON",
+    "p": 49,
+    "s": 6
+   },
+   {
+    "n": "Onions",
+    "t": "ADD_ON",
+    "p": 49,
+    "s": 7
+   },
+   {
+    "n": "Jalapenos",
+    "t": "ADD_ON",
+    "p": 49,
+    "s": 8
+   },
+   {
+    "n": "Sauce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 9
+   },
+   {
+    "n": "Cheese",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 10
+   }
+  ]
+ },
+ {
+  "name": "Crispy Chicken Sandwich",
+  "category": "Burgers & Sandwiches",
+  "price": 1299,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Cheese",
+    "t": "ADD_ON",
+    "p": 100,
+    "s": 0
+   },
+   {
+    "n": "Avocado",
+    "t": "ADD_ON",
+    "p": 150,
+    "s": 1
+   },
+   {
+    "n": "Gluten Free Bun",
+    "t": "ADD_ON",
+    "p": 149,
+    "s": 2
+   },
+   {
+    "n": "Lettuce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "Pickles",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Sauce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 2
+   },
+   {
+    "n": "Tomato",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 6
+   },
+   {
+    "n": "Onions",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 7
+   }
+  ]
+ },
+ {
+  "name": "Fries",
+  "category": "Sides & Snacks",
+  "price": 499,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Gourmet Burgers",
+  "category": "Burgers & Sandwiches",
+  "price": 1399,
+  "active": true,
+  "choices": [
+   "Bacon Cheddar",
+   "Jalapeno Sriracha",
+   "Hawaiian (Pineapple) Burger",
+   "Western (no veggies)",
+   "Shroom n Onions"
+  ],
+  "opts": [
+   {
+    "n": "Extra cheese",
+    "t": "ADD_ON",
+    "p": 100,
+    "s": 0
+   },
+   {
+    "n": "Extra bacon",
+    "t": "ADD_ON",
+    "p": 200,
+    "s": 1
+   },
+   {
+    "n": "Gluten Free Bun",
+    "t": "ADD_ON",
+    "p": 149,
+    "s": 2
+   },
+   {
+    "n": "Extra patty",
+    "t": "ADD_ON",
+    "p": 399,
+    "s": 3
+   },
+   {
+    "n": "Lettuce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "Tomato",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Pickles",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 2
+   },
+   {
+    "n": "Onions",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 3
+   }
+  ]
+ },
+ {
+  "name": "Grilled Beef over Rice",
+  "category": "Rice Plates",
+  "price": 1399,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Extra Meat",
+    "t": "ADD_ON",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "White Sauce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Salad",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 2
+   }
+  ]
+ },
+ {
+  "name": "Grilled Cheese",
+  "category": "Comfort Favorites",
+  "price": 799,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Gluten Free Bun",
+    "t": "ADD_ON",
+    "p": 149,
+    "s": 0
+   }
+  ]
+ },
+ {
+  "name": "Grilled Chicken Sandwich",
+  "category": "Burgers & Sandwiches",
+  "price": 1299,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Cheese",
+    "t": "ADD_ON",
+    "p": 100,
+    "s": 0
+   },
+   {
+    "n": "Avocado",
+    "t": "ADD_ON",
+    "p": 150,
+    "s": 1
+   },
+   {
+    "n": "Gluten Free Bun",
+    "t": "ADD_ON",
+    "p": 149,
+    "s": 2
+   },
+   {
+    "n": "Lettuce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "Tomato",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Onion",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 2
+   },
+   {
+    "n": "Pickles",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 6
+   }
+  ]
+ },
+ {
+  "name": "Large Brownie",
+  "category": "Sides & Snacks",
+  "price": 499,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Large Choc Chip Cookie",
+  "category": "Sides & Snacks",
+  "price": 399,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "Mac n' Cheese",
+  "category": "Comfort Favorites",
+  "price": 799,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Crispy Chicken Tender",
+    "t": "ADD_ON",
+    "p": 0,
+    "s": 0
+   }
+  ]
+ },
+ {
+  "name": "Mozzarella Sticks",
+  "category": "Sides & Snacks",
+  "price": 599,
+  "active": true,
+  "choices": [],
+  "opts": []
+ },
+ {
+  "name": "NY Style Chicken over Rice",
+  "category": "Rice Plates",
+  "price": 1399,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Extra Meat",
+    "t": "ADD_ON",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "White Sauce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Salad",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 2
+   }
+  ]
+ },
+ {
+  "name": "Nashville Chicken Sandwich",
+  "category": "Burgers & Sandwiches",
+  "price": 1399,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Cheese",
+    "t": "ADD_ON",
+    "p": 100,
+    "s": 0
+   },
+   {
+    "n": "Extra pickles",
+    "t": "ADD_ON",
+    "p": 50,
+    "s": 1
+   },
+   {
+    "n": "Gluten Free Bun",
+    "t": "ADD_ON",
+    "p": 149,
+    "s": 2
+   },
+   {
+    "n": "Coleslaw",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "Pickles",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Sauce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 2
+   }
+  ]
+ },
+ {
+  "name": "Onion Rings",
+  "category": "Sides & Snacks",
+  "price": 699,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Ranch",
+    "t": "ADD_ON",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "Garlic Aioli",
+    "t": "ADD_ON",
+    "p": 0,
+    "s": 1
+   }
+  ]
+ },
+ {
+  "name": "Smash Burger",
+  "category": "Burgers & Sandwiches",
+  "price": 1099,
+  "active": true,
+  "choices": [],
+  "opts": [
+   {
+    "n": "Extra Cheddar",
+    "t": "ADD_ON",
+    "p": 100,
+    "s": 0
+   },
+   {
+    "n": "Gluten Free Bun",
+    "t": "ADD_ON",
+    "p": 149,
+    "s": 1
+   },
+   {
+    "n": "Jalapenos",
+    "t": "ADD_ON",
+    "p": 49,
+    "s": 2
+   },
+   {
+    "n": "Extra Beef Patty",
+    "t": "ADD_ON",
+    "p": 299,
+    "s": 3
+   },
+   {
+    "n": "Cheese",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 0
+   },
+   {
+    "n": "Sauce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 1
+   },
+   {
+    "n": "Lettuce",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 6
+   },
+   {
+    "n": "Tomato",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 7
+   },
+   {
+    "n": "Onions",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 8
+   },
+   {
+    "n": "Pickles",
+    "t": "REMOVAL",
+    "p": 0,
+    "s": 9
+   }
+  ]
+ },
+ {
+  "name": "Tots",
+  "category": "Sides & Snacks",
+  "price": 499,
+  "active": true,
+  "choices": [],
+  "opts": []
+ }
+]
