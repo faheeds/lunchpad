@@ -19,6 +19,7 @@ type OrderListItem = {
   specialInstructions: string | null;
   parentName: string;
   parentEmail: string;
+  payment?: { provider: string | null; status: string; method: string | null } | null;
   school: { name: string; timezone: string };
   deliveryDate: { deliveryDate: string | Date; originalCutoffAt: string | Date | null };
   student: {
@@ -61,6 +62,17 @@ function fmtDate(value: string | Date, timezone: string) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "short", month: "short", day: "numeric", timeZone: timezone,
   }).format(new Date(value));
+}
+
+// Cash / Zelle orders are confirmed for the kitchen right away (status PAID)
+// but the money is still to be collected — show that instead of "Paid".
+function badgeFor(order: OrderListItem) {
+  const p = order.payment;
+  if (order.status === "PAID" && p?.provider === "manual" && p.status === "PENDING") {
+    const how = p.method === "zelle" ? "Zelle" : p.method === "cash" ? "cash" : "payment";
+    return { bg: "#F6EED9", text: "#6E5C2C", label: `Awaiting ${how}` };
+  }
+  return STATUS_CONFIG[order.status] ?? STATUS_CONFIG.CANCELLED;
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
@@ -263,7 +275,7 @@ export function OrdersList({
 
       {/* Order cards */}
       {orders.map((order) => {
-        const badge    = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.CANCELLED;
+        const badge    = badgeFor(order);
         const isOpen   = expandedIds.has(order.id);
         const allergy  = order.items.map((i) => i.allergyNotes).find(Boolean) || order.student.allergyNotes;
         const addons   = order.items.flatMap((i) => i.additions);

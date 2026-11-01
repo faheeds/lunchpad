@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
 
   let created = 0;
   let skipped = 0;
+  const createdActiveIds: string[] = [];
   const errors: string[] = [];
 
   for (const item of items) {
@@ -128,7 +129,8 @@ export async function POST(req: NextRequest) {
       const rawImage = String(item.imageUrl ?? "").trim();
       const imageUrl = /^https?:\/\/[^\s]+$/i.test(rawImage) ? rawImage : null;
 
-      await prisma.menuItem.create({
+      const createdItem = await prisma.menuItem.create({
+        select: { id: true, isActive: true },
         data: {
           restaurantId: restaurant.id,
           name,
@@ -156,8 +158,47 @@ export async function POST(req: NextRequest) {
         },
       });
       created++;
+      if (createdItem.isActive) createdActiveIds.push(createdItem.id);
     } catch (err) {
       errors.push(`"${name}": ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  }
+
+  // Operators set up through the onboarding questionnaire have no per-date menu
+  // curation yet, so new active items go straight onto their upcoming dates —
+  // otherwise the ordering page stays empty until they visit Schedule.
+  // Legacy tenants keep their hand-curated per-date menus untouched.
+  if (createdActiveIds.length > 0) {
+    try {
+      const profileState = await prisma.restaurant.findUnique({
+        where: { id: restaurant.id },
+        select: { questionnaireCompletedAt: true },
+      });
+      if (profileState?.questionnaireCompletedAt) {
+        const upcoming = await prisma.deliveryDate.findMany({
+          where: {
+            school: { restaurantId: restaurant.id },
+            deliveryDate: { gte: new Date() },
+            cancelledAt: null,
+          },
+          select: { id: true, schoolId: true },
+        });
+        if (upcoming.length > 0) {
+          await prisma.deliveryMenuItem.createMany({
+            data: upcoming.flatMap((d) =>
+              createdActiveIds.map((menuItemId) => ({
+                deliveryDateId: d.id,
+                menuItemId,
+                schoolId: d.schoolId,
+                isAvailable: true,
+              }))
+            ),
+            skipDuplicates: true,
+          });
+        }
+      }
+    } catch (err) {
+      errors.push(`Items were added but could not be put on upcoming dates: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   }
 
