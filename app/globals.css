@@ -171,6 +171,14 @@ body {
  * `.app-shell`, drop the phone-card so dashboards, tables, and reports
  * get full desktop width. Keyed off the DOM (not the <html> shell class)
  * so it holds regardless of how shell mode resolved or client-side nav. */
+/* Landing page v2 is full-bleed like a restaurant website, not a phone card. */
+body .app-shell:has(.landing-v2) {
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 body .app-shell:has(.admin-shell) {
   max-width: none;
   margin: 0;
