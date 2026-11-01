@@ -81,9 +81,9 @@ export function AdminNav({
   }
 
   return (
-    <header className="bg-white border-b border-editorial-line sticky top-0 z-20">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between py-2.5 border-b border-editorial-line gap-4">
+    <header className="sticky top-0 z-20 pt-3 pb-1">
+      <div className="max-w-7xl mx-auto px-4 flex flex-col gap-2">
+        <div className="glass-bar flex items-center justify-between gap-4 px-4 py-2.5 rounded-[20px]">
           <div className="flex items-center gap-2">
             <Link href="/admin/dashboard" className="no-underline flex items-center gap-2">
               <ClocheMark size={22} />
@@ -153,15 +153,15 @@ export function AdminNav({
             </button>
           </div>
         </div>
-        <div className="flex overflow-x-auto gap-0.5 py-1" style={{ scrollbarWidth: "none" }}>
+        <div className="glass-bar flex overflow-x-auto gap-1 p-1.5 rounded-full" style={{ scrollbarWidth: "none" }}>
           {links.map((link) => {
             const active = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
               <Link key={link.href} href={link.href}
-                className="flex-shrink-0 px-3 py-1.5 rounded-lg text-[12px] no-underline transition whitespace-nowrap"
+                className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] no-underline transition whitespace-nowrap"
                 style={{
-                  background: active ? "rgba(44,64,49,0.08)" : "transparent",
-                  color: active ? "#2C4031" : "#5B5446",
+                  background: active ? "#2C4031" : "transparent",
+                  color: active ? "#F6F1E6" : "#4A4536",
                   fontWeight: active ? 600 : 400,
                 }}>
                 {link.label}
