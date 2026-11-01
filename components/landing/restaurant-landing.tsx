@@ -54,7 +54,7 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
   });
 
   return (
-    <div style={{ background: dark, color: "#F7EFE6", lineHeight: 1.55 }}>
+    <div className="landing-v2" style={{ background: dark, color: "#F7EFE6", lineHeight: 1.55 }}>
       <style>{`
         .lp-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:640px}
         .lp-hero-photo{position:relative;min-height:380px}
@@ -112,7 +112,7 @@ export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant
       <section id="how" style={{ background: "#FAF7F2", color: "#1A1412", padding: "72px clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 40 }}>
           <h2 style={{ ...h2, fontSize: "clamp(2rem,4.5vw,3.2rem)" }}>How it works</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(230px,100%),1fr))", gap: 32 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(200px,100%),1fr))", gap: 32 }}>
             {steps.map((s, i) => (
               <div key={s.title} style={{ borderTop: "3px solid #1A1412", paddingTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
                 <span style={{ fontFamily: display, fontWeight: 800, fontSize: 14, letterSpacing: "0.14em", color: accent }}>{String(i + 1).padStart(2, "0")}</span>
