@@ -142,7 +142,7 @@ export default async function AdminOrdersPage({
   // Summary stats from returned orders
   // Cash/Zelle orders still awaiting payment are confirmed but not paid yet.
   const paidOrders    = orders.filter(
-    (o) => o.status === "PAID" && !(adaptive && o.payment?.provider === "manual" && o.payment.status === "PENDING"),
+    (o) => o.status === "PAID" && !(o.payment?.provider === "manual" && o.payment.status === "PENDING"),
   );
   const pendingOrders = orders.filter((o) => o.status === "PENDING");
   const revenue       = paidOrders.reduce((sum, o) => sum + o.totalCents, 0);

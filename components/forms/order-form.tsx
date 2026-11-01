@@ -980,13 +980,13 @@ export function OrderForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>
-                  {isOffice ? "Your name" : "Parent name"}
+                  {isOffice || isCaterer ? "Your name" : "Parent name"}
                 </label>
                 <input className="w-full rounded-xl text-[13px] px-3 py-2" value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="Your name" required style={{ backgroundColor: "white", borderColor: "#E3DBC6" }} />
               </div>
               <div>
                 <label className="text-[12px] mb-1 block" style={{ color: "#938B78" }}>
-                  {isOffice ? "Your email" : "Parent email"}
+                  {isOffice || isCaterer ? "Your email" : "Parent email"}
                 </label>
                 <input type="email" className="w-full rounded-xl text-[13px] px-3 py-2" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="email@example.com" required style={{ backgroundColor: "white", borderColor: "#E3DBC6" }} />
               </div>
