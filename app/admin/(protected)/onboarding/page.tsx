@@ -14,7 +14,7 @@ import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
 import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { WizardStepper, type WizardStep } from "@/components/admin/wizard-stepper";
 import { isQuestionnaireEnabled } from "@/lib/onboarding-flag";
-import { buildPlan, getVocabulary, parseStoredProfile } from "@/lib/business-profile";
+import { buildPlan, getVocabulary, individualVocabulary, parseStoredProfile } from "@/lib/business-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -398,6 +398,10 @@ export default async function OnboardingPage({
   const plan = profile ? buildPlan(profile) : null;
   const caps = profile?.capabilities ?? null;
   const offlineOnly = Boolean(caps && !caps.cards);
+  // Tenants created before the questionnaire have no profile, but one that
+  // picked "Caterer / individual orders" in step 1 serves individuals: no
+  // school/office choice, just a pickup spot.
+  const legacyCaterer = !profile && restaurant.operatorType === "caterer";
   const planStep = (key: string) => plan?.steps.find((x) => x.key === key);
   // Location types this operator can actually create. School appears only if
   // they serve schools; everything else is stored as an OFFICE row.
@@ -406,9 +410,15 @@ export default async function OnboardingPage({
         ...(caps.servesSchools ? (["SCHOOL"] as const) : []),
         ...(caps.servesOffices || caps.servesGroups || caps.servesIndividuals || !caps.servesSchools ? (["OFFICE"] as const) : []),
       ]
-    : ["SCHOOL", "OFFICE"];
+    : legacyCaterer
+      ? ["OFFICE"]
+      : ["SCHOOL", "OFFICE"];
   const officeAudience = caps?.servesOffices ? "offices" : "individuals";
-  const placeVocab = profile ? getVocabulary(profile, caps?.servesSchools && allowedLocationTypes.length === 1 ? "schools" : officeAudience) : null;
+  const placeVocab = profile
+    ? getVocabulary(profile, caps?.servesSchools && allowedLocationTypes.length === 1 ? "schools" : officeAudience)
+    : legacyCaterer
+      ? individualVocabulary()
+      : null;
 
   // Step status detection (10 steps total — share + launch are one combined final step)
   const status = {
@@ -810,7 +820,7 @@ export default async function OnboardingPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">{placeVocab && allowedLocationTypes.length === 1 && allowedLocationTypes[0] === "OFFICE" ? `${placeVocab.place} name` : "Location name"}</label>
-                  <input type="text" name="name" required placeholder={profile && allowedLocationTypes.length === 1 ? (allowedLocationTypes[0] === "SCHOOL" ? "Lincoln Elementary" : officeAudience === "individuals" ? "Home kitchen pickup" : "Main office") : "HQ — Main Office"}
+                  <input type="text" name="name" required placeholder={(profile || legacyCaterer) && allowedLocationTypes.length === 1 ? (allowedLocationTypes[0] === "SCHOOL" ? "Lincoln Elementary" : officeAudience === "individuals" ? "Home kitchen pickup" : "Main office") : "HQ — Main Office"}
                     className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                 </div>
                 <div>
