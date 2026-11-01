@@ -276,6 +276,7 @@ export function OrdersList({
       {/* Order cards */}
       {orders.map((order) => {
         const badge    = badgeFor(order);
+        const awaitingPayment = order.status === "PAID" && order.payment?.provider === "manual" && order.payment.status === "PENDING";
         const isOpen   = expandedIds.has(order.id);
         const allergy  = order.items.map((i) => i.allergyNotes).find(Boolean) || order.student.allergyNotes;
         const addons   = order.items.flatMap((i) => i.additions);
@@ -386,7 +387,13 @@ export function OrdersList({
                     className="text-sm text-editorial-green font-semibold no-underline hover:text-editorial-green-deep">
                     Edit order →
                   </Link>
-                  <OrderRefundAction
+                  {awaitingPayment && (
+                    <Link href={`/admin/orders/${order.id}`}
+                      className="px-3.5 py-1.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold no-underline hover:bg-editorial-green-deep transition">
+                      Mark {order.payment?.method === "zelle" ? "Zelle received" : order.payment?.method === "cash" ? "cash received" : "as paid"} →
+                    </Link>
+                  )}
+                  {!awaitingPayment && <OrderRefundAction
                     orderId={order.id}
                     orderStatus={order.status}
                     items={order.items.map((item) => ({
@@ -401,7 +408,7 @@ export function OrdersList({
                     parentName={order.parentName}
                     studentName={order.student.studentName}
                     myRole={myRole}
-                  />
+                  />}
                   <OrderStatusActions orderId={order.id} isArchived={Boolean(order.archivedAt)} />
                 </div>
               </div>
