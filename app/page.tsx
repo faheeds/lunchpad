@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { getLabelsForOperator } from "@/lib/location-labels";
 import { PlatformLanding } from "@/components/platform-landing";
+import { RestaurantLanding } from "@/components/landing/restaurant-landing";
+import { loadLandingView } from "@/lib/landing-data";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,20 @@ export default async function HomePage() {
   const restaurant = await getCurrentRestaurant();
 
   // ── Restaurant mode (subdomain) ──────────────────────────────────────────
+  if (restaurant && restaurant.landingTemplate === "v2") {
+    const view = await loadLandingView(restaurant);
+    return (
+      <>
+        <SiteHeaderServer />
+        <main className="app-content" id="main-content">
+          <RestaurantLanding restaurant={restaurant} view={view} />
+          <SiteFooter />
+        </main>
+        <AppNav />
+      </>
+    );
+  }
+
   if (restaurant) {
     const restaurantName = restaurant.name;
     const labels = getLabelsForOperator(restaurant.operatorType);
