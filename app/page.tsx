@@ -127,39 +127,41 @@ export default async function HomePage() {
             </div>
           )}
 
-          {/* Weekly plan promo */}
-          <div style={{ padding: "20px 20px 28px" }}>
-            <div style={{ background: restaurant.primaryColor ?? "#2C4031", borderRadius: 18, padding: "28px 24px", display: "flex", flexDirection: "column", gap: 10, position: "relative", overflow: "hidden" }}>
-              {/* Desktop: two-column layout with image on right */}
-              {heroSrc && (
-                <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-1/2">
-                  <Image
-                    src={heroSrc}
-                    alt=""
-                    fill
-                    style={{ objectFit: "cover", objectPosition: "center" }}
-                  />
-                  {/* Gradient overlay to blend with card background */}
-                  <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to right, ${restaurant.primaryColor ?? "#2C4031"}, ${restaurant.primaryColor ?? "#2C4031"} 20%, transparent)` }} />
+          {/* Weekly plan promo (operator can turn this off in Settings) */}
+          {restaurant.weeklyPlanningEnabled && (
+            <div style={{ padding: "20px 20px 28px" }}>
+              <div style={{ background: restaurant.primaryColor ?? "#2C4031", borderRadius: 18, padding: "28px 24px", display: "flex", flexDirection: "column", gap: 10, position: "relative", overflow: "hidden" }}>
+                {/* Desktop: two-column layout with image on right */}
+                {heroSrc && (
+                  <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-1/2">
+                    <Image
+                      src={heroSrc}
+                      alt=""
+                      fill
+                      style={{ objectFit: "cover", objectPosition: "center" }}
+                    />
+                    {/* Gradient overlay to blend with card background */}
+                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to right, ${restaurant.primaryColor ?? "#2C4031"}, ${restaurant.primaryColor ?? "#2C4031"} 20%, transparent)` }} />
+                  </div>
+                )}
+                {/* Text content */}
+                <div style={{ position: "relative", zIndex: 1, maxWidth: heroSrc ? 340 : "100%" }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-display)" }}>
+                    Save time
+                  </p>
+                  <p style={{ fontSize: 24, fontWeight: 700, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", lineHeight: 1.1, marginBottom: 12 }}>
+                    Plan<br />The Week
+                  </p>
+                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.70)", lineHeight: 1.5, marginBottom: 16 }}>
+                    Order multiple days at once &mdash; one checkout, all week sorted.
+                  </p>
+                  <Link href="/weekly" style={{ padding: "12px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, textDecoration: "none", background: "white", color: restaurant.primaryColor ?? "#2C4031", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.06em", display: "inline-block" }}>
+                    Plan The Week
+                  </Link>
                 </div>
-              )}
-              {/* Text content */}
-              <div style={{ position: "relative", zIndex: 1, maxWidth: heroSrc ? 340 : "100%" }}>
-                <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-display)" }}>
-                  Save time
-                </p>
-                <p style={{ fontSize: 24, fontWeight: 700, color: "white", fontFamily: "var(--font-display)", textTransform: "uppercase", lineHeight: 1.1, marginBottom: 12 }}>
-                  Plan<br />The Week
-                </p>
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.70)", lineHeight: 1.5, marginBottom: 16 }}>
-                  Order multiple days at once &mdash; one checkout, all week sorted.
-                </p>
-                <Link href="/weekly" style={{ padding: "12px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, textDecoration: "none", background: "white", color: restaurant.primaryColor ?? "#2C4031", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.06em", display: "inline-block" }}>
-                  Plan The Week
-                </Link>
               </div>
             </div>
-          </div>
+          )}
 
           <SiteFooter />
         </main>

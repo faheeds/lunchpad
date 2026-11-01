@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useTenantFeatures } from "@/components/tenant-features";
 import { Home, UtensilsCrossed, ShoppingBag, CalendarDays, Receipt, CircleUserRound } from "lucide-react";
 
 const navItems = [
@@ -14,10 +15,12 @@ const navItems = [
 
 export function AppNav() {
   const pathname = usePathname();
+  const { weeklyPlanning } = useTenantFeatures();
+  const items = navItems.filter((item) => weeklyPlanning || item.href !== "/weekly");
 
   return (
     <nav className="app-bnav">
-      {navItems.map((item) => {
+      {items.map((item) => {
         const active = pathname === item.href;
         const color = active ? "var(--brand-hex)" : "rgba(255,255,255,0.35)";
         return (

@@ -20,6 +20,8 @@ export default async function WeeklyPage({
   const parentUserId = session.user?.parentUserId;
   if (!parentUserId) redirect("/account/sign-in");
   const restaurant = await requireParentTenant(parentUserId, "/weekly");
+  // Operators can turn weekly planning off in Settings.
+  if (!restaurant.weeklyPlanningEnabled) redirect("/order");
 
   const parent = await prisma.parentUser.findUnique({
     where: { id: parentUserId },

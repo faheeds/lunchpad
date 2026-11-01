@@ -98,6 +98,7 @@ async function updateOfflineSettings(formData: FormData) {
         offlinePaymentInstructions:
           String(formData.get("offlinePaymentInstructions") || "").trim().slice(0, 500) || null,
         deliveryEnabled: formData.get("deliveryEnabled") === "on",
+        weeklyPlanningEnabled: formData.get("weeklyPlanningEnabled") === "on",
         pickupInstructions: String(formData.get("pickupInstructions") || "").trim().slice(0, 500) || null,
       },
     });
@@ -715,6 +716,15 @@ export default async function AdminSettingsPage({
               <input type="checkbox" name="deliveryEnabled" defaultChecked={restaurant.deliveryEnabled} className="rounded border-editorial-line" />
               <span className="text-[13px] text-editorial-ink">Offer delivery to the customer&apos;s address</span>
             </label>
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer w-fit">
+                <input type="checkbox" name="weeklyPlanningEnabled" defaultChecked={restaurant.weeklyPlanningEnabled} className="rounded border-editorial-line" />
+                <span className="text-[13px] text-editorial-ink">Let customers plan the whole week</span>
+              </label>
+              <p className="text-[11px] text-editorial-ink-faint mt-1 ml-6">
+                Shows &ldquo;Plan the week&rdquo; (order several days in one checkout). Turn off if you only take single orders.
+              </p>
+            </div>
             <div>
               <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Pickup instructions (optional)</label>
               <textarea name="pickupInstructions" rows={2} defaultValue={restaurant.pickupInstructions ?? ""}

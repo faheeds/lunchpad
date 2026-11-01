@@ -25,6 +25,8 @@ export async function GET() {
         id: restaurant.id,
         name: restaurant.name,
         slug: restaurant.slug,
+        // Whether this operator offers multi-day "Plan the week" ordering.
+        weeklyPlanningEnabled: restaurant.weeklyPlanningEnabled,
 
         // Branding — used by the iOS ThemeProvider. All fields nullable;
         // the app falls back to LunchPad neutral defaults when unset.

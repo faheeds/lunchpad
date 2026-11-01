@@ -5,6 +5,7 @@ import { getCurrentRestaurant } from "@/lib/restaurant";
 import { themeCssBlock } from "@/lib/color";
 import { getDisplayFont, getBodyFont } from "@/lib/fonts";
 import { CookieNotice } from "@/components/cookie-notice";
+import { TenantFeaturesProvider } from "@/components/tenant-features";
 import { SiteHeaderServer } from "@/components/site-header-server";
 import "./globals.css";
 
@@ -135,6 +136,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <style dangerouslySetInnerHTML={{ __html: cssBlock }} />
       </head>
       <body>
+        <TenantFeaturesProvider weeklyPlanning={restaurant?.weeklyPlanningEnabled ?? true}>
         <div className="app-shell">
           {isLockedTenant ? (
             <>
@@ -194,6 +196,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             children
           )}
         </div>
+        </TenantFeaturesProvider>
         <CookieNotice />
       </body>
     </html>

@@ -97,6 +97,7 @@ model Restaurant {
   zelleHandle              String?        // phone or email customers send Zelle to
   offlinePaymentInstructions String?      // free text shown after checkout
   deliveryEnabled          Boolean        @default(false) // offer home/address delivery
+  weeklyPlanningEnabled    Boolean        @default(true) // show "Plan the week" (multi-day ordering); operators can turn it off
   pickupInstructions       String?        // where/when to collect, shown for pickup orders
 
   // Stripe Connect

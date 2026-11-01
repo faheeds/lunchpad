@@ -209,10 +209,12 @@ export default async function ParentAccountPage({
                 <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{orders.filter((o) => o.status === "PAID").length}</p>
                 <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Orders</p>
               </div>
-              <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
-                <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{activeWeeklyPlanCount}</p>
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Weekly</p>
-              </div>
+              {restaurant.weeklyPlanningEnabled && (
+                <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px", textAlign: "center" }}>
+                  <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{activeWeeklyPlanCount}</p>
+                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Weekly</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -306,7 +308,7 @@ export default async function ParentAccountPage({
           </section>
 
           {/* ── Weekly plan ────────────────────────────────────────── */}
-          {parent.children.length > 0 && (
+          {restaurant.weeklyPlanningEnabled && parent.children.length > 0 && (
             <section>
               <p style={{ fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#938B78", marginBottom: 8 }}>Weekly lunch plan</p>
               <div style={{ borderRadius: 18, border: "1px solid #E3DBC6", background: "#FCFAF3", padding: 16 }}>
@@ -425,7 +427,7 @@ export default async function ParentAccountPage({
       </main>
 
       {/* Sticky weekly checkout */}
-      {activeWeeklyPlanCount > 0 && (
+      {restaurant.weeklyPlanningEnabled && activeWeeklyPlanCount > 0 && (
         <div className="fixed inset-x-0 bottom-[52px] z-20 px-4 pb-2 pointer-events-none lg:static lg:px-4 lg:pb-4 lg:mt-4"
           style={{ maxWidth: 480, margin: "0 auto", left: 0, right: 0 }}>
           <div style={{
