@@ -125,8 +125,11 @@ export default async function AdminOrdersPage({
   // school has configured grades yet.
   // Grades, classrooms and "Parent" only make sense when this operator actually
   // serves schools. Caterers and office-only operators never see them.
+  // Only operators onboarded through the questionnaire get the adaptive
+  // behavior; every existing tenant keeps today's behavior exactly.
+  const adaptive = Boolean(restaurant.questionnaireCompletedAt);
   const showSchoolFields =
-    restaurant.operatorType !== "caterer" && schools.some((s) => s.locationType === "SCHOOL");
+    !adaptive || (restaurant.operatorType !== "caterer" && schools.some((s) => s.locationType === "SCHOOL"));
 
   const moreFiltersActive = Boolean(
     params.fromDate || params.toDate || params.deliveryDateId || selectedGrades.length ||
@@ -139,7 +142,7 @@ export default async function AdminOrdersPage({
   // Summary stats from returned orders
   // Cash/Zelle orders still awaiting payment are confirmed but not paid yet.
   const paidOrders    = orders.filter(
-    (o) => o.status === "PAID" && !(o.payment?.provider === "manual" && o.payment.status === "PENDING"),
+    (o) => o.status === "PAID" && !(adaptive && o.payment?.provider === "manual" && o.payment.status === "PENDING"),
   );
   const pendingOrders = orders.filter((o) => o.status === "PENDING");
   const revenue       = paidOrders.reduce((sum, o) => sum + o.totalCents, 0);
@@ -321,7 +324,7 @@ export default async function AdminOrdersPage({
           </Link>
         </div>
 
-        <details className="mt-2" open={moreFiltersActive}>
+        <details className="mt-2" open={moreFiltersActive || !adaptive}>
           <summary className="cursor-pointer select-none text-[12px] font-semibold text-editorial-green">More filters (dates, delivery date, show, sort)</summary>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
         {/* Date range — operators looking at a week or month of orders need
@@ -410,7 +413,7 @@ export default async function AdminOrdersPage({
       </form>
 
       {/* ── Orders list ────────────────────────────────────────────── */}
-      <OrdersList orders={orders} myRole={myRole} showSchoolFields={showSchoolFields} />
+      <OrdersList orders={orders} myRole={myRole} showSchoolFields={showSchoolFields} adaptive={adaptive} />
     </div>
   );
 }

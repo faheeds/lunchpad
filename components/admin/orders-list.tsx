@@ -66,9 +66,9 @@ function fmtDate(value: string | Date, timezone: string) {
 
 // Cash / Zelle orders are confirmed for the kitchen right away (status PAID)
 // but the money is still to be collected — show that instead of "Paid".
-function badgeFor(order: OrderListItem) {
+function badgeFor(order: OrderListItem, adaptive: boolean) {
   const p = order.payment;
-  if (order.status === "PAID" && p?.provider === "manual" && p.status === "PENDING") {
+  if (adaptive && order.status === "PAID" && p?.provider === "manual" && p.status === "PENDING") {
     const how = p.method === "zelle" ? "Zelle" : p.method === "cash" ? "cash" : "payment";
     return { bg: "#F6EED9", text: "#6E5C2C", label: `Awaiting ${how}` };
   }
@@ -111,6 +111,7 @@ export function OrdersList({
   orders,
   myRole = "STAFF",
   showSchoolFields = true,
+  adaptive = false,
 }: {
   orders: OrderListItem[];
   /** Current admin's role — controls which bulk actions are shown. Defaults
@@ -118,6 +119,8 @@ export function OrdersList({
   myRole?: AdminRoleClient;
   /** False for caterers / office-only operators: hides grade, teacher, classroom and "Parent". */
   showSchoolFields?: boolean;
+  /** True only for operators onboarded via the questionnaire (awaiting-payment badge, hidden Refund). */
+  adaptive?: boolean;
 }) {
   const [selectedIds, setSelectedIds]  = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds]  = useState<Set<string>>(new Set());
@@ -278,8 +281,8 @@ export function OrdersList({
 
       {/* Order cards */}
       {orders.map((order) => {
-        const badge    = badgeFor(order);
-        const awaitingPayment = order.status === "PAID" && order.payment?.provider === "manual" && order.payment.status === "PENDING";
+        const badge    = badgeFor(order, adaptive);
+        const awaitingPayment = adaptive && order.status === "PAID" && order.payment?.provider === "manual" && order.payment.status === "PENDING";
         const isOpen   = expandedIds.has(order.id);
         const allergy  = order.items.map((i) => i.allergyNotes).find(Boolean) || order.student.allergyNotes;
         const addons   = order.items.flatMap((i) => i.additions);
