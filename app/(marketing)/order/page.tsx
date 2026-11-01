@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function OrderPage({
   searchParams
 }: {
-  searchParams: Promise<{ reorder?: string; item?: string; childId?: string }>;
+  searchParams: Promise<{ reorder?: string; item?: string; size?: string; childId?: string }>;
 }) {
   const session = await auth();
   // If a parent is on the apex (no slug header), bounce them to their
@@ -374,6 +374,7 @@ export default async function OrderPage({
               soldOutByDeliveryDate={soldOutByDeliveryDate}
               categoryOrder={categoryOrder}
               initialItemSlug={params.item}
+              initialSize={params.size}
             />
           ) : (
             <div className="space-y-4">
