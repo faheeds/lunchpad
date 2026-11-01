@@ -13,11 +13,12 @@ export async function GET() {
 
   // ── Sheet 1: Menu Items ────────────────────────────────────────────────────
   const itemsData = [
-    ["Name *", "Price * ($)", "Description", "Category", "Active (yes/no)", "Required Choices (one per line, optional)"],
-    ["Smash Burger", "12.99", "Classic smash patty with American cheese", "Mains", "yes", "Beef\nCrispy Chicken\nGrilled Chicken\nVegan"],
-    ["Caesar Salad", "9.99", "Romaine lettuce, croutons, parmesan", "Salads", "yes", ""],
-    ["Chocolate Milk", "2.50", "", "Drinks", "yes", ""],
-    ["Fruit Cup", "4.00", "Seasonal fresh fruit", "Sides", "yes", ""],
+    ["Name *", "Price * ($)", "Description", "Category", "Active (yes/no)", "Required Choices (one per line, optional)", "Sizes (one per line: Name | price, optional)"],
+    ["Smash Burger", "12.99", "Classic smash patty with American cheese", "Mains", "yes", "Beef\nCrispy Chicken\nGrilled Chicken\nVegan", ""],
+    ["Caesar Salad", "9.99", "Romaine lettuce, croutons, parmesan", "Salads", "yes", "", ""],
+    ["Chocolate Milk", "2.50", "", "Drinks", "yes", "", ""],
+    ["Fruit Cup", "4.00", "Seasonal fresh fruit", "Sides", "yes", "", ""],
+    ["Cheese Pizza", "12.99", "Mozzarella and tomato sauce", "Pizza", "yes", "", 'Small 7" | 12.99\nMedium 11" | 20.99\nLarge 16" | 26.99'],
   ];
   const itemsSheet = XLSX.utils.aoa_to_sheet(itemsData);
   itemsSheet["!cols"] = [
@@ -27,6 +28,7 @@ export async function GET() {
     { wch: 18 }, // Category
     { wch: 16 }, // Active
     { wch: 36 }, // Required Choices
+    { wch: 34 }, // Sizes
   ];
   // Style header row bold (xlsx supports limited styling via !rows)
   XLSX.utils.book_append_sheet(wb, itemsSheet, "Menu Items");
@@ -63,6 +65,9 @@ export async function GET() {
     ["  Required Choices  Optional. Comma or newline separated list of pick-one options"],
     ["                    (e.g. Beef, Crispy Chicken, Vegan). Customers must pick exactly"],
     ["                    one to add the item to their cart. Leave blank if not needed."],
+    ["  Sizes           Optional. One size per line as  Name | price  (e.g. Small 7\" | 12.99)."],
+    ["                    The item then shows a size picker and the size's price replaces Price."],
+    ["                    Price * is still required; use the lowest size price."],
     [""],
     ["SHEET 2: Options"],
     ["  Item Name *          Must exactly match a name from Sheet 1."],
@@ -75,6 +80,9 @@ export async function GET() {
     ["  - Delete the sample rows before uploading."],
     ["  - You can add as many items and options as you need."],
     ["  - Items with the same name as an existing menu item will be skipped."],
+    ["  - Rows named like  Pizza - Small  /  Pizza - Large  in the same category are combined"],
+    ["    into one item with sizes automatically (you can undo this in the preview)."],
+    ["  - Columns are matched by their heading, so the order of columns can differ."],
   ];
   const instrSheet = XLSX.utils.aoa_to_sheet(instrData);
   instrSheet["!cols"] = [{ wch: 80 }];
