@@ -35,6 +35,7 @@ type Tab = {
 const TABS: Tab[] = [
   { id: "general",       label: "General",       href: "/admin/settings?tab=general",       minRole: "OWNER" },
   { id: "branding",      label: "Branding",      href: "/admin/settings?tab=branding",      minRole: "OWNER" },
+  { id: "landing",       label: "Landing page",  href: "/admin/settings?tab=landing",       minRole: "OWNER" },
   { id: "domain",        label: "Domain",        href: "/admin/settings?tab=domain",        minRole: "OWNER" },
   // Labeled "Payouts", not "Payments" — this tab is Stripe Connect (customer
   // payments flowing OUT to the restaurant's own Stripe account), a distinct
@@ -56,7 +57,7 @@ const TABS: Tab[] = [
 // Kept exported for compatibility with anything importing it elsewhere;
 // the in-page tabs on settings/page.tsx use these IDs to decide which
 // panel to render.
-export type SettingsTabId = "general" | "branding" | "domain" | "payments" | "offline" | "notifications" | "danger";
+export type SettingsTabId = "general" | "branding" | "landing" | "domain" | "payments" | "offline" | "notifications" | "danger";
 
 export function SettingsTabs({ adminRole }: { adminRole: AdminRole }) {
   const pathname = usePathname();

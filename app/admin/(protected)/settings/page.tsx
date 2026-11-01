@@ -12,6 +12,7 @@ import { ImageUpload } from "@/components/admin/image-upload";
 import { SettingsTabs, type SettingsTabId } from "@/components/admin/settings-tabs";
 import { LiveBrandingPreview } from "@/components/admin/live-branding-preview";
 import { ConfirmButton } from "@/components/admin/confirm-button";
+import { parseLandingContent } from "@/lib/landing-content";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +76,37 @@ async function updateBranding(formData: FormData) {
   }
   if (errorMsg) redirect(`/admin/settings?tab=branding&error=${encodeURIComponent(errorMsg)}`);
   redirect("/admin/settings?tab=branding&saved=1");
+}
+
+async function updateLanding(formData: FormData) {
+  "use server";
+  let errorMsg: string | null = null;
+  try {
+    const restaurant = await requireRestaurant();
+    await requireAdminRole("OWNER");
+    const clean = (k: string, max: number) => String(formData.get(k) || "").trim().slice(0, max);
+    const content = parseLandingContent({
+      eyebrow: clean("eyebrow", 80),
+      tagline: clean("tagline", 90),
+      subtitle: clean("subtitle", 240),
+      storyHeadline: clean("storyHeadline", 120),
+      storyBody: clean("storyBody", 1200),
+      storyImageUrl: clean("storyImageUrl", 500),
+      address: clean("address", 200),
+      hours: clean("hours", 300),
+      instagramUrl: clean("instagramUrl", 500),
+      facebookUrl: clean("facebookUrl", 500),
+    });
+    await prisma.restaurant.update({
+      where: { id: restaurant.id },
+      data: { landingContent: content },
+    });
+    revalidatePath("/");
+  } catch (e: unknown) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong";
+  }
+  if (errorMsg) redirect(`/admin/settings?tab=landing&error=${encodeURIComponent(errorMsg)}`);
+  redirect("/admin/settings?tab=landing&saved=1");
 }
 
 async function updateOfflineSettings(formData: FormData) {
@@ -493,6 +525,92 @@ export default async function AdminSettingsPage({
           </div>
         </div>
       )}
+
+      {/* ── LANDING PAGE ────────────────────────────────────────────── */}
+      {tab === "landing" && (() => {
+        const lc = parseLandingContent(restaurant.landingContent);
+        const checklist: { label: string; done: boolean }[] = [
+          { label: "Hero photo (Branding tab)", done: !!restaurant.heroImageUrl },
+          { label: "Headline", done: !!lc.tagline },
+          { label: "Your story", done: !!lc.storyBody },
+          { label: "Address & hours", done: !!(lc.address || lc.hours) },
+          { label: "Phone or email", done: !!(restaurant.contactPhone || restaurant.contactEmail) },
+          { label: "Instagram or Facebook", done: !!(lc.instagramUrl || lc.facebookUrl) },
+        ];
+        return (
+          <form action={updateLanding} className="rounded-[14px] bg-white border border-editorial-line overflow-hidden max-w-2xl">
+            <div className="px-4 py-3 border-b border-editorial-line">
+              <p className="text-[13px] font-semibold text-editorial-ink">Landing page</p>
+              <p className="text-[11px] text-editorial-ink-faint mt-0.5">
+                The words and details on your home page. Anything you leave blank is filled in automatically or hidden.
+              </p>
+              {restaurant.landingTemplate !== "v2" && (
+                <p className="text-[11px] text-editorial-ink-faint mt-1">
+                  Your site is still using the classic home page. These details will appear once the new design is switched on for you.
+                </p>
+              )}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                {checklist.map((c) => (
+                  <span key={c.label} className={`text-[11px] ${c.done ? "text-editorial-green" : "text-editorial-ink-faint"}`}>
+                    {c.done ? "\u2713" : "\u25CB"} {c.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="px-4 py-4 space-y-4">
+              <div>
+                <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Small line above the headline</label>
+                <input type="text" name="eyebrow" maxLength={80} defaultValue={lc.eyebrow ?? ""} placeholder="e.g. Bellevue, WA · Pickup & delivery" className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+              </div>
+              <div>
+                <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Headline</label>
+                <input type="text" name="tagline" maxLength={90} defaultValue={lc.tagline ?? ""} placeholder="e.g. Pizza with a desi twist." className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+              </div>
+              <div>
+                <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Sub-headline</label>
+                <textarea name="subtitle" rows={2} maxLength={240} defaultValue={lc.subtitle ?? ""} placeholder="One or two sentences about what you serve." className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+              </div>
+              <div className="border-t border-editorial-line pt-4 space-y-4">
+                <p className="text-[12px] font-semibold text-editorial-ink">Your story</p>
+                <div>
+                  <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Story headline</label>
+                  <input type="text" name="storyHeadline" maxLength={120} defaultValue={lc.storyHeadline ?? ""} className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                </div>
+                <div>
+                  <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Story (blank line between paragraphs)</label>
+                  <textarea name="storyBody" rows={6} maxLength={1200} defaultValue={lc.storyBody ?? ""} className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                </div>
+                <div className="max-w-[320px]">
+                  <ImageUpload name="storyImageUrl" defaultValue={lc.storyImageUrl} label="Story photo (optional)" aspect="free" hint="Your kitchen, storefront or team." />
+                </div>
+              </div>
+              <div className="border-t border-editorial-line pt-4 space-y-4">
+                <p className="text-[12px] font-semibold text-editorial-ink">Visit &amp; follow</p>
+                <div>
+                  <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Address</label>
+                  <input type="text" name="address" maxLength={200} defaultValue={lc.address ?? ""} className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                </div>
+                <div>
+                  <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Hours (one line per row)</label>
+                  <textarea name="hours" rows={3} maxLength={300} defaultValue={lc.hours ?? ""} placeholder={"Mon\u2013Fri 11am\u20138pm\nSat 12pm\u20139pm"} className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                </div>
+                <div>
+                  <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Instagram link</label>
+                  <input type="url" name="instagramUrl" defaultValue={lc.instagramUrl ?? ""} placeholder="https://www.instagram.com/yourname/" className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                </div>
+                <div>
+                  <label className="text-[11px] text-editorial-ink-soft font-medium block mb-1">Facebook link</label>
+                  <input type="url" name="facebookUrl" defaultValue={lc.facebookUrl ?? ""} placeholder="https://www.facebook.com/yourpage" className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:outline-none focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
+                </div>
+                <p className="text-[11px] text-editorial-ink-faint">Phone and email come from the General tab; logo and hero photo from Branding.</p>
+              </div>
+              <button type="submit" className="px-4 py-2 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
+                Save
+              </button>
+            </div>
+          </form>
+        );
+      })()}
 
       {/* ── DOMAIN ──────────────────────────────────────────────────── */}
       {tab === "domain" && (
