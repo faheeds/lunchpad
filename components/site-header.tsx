@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { HelpDrawer } from "./help-drawer";
 
@@ -37,6 +37,17 @@ export function SiteHeader({
   // permanently break the brand.
   const [logoFailed, setLogoFailed] = useState(false);
   const showUploadedLogo = Boolean(logoUrl) && !logoFailed;
+  // Logos are shown whole, never cropped: near-square marks keep the compact
+  // 28px rounded tile; wider logos get a taller, width-auto box (capped so
+  // they can't crowd the nav on phones) with object-fit: contain.
+  const [logoWide, setLogoWide] = useState(false);
+  const logoRef = useRef<HTMLImageElement>(null);
+  const measureLogo = (img: HTMLImageElement | null) => {
+    if (img && img.naturalWidth && img.naturalHeight) {
+      setLogoWide(img.naturalWidth / img.naturalHeight > 1.15);
+    }
+  };
+  useEffect(() => { measureLogo(logoRef.current); }, [logoUrl]);
 
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -71,12 +82,16 @@ export function SiteHeader({
             // works without a remotePatterns entry per restaurant.
             // eslint-disable-next-line @next/next/no-img-element
             <img
+              ref={logoRef}
               src={logoUrl!}
               alt={`${restaurantName} logo`}
-              width={28}
-              height={28}
+              onLoad={(e) => measureLogo(e.currentTarget)}
               onError={() => setLogoFailed(true)}
-              style={{ width: 28, height: 28, borderRadius: 7, objectFit: "cover", flexShrink: 0 }}
+              style={
+                logoWide
+                  ? { height: 36, width: "auto", maxWidth: "min(200px, 42vw)", objectFit: "contain", flexShrink: 0 }
+                  : { width: 28, height: 28, borderRadius: 7, objectFit: "cover", flexShrink: 0 }
+              }
             />
           ) : (
             <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#2C4031"/><g transform="translate(6.4 5.6) scale(0.8)" fill="none" stroke="#F6F1E6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M3 12a9 9 0 0 0 18 0"/><path d="M12 7v-2"/><path d="M9 5h6"/></g></svg>

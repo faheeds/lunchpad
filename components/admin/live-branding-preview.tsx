@@ -104,7 +104,7 @@ export function LiveBrandingPreview({
       >
         {snap.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={snap.logoUrl} alt="" width={28} height={28} className="w-7 h-7 rounded-md object-cover" />
+          <img src={snap.logoUrl} alt="" style={{ height: 28, width: "auto", maxWidth: 120, objectFit: "contain" }} />
         ) : (
           <div
             className="w-7 h-7 rounded-md flex items-center justify-center text-white text-[10px] font-bold"
