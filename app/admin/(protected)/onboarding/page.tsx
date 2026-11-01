@@ -786,7 +786,7 @@ export default async function OnboardingPage({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">Location name</label>
+                  <label className="text-[11px] text-editorial-ink-soft font-semibold block mb-1">{placeVocab && allowedLocationTypes.length === 1 && allowedLocationTypes[0] === "OFFICE" ? `${placeVocab.place} name` : "Location name"}</label>
                   <input type="text" name="name" required placeholder={profile && allowedLocationTypes.length === 1 ? (allowedLocationTypes[0] === "SCHOOL" ? "Lincoln Elementary" : officeAudience === "individuals" ? "Home kitchen pickup" : "Main office") : "HQ — Main Office"}
                     className="w-full rounded-lg border border-editorial-line text-[13px] px-3 py-2 focus:border-editorial-green focus:ring-1 focus:ring-editorial-green" />
                 </div>
@@ -818,7 +818,7 @@ export default async function OnboardingPage({
                   )}
                   {status[4] !== "done" && (
                     <button type="submit" className="px-5 py-2.5 rounded-full bg-editorial-green text-editorial-paper text-[13px] font-semibold hover:bg-editorial-green-deep transition">
-                      Add location →
+                      {placeVocab && allowedLocationTypes.length === 1 && allowedLocationTypes[0] === "OFFICE" ? `Add ${placeVocab.place.toLowerCase()} →` : "Add location →"}
                     </button>
                   )}
                 </div>

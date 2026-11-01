@@ -228,7 +228,8 @@ export function buildPlan(profile: BusinessProfile): Plan {
   // Places: school-flavoured wording only when schools were chosen.
   const placeParts: string[] = [];
   if (c.servesSchools) placeParts.push("schools and classrooms");
-  if (org) placeParts.push("offices and teams");
+  if (c.servesOffices) placeParts.push("offices and teams");
+  if (c.servesGroups) placeParts.push("groups and events");
   if (c.pickup) placeParts.push("pickup spots");
   if (c.delivery) placeParts.push("delivery area");
   if (c.dropoff && !c.servesSchools && !org) placeParts.push("drop-off sites");
