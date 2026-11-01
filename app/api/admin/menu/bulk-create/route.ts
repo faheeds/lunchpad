@@ -164,17 +164,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Operators set up through the onboarding questionnaire have no per-date menu
-  // curation yet, so new active items go straight onto their upcoming dates —
+  // Operators set up through the onboarding questionnaire (and caterers) have no
+  // per-date menu curation yet, so new active items go straight onto their upcoming dates —
   // otherwise the ordering page stays empty until they visit Schedule.
   // Legacy tenants keep their hand-curated per-date menus untouched.
   if (createdActiveIds.length > 0) {
     try {
       const profileState = await prisma.restaurant.findUnique({
         where: { id: restaurant.id },
-        select: { questionnaireCompletedAt: true },
+        select: { questionnaireCompletedAt: true, operatorType: true },
       });
-      if (profileState?.questionnaireCompletedAt) {
+      // Caterers (including ones set up before the questionnaire existed) have
+      // no per-date curation either, so an import must not leave their dates empty.
+      if (profileState?.questionnaireCompletedAt || profileState?.operatorType === "caterer") {
         const upcoming = await prisma.deliveryDate.findMany({
           where: {
             school: { restaurantId: restaurant.id },
