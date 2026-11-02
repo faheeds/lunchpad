@@ -76,7 +76,7 @@ export function SiteHeader({
         Skip to main content
       </a>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "14px 16px" }}>
-        <Link href="/" className="no-underline flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+        <Link href="/" className="no-underline flex items-center gap-2" style={{ minWidth: 0, flex: "1 1 auto" }} onClick={() => setMenuOpen(false)}>
           {showUploadedLogo ? (
             // Plain <img> rather than next/image so any Vercel Blob host
             // works without a remotePatterns entry per restaurant.
@@ -89,14 +89,14 @@ export function SiteHeader({
               onError={() => setLogoFailed(true)}
               style={
                 logoWide
-                  ? { height: 36, width: "auto", maxWidth: "min(200px, 42vw)", objectFit: "contain", flexShrink: 0 }
+                  ? { height: 36, width: "auto", maxWidth: "min(200px, 34vw)", objectFit: "contain", flexShrink: 0 }
                   : { width: 28, height: 28, borderRadius: 7, objectFit: "cover", flexShrink: 0 }
               }
             />
           ) : (
             <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#2C4031"/><g transform="translate(6.4 5.6) scale(0.8)" fill="none" stroke="#F6F1E6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M3 12a9 9 0 0 0 18 0"/><path d="M12 7v-2"/><path d="M9 5h6"/></g></svg>
           )}
-          <p style={{ fontSize: 16, fontWeight: 600, color: "#211D15", fontFamily: "Fraunces, Georgia, serif", textTransform: "uppercase", letterSpacing: "0.02em" }}>
+          <p style={{ fontSize: 16, fontWeight: 600, color: "#211D15", fontFamily: "Fraunces, Georgia, serif", textTransform: "uppercase", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
             {restaurantName}
           </p>
         </Link>
@@ -126,7 +126,7 @@ export function SiteHeader({
             </Link>
           </nav>
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           {isAdmin ? (
             <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "#2C4031", color: "#F6F1E6", fontFamily: "Fraunces, Georgia, serif", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Staff

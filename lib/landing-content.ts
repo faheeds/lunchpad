@@ -122,6 +122,15 @@ export type LandingView = {
   };
 };
 
+/** 4253061112 / +14253061112 -> (425) 306-1112; anything else is returned as typed. */
+export function formatPhone(raw: string | null): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  const ten = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+  if (ten.length === 10) return `(${ten.slice(0, 3)}) ${ten.slice(3, 6)}-${ten.slice(6)}`;
+  return raw.trim() || null;
+}
+
 export function priceLabel(item: Pick<ResolverMenuItem, "basePriceCents" | "sizePricesCents">): string {
   const fmt = (c: number) => `$${(c / 100).toFixed(2)}`;
   if (item.sizePricesCents.length > 1) {
@@ -261,7 +270,7 @@ export function resolveLanding(input: ResolverInput): LandingView {
     footer: {
       address: c.address ?? null,
       hours: c.hours ? c.hours.split(/\r?\n/).map((h) => h.trim()).filter(Boolean) : [],
-      phone: input.contactPhone,
+      phone: formatPhone(input.contactPhone),
       email: input.contactEmail,
       instagramUrl: c.instagramUrl ?? null,
       facebookUrl: c.facebookUrl ?? null,

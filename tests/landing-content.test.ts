@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseLandingContent, resolveLanding, priceLabel, type ResolverInput } from "@/lib/landing-content";
+import { parseLandingContent, resolveLanding, priceLabel, formatPhone, type ResolverInput } from "@/lib/landing-content";
 
 const item = (over: Partial<ResolverInput["menuItems"][number]> = {}) => ({
   name: "Smash Burger",
@@ -98,5 +98,14 @@ describe("resolveLanding fallbacks", () => {
   it("price label shows 'from' for sized items", () => {
     expect(priceLabel({ basePriceCents: 0, sizePricesCents: [1299, 2099] })).toBe("from $12.99");
     expect(priceLabel({ basePriceCents: 999, sizePricesCents: [] })).toBe("$9.99");
+  });
+});
+
+describe("formatPhone", () => {
+  it("formats US numbers and leaves others alone", () => {
+    expect(formatPhone("4253061112")).toBe("(425) 306-1112");
+    expect(formatPhone("+1 425-306-1112")).toBe("(425) 306-1112");
+    expect(formatPhone("555-12")).toBe("555-12");
+    expect(formatPhone(null)).toBeNull();
   });
 });
