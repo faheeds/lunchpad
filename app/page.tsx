@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentRestaurant } from "@/lib/restaurant";
 import { getLabelsForOperator } from "@/lib/location-labels";
 import { PlatformLanding } from "@/components/platform-landing";
-import { RestaurantLanding } from "@/components/landing/restaurant-landing";
+import { RestaurantLanding, LandingOrderBar } from "@/components/landing/restaurant-landing";
 import { loadLandingView } from "@/lib/landing-data";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,10 @@ export default async function HomePage() {
           <RestaurantLanding restaurant={restaurant} view={view} />
           <SiteFooter />
         </main>
-        <AppNav />
+        <div className="lp-sticky-bottom">
+          <LandingOrderBar restaurant={restaurant} view={view} />
+          <AppNav />
+        </div>
       </>
     );
   }

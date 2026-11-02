@@ -31,6 +31,22 @@ function dateChip(iso: string): string {
   );
 }
 
+/** Sticky strip above the mobile bottom nav: next open day + one-tap order. */
+export function LandingOrderBar({ restaurant, view }: { restaurant: Restaurant; view: LandingView }) {
+  if (!view.status) return null;
+  const dark = restaurant.darkColor ?? "#1E2C22";
+  const accent = restaurant.accentColor ?? "#C0673E";
+  return (
+    <div className="lp-orderbar" style={{ background: dark }}>
+      <div className="lp-orderbar-text">
+        <strong>Next day: {dateChip(view.status.nextDate)}</strong>
+        {view.status.cutoffLabel ? <small>Order by {view.status.cutoffLabel}</small> : null}
+      </div>
+      <Link href="/order" style={{ background: accent, color: "#fff", borderRadius: 999, fontWeight: 700, textDecoration: "none" }}>Order now</Link>
+    </div>
+  );
+}
+
 export function RestaurantLanding({ restaurant, view }: { restaurant: Restaurant; view: LandingView }) {
   const dark = restaurant.darkColor ?? "#1E2C22";
   const accent = restaurant.accentColor ?? "#C0673E";

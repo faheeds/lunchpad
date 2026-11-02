@@ -187,8 +187,23 @@ function buildMenuBoard(items: ResolverMenuItem[]): LandingMenuCategory[] {
     .slice(0, 4);
 }
 
+/** First step wording per kind of place (school, office, pickup spot, generic). */
+function placeStep(placeNoun: string | null): { title: string; body: string } {
+  switch (placeNoun) {
+    case "school":
+      return { title: "Pick your school", body: "Choose the school your order is delivered to." };
+    case "office":
+      return { title: "Pick your office", body: "Choose the office your order is delivered to." };
+    case "pickup spot":
+      return { title: "Choose a pickup spot", body: "Pick where you'd like to collect your order." };
+    case null:
+      return { title: "Choose your location", body: "Pick where you'd like your order delivered or picked up." };
+    default:
+      return { title: `Pick your ${placeNoun}`, body: "Choose where you'd like your order delivered or picked up." };
+  }
+}
+
 function buildSteps(input: ResolverInput): { title: string; body: string }[] {
-  const place = input.placeNoun ?? "pickup spot";
   const pay: string[] = [];
   if (input.acceptsCard) pay.push("card");
   if (input.acceptsCash) pay.push("cash");
@@ -198,7 +213,7 @@ function buildSteps(input: ResolverInput): { title: string; body: string }[] {
       ? `Pay by ${pay.length > 1 ? pay.slice(0, -1).join(", ") + " or " + pay[pay.length - 1] : pay[0]}.`
       : "Quick, simple checkout.";
   const steps = [
-    { title: `Pick your ${place}`, body: "Choose where you'd like your order delivered or picked up." },
+    placeStep(input.placeNoun),
     {
       title: "Choose your day",
       body: input.weeklyPlanningEnabled
