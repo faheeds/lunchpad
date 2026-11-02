@@ -136,7 +136,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <style dangerouslySetInnerHTML={{ __html: cssBlock }} />
       </head>
       <body>
-        <TenantFeaturesProvider weeklyPlanning={restaurant?.weeklyPlanningEnabled ?? true}>
+        <TenantFeaturesProvider
+          weeklyPlanning={restaurant?.weeklyPlanningEnabled ?? true}
+          landingV2={restaurant?.landingTemplate === "v2"}
+          schoolStyle={!restaurant?.operatorType || restaurant.operatorType === "school"}
+        >
         <div className="app-shell">
           {isLockedTenant ? (
             <>

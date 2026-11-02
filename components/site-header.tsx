@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { HelpDrawer } from "./help-drawer";
+import { useTenantFeatures } from "./tenant-features";
 
 export function SiteHeader({
   restaurantName = "LunchPad",
@@ -30,6 +31,19 @@ export function SiteHeader({
       .toUpperCase();
   };
   const pathname = usePathname();
+  const { weeklyPlanning, landingV2, schoolStyle } = useTenantFeatures();
+  const orderLabel = landingV2 && !schoolStyle ? "Order now" : "Order lunch";
+  const navItems = landingV2
+    ? [
+        { href: "/menu", label: "Menu" },
+        { href: "/#how", label: "How it works" },
+        ...(weeklyPlanning ? [{ href: "/weekly", label: "Plan the week" }] : []),
+        { href: "/#visit", label: "Contact" },
+      ]
+    : [
+        { href: "/", label: "Home" },
+        { href: "/menu", label: "Menu" },
+      ];
   const isAdmin = pathname.startsWith("/admin");
   const [menuOpen, setMenuOpen] = useState(false);
   // If the uploaded image fails to load (404, expired blob, etc.) we
@@ -103,10 +117,7 @@ export function SiteHeader({
         {/* Desktop nav — visible at >=1024px */}
         {!isAdmin && (
           <nav className="hidden lg:flex items-center gap-6">
-            {[
-              { href: "/", label: "Home" },
-              { href: "/menu", label: "Menu" },
-            ].map((item) => (
+            {navItems.map((item) => (
               <Link key={item.href} href={item.href} style={{
                 fontSize: 14, fontWeight: 600, color: "#211D15",
                 textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
@@ -122,7 +133,7 @@ export function SiteHeader({
               background: "#C0673E", borderRadius: 100,
               padding: "8px 16px",
             }}>
-              Order lunch
+              {orderLabel}
             </Link>
           </nav>
         )}

@@ -80,6 +80,11 @@ describe("resolveLanding fallbacks", () => {
     const v = resolveLanding({ ...base, acceptsCash: true, acceptsZelle: true });
     expect(v.steps[3].body).toBe("Pay by card, cash or Zelle.");
   });
+  it("words the first step per kind of place", () => {
+    expect(resolveLanding({ ...base, placeNoun: "school" }).steps[0].title).toBe("Pick your school");
+    expect(resolveLanding({ ...base, placeNoun: "pickup spot" }).steps[0].title).toBe("Choose a pickup spot");
+    expect(resolveLanding({ ...base, placeNoun: null }).steps[0].title).toBe("Choose your location");
+  });
   it("shows the story only when copy exists", () => {
     expect(resolveLanding({ ...base, content: { storyBody: "Hi" } }).story?.headline).toBe("About Test Cafe");
   });
