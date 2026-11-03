@@ -7,6 +7,12 @@ import { getDisplayFont, getBodyFont } from "@/lib/fonts";
 import { CookieNotice } from "@/components/cookie-notice";
 import { TenantFeaturesProvider } from "@/components/tenant-features";
 import { SiteHeaderServer } from "@/components/site-header-server";
+import {
+  getSiteContext,
+  PLATFORM_TITLE,
+  PLATFORM_OG_TITLE,
+  PLATFORM_DESCRIPTION,
+} from "@/lib/seo";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -24,15 +30,19 @@ const inter = Inter({
 
 export async function generateMetadata(): Promise<Metadata> {
   const restaurant = await getCurrentRestaurant();
-  const title = restaurant ? restaurant.name : "LunchPad";
+  const site = await getSiteContext();
+  const title = restaurant ? restaurant.name : PLATFORM_OG_TITLE;
   const description = restaurant
     ? `Order lunch from ${restaurant.name} — powered by LunchPad.`
-    : "LunchPad — lunch ordering software built for operators. Schools, offices, anywhere lunch is delivered daily.";
+    : PLATFORM_DESCRIPTION;
 
   return {
+    metadataBase: new URL(site.origin),
+    alternates: { canonical: "./" },
+    robots: site.kind === "preview" ? { index: false, follow: false } : undefined,
     title: restaurant
       ? { default: restaurant.name, template: `%s | ${restaurant.name}` }
-      : { default: "LunchPad", template: "%s | LunchPad" },
+      : { default: PLATFORM_TITLE, template: "%s | LunchPad" },
     description,
     icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }] },
     // Open Graph (link previews in iMessage, WhatsApp, Slack, etc.)
@@ -58,12 +68,19 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  themeColor: "#2C4031",
-};
+export async function generateViewport(): Promise<Viewport> {
+  const restaurant = await getCurrentRestaurant();
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  // Apex marketing pages may be zoomable. Ordering/admin forms stay locked
+  // (maximumScale=1) because iOS zooms on input focus otherwise.
+  const zoomable = !restaurant && ["/", "/contact", "/privacy", "/terms"].includes(pathname);
+  return {
+    width: "device-width",
+    initialScale: 1,
+    ...(zoomable ? {} : { maximumScale: 1 }),
+    themeColor: "#2C4031",
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const restaurant = await getCurrentRestaurant();

@@ -14,6 +14,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { PRICING } from "@/lib/platform-content";
 
 // ─── Small presentational helpers ───────────────────────────────────────────
 
@@ -111,24 +112,6 @@ const STEPS = [
         <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
       </svg>
     ),
-  },
-];
-
-const PRICING = [
-  {
-    name: "Starter", price: "49", pop: false,
-    desc: "Perfect for a couple of locations just getting started.",
-    feats: ["Up to 2 locations", "750 orders / month", "Stripe payouts", "Email confirmations", "Order dashboard"],
-  },
-  {
-    name: "Growth", price: "99", pop: true,
-    desc: "For growing operators serving multiple locations.",
-    feats: ["Up to 5 locations", "2,000 orders / month", "Weekly batch checkout", "Priority support", "Everything in Starter"],
-  },
-  {
-    name: "Scale", price: "199", pop: false,
-    desc: "For large districts and multi-brand operators.",
-    feats: ["Up to 10 locations", "Unlimited orders", "Custom branding", "Dedicated onboarding", "Everything in Growth"],
   },
 ];
 
@@ -471,7 +454,9 @@ export function PlatformLanding() {
     root.querySelectorAll(".reveal,.reveal-l,.reveal-r").forEach((el) => io.observe(el));
 
     // Animated counters
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const countUp = (el: HTMLElement) => {
+      if (reduceMotion) return;
       const target = parseFloat(el.dataset.count || "0");
       const suffix = el.dataset.suffix || "";
       const dur = 1700;
@@ -480,7 +465,7 @@ export function PlatformLanding() {
         if (start === null) start = ts;
         const p = Math.min((ts - start) / dur, 1);
         const eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = Math.round(target * eased).toLocaleString() + suffix;
+        el.textContent = Math.round(target * eased).toLocaleString("en-US") + suffix;
         if (p < 1) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
@@ -574,8 +559,9 @@ export function PlatformLanding() {
             <span className="line"><span style={delay(".16s")}><em>finally</em> handled.</span></span>
           </h1>
           <p className="hero-sub reveal" style={delay(".3s")}>
-            LunchPad runs the ordering, payments, and pickup lists for your lunch
-            program — schools, offices, anywhere you deliver. You focus on the food.
+            LunchPad is lunch ordering software for operators: it handles online
+            ordering, payments, and pickup lists for your lunch program — schools,
+            offices, anywhere you deliver. You focus on the food.
           </p>
           <div className="hero-actions reveal" style={delay(".4s")}>
             <Link href="/signup" className="btn btn-primary btn-lg">Start free — 14 days</Link>
@@ -700,7 +686,7 @@ export function PlatformLanding() {
           {STATS.map((s, i) => (
             <div className="stat reveal" key={s.cap} style={delay(i * 0.12 + "s")}>
               <div className="num">
-                <span data-count={s.count} data-suffix={s.suffix}>0</span>
+                <span data-count={s.count} data-suffix={s.suffix}>{`${s.count.toLocaleString("en-US")}${s.suffix}`}</span>
               </div>
               <div className="cap">{s.cap}</div>
             </div>
