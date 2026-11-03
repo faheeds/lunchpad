@@ -24,6 +24,22 @@ const nextConfig = {
       },
     ],
   },
+  // Keep private/transactional routes out of search indexes even if linked.
+  async headers() {
+    const privateSources = [
+      "/admin/:path*",
+      "/account/:path*",
+      "/history",
+      "/weekly",
+      "/mobile-login",
+      "/checkout/:path*",
+      "/api/:path*",
+    ];
+    return privateSources.map((source) => ({
+      source,
+      headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+    }));
+  },
 };
 
 export default withSentryConfig(nextConfig, {

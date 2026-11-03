@@ -9,6 +9,7 @@ import { getLabelsForOperator } from "@/lib/location-labels";
 import { PlatformLanding } from "@/components/platform-landing";
 import { RestaurantLanding, LandingOrderBar } from "@/components/landing/restaurant-landing";
 import { loadLandingView } from "@/lib/landing-data";
+import { getSiteContext, platformJsonLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -190,5 +191,16 @@ export default async function HomePage() {
   }
 
   // ── Platform mode (root domain) ──────────────────────────────────────────
-  return <PlatformLanding />;
+  const site = await getSiteContext();
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(platformJsonLd(site.origin)).replace(/</g, "\\u003c"),
+        }}
+      />
+      <PlatformLanding />
+    </>
+  );
 }
