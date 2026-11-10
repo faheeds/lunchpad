@@ -1860,7 +1860,7 @@ export async function buildCancellationQuote(order: CancellationQuoteOrder & { t
 
 /** Weekly-checkout orders don't carry their own PaymentIntent — the whole
  *  week was one Stripe charge. Find it through the batch item they came from. */
-async function findWeeklyBatchPaymentIntent(order: {
+export async function findWeeklyBatchPaymentIntent(order: {
   parentUserId: string | null;
   parentChildId: string | null;
   deliveryDateId: string;
