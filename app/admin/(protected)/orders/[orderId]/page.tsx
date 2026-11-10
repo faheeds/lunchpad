@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { updateOrderAsAdmin, swapOrderItemAsAdmin } from "@/lib/orders";
 import { sendOrderModifiedEmail, sendOrderEditPaymentLinkEmail } from "@/lib/email/service";
-import { modifyOrderLinesAsAdmin, modifyWeeklyBatchAsAdmin, loadWeekEditorData, cancelPendingModification } from "@/lib/order-modify";
+import { modifyOrderLinesAsAdmin, modifyWeeklyBatchAsAdmin, loadWeekEditorData, cancelPendingModification, getPendingModification, applyPendingNow } from "@/lib/order-modify";
 import { requireAdminRole, hasRole } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -252,6 +252,7 @@ export default async function AdminOrderDetailPage({
         adminUserId,
         request: { updates: payload.updates ?? [], removeItemIds: payload.removeItemIds ?? [], adds: payload.adds ?? [] },
         adminNote: payload.adminNote,
+        applyNow: payload.applyNow,
         adjustmentMode:
           payload.adjustment === "manual"
             ? { kind: "manual", method: payload.manualMethod || "manual" }
@@ -272,7 +273,9 @@ export default async function AdminOrderDetailPage({
           success: true,
           checkoutUrl: result.checkoutUrl,
           emailed,
-          message: `Payment link created for ${formatCurrency(result.deltaCents)}.`,
+          message: result.appliedNow
+            ? `Order updated now — ${formatCurrency(result.deltaCents)} balance due via payment link.`
+            : `Payment link created for ${formatCurrency(result.deltaCents)}.`,
         };
       }
       sendOrderModifiedEmail(orderId, restaurant.id).catch(() => {});
@@ -302,6 +305,7 @@ export default async function AdminOrderDetailPage({
           request: { updates: e.updates ?? [], removeItemIds: e.removeItemIds ?? [], adds: e.adds ?? [] },
         })),
         adminNote: payload.adminNote,
+        applyNow: payload.applyNow,
         adjustmentMode:
           payload.adjustment === "manual"
             ? { kind: "manual", method: payload.manualMethod || "manual" }
@@ -319,7 +323,7 @@ export default async function AdminOrderDetailPage({
             .then(() => true)
             .catch(() => false);
         }
-        return { success: true, checkoutUrl: result.checkoutUrl, emailed, message: `One payment link created for ${formatCurrency(result.deltaCents)}.` };
+        return { success: true, checkoutUrl: result.checkoutUrl, emailed, message: result.appliedNow ? `Week updated now — ${formatCurrency(result.deltaCents)} balance due via one payment link.` : `One payment link created for ${formatCurrency(result.deltaCents)}.` };
       }
       for (const e of payload.edits) sendOrderModifiedEmail(e.orderId, restaurant.id).catch(() => {});
       return {
@@ -329,6 +333,16 @@ export default async function AdminOrderDetailPage({
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : "Modification failed." };
     }
+  }
+
+  async function applyNowAction() {
+    "use server";
+    await requireAdminRole("MANAGER");
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string } | undefined)?.adminUserId;
+    await applyPendingNow({ orderId, restaurantId: restaurant.id, adminUserId }).catch(() => {});
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
   }
 
   async function cancelPayLink() {
@@ -357,7 +371,11 @@ export default async function AdminOrderDetailPage({
     order.refundAmountCents === 0 &&
     !cutoffPassed &&
     order.items.length > 0;
-  const modifyBlockedByLink = canModify && !!order.pendingEditCheckoutSession;
+  const pendingMod =
+    order.pendingEditCheckoutSession || order.pendingEditTotalCents != null
+      ? await getPendingModification(orderId, restaurant.id)
+      : null;
+  const modifyBlockedByLink = !!pendingMod;
   const isStripeOrder = order.payment?.provider === "stripe" || order.payment?.provider === "stripe_checkout_link";
 
   const weekOrders =
@@ -600,15 +618,31 @@ export default async function AdminOrderDetailPage({
               </div>
             </div>
           ))}
-          {modifyBlockedByLink && (
+          {pendingMod && (
             <div className="rounded-lg bg-editorial-paper-2 px-3 py-3 space-y-2">
-              <p className="text-sm font-semibold text-editorial-ink">Waiting on a payment link</p>
-              <p className="text-[11px] text-editorial-ink-soft">
-                A modification is pending the customer&apos;s payment. The order updates automatically once it is paid. You can cancel the link to edit again.
+              <p className="text-sm font-semibold text-editorial-ink">
+                {pendingMod.applied
+                  ? `Changes applied — ${formatCurrency(pendingMod.deltaCents)} balance due`
+                  : `Waiting on payment of ${formatCurrency(pendingMod.deltaCents)}`}
               </p>
-              <form action={cancelPayLink}>
-                <button type="submit" className="text-[12px] underline text-red-700 cursor-pointer">Cancel payment link</button>
-              </form>
+              <p className="text-[11px] text-editorial-ink-soft">
+                {pendingMod.applied
+                  ? "The kitchen already sees the updated order. The customer can still pay the link; or close the balance if you collected it another way or want to waive it."
+                  : "The order stays as-is until the link is paid, then every change applies automatically. You can also apply the changes now and collect later."}
+              </p>
+              {pendingMod.url && <input readOnly value={pendingMod.url} className="w-full rounded-lg border border-editorial-line text-[12px] px-3 py-2 bg-white" />}
+              <div className="flex flex-wrap gap-4">
+                {!pendingMod.applied && (
+                  <form action={applyNowAction}>
+                    <button type="submit" className="text-[12px] font-semibold underline text-editorial-green cursor-pointer">Apply changes now (collect later)</button>
+                  </form>
+                )}
+                <form action={cancelPayLink}>
+                  <button type="submit" className="text-[12px] underline text-red-700 cursor-pointer">
+                    {pendingMod.applied ? "Close balance (collected / waived)" : "Cancel link — discard changes"}
+                  </button>
+                </form>
+              </div>
             </div>
           )}
           {canModify && !modifyBlockedByLink && (

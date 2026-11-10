@@ -42,6 +42,8 @@ export type ModifyPayload = {
   adjustment: "stripe_link" | "manual" | "comped";
   manualMethod?: string;
   emailLink: boolean;
+  /** Pay-link mode: apply the changes now instead of waiting for payment. */
+  applyNow?: boolean;
 };
 
 export type ModifyEdit = Pick<ModifyPayload, "updates" | "removeItemIds" | "adds">;
@@ -52,6 +54,7 @@ export type WeekPayload = {
   adjustment: ModifyPayload["adjustment"];
   manualMethod?: string;
   emailLink: boolean;
+  applyNow?: boolean;
 };
 
 type Result = { success: boolean; error?: string; message?: string; checkoutUrl?: string; emailed?: boolean };
@@ -286,7 +289,7 @@ export function OrderEditor({ order, onChange }: { order: EditorOrder; onChange:
   );
 }
 
-type Settle = { adminNote?: string; adjustment: ModifyPayload["adjustment"]; manualMethod?: string; emailLink: boolean };
+type Settle = { adminNote?: string; adjustment: ModifyPayload["adjustment"]; manualMethod?: string; emailLink: boolean; applyNow: boolean };
 
 function SettleFooter(props: {
   currentTotalCents: number;
@@ -304,6 +307,7 @@ function SettleFooter(props: {
   const [adjustment, setAdjustment] = useState<ModifyPayload["adjustment"]>("stripe_link");
   const [manualMethod, setManualMethod] = useState("");
   const [emailLink, setEmailLink] = useState(true);
+  const [applyNow, setApplyNow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -313,7 +317,7 @@ function SettleFooter(props: {
     setBusy(true);
     setError(null);
     try {
-      const res = await props.onSubmit({ adminNote: note.trim() || undefined, adjustment, manualMethod: manualMethod.trim() || undefined, emailLink });
+      const res = await props.onSubmit({ adminNote: note.trim() || undefined, adjustment, manualMethod: manualMethod.trim() || undefined, emailLink, applyNow: applyNow && adjustment === "stripe_link" && delta > 0 });
       if (!res.success) setError(res.error || "Could not modify the order.");
       else {
         setResult(res);
@@ -380,10 +384,23 @@ function SettleFooter(props: {
           </select>
           {adjustment === "manual" && <input className={field} placeholder="Method, e.g. cash or Zelle" value={manualMethod} onChange={(e) => setManualMethod(e.target.value)} />}
           {adjustment === "stripe_link" && (
-            <label className="text-[12px] flex items-center gap-2">
-              <input type="checkbox" checked={emailLink} onChange={(e) => setEmailLink(e.target.checked)} />
-              Email the payment link to the customer
-            </label>
+            <>
+              <label className="text-[12px] flex items-center gap-2">
+                <input type="checkbox" checked={emailLink} onChange={(e) => setEmailLink(e.target.checked)} />
+                Email the payment link to the customer
+              </label>
+              <div className="rounded-lg border border-editorial-line p-2 space-y-1">
+                <label className="text-[12px] flex items-center gap-2 font-semibold">
+                  <input type="checkbox" checked={applyNow} onChange={(e) => setApplyNow(e.target.checked)} />
+                  Apply changes now — don&apos;t wait for payment
+                </label>
+                <p className="text-[11px] text-editorial-ink-soft">
+                  {applyNow
+                    ? "The kitchen sees the new order immediately. The link stays open and the balance shows as due until it's paid."
+                    : "The order stays as-is until the customer pays the link; then every change applies automatically."}
+                </p>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -395,7 +412,9 @@ function SettleFooter(props: {
         {busy
           ? "Saving…"
           : delta > 0 && props.isStripe && adjustment === "stripe_link"
-            ? `Save & send one payment link (${formatCurrency(delta)})`
+            ? applyNow
+              ? `Apply now & send payment link (${formatCurrency(delta)})`
+              : `Save & send payment link (${formatCurrency(delta)})`
             : delta < 0 && props.isStripe
               ? `Save & refund ${formatCurrency(-delta)}`
               : `Save ${noun} changes`}
