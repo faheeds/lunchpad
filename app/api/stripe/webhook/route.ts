@@ -239,8 +239,12 @@ export async function POST(request: Request) {
             // this order when the pay link was created. A weekly-checkout edit
             // stores one plan per order here, settled by this ONE payment.
             const payload = order.pendingEditPayload as unknown as {
+              applied?: boolean;
               plans: { orderId: string; plan: ModifyPlan; specialInstructions: string | null }[];
             };
+            // When the admin already applied the changes ("apply now"), this payment
+            // only settles the balance — don't apply the plans a second time.
+            const alreadyApplied = !!payload.applied;
             const netDeltaCents = payload.plans.reduce((t, e) => t + e.plan.deltaCents, 0);
             const lockedIds = payload.plans.map((e) => e.orderId).filter((id) => id !== order.id);
             const orderNumbers = new Map(
@@ -250,15 +254,22 @@ export async function POST(request: Request) {
             await prisma.$transaction(async (tx) => {
               for (const entry of payload.plans) {
                 const isPrimary = entry.orderId === order.id;
-                await applyModifyPlan(tx, entry.orderId, entry.plan, {
-                  ...(entry.specialInstructions ? { specialInstructions: entry.specialInstructions } : {}),
+                const settle = {
                   pendingEditTotalCents: null,
                   pendingEditCheckoutSession: null,
                   pendingEditCreatedAt: null,
                   pendingEditPayload: Prisma.DbNull,
                   // The single supplemental charge is recorded on the order that owns the link.
                   ...(isPrimary ? { deltaPaymentIntentId: paymentIntentId, deltaAmountCents: netDeltaCents } : {}),
-                });
+                };
+                if (alreadyApplied) {
+                  await tx.order.update({ where: { id: entry.orderId }, data: settle });
+                } else {
+                  await applyModifyPlan(tx, entry.orderId, entry.plan, {
+                    ...(entry.specialInstructions ? { specialInstructions: entry.specialInstructions } : {}),
+                    ...settle,
+                  });
+                }
               }
             });
 
@@ -277,8 +288,10 @@ export async function POST(request: Request) {
               },
             });
 
-            for (const entry of payload.plans) {
-              sendOrderModifiedEmail(entry.orderId, order.restaurantId).catch(() => {});
+            if (!alreadyApplied) {
+              for (const entry of payload.plans) {
+                sendOrderModifiedEmail(entry.orderId, order.restaurantId).catch(() => {});
+              }
             }
             sendPushForOrder(order.id, { title: "Order updated", body: "Your order has been updated.", data: { screen: "order", orderId: order.id } }).catch(() => {});
           } else {

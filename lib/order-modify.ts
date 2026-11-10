@@ -44,6 +44,8 @@ export type ModifyOrderResult =
       checkoutUrl: string;
       deltaCents: number;
       newTotalCents: number;
+      /** True when the changes were applied immediately and the link only collects the balance. */
+      appliedNow: boolean;
     };
 
 /** Applies a plan inside an existing transaction. Shared by the admin action
@@ -226,6 +228,8 @@ export async function modifyOrderLinesAsAdmin(args: {
   adminNote?: string;
   /** How a price INCREASE on a Stripe-paid order is handled. */
   adjustmentMode?: AdminAdjustmentMode;
+  /** With a pay link: apply the changes now instead of waiting for payment. */
+  applyNow?: boolean;
 }): Promise<ModifyOrderResult> {
   const mode: AdminAdjustmentMode = args.adjustmentMode ?? { kind: "stripe_link" };
   const { order, plan, isStripePayment, intents } = await prepareModification(args);
@@ -261,15 +265,23 @@ export async function modifyOrderLinesAsAdmin(args: {
       expiresAt,
     });
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        pendingEditTotalCents: plan.newTotalCents,
-        pendingEditCheckoutSession: session.id,
-        pendingEditCreatedAt: now,
-        pendingEditPayload: { plans: [{ orderId: order.id, plan, specialInstructions: specialInstructions ?? null }] } as unknown as Prisma.InputJsonValue,
-      },
-    });
+    const pendingData = {
+      pendingEditTotalCents: plan.newTotalCents,
+      pendingEditCheckoutSession: session.id,
+      pendingEditCreatedAt: now,
+      pendingEditPayload: {
+        applied: !!args.applyNow,
+        plans: [{ orderId: order.id, plan, specialInstructions: specialInstructions ?? null }],
+      } as unknown as Prisma.InputJsonValue,
+    };
+    if (args.applyNow) {
+      // Apply now; the link stays open to collect the balance.
+      await prisma.$transaction(async (tx) => {
+        await applyModifyPlan(tx, order.id, plan, { ...(specialInstructions ? { specialInstructions } : {}), ...pendingData });
+      });
+    } else {
+      await prisma.order.update({ where: { id: order.id }, data: pendingData });
+    }
 
     await logActivity({
       restaurantId: order.restaurantId,
@@ -277,11 +289,13 @@ export async function modifyOrderLinesAsAdmin(args: {
       entityType: "ORDER",
       entityId: order.id,
       action: "MODIFIED",
-      summary: `Admin started modification of order ${order.orderNumber} (${summaryText}) — awaiting payment of ${formatCurrency(deltaCents)}${noteFragment}`,
+      summary: args.applyNow
+        ? `Admin modified order ${order.orderNumber} (${summaryText}) — applied now, ${formatCurrency(deltaCents)} balance due via payment link${noteFragment}`
+        : `Admin started modification of order ${order.orderNumber} (${summaryText}) — awaiting payment of ${formatCurrency(deltaCents)}${noteFragment}`,
       metadata: { orderNumber: order.orderNumber, deltaCents, newTotalCents: plan.newTotalCents, adjustmentMode: "stripe_link" },
     });
 
-    return { action: "checkout_required", checkoutUrl: session.url!, deltaCents, newTotalCents: plan.newTotalCents };
+    return { action: "checkout_required", checkoutUrl: session.url!, deltaCents, newTotalCents: plan.newTotalCents, appliedNow: !!args.applyNow };
   }
 
   // ── Decrease on a Stripe order: refund first, then apply ──
@@ -401,6 +415,8 @@ export async function modifyWeeklyBatchAsAdmin(args: {
   edits: { orderId: string; request: ModifyRequest }[];
   adminNote?: string;
   adjustmentMode?: AdminAdjustmentMode;
+  /** With a pay link: apply every day's changes now instead of waiting for payment. */
+  applyNow?: boolean;
 }): Promise<ModifyOrderResult> {
   const mode: AdminAdjustmentMode = args.adjustmentMode ?? { kind: "stripe_link" };
   if (args.edits.length === 0) throw new Error("No changes to save.");
@@ -452,27 +468,24 @@ export async function modifyWeeklyBatchAsAdmin(args: {
     });
 
     const payload = {
+      applied: !!args.applyNow,
       plans: withNotes.map(({ p, specialInstructions }) => ({ orderId: p.order.id, plan: p.plan, specialInstructions })),
     } as unknown as Prisma.InputJsonValue;
 
-    await prisma.$transaction([
-      prisma.order.update({
-        where: { id: primary.id },
-        data: {
-          pendingEditTotalCents: prepared[0].plan.newTotalCents,
-          pendingEditCheckoutSession: session.id,
-          pendingEditCreatedAt: now,
-          pendingEditPayload: payload,
-        },
-      }),
-      // Lock the other orders so nobody edits them while the link is open.
-      ...prepared.slice(1).map((p) =>
-        prisma.order.update({
-          where: { id: p.order.id },
-          data: { pendingEditTotalCents: p.plan.newTotalCents, pendingEditCreatedAt: now },
-        })
-      ),
-    ]);
+    await prisma.$transaction(async (tx) => {
+      for (const { p, specialInstructions } of withNotes) {
+        const isPrimary = p.order.id === primary.id;
+        const lock = isPrimary
+          ? { pendingEditTotalCents: p.plan.newTotalCents, pendingEditCheckoutSession: session.id, pendingEditCreatedAt: now, pendingEditPayload: payload }
+          // Lock the other orders so nobody edits them while the balance is open.
+          : { pendingEditTotalCents: p.plan.newTotalCents, pendingEditCreatedAt: now };
+        if (args.applyNow) {
+          await applyModifyPlan(tx, p.order.id, p.plan, { ...(specialInstructions ? { specialInstructions } : {}), ...lock });
+        } else {
+          await tx.order.update({ where: { id: p.order.id }, data: lock });
+        }
+      }
+    });
 
     await logActivity({
       restaurantId: primary.restaurantId,
@@ -480,11 +493,13 @@ export async function modifyWeeklyBatchAsAdmin(args: {
       entityType: "ORDER",
       entityId: primary.id,
       action: "MODIFIED",
-      summary: `Admin started a weekly modification across ${prepared.length} orders (${summaryText}) — awaiting one payment of ${formatCurrency(netDelta)}${noteFragment}`,
+      summary: args.applyNow
+        ? `Admin modified ${prepared.length} orders in one weekly checkout (${summaryText}) — applied now, ${formatCurrency(netDelta)} balance due via one payment link${noteFragment}`
+        : `Admin started a weekly modification across ${prepared.length} orders (${summaryText}) — awaiting one payment of ${formatCurrency(netDelta)}${noteFragment}`,
       metadata: { orderIds: prepared.map((p) => p.order.id), netDelta, adjustmentMode: "stripe_link" },
     });
 
-    return { action: "checkout_required", checkoutUrl: session.url!, deltaCents: netDelta, newTotalCents: newTotalSum };
+    return { action: "checkout_required", checkoutUrl: session.url!, deltaCents: netDelta, newTotalCents: newTotalSum, appliedNow: !!args.applyNow };
   }
 
   // ── Net decrease: ONE refund for the net amount, then apply everything ──
@@ -576,7 +591,8 @@ export async function cancelPendingModification(args: {
       /* already expired/completed */
     }
   }
-  const plans = ((primary.pendingEditPayload as { plans?: { orderId: string }[] } | null)?.plans ?? []).map((p) => p.orderId);
+  const payloadInfo = primary.pendingEditPayload as { applied?: boolean; plans?: { orderId: string }[] } | null;
+  const plans = (payloadInfo?.plans ?? []).map((p) => p.orderId);
   const ids = Array.from(new Set([primary.id, ...plans]));
   await prisma.order.updateMany({
     where: { id: { in: ids }, restaurantId: args.restaurantId },
@@ -588,7 +604,9 @@ export async function cancelPendingModification(args: {
     entityType: "ORDER",
     entityId: primary.id,
     action: "MODIFIED",
-    summary: `Admin cancelled the outstanding payment link on order ${primary.orderNumber}${ids.length > 1 ? ` (and ${ids.length - 1} linked order${ids.length > 2 ? "s" : ""})` : ""}`,
+    summary: payloadInfo?.applied
+      ? `Admin closed the open balance on order ${primary.orderNumber} (collected or waived outside Stripe)${ids.length > 1 ? ` and ${ids.length - 1} linked order${ids.length > 2 ? "s" : ""}` : ""}`
+      : `Admin cancelled the outstanding payment link on order ${primary.orderNumber} — changes were not applied${ids.length > 1 ? ` (and ${ids.length - 1} linked order${ids.length > 2 ? "s" : ""})` : ""}`,
   });
 }
 
@@ -672,4 +690,78 @@ export async function loadWeekEditorData(
         removals: m.options.filter((o) => o.optionType === "REMOVAL").map((o) => o.name),
       })),
   }));
+}
+
+/** What is outstanding on this order's pay link, if anything. */
+export async function getPendingModification(orderId: string, restaurantId: string) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
+    select: { id: true, pendingEditCheckoutSession: true, pendingEditTotalCents: true, pendingEditPayload: true },
+  });
+  if (!order || (!order.pendingEditCheckoutSession && order.pendingEditTotalCents == null)) return null;
+
+  let owner: { id: string; orderNumber: string; pendingEditCheckoutSession: string | null; pendingEditPayload: Prisma.JsonValue } | null = null;
+  if (order.pendingEditCheckoutSession) {
+    owner = { id: order.id, orderNumber: "", pendingEditCheckoutSession: order.pendingEditCheckoutSession, pendingEditPayload: order.pendingEditPayload };
+  } else {
+    owner = await prisma.order.findFirst({
+      where: {
+        restaurantId,
+        pendingEditCheckoutSession: { not: null },
+        pendingEditPayload: { path: ["plans"], array_contains: [{ orderId: order.id }] },
+      },
+      select: { id: true, orderNumber: true, pendingEditCheckoutSession: true, pendingEditPayload: true },
+    });
+  }
+  if (!owner) return { applied: false, deltaCents: 0, url: null as string | null, ownerOrderId: null as string | null };
+
+  const info = owner.pendingEditPayload as { applied?: boolean; plans?: { plan: { deltaCents: number } }[] } | null;
+  const deltaCents = (info?.plans ?? []).reduce((t, e) => t + e.plan.deltaCents, 0);
+  let url: string | null = null;
+  if (stripe && owner.pendingEditCheckoutSession) {
+    try {
+      url = (await stripe.checkout.sessions.retrieve(owner.pendingEditCheckoutSession)).url ?? null;
+    } catch {
+      url = null;
+    }
+  }
+  return { applied: !!info?.applied, deltaCents, url, ownerOrderId: owner.id };
+}
+
+/**
+ * Admin decides not to wait for payment: apply the held changes now and keep
+ * the pay link open so the balance can still be collected.
+ */
+export async function applyPendingNow(args: { orderId: string; restaurantId: string; adminUserId?: string }) {
+  const pending = await getPendingModification(args.orderId, args.restaurantId);
+  if (!pending?.ownerOrderId) throw new Error("This order has no payment link outstanding.");
+  const owner = await prisma.order.findFirst({
+    where: { id: pending.ownerOrderId, restaurantId: args.restaurantId },
+    select: { id: true, orderNumber: true, restaurantId: true, pendingEditPayload: true },
+  });
+  const payload = owner?.pendingEditPayload as {
+    applied?: boolean;
+    plans?: { orderId: string; plan: ModifyPlan; specialInstructions: string | null }[];
+  } | null;
+  if (!owner || !payload?.plans) throw new Error("Nothing pending to apply.");
+  if (payload.applied) throw new Error("These changes are already applied.");
+
+  await prisma.$transaction(async (tx) => {
+    for (const e of payload.plans!) {
+      await applyModifyPlan(tx, e.orderId, e.plan, e.specialInstructions ? { specialInstructions: e.specialInstructions } : {});
+    }
+    await tx.order.update({
+      where: { id: owner.id },
+      data: { pendingEditPayload: { ...payload, applied: true } as unknown as Prisma.InputJsonValue },
+    });
+  });
+  await logActivity({
+    restaurantId: owner.restaurantId,
+    adminUserId: args.adminUserId,
+    entityType: "ORDER",
+    entityId: owner.id,
+    action: "MODIFIED",
+    summary: `Admin applied the pending changes on order ${owner.orderNumber} without waiting for payment — ${formatCurrency(pending.deltaCents)} balance still due via the payment link`,
+  });
+  return pending.deltaCents;
 }
