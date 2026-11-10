@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 
@@ -44,6 +44,16 @@ export type ModifyPayload = {
   emailLink: boolean;
 };
 
+export type ModifyEdit = Pick<ModifyPayload, "updates" | "removeItemIds" | "adds">;
+
+export type WeekPayload = {
+  edits: (ModifyEdit & { orderId: string })[];
+  adminNote?: string;
+  adjustment: ModifyPayload["adjustment"];
+  manualMethod?: string;
+  emailLink: boolean;
+};
+
 type Result = { success: boolean; error?: string; message?: string; checkoutUrl?: string; emailed?: boolean };
 
 type LineState = { remove: boolean; additions: string[]; removals: string[] };
@@ -64,29 +74,29 @@ const chip = (on: boolean) =>
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-export function ModifyOrderClient(props: {
+
+export type EditorOutput = {
+  edit: ModifyEdit;
   currentTotalCents: number;
-  currentSubtotalCents: number;
+  newTotalCents: number;
+  dirty: boolean;
+  remaining: number;
+};
+
+export type EditorOrder = {
+  orderId: string;
+  title?: string;
+  currentTotalCents: number;
   discountCents: number;
-  isStripe: boolean;
   lines: ModifyLine[];
   menuItems: ModifyMenuItem[];
-  action: (payload: ModifyPayload) => Promise<Result>;
-}) {
-  const { lines, menuItems } = props;
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
+};
+
+export function OrderEditor({ order, onChange }: { order: EditorOrder; onChange: (o: EditorOutput) => void }) {
+  const { lines, menuItems } = order;
   const [state, setState] = useState<Record<string, LineState>>({});
   const [news, setNews] = useState<NewLine[]>([]);
   const [draftItem, setDraftItem] = useState("");
-  const [note, setNote] = useState("");
-  const [adjustment, setAdjustment] = useState<ModifyPayload["adjustment"]>("stripe_link");
-  const [manualMethod, setManualMethod] = useState("");
-  const [emailLink, setEmailLink] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<Result | null>(null);
-
   const menuById = useMemo(() => new Map(menuItems.map((m) => [m.id, m])), [menuItems]);
 
   const lineState = (l: ModifyLine): LineState => {
@@ -102,7 +112,7 @@ export function ModifyOrderClient(props: {
     return base + m.addOns.filter((a) => n.additions.includes(a.name)).reduce((t, a) => t + a.priceDeltaCents, 0);
   }
 
-  const preview = useMemo(() => {
+  const output = useMemo<EditorOutput>(() => {
     let subtotal = 0;
     for (const l of lines) {
       const st = state[l.id];
@@ -111,30 +121,29 @@ export function ModifyOrderClient(props: {
       subtotal += l.basePriceCents + l.menu.addOns.filter((a) => adds.includes(a.name)).reduce((t, a) => t + a.priceDeltaCents, 0);
     }
     for (const n of news) subtotal += newLinePrice(n) * n.quantity;
-    const total = Math.max(0, subtotal - props.discountCents);
-    return { total, delta: total - props.currentTotalCents };
+    return {
+      edit: {
+        updates: lines.filter((l) => state[l.id] && !state[l.id].remove).map((l) => ({ orderItemId: l.id, additions: state[l.id].additions, removals: state[l.id].removals })),
+        removeItemIds: lines.filter((l) => state[l.id]?.remove).map((l) => l.id),
+        adds: news.map((n) => ({ menuItemId: n.menuItemId, size: n.size, choice: n.choice, additions: n.additions, removals: n.removals, quantity: n.quantity })),
+      },
+      currentTotalCents: order.currentTotalCents,
+      newTotalCents: Math.max(0, subtotal - order.discountCents),
+      dirty: Object.keys(state).length > 0 || news.length > 0,
+      remaining: lines.filter((l) => !state[l.id]?.remove).length + news.reduce((t, n) => t + n.quantity, 0),
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, state, news, props.discountCents, props.currentTotalCents]);
+  }, [lines, state, news, order.discountCents, order.currentTotalCents]);
 
-  const remainingCount = lines.filter((l) => !state[l.id]?.remove).length + news.reduce((t, n) => t + n.quantity, 0);
-  const dirty = Object.values(state).length > 0 || news.length > 0;
+  useEffect(() => {
+    onChange(output);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [output]);
 
   function addNew(menuItemId: string, seed?: Partial<NewLine>) {
     const m = menuById.get(menuItemId);
     if (!m) return;
-    setNews((cur) => [
-      ...cur,
-      {
-        key: Date.now() + cur.length,
-        menuItemId,
-        size: m.sizes[0]?.name,
-        choice: undefined,
-        additions: [],
-        removals: [],
-        quantity: 1,
-        ...seed,
-      },
-    ]);
+    setNews((cur) => [...cur, { key: Date.now() + cur.length, menuItemId, size: m.sizes[0]?.name, choice: undefined, additions: [], removals: [], quantity: 1, ...seed }]);
   }
 
   function addAnother(l: ModifyLine) {
@@ -149,85 +158,11 @@ export function ModifyOrderClient(props: {
   }
 
   const patchNew = (key: number, p: Partial<NewLine>) => setNews((cur) => cur.map((n) => (n.key === key ? { ...n, ...p } : n)));
-
-  async function submit() {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await props.action({
-        updates: lines.filter((l) => state[l.id] && !state[l.id].remove).map((l) => ({ orderItemId: l.id, additions: state[l.id].additions, removals: state[l.id].removals })),
-        removeItemIds: lines.filter((l) => state[l.id]?.remove).map((l) => l.id),
-        adds: news.map((n) => ({
-          menuItemId: n.menuItemId,
-          size: n.size,
-          choice: n.choice,
-          additions: n.additions,
-          removals: n.removals,
-          quantity: n.quantity,
-        })),
-        adminNote: note.trim() || undefined,
-        adjustment,
-        manualMethod: manualMethod.trim() || undefined,
-        emailLink,
-      });
-      if (!res.success) setError(res.error || "Could not modify the order.");
-      else {
-        setResult(res);
-        if (!res.checkoutUrl) router.refresh();
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not modify the order.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-full py-2.5 rounded-full border border-editorial-green text-editorial-green text-sm font-semibold bg-white cursor-pointer hover:bg-editorial-paper-2 transition"
-      >
-        Modify order…
-      </button>
-    );
-  }
-
-  if (result) {
-    return (
-      <div className="rounded-lg bg-editorial-paper-2 px-3 py-3 space-y-2">
-        <p className="text-sm font-semibold text-editorial-ink">{result.message ?? "Order updated."}</p>
-        {result.checkoutUrl && (
-          <>
-            <p className="text-[11px] text-editorial-ink-soft">
-              {result.emailed ? "We emailed the customer the payment link. " : ""}
-              The order updates automatically once it is paid.
-            </p>
-            <input readOnly value={result.checkoutUrl} className={field} onFocus={(e) => e.currentTarget.select()} />
-          </>
-        )}
-        <button type="button" className="text-[12px] underline cursor-pointer" onClick={() => router.refresh()}>
-          Done
-        </button>
-      </div>
-    );
-  }
-
-  const needsMethod = adjustment === "manual" && preview.delta > 0 && props.isStripe;
-  const canSubmit = dirty && remainingCount > 0 && !busy && (!needsMethod || manualMethod.trim().length > 0);
   const draft = menuById.get(draftItem);
 
   return (
-    <div className="rounded-[14px] border border-editorial-line bg-white p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-editorial-ink">Modify order</p>
-        <button type="button" className="text-[12px] text-editorial-ink-soft cursor-pointer" onClick={() => setOpen(false)}>
-          Close
-        </button>
-      </div>
-
-      <div className="space-y-2">
+    <div className="space-y-2">
+      {order.title && <p className="text-[12px] font-semibold text-editorial-ink-soft uppercase tracking-wide">{order.title}</p>}
         {lines.map((l) => {
           const st = lineState(l);
           return (
@@ -325,7 +260,6 @@ export function ModifyOrderClient(props: {
             </div>
           );
         })}
-      </div>
 
       <div className="flex gap-2">
         <select className={field} value={draftItem} onChange={(e) => setDraftItem(e.target.value)}>
@@ -348,29 +282,99 @@ export function ModifyOrderClient(props: {
           Add
         </button>
       </div>
+    </div>
+  );
+}
 
+type Settle = { adminNote?: string; adjustment: ModifyPayload["adjustment"]; manualMethod?: string; emailLink: boolean };
+
+function SettleFooter(props: {
+  currentTotalCents: number;
+  newTotalCents: number;
+  discountCents: number;
+  isStripe: boolean;
+  canSubmit: boolean;
+  emptyWarning: boolean;
+  weekly?: boolean;
+  onSubmit: (s: Settle) => Promise<Result>;
+  onClose?: () => void;
+}) {
+  const router = useRouter();
+  const [note, setNote] = useState("");
+  const [adjustment, setAdjustment] = useState<ModifyPayload["adjustment"]>("stripe_link");
+  const [manualMethod, setManualMethod] = useState("");
+  const [emailLink, setEmailLink] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
+  const delta = props.newTotalCents - props.currentTotalCents;
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await props.onSubmit({ adminNote: note.trim() || undefined, adjustment, manualMethod: manualMethod.trim() || undefined, emailLink });
+      if (!res.success) setError(res.error || "Could not modify the order.");
+      else {
+        setResult(res);
+        if (!res.checkoutUrl) router.refresh();
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not modify the order.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (result) {
+    return (
+      <div className="rounded-lg bg-editorial-paper-2 px-3 py-3 space-y-2">
+        <p className="text-sm font-semibold text-editorial-ink">{result.message ?? "Order updated."}</p>
+        {result.checkoutUrl && (
+          <>
+            <p className="text-[11px] text-editorial-ink-soft">
+              {result.emailed ? "We emailed the customer the payment link. " : ""}
+              {props.weekly ? "Every change in this week applies automatically once this one link is paid." : "The order updates automatically once it is paid."}
+            </p>
+            <input readOnly value={result.checkoutUrl} className={field} onFocus={(e) => e.currentTarget.select()} />
+          </>
+        )}
+        <button type="button" className="text-[12px] underline cursor-pointer" onClick={() => router.refresh()}>
+          Done
+        </button>
+      </div>
+    );
+  }
+
+  const needsMethod = adjustment === "manual" && delta > 0 && props.isStripe;
+  const ok = props.canSubmit && !busy && (!needsMethod || manualMethod.trim().length > 0);
+  const noun = props.weekly ? "week" : "order";
+
+  return (
+    <div className="space-y-3">
       <input className={field} placeholder="Note for the customer / kitchen (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
 
       <div className="rounded-lg bg-editorial-paper-2 px-3 py-2 text-[12px] space-y-1">
         <div className="flex justify-between">
-          <span>Current total</span>
+          <span>Current {props.weekly ? "total (changed days)" : "total"}</span>
           <span>{formatCurrency(props.currentTotalCents)}</span>
         </div>
         <div className="flex justify-between font-semibold">
           <span>New total</span>
-          <span>{formatCurrency(preview.total)}</span>
+          <span>{formatCurrency(props.newTotalCents)}</span>
         </div>
         <div className="flex justify-between font-semibold">
-          <span>{preview.delta < 0 ? (props.isStripe ? "Refunded to customer automatically" : "Owed back to customer") : preview.delta > 0 ? "Additional amount due" : "Difference"}</span>
-          <span>{formatCurrency(Math.abs(preview.delta))}</span>
+          <span>{delta < 0 ? (props.isStripe ? "Refunded to customer automatically" : "Owed back to customer") : delta > 0 ? "Additional amount due" : "Difference"}</span>
+          <span>{formatCurrency(Math.abs(delta))}</span>
         </div>
-        {props.discountCents > 0 && <p className="text-editorial-ink-soft">Order discount of {formatCurrency(props.discountCents)} is kept as-is.</p>}
+        {props.weekly && <p className="text-editorial-ink-soft">Changes across days are netted into one payment or one refund.</p>}
+        {props.discountCents > 0 && <p className="text-editorial-ink-soft">Existing discounts are kept as fixed amounts.</p>}
       </div>
 
-      {preview.delta > 0 && props.isStripe && (
+      {delta > 0 && props.isStripe && (
         <div className="space-y-2">
           <select className={field} value={adjustment} onChange={(e) => setAdjustment(e.target.value as ModifyPayload["adjustment"])}>
-            <option value="stripe_link">Customer pays by card via payment link</option>
+            <option value="stripe_link">Customer pays by card via ONE payment link</option>
             <option value="manual">Collected another way (cash, Zelle…)</option>
             <option value="comped">Waive the extra cost</option>
           </select>
@@ -384,12 +388,127 @@ export function ModifyOrderClient(props: {
         </div>
       )}
 
-      {remainingCount < 1 && dirty && <p className="text-[12px] text-red-700">An order needs at least one item. Cancel the order instead.</p>}
+      {props.emptyWarning && <p className="text-[12px] text-red-700">An order needs at least one item. Cancel the order instead.</p>}
       {error && <p className="text-[12px] text-red-700">{error}</p>}
 
-      <button type="button" disabled={!canSubmit} onClick={submit} className="w-full py-2.5 rounded-full bg-editorial-green text-white text-sm font-semibold disabled:opacity-40 cursor-pointer">
-        {busy ? "Saving…" : preview.delta > 0 && props.isStripe && adjustment === "stripe_link" ? "Save & send payment link" : preview.delta < 0 && props.isStripe ? `Save & refund ${formatCurrency(-preview.delta)}` : "Save changes"}
+      <button type="button" disabled={!ok} onClick={submit} className="w-full py-2.5 rounded-full bg-editorial-green text-white text-sm font-semibold disabled:opacity-40 cursor-pointer">
+        {busy
+          ? "Saving…"
+          : delta > 0 && props.isStripe && adjustment === "stripe_link"
+            ? `Save & send one payment link (${formatCurrency(delta)})`
+            : delta < 0 && props.isStripe
+              ? `Save & refund ${formatCurrency(-delta)}`
+              : `Save ${noun} changes`}
       </button>
+    </div>
+  );
+}
+
+const OPEN_BTN =
+  "w-full py-2.5 rounded-full border border-editorial-green text-editorial-green text-sm font-semibold bg-white cursor-pointer hover:bg-editorial-paper-2 transition";
+
+export function ModifyOrderClient(props: {
+  currentTotalCents: number;
+  currentSubtotalCents: number;
+  discountCents: number;
+  isStripe: boolean;
+  lines: ModifyLine[];
+  menuItems: ModifyMenuItem[];
+  action: (payload: ModifyPayload) => Promise<Result>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [out, setOut] = useState<EditorOutput | null>(null);
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className={OPEN_BTN}>
+        Modify order…
+      </button>
+    );
+  }
+  return (
+    <div className="rounded-[14px] border border-editorial-line bg-white p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-editorial-ink">Modify order</p>
+        <button type="button" className="text-[12px] text-editorial-ink-soft cursor-pointer" onClick={() => setOpen(false)}>
+          Close
+        </button>
+      </div>
+      <OrderEditor
+        order={{ orderId: "single", currentTotalCents: props.currentTotalCents, discountCents: props.discountCents, lines: props.lines, menuItems: props.menuItems }}
+        onChange={setOut}
+      />
+      <SettleFooter
+        currentTotalCents={props.currentTotalCents}
+        newTotalCents={out?.newTotalCents ?? props.currentTotalCents}
+        discountCents={props.discountCents}
+        isStripe={props.isStripe}
+        canSubmit={!!out?.dirty && (out?.remaining ?? 0) > 0}
+        emptyWarning={!!out?.dirty && (out?.remaining ?? 1) < 1}
+        onSubmit={(s) => props.action({ ...out!.edit, ...s })}
+      />
+    </div>
+  );
+}
+
+export type WeekOrder = EditorOrder & { dateLabel: string };
+
+/** Edit every day of a weekly checkout together; settled with ONE pay link / ONE refund. */
+export function ModifyWeekClient(props: {
+  orders: WeekOrder[];
+  isStripe: boolean;
+  action: (payload: WeekPayload) => Promise<Result>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [outs, setOuts] = useState<Record<string, EditorOutput>>({});
+  const [tab, setTab] = useState(props.orders[0]?.orderId ?? "");
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className={OPEN_BTN}>
+        Modify whole week ({props.orders.length} days, one payment)…
+      </button>
+    );
+  }
+
+  const changed = props.orders.filter((o) => outs[o.orderId]?.dirty);
+  const current = changed.reduce((t, o) => t + o.currentTotalCents, 0);
+  const next = changed.reduce((t, o) => t + (outs[o.orderId]?.newTotalCents ?? o.currentTotalCents), 0);
+  const anyEmpty = changed.some((o) => (outs[o.orderId]?.remaining ?? 1) < 1);
+
+  return (
+    <div className="rounded-[14px] border border-editorial-line bg-white p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-editorial-ink">Modify whole week</p>
+        <button type="button" className="text-[12px] text-editorial-ink-soft cursor-pointer" onClick={() => setOpen(false)}>
+          Close
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {props.orders.map((o) => (
+          <button key={o.orderId} type="button" className={chip(tab === o.orderId)} onClick={() => setTab(o.orderId)}>
+            {o.dateLabel}
+            {outs[o.orderId]?.dirty ? " •" : ""}
+          </button>
+        ))}
+      </div>
+      {props.orders.map((o) => (
+        <div key={o.orderId} hidden={tab !== o.orderId}>
+          <OrderEditor
+            order={{ ...o, title: o.dateLabel }}
+            onChange={(out) => setOuts((cur) => (cur[o.orderId] && JSON.stringify(cur[o.orderId]) === JSON.stringify(out) ? cur : { ...cur, [o.orderId]: out }))}
+          />
+        </div>
+      ))}
+      <SettleFooter
+        weekly
+        currentTotalCents={current}
+        newTotalCents={next}
+        discountCents={0}
+        isStripe={props.isStripe}
+        canSubmit={changed.length > 0 && !anyEmpty}
+        emptyWarning={anyEmpty}
+        onSubmit={(s) => props.action({ edits: changed.map((o) => ({ orderId: o.orderId, ...outs[o.orderId].edit })), ...s })}
+      />
     </div>
   );
 }

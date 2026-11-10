@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { updateOrderAsAdmin, swapOrderItemAsAdmin } from "@/lib/orders";
 import { sendOrderModifiedEmail, sendOrderEditPaymentLinkEmail } from "@/lib/email/service";
-import { modifyOrderLinesAsAdmin, cancelPendingModification } from "@/lib/order-modify";
+import { modifyOrderLinesAsAdmin, modifyWeeklyBatchAsAdmin, loadWeekEditorData, cancelPendingModification } from "@/lib/order-modify";
 import { requireAdminRole, hasRole } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -17,7 +17,7 @@ import { issueOrderRefund } from "@/lib/refund";
 import { sendRefundEmail } from "@/lib/email/service";
 import { RefundModalClient } from "@/components/admin/refund-modal-client";
 import { SwapItemClient, type SwapPayload } from "@/components/admin/swap-item-client";
-import { ModifyOrderClient, type ModifyPayload } from "@/components/admin/modify-order-client";
+import { ModifyOrderClient, ModifyWeekClient, type ModifyPayload, type WeekPayload } from "@/components/admin/modify-order-client";
 
 export const dynamic = "force-dynamic";
 
@@ -288,6 +288,49 @@ export default async function AdminOrderDetailPage({
     }
   }
 
+  async function performModifyWeek(payload: WeekPayload) {
+    "use server";
+    await requireAdminRole("MANAGER");
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string } | undefined)?.adminUserId;
+    try {
+      const result = await modifyWeeklyBatchAsAdmin({
+        restaurantId: restaurant.id,
+        adminUserId,
+        edits: (payload.edits ?? []).map((e) => ({
+          orderId: e.orderId,
+          request: { updates: e.updates ?? [], removeItemIds: e.removeItemIds ?? [], adds: e.adds ?? [] },
+        })),
+        adminNote: payload.adminNote,
+        adjustmentMode:
+          payload.adjustment === "manual"
+            ? { kind: "manual", method: payload.manualMethod || "manual" }
+            : payload.adjustment === "comped"
+              ? { kind: "comped" }
+              : { kind: "stripe_link" },
+      });
+      revalidatePath(`/admin/orders/${orderId}`);
+      revalidatePath("/admin/orders");
+      if (result.action === "checkout_required") {
+        let emailed = false;
+        if (payload.emailLink) {
+          // One email, sent for the order that owns the link.
+          emailed = await sendOrderEditPaymentLinkEmail(payload.edits[0].orderId, restaurant.id, result.checkoutUrl, result.deltaCents)
+            .then(() => true)
+            .catch(() => false);
+        }
+        return { success: true, checkoutUrl: result.checkoutUrl, emailed, message: `One payment link created for ${formatCurrency(result.deltaCents)}.` };
+      }
+      for (const e of payload.edits) sendOrderModifiedEmail(e.orderId, restaurant.id).catch(() => {});
+      return {
+        success: true,
+        message: result.refundCents > 0 ? `Week updated — ${formatCurrency(result.refundCents)} refunded in one refund.` : "Week updated.",
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Modification failed." };
+    }
+  }
+
   async function cancelPayLink() {
     "use server";
     await requireAdminRole("MANAGER");
@@ -316,6 +359,11 @@ export default async function AdminOrderDetailPage({
     order.items.length > 0;
   const modifyBlockedByLink = canModify && !!order.pendingEditCheckoutSession;
   const isStripeOrder = order.payment?.provider === "stripe" || order.payment?.provider === "stripe_checkout_link";
+
+  const weekOrders =
+    canModify && !modifyBlockedByLink && order.payment?.provider === "stripe-weekly-batch"
+      ? await loadWeekEditorData(order, restaurant.id)
+      : [];
 
   const swapMenuItems = canSwap || (canModify && !modifyBlockedByLink)
     ? (
@@ -593,6 +641,9 @@ export default async function AdminOrderDetailPage({
               menuItems={swapMenuItems}
               action={performModify}
             />
+          )}
+          {weekOrders.length >= 2 && (
+            <ModifyWeekClient orders={weekOrders} isStripe action={performModifyWeek} />
           )}
           {canSwap && (
             <SwapItemClient

@@ -234,23 +234,32 @@ export async function POST(request: Request) {
                 ...(orphanRefundError ? { orphanRefundError } : {}),
               },
             });
-          } else if ((order.pendingEditPayload as { plan?: ModifyPlan } | null)?.plan) {
-            // Happy path (admin multi-line modification): the full plan was
-            // stored on the order when the pay link was created.
-            const payload = order.pendingEditPayload as unknown as { plan: ModifyPlan; specialInstructions: string | null };
-            const oldTotalCents = order.totalCents;
-            const deltaCents = payload.plan.newTotalCents - oldTotalCents;
+          } else if ((order.pendingEditPayload as { plans?: unknown[] } | null)?.plans) {
+            // Happy path (admin modification): the full plan(s) were stored on
+            // this order when the pay link was created. A weekly-checkout edit
+            // stores one plan per order here, settled by this ONE payment.
+            const payload = order.pendingEditPayload as unknown as {
+              plans: { orderId: string; plan: ModifyPlan; specialInstructions: string | null }[];
+            };
+            const netDeltaCents = payload.plans.reduce((t, e) => t + e.plan.deltaCents, 0);
+            const lockedIds = payload.plans.map((e) => e.orderId).filter((id) => id !== order.id);
+            const orderNumbers = new Map(
+              (await prisma.order.findMany({ where: { id: { in: payload.plans.map((e) => e.orderId) } }, select: { id: true, orderNumber: true } })).map((o) => [o.id, o.orderNumber])
+            );
 
             await prisma.$transaction(async (tx) => {
-              await applyModifyPlan(tx, order.id, payload.plan, {
-                ...(payload.specialInstructions ? { specialInstructions: payload.specialInstructions } : {}),
-                pendingEditTotalCents: null,
-                pendingEditCheckoutSession: null,
-                pendingEditCreatedAt: null,
-                pendingEditPayload: Prisma.DbNull,
-                deltaPaymentIntentId: paymentIntentId,
-                deltaAmountCents: deltaCents,
-              });
+              for (const entry of payload.plans) {
+                const isPrimary = entry.orderId === order.id;
+                await applyModifyPlan(tx, entry.orderId, entry.plan, {
+                  ...(entry.specialInstructions ? { specialInstructions: entry.specialInstructions } : {}),
+                  pendingEditTotalCents: null,
+                  pendingEditCheckoutSession: null,
+                  pendingEditCreatedAt: null,
+                  pendingEditPayload: Prisma.DbNull,
+                  // The single supplemental charge is recorded on the order that owns the link.
+                  ...(isPrimary ? { deltaPaymentIntentId: paymentIntentId, deltaAmountCents: netDeltaCents } : {}),
+                });
+              }
             });
 
             await logActivity({
@@ -258,17 +267,19 @@ export async function POST(request: Request) {
               entityType: "ORDER",
               entityId: order.id,
               action: "MODIFIED",
-              summary: `Order ${order.orderNumber} modification paid — total updated to ${formatCurrency(payload.plan.newTotalCents)} (+${formatCurrency(deltaCents)}): ${payload.plan.summary.join("; ")}`,
+              summary: `Order ${order.orderNumber} modification paid — ${formatCurrency(netDeltaCents)} charged across ${payload.plans.length} order${payload.plans.length > 1 ? "s" : ""}: ${payload.plans.map((e) => `${orderNumbers.get(e.orderId) ?? e.orderId} ${e.plan.summary.join(", ")}`).join(" | ")}`,
               metadata: {
                 orderNumber: order.orderNumber,
-                oldTotalCents,
-                newTotalCents: payload.plan.newTotalCents,
-                deltaCents,
+                orderIds: payload.plans.map((e) => e.orderId),
+                netDeltaCents,
                 deltaPaymentIntentId: paymentIntentId,
+                linkedOrderIds: lockedIds,
               },
             });
 
-            sendOrderModifiedEmail(order.id, order.restaurantId).catch(() => {});
+            for (const entry of payload.plans) {
+              sendOrderModifiedEmail(entry.orderId, order.restaurantId).catch(() => {});
+            }
             sendPushForOrder(order.id, { title: "Order updated", body: "Your order has been updated.", data: { screen: "order", orderId: order.id } }).catch(() => {});
           } else {
             // Happy path: finalize the increase-edit.
