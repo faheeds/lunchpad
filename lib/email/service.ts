@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { EmailStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
+import { formatCurrency } from "@/lib/utils";
 import {
   buildConfirmationEmail,
   buildCancellationEmail,
@@ -957,4 +958,26 @@ export async function sendWeeklyOrderConfirmationEmail(
     });
     throw error;
   }
+}
+
+export async function sendOrderEditPaymentLinkEmail(orderId: string, restaurantId: string, checkoutUrl: string, deltaCents: number) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, restaurantId },
+    include: { restaurant: true },
+  });
+  if (!order) throw new Error("Order not found.");
+  if (!resend || !env.EMAIL_FROM) throw new Error("Email delivery is not configured.");
+  const amount = formatCurrency(deltaCents);
+  const subject = `${order.restaurant.name}: please pay ${amount} to confirm your updated order ${order.orderNumber}`;
+  const text = `Hi ${order.parentName},\n\n${order.restaurant.name} updated your order ${order.orderNumber}. The change adds ${amount}. Pay securely here and your order will update automatically:\n\n${checkoutUrl}\n\nThis link expires in 24 hours or at the order cutoff, whichever comes first.\n\n— ${order.restaurant.name}`;
+  const html = `<div style="font-family:Arial,sans-serif;color:#1c2a35;line-height:1.55;max-width:560px;margin:0 auto"><p>Hi ${order.parentName},</p><p>${order.restaurant.name} updated your order <strong>${order.orderNumber}</strong>. The change adds <strong>${amount}</strong>.</p><p><a href="${checkoutUrl}" style="display:inline-block;background:#2C4031;color:#fff;text-decoration:none;border-radius:100px;padding:10px 20px;font-weight:700">Pay ${amount}</a></p><p style="font-size:12px;color:#6b7280">Your order updates automatically once paid. The link expires in 24 hours or at the order cutoff, whichever comes first.</p></div>`;
+  const result = await resend.emails.send({
+    from: `${order.restaurant.name} <${env.EMAIL_FROM}>`,
+    to: order.parentEmail,
+    replyTo: order.restaurant.contactEmail || undefined,
+    subject,
+    text,
+    html,
+  });
+  if (result.error) throw new Error(result.error.message || "Resend email delivery failed.");
 }

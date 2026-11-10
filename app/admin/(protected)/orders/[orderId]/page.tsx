@@ -4,7 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { updateOrderAsAdmin, swapOrderItemAsAdmin } from "@/lib/orders";
-import { sendOrderModifiedEmail } from "@/lib/email/service";
+import { sendOrderModifiedEmail, sendOrderEditPaymentLinkEmail } from "@/lib/email/service";
+import { modifyOrderLinesAsAdmin, cancelPendingModification } from "@/lib/order-modify";
 import { requireAdminRole, hasRole } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { requireRestaurant } from "@/lib/restaurant";
@@ -16,6 +17,7 @@ import { issueOrderRefund } from "@/lib/refund";
 import { sendRefundEmail } from "@/lib/email/service";
 import { RefundModalClient } from "@/components/admin/refund-modal-client";
 import { SwapItemClient, type SwapPayload } from "@/components/admin/swap-item-client";
+import { ModifyOrderClient, type ModifyPayload } from "@/components/admin/modify-order-client";
 
 export const dynamic = "force-dynamic";
 
@@ -237,6 +239,64 @@ export default async function AdminOrderDetailPage({
     }
   }
 
+  async function performModify(payload: ModifyPayload) {
+    "use server";
+    // Moves money (refunds / pay links) — re-checked server-side on every call.
+    await requireAdminRole("MANAGER");
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string } | undefined)?.adminUserId;
+    try {
+      const result = await modifyOrderLinesAsAdmin({
+        orderId,
+        restaurantId: restaurant.id,
+        adminUserId,
+        request: { updates: payload.updates ?? [], removeItemIds: payload.removeItemIds ?? [], adds: payload.adds ?? [] },
+        adminNote: payload.adminNote,
+        adjustmentMode:
+          payload.adjustment === "manual"
+            ? { kind: "manual", method: payload.manualMethod || "manual" }
+            : payload.adjustment === "comped"
+              ? { kind: "comped" }
+              : { kind: "stripe_link" },
+      });
+      revalidatePath(`/admin/orders/${orderId}`);
+      revalidatePath("/admin/orders");
+      if (result.action === "checkout_required") {
+        let emailed = false;
+        if (payload.emailLink) {
+          emailed = await sendOrderEditPaymentLinkEmail(orderId, restaurant.id, result.checkoutUrl, result.deltaCents)
+            .then(() => true)
+            .catch(() => false);
+        }
+        return {
+          success: true,
+          checkoutUrl: result.checkoutUrl,
+          emailed,
+          message: `Payment link created for ${formatCurrency(result.deltaCents)}.`,
+        };
+      }
+      sendOrderModifiedEmail(orderId, restaurant.id).catch(() => {});
+      return {
+        success: true,
+        message:
+          result.refundCents > 0
+            ? `Order updated — ${formatCurrency(result.refundCents)} refunded.`
+            : "Order updated.",
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Modification failed." };
+    }
+  }
+
+  async function cancelPayLink() {
+    "use server";
+    await requireAdminRole("MANAGER");
+    const session = await auth();
+    const adminUserId = (session?.user as { adminUserId?: string } | undefined)?.adminUserId;
+    await cancelPendingModification({ orderId, restaurantId: restaurant.id, adminUserId }).catch(() => {});
+    revalidatePath(`/admin/orders/${orderId}`);
+  }
+
   // Swap is MANAGER+ only (it can move money) — STAFF never sees the panel.
   const swapSession = await auth();
   const canSwap =
@@ -247,7 +307,17 @@ export default async function AdminOrderDetailPage({
     !order.pendingEditCheckoutSession &&
     order.items.length > 0;
 
-  const swapMenuItems = canSwap
+  const canModify =
+    hasRole((swapSession?.user as { adminRole?: string } | undefined)?.adminRole, "MANAGER") &&
+    order.status === "PAID" &&
+    !order.archivedAt &&
+    order.refundAmountCents === 0 &&
+    !cutoffPassed &&
+    order.items.length > 0;
+  const modifyBlockedByLink = canModify && !!order.pendingEditCheckoutSession;
+  const isStripeOrder = order.payment?.provider === "stripe" || order.payment?.provider === "stripe_checkout_link";
+
+  const swapMenuItems = canSwap || (canModify && !modifyBlockedByLink)
     ? (
         await prisma.deliveryMenuItem.findMany({
           where: {
@@ -482,6 +552,48 @@ export default async function AdminOrderDetailPage({
               </div>
             </div>
           ))}
+          {modifyBlockedByLink && (
+            <div className="rounded-lg bg-editorial-paper-2 px-3 py-3 space-y-2">
+              <p className="text-sm font-semibold text-editorial-ink">Waiting on a payment link</p>
+              <p className="text-[11px] text-editorial-ink-soft">
+                A modification is pending the customer&apos;s payment. The order updates automatically once it is paid. You can cancel the link to edit again.
+              </p>
+              <form action={cancelPayLink}>
+                <button type="submit" className="text-[12px] underline text-red-700 cursor-pointer">Cancel payment link</button>
+              </form>
+            </div>
+          )}
+          {canModify && !modifyBlockedByLink && (
+            <ModifyOrderClient
+              currentTotalCents={order.totalCents}
+              currentSubtotalCents={order.subtotalCents}
+              discountCents={order.discountCents}
+              isStripe={isStripeOrder}
+              lines={order.items.map((i) => ({
+                id: i.id,
+                menuItemId: i.menuItemId,
+                name: i.itemNameSnapshot,
+                sizeName: i.sizeName,
+                basePriceCents: i.basePriceCents,
+                additions: i.additions,
+                removals: i.removals,
+                refunded: !!i.refundedAt,
+                menu: {
+                  id: i.menuItem.id,
+                  name: i.menuItem.name,
+                  basePriceCents: i.menuItem.basePriceCents,
+                  sizes: [],
+                  requiredChoices: i.menuItem.requiredChoices ?? [],
+                  addOns: i.menuItem.options
+                    .filter((o) => o.optionType === "ADD_ON")
+                    .map((o) => ({ name: o.name, priceDeltaCents: o.priceDeltaCents })),
+                  removals: i.menuItem.options.filter((o) => o.optionType === "REMOVAL").map((o) => o.name),
+                },
+              }))}
+              menuItems={swapMenuItems}
+              action={performModify}
+            />
+          )}
           {canSwap && (
             <SwapItemClient
               orderItemId={order.items[0].id}
