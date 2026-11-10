@@ -1,4 +1,7 @@
 import Stripe from "stripe";
+import { Prisma } from "@prisma/client";
+import { applyModifyPlan } from "@/lib/order-modify";
+import type { ModifyPlan } from "@/lib/order-modify-plan";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -231,6 +234,42 @@ export async function POST(request: Request) {
                 ...(orphanRefundError ? { orphanRefundError } : {}),
               },
             });
+          } else if ((order.pendingEditPayload as { plan?: ModifyPlan } | null)?.plan) {
+            // Happy path (admin multi-line modification): the full plan was
+            // stored on the order when the pay link was created.
+            const payload = order.pendingEditPayload as unknown as { plan: ModifyPlan; specialInstructions: string | null };
+            const oldTotalCents = order.totalCents;
+            const deltaCents = payload.plan.newTotalCents - oldTotalCents;
+
+            await prisma.$transaction(async (tx) => {
+              await applyModifyPlan(tx, order.id, payload.plan, {
+                ...(payload.specialInstructions ? { specialInstructions: payload.specialInstructions } : {}),
+                pendingEditTotalCents: null,
+                pendingEditCheckoutSession: null,
+                pendingEditCreatedAt: null,
+                pendingEditPayload: Prisma.DbNull,
+                deltaPaymentIntentId: paymentIntentId,
+                deltaAmountCents: deltaCents,
+              });
+            });
+
+            await logActivity({
+              restaurantId: order.restaurantId,
+              entityType: "ORDER",
+              entityId: order.id,
+              action: "MODIFIED",
+              summary: `Order ${order.orderNumber} modification paid — total updated to ${formatCurrency(payload.plan.newTotalCents)} (+${formatCurrency(deltaCents)}): ${payload.plan.summary.join("; ")}`,
+              metadata: {
+                orderNumber: order.orderNumber,
+                oldTotalCents,
+                newTotalCents: payload.plan.newTotalCents,
+                deltaCents,
+                deltaPaymentIntentId: paymentIntentId,
+              },
+            });
+
+            sendOrderModifiedEmail(order.id, order.restaurantId).catch(() => {});
+            sendPushForOrder(order.id, { title: "Order updated", body: "Your order has been updated.", data: { screen: "order", orderId: order.id } }).catch(() => {});
           } else {
             // Happy path: finalize the increase-edit.
             let pendingItems: {

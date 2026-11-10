@@ -667,6 +667,8 @@ model Order {
   pendingEditTotalCents      Int?
   pendingEditCheckoutSession String?   @unique
   pendingEditCreatedAt       DateTime?
+  /// Full admin modification plan (ModifyPlan JSON) awaiting a pay-link payment.
+  pendingEditPayload         Json?
 
   // Supplemental charge from a finalized increase-edit.
   // Payment.providerPaymentIntent is NEVER overwritten (always = original charge).
