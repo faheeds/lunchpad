@@ -46,6 +46,7 @@ export function SiteHeader({
       ];
   const isAdmin = pathname.startsWith("/admin");
   const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
   // If the uploaded image fails to load (404, expired blob, etc.) we
   // swap to the SVG fallback. Tracked locally so a single bad URL doesn't
   // permanently break the brand.
@@ -89,7 +90,7 @@ export function SiteHeader({
       }}>
         Skip to main content
       </a>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "14px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "14px 16px", position: "relative" }}>
         <Link href="/" className="no-underline flex items-center gap-2" style={{ minWidth: 0, flex: "1 1 auto" }} onClick={() => setMenuOpen(false)}>
           {showUploadedLogo ? (
             // Plain <img> rather than next/image so any Vercel Blob host
@@ -114,29 +115,6 @@ export function SiteHeader({
             {restaurantName}
           </p>
         </Link>
-        {/* Desktop nav — visible at >=1024px */}
-        {!isAdmin && (
-          <nav className="hidden lg:flex items-center gap-6">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href} style={{
-                fontSize: 14, fontWeight: 600, color: "#211D15",
-                textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
-                textTransform: "uppercase", letterSpacing: "0.02em",
-              }}>
-                {item.label}
-              </Link>
-            ))}
-            <Link href="/order" style={{
-              fontSize: 14, fontWeight: 700, color: "white",
-              textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
-              textTransform: "uppercase", letterSpacing: "0.05em",
-              background: "#C0673E", borderRadius: 100,
-              padding: "8px 16px",
-            }}>
-              {orderLabel}
-            </Link>
-          </nav>
-        )}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           {isAdmin ? (
             <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "#2C4031", color: "#F6F1E6", fontFamily: "Fraunces, Georgia, serif", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -144,6 +122,15 @@ export function SiteHeader({
             </span>
           ) : (
             <>
+              <Link href="/order" className="hidden sm:inline-block" style={{
+                fontSize: 14, fontWeight: 700, color: "white",
+                textDecoration: "none", fontFamily: "Fraunces, Georgia, serif",
+                textTransform: "uppercase", letterSpacing: "0.05em",
+                background: "#C0673E", borderRadius: 100,
+                padding: "8px 16px", whiteSpace: "nowrap",
+              }}>
+                {orderLabel}
+              </Link>
               <HelpDrawer />
               {isSignedIn ? (
                 <Link href="/account" aria-label="Go to account" style={{
@@ -169,7 +156,7 @@ export function SiteHeader({
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                className="lg:hidden"
+                aria-expanded={menuOpen}
                 style={{
                   width: 32, height: 32, borderRadius: 8,
                   border: "1px solid #E3DBC6",
@@ -189,10 +176,11 @@ export function SiteHeader({
       </div>
 
       {menuOpen && !isAdmin && (
-        <nav style={{ width: "100%", borderTop: "1px solid #E3DBC6", background: "#FCFAF3", padding: "8px 12px 14px" }}>
+        <nav style={{ position: "absolute", top: "100%", right: 12, zIndex: 60, width: "min(280px, calc(100vw - 24px))", border: "1px solid #E3DBC6", borderRadius: 14, boxShadow: "0 12px 32px rgba(33,29,21,0.14)", background: "#FCFAF3", padding: "8px 8px 10px" }}>
           {[
-            { href: "/faq",     label: "FAQ"           },
-            { href: "/contact", label: "Contact us"    },
+            ...navItems,
+            { href: "/faq", label: "FAQ" },
+            ...(landingV2 ? [] : [{ href: "/contact", label: "Contact us" }]),
           ].map((item) => (
             <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{
               display: "block", padding: "12px 14px", borderRadius: 10,
@@ -205,6 +193,13 @@ export function SiteHeader({
               {item.label}
             </Link>
           ))}
+          <Link href="/order" className="sm:hidden" onClick={() => setMenuOpen(false)} style={{
+            display: "block", textAlign: "center", margin: "6px 6px 2px", padding: "11px 14px", borderRadius: 100,
+            fontSize: 14, fontWeight: 700, color: "white", background: "#C0673E", textDecoration: "none",
+            fontFamily: "Fraunces, Georgia, serif", textTransform: "uppercase", letterSpacing: "0.05em"
+          }}>
+            {orderLabel}
+          </Link>
           <div style={{ borderTop: "1px solid #E3DBC6", marginTop: 8, paddingTop: 8 }}>
             <Link href="/admin/login" onClick={() => setMenuOpen(false)} style={{
               display: "flex", alignItems: "center", gap: 8,
