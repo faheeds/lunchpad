@@ -12,6 +12,8 @@ import { requireRestaurant } from "@/lib/restaurant";
 import { listActivity, logActivity } from "@/lib/activity";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/lib/utils";
+import { stripe } from "@/lib/payments/stripe";
+import { CopyUrlButton } from "@/components/admin/copy-url-button";
 import { getLabels } from "@/lib/location-labels";
 import { issueOrderRefund } from "@/lib/refund";
 import { sendRefundEmail } from "@/lib/email/service";
@@ -376,6 +378,22 @@ export default async function AdminOrderDetailPage({
       ? await getPendingModification(orderId, restaurant.id)
       : null;
   const modifyBlockedByLink = !!pendingMod;
+  // Unpaid order created with "payment link": show the live Stripe link so the
+  // admin can copy it or text it (the email may not have reached the parent).
+  let openPayLink: string | null = null;
+  if (
+    order.status === "PENDING" &&
+    order.payment?.provider === "stripe_checkout_link" &&
+    order.checkoutSessionId &&
+    stripe
+  ) {
+    try {
+      const sess = await stripe.checkout.sessions.retrieve(order.checkoutSessionId);
+      if (sess.status === "open" && sess.payment_status !== "paid") openPayLink = sess.url ?? null;
+    } catch {
+      openPayLink = null;
+    }
+  }
   const isStripeOrder = order.payment?.provider === "stripe" || order.payment?.provider === "stripe_checkout_link";
 
   const weekOrders =
@@ -618,6 +636,23 @@ export default async function AdminOrderDetailPage({
               </div>
             </div>
           ))}
+          {openPayLink && (
+            <div className="rounded-lg bg-editorial-paper-2 px-3 py-3 space-y-2">
+              <p className="text-[13px] font-medium text-editorial-ink">
+                Waiting on payment of {formatCurrency(order.totalCents)} — payment link
+              </p>
+              <input readOnly value={openPayLink} className="w-full rounded-lg border border-editorial-line text-[12px] px-3 py-2 bg-white" />
+              <div className="flex flex-wrap gap-2">
+                <CopyUrlButton url={openPayLink} />
+                <a
+                  href={`sms:${order.customerPhone ?? ""}?&body=${encodeURIComponent(`Hi ${order.parentName}, here is your payment link for order ${order.orderNumber}: ${openPayLink}`)}`}
+                  className="px-3 py-2 rounded-full text-[12px] font-medium border bg-white border-editorial-line text-editorial-ink-soft hover:text-editorial-ink"
+                >
+                  Text this link
+                </a>
+              </div>
+            </div>
+          )}
           {pendingMod && (
             <div className="rounded-lg bg-editorial-paper-2 px-3 py-3 space-y-2">
               <p className="text-sm font-semibold text-editorial-ink">
