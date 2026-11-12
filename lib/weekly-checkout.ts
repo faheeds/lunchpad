@@ -834,7 +834,26 @@ export async function markWeeklyBatchPaidByCheckoutSession(
     const paidAt = new Date();
     const createdOrderIds: string[] = [];
 
-    for (const [index, item] of batch.items.entries()) {
+    // One Order per (child, delivery day) — not per cart line. Several items
+    // for the same child on the same day become ONE order with several
+    // OrderItems (one label, one history row, one cancel), matching what the
+    // web checkout produces. Different children or different days stay
+    // separate orders.
+    const groups = new Map<string, number[]>();
+    batch.items.forEach((item, index) => {
+      const key = `${item.parentChildId}|${item.deliveryDateId}`;
+      const list = groups.get(key);
+      if (list) list.push(index);
+      else groups.set(key, [index]);
+    });
+
+    for (const indexes of groups.values()) {
+      const groupItems = indexes.map((i) => batch.items[i]);
+      const item = groupItems[0];
+      const subtotalCents = groupItems.reduce((t, it) => t + it.lineTotalCents, 0);
+      const discountCents = groupItems.reduce((t, it) => t + it.discountCents, 0);
+      const totalCents = indexes.reduce((t, i) => t + allocatedTotals[i], 0);
+
       const student = await tx.student.create({
         data: {
           schoolId: item.schoolId,
@@ -858,28 +877,28 @@ export async function markWeeklyBatchPaidByCheckoutSession(
           parentChildId: item.parentChildId,
           parentName: batch.parentUser.name || batch.parentUser.email,
           parentEmail: batch.parentUser.email,
-          subtotalCents: item.lineTotalCents,
-          discountCents: item.discountCents,
-          totalCents: allocatedTotals[index],
+          subtotalCents,
+          discountCents,
+          totalCents,
           status: OrderStatus.PAID,
           paidAt,
           items: {
-            create: {
-              menuItemId: item.menuItemId,
-              itemNameSnapshot: item.itemNameSnapshot,
-              sizeName: item.size,
-              basePriceCents: item.basePriceCents,
-              additions: item.choice ? [item.choice, ...item.additions] : item.additions,
-              removals: item.removals,
-              allergyNotes: item.parentChild.allergyNotes,
-              dietaryNotes: item.parentChild.dietaryNotes,
-              lineTotalCents: item.lineTotalCents
-            }
+            create: groupItems.map((it) => ({
+              menuItemId: it.menuItemId,
+              itemNameSnapshot: it.itemNameSnapshot,
+              sizeName: it.size,
+              basePriceCents: it.basePriceCents,
+              additions: it.choice ? [it.choice, ...it.additions] : it.additions,
+              removals: it.removals,
+              allergyNotes: it.parentChild.allergyNotes,
+              dietaryNotes: it.parentChild.dietaryNotes,
+              lineTotalCents: it.lineTotalCents
+            }))
           },
           payment: {
             create: {
               provider: "stripe-weekly-batch",
-              amountCents: allocatedTotals[index],
+              amountCents: totalCents,
               status: PaymentStatus.PAID,
               paidAt
             }
@@ -889,29 +908,31 @@ export async function markWeeklyBatchPaidByCheckoutSession(
       createdOrderIds.push(order.id);
 
       // Same redemption-ledger pattern as lib/orders.ts's createPendingOrder:
-      // one DiscountRedemption per Order, inside the same transaction so the
-      // Order's discountCents and the ledger never disagree, plus bumping
-      // the discount's usage counter. The discount decision itself was
-      // already made per-item at batch-creation time (createAdHocCheckoutBatch
-      // / createWeeklyCheckoutBatch) — this just records it now that the
-      // item has become a real Order.
-      if (item.discountId && item.discountCents > 0) {
+      // the ledger allows ONE DiscountRedemption per Order, so a grouped order
+      // records the summed discount against the first discount used, and every
+      // distinct discount's usage counter is still bumped once. Done inside the
+      // same transaction so Order.discountCents and the ledger never disagree.
+      const discounted = groupItems.filter((it) => it.discountId && it.discountCents > 0);
+      if (discounted.length > 0) {
+        const first = discounted[0];
         await tx.discountRedemption.create({
           data: {
-            discountId: item.discountId,
+            discountId: first.discountId!,
             orderId: order.id,
             parentUserId: batch.parentUserId,
-            amountCents: item.discountCents
+            amountCents: discountCents
           }
         });
-        await tx.discount.update({
-          where: { id: item.discountId },
-          data: { currentRedemptions: { increment: 1 } }
-        });
-        if (item.discount) {
+        for (const id of new Set(discounted.map((it) => it.discountId!))) {
+          await tx.discount.update({
+            where: { id },
+            data: { currentRedemptions: { increment: 1 } }
+          });
+        }
+        if (first.discount) {
           redemptionsToLog.push({
-            discountName: item.discount.name,
-            amountCents: item.discountCents,
+            discountName: first.discount.name,
+            amountCents: discountCents,
             orderId: order.id,
             orderNumber: order.orderNumber
           });
